@@ -21,7 +21,7 @@ import {
   type KeyEntry,
   type Message,
   type Part,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { buildFrom, Prerequisite, type Ctx } from '../context.ts';
 import { sleep, type Res, type T } from '../harness.ts';
 import { LONG_AGO, type PeerAgent } from '../peer.ts';

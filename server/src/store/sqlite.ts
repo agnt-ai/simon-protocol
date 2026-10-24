@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
-import { canonicalize, header, namedFiles, type AnyMessage } from '@agnt-protocol/protocol';
+import { canonicalize, header, namedFiles, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from './store.ts';
 import type {
   Agent,

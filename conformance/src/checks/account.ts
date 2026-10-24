@@ -1,5 +1,5 @@
 /** CLIENT account and no-op recovery/grant refusals. */
-import { parseTimestamp, readKeys } from '@agnt-protocol/protocol';
+import { parseTimestamp, readKeys } from '@agnt-sdk/simon-protocol';
 import type { Ctx } from '../context.ts';
 import type { T } from '../harness.ts';
 import { def } from './common.ts';

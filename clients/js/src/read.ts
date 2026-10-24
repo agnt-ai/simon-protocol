@@ -45,7 +45,7 @@ import {
   type ResolverIO,
   type ServerDocument,
   type SignedClaims,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { SimonError, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, type Answer, type Transport } from './http.ts';
 

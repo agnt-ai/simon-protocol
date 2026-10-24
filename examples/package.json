@@ -1,5 +1,5 @@
 {
-  "name": "@agnt-protocol/examples",
+  "name": "simon-examples",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
     "node": ">=26"
   },
   "dependencies": {
-    "@agnt-protocol/protocol": "0.1.0",
-    "@agnt-protocol/client": "0.1.0"
+    "@agnt-sdk/simon-protocol": "0.1.0",
+    "@agnt-sdk/simon-client": "0.1.0"
   }
 }

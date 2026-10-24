@@ -16,8 +16,8 @@
  *
  * Hooks: on.stored (the author), on.inbox (each recipient).
  */
-import { header, messageId, principalKey, verify, verifyPairing, type Message } from '@agnt-protocol/protocol';
-import type { ServerApi, StoredMessage } from '@agnt-protocol/server';
+import { header, messageId, principalKey, verify, verifyPairing, type Message } from '@agnt-sdk/simon-protocol';
+import type { ServerApi, StoredMessage } from 'simon-server';
 import type { Ctx, Module } from '../../context.ts';
 
 /** The bytes a key principal signs to say they saw or approved `from`'s message `id` (its id without the header). */

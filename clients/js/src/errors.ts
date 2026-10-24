@@ -1,4 +1,4 @@
-import { normalizeAddress, serverOrigin } from '@agnt-protocol/protocol';
+import { normalizeAddress, serverOrigin } from '@agnt-sdk/simon-protocol';
 
 /**
  * Every failure this client reports is a SimonError. A server's refusal keeps the server's code, message,

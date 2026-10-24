@@ -1,14 +1,14 @@
 /**
  * The Store contract as tests. Any store proves itself by running them:
  *
- *   import { storeContract } from '@agnt-protocol/server/store-contract';
+ *   import { storeContract } from 'simon-server/store-contract';
  *   storeContract('my store', () => new MyStore());
  *
  * `make` returns a fresh, empty store each time. Every rule in store.ts that the core relies on is here.
  */
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
-import type { AnyMessage } from '@agnt-protocol/protocol';
+import type { AnyMessage } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS } from './store.ts';
 import type { Agent, Delivery, QueuedArrival, Store, StoredMessage, Webhook, RetractionCapacity } from './store.ts';
 

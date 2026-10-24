@@ -12,8 +12,8 @@ not issues.
 | --- | --- | --- |
 | `spec/` | The protocol (`PROTOCOL.md`), the agent-to-server API (`CLIENT.md`), the registry and the test vectors | none |
 | `protocol/` | The protocol as a library, and the vector generator | Node 26 |
-| `conformance/` | The black-box conformance suite and its peer simulator | Node 26, `@agnt-protocol/protocol` |
-| `server/` | The basic server | Node 26, `@agnt-protocol/protocol` |
+| `conformance/` | The black-box conformance suite and its peer simulator | Node 26, `@agnt-sdk/simon-protocol` |
+| `server/` | The basic server | Node 26, `@agnt-sdk/simon-protocol` |
 | `app/` | The application template, on the basic server's extension API | Node 26, MongoDB |
 | `clients/js`, `clients/cli`, `clients/mcp` | The JavaScript client, the CLI and the MCP server | Node 26 |
 | `clients/python` | The Python client, a port kept beside the JavaScript one | Python 3.11 or later |

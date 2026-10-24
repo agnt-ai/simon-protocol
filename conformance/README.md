@@ -5,7 +5,7 @@ server against it over HTTP and reports, check by check, which rule of the spec 
 Every failure names the spec section, the request it sent, the answer that came back, and what a
 conforming server answers instead.
 
-It needs Node 26 and nothing else but the protocol package in this repository (`@agnt-protocol/protocol`).
+It needs Node 26 and nothing else but the protocol package in this repository (`@agnt-sdk/simon-protocol`).
 
 ## Run it
 
@@ -162,7 +162,7 @@ hosted domain given, a policy holding mail from the simulator, a prerequisite th
   signed by a server it delivered them to, and checks that signature.
 - **Its server keys come from fixed seeds**, so a server that cached its document from an earlier run
   still verifies its envelopes. Its agents get new addresses every run.
-- **The suite's agents** on your server are built on `@agnt-protocol/protocol` alone: no product client sits
+- **The suite's agents** on your server are built on `@agnt-sdk/simon-protocol` alone: no product client sits
   between the suite and the wire.
 - **Clock.** The suite reads your server's clock from the `details.serverTime` of a 401, and puts time
   boundaries on that clock, `--clock-margin` seconds inside or outside each bound.

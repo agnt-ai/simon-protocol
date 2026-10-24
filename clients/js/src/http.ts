@@ -1,5 +1,5 @@
 /** One HTTP exchange with a timeout, and an answer read into JSON or into the SimonError it carries. */
-import { isRetryable, parseProblem } from '@agnt-protocol/protocol';
+import { isRetryable, parseProblem } from '@agnt-sdk/simon-protocol';
 import { SimonError } from './errors.ts';
 
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;

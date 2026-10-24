@@ -1,6 +1,6 @@
 /**
  * An in-process server for tests: the six calls of spec/CLIENT.md and the two documents, with every
- * request's signature checked by @agnt-protocol/protocol. It holds one hosted domain, and treats every other domain
+ * request's signature checked by @agnt-sdk/simon-protocol. It holds one hosted domain, and treats every other domain
  * as resolving to it with the code 123456. It speaks the current wire: errors are RFC 9457
  * problem details, the server document lists `algorithms`, `send` refuses versions it does not implement,
  * a recovery of an agent that still holds a valid key waits 72 hours (`recovery_pending`, cancelled by
@@ -41,7 +41,7 @@ import {
   type KeyEntry,
   type Message,
   type SignedClaims,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 
 /** How long a recovery waits while the agent still holds a valid key, as the reference server waits. */
 export const RECOVERY_WAIT_MS = 72 * 3600_000;

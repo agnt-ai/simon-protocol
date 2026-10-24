@@ -9,8 +9,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
-import { Agent } from '@agnt-protocol/client';
-import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-protocol/protocol';
+import { Agent } from '@agnt-sdk/simon-client';
+import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-sdk/simon-protocol';
 import { CANCEL_CODE, CODE, listen } from '../../js/test/fake-server.ts';
 
 const SERVER = path.resolve(import.meta.dirname, '../src/server.ts');

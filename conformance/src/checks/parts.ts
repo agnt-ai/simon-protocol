@@ -4,7 +4,7 @@
  * carrier on its own, soon after accepting it.
  */
 import crypto from 'node:crypto';
-import { canonicalize, domainOf, messageId, sha256Hex } from '@agnt-protocol/protocol';
+import { canonicalize, domainOf, messageId, sha256Hex } from '@agnt-sdk/simon-protocol';
 import type { TargetAgent } from '../agent.ts';
 import { buildFrom, Prerequisite, type Ctx } from '../context.ts';
 import { poll, sleep, type Exchange, type Res, type T } from '../harness.ts';

@@ -13,7 +13,7 @@ import {
   unauthorized,
   type KeyEntry,
   type SignedHeaders,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { iso, type Context } from './context.ts';
 import type { Request } from './http.ts';
 import { clientKey } from './net/ip.ts';

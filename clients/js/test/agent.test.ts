@@ -13,7 +13,7 @@ import {
   signPairing,
   signRecovery,
   timestamp,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, type AgentOptions, type Fetch } from '../src/index.ts';
 import { fetchServerDocument } from '../src/read.ts';
 import { exchange } from '../src/http.ts';

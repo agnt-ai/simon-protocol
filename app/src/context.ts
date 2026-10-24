@@ -4,7 +4,7 @@
  * application's own agents. Nothing is a module-level singleton, so several applications run in one
  * process, as the tests do.
  */
-import type { Dns, Extension, Http, Log, ServerApi } from '@agnt-protocol/server';
+import type { Dns, Extension, Http, Log, ServerApi } from 'simon-server';
 import type { Db } from 'mongodb';
 import type { z } from 'zod';
 import type { Mailer } from './adapters/mail.ts';

@@ -17,7 +17,7 @@ import {
   WireError,
   type Claim,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { AddressRequest, Arrival, Events, Extension } from '../src/extensions.ts';
 import { json } from '../src/http.ts';
 import { defineConfig } from '../src/config.ts';

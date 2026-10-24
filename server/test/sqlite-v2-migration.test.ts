@@ -20,7 +20,7 @@ import {
   type AnyMessage,
   type Message,
   type Part,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer } from '../src/server.ts';
 import {

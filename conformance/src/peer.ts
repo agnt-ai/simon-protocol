@@ -39,7 +39,7 @@ import {
   type Json,
   type KeyEntry,
   type AnyMessage,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { newNonce } from './agent.ts';
 import { transport } from './harness.ts';
 

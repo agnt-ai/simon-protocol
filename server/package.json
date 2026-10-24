@@ -1,5 +1,5 @@
 {
-  "name": "@agnt-protocol/server",
+  "name": "simon-server",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -27,6 +27,6 @@
     "smoke": "node scripts/smoke.ts"
   },
   "dependencies": {
-    "@agnt-protocol/protocol": "0.1.0"
+    "@agnt-sdk/simon-protocol": "0.1.0"
   }
 }

@@ -1,26 +1,49 @@
 {
-  "name": "@agnt-protocol/mcp",
+  "name": "@agnt-sdk/simon-mcp",
+  "version": "0.1.0",
+  "description": "MCP server (stdio) for a SIMON agent, with tools pinned at build time.",
   "license": "Apache-2.0",
+  "keywords": [
+    "simon",
+    "agents",
+    "ai-agents",
+    "protocol",
+    "signed-messages",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "homepage": "https://github.com/agnt-ai/simon-protocol/tree/main/clients/mcp#readme",
+  "bugs": {
+    "url": "https://github.com/agnt-ai/simon-protocol/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/agnt-ai/simon-protocol.git",
     "directory": "clients/mcp"
   },
-  "version": "0.1.0",
-  "private": true,
-  "description": "MCP server (stdio) for a SIMON agent, with tools pinned at build time.",
   "type": "module",
   "bin": {
     "simon-mcp": "./src/server.ts"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "engines": {
     "node": ">=26"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
-    "test": "node --test 'test/**/*.test.ts'"
+    "test": "node --test 'test/**/*.test.ts'",
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   },
   "dependencies": {
-    "@agnt-protocol/protocol": "0.1.0",
-    "@agnt-protocol/client": "0.1.0"
+    "@agnt-sdk/simon-protocol": "0.1.0",
+    "@agnt-sdk/simon-client": "0.1.0"
   }
 }

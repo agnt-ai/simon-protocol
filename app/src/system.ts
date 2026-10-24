@@ -11,8 +11,15 @@
  * words for this server's.
  */
 import crypto, { type KeyObject } from 'node:crypto';
-import { keyToken, privateKeyFromSeed, signMessage, timestamp, type Message, type Part } from '@agnt-protocol/protocol';
-import type { ServerApi } from '@agnt-protocol/server';
+import {
+  keyToken,
+  privateKeyFromSeed,
+  signMessage,
+  timestamp,
+  type Message,
+  type Part,
+} from '@agnt-sdk/simon-protocol';
+import type { ServerApi } from 'simon-server';
 
 export type SystemName = 'notices' | 'bridge';
 

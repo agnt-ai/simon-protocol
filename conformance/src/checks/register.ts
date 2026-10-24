@@ -11,7 +11,7 @@ import {
   signUnpairing,
   validAt,
   verifyUnpairing,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { TargetAgent } from '../agent.ts';
 import { Prerequisite, type Ctx } from '../context.ts';
 import { problem, sleep, type Res, type T } from '../harness.ts';

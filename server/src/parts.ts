@@ -30,7 +30,15 @@
  * in the store, shared by every process on it.
  */
 import crypto from 'node:crypto';
-import { domainOf, invalid, isAddress, sha256Hex, signRequest, unauthorized, WireError } from '@agnt-protocol/protocol';
+import {
+  domainOf,
+  invalid,
+  isAddress,
+  sha256Hex,
+  signRequest,
+  unauthorized,
+  WireError,
+} from '@agnt-sdk/simon-protocol';
 import { authenticateAgent, authenticateServer, isAgentSigned, isServerSigned } from './auth.ts';
 import { iso, later, type Context } from './context.ts';
 import { notFound, unavailable } from './errors.ts';

@@ -10,8 +10,8 @@
  * proven since. An identifier last proven more than a year ago grants nothing until proven again, so an
  * inbox that changed hands, or a long-lived API key, does not stand in for the person for ever.
  */
-import { principalKey, verify } from '@agnt-protocol/protocol';
-import type { Request } from '@agnt-protocol/server';
+import { principalKey, verify } from '@agnt-sdk/simon-protocol';
+import type { Request } from 'simon-server';
 import type { Activity, Ctx } from '../../context.ts';
 import type { Codes } from '../../lib/codes.ts';
 import { badRequest, conflict, gone, notFound, unauthorized, unprocessable } from '../../lib/errors.ts';

@@ -1,11 +1,11 @@
 /**
  * Errors as this application's API answers them: RFC 9457 problem details, the protocol's shape
  * (`{type, title, status, code, retryable, detail, details?}`, spec/PROTOCOL.md section 9). `invalid`
- * (400, `details.field`) comes from @agnt-protocol/protocol.
+ * (400, `details.field`) comes from @agnt-sdk/simon-protocol.
  */
-import { WireError } from '@agnt-protocol/protocol';
+import { WireError } from '@agnt-sdk/simon-protocol';
 
-export { invalid, WireError } from '@agnt-protocol/protocol';
+export { invalid, WireError } from '@agnt-sdk/simon-protocol';
 
 /** A missing resource, always the same code, with `details.what` naming what was missing. */
 export const notFound = (what: string, message = `No such ${what}.`) =>

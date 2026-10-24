@@ -4,8 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import { generateKey, signPairing } from '@agnt-protocol/protocol';
-import { Agent } from '@agnt-protocol/client';
+import { generateKey, signPairing } from '@agnt-sdk/simon-protocol';
+import { Agent } from '@agnt-sdk/simon-client';
 import { texts, World } from './harness.ts';
 
 describe('recipient policy', async () => {

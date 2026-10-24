@@ -6,7 +6,7 @@
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isIP } from 'node:net';
-import { bodyTooLarge, canonicalize, WireError } from '@agnt-protocol/protocol';
+import { bodyTooLarge, canonicalize, WireError } from '@agnt-sdk/simon-protocol';
 import { inNetworks, parseNetwork, type Network } from './net/ip.ts';
 
 export interface Request {

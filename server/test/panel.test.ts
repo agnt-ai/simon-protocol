@@ -16,7 +16,7 @@ import {
   signRequest,
   timestamp,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { createServer } from '../src/server.ts';
 import type { HttpRequest, HttpResponse } from '../src/net/fetch.ts';
 import { CONCURRENCY } from '../src/outbox.ts';

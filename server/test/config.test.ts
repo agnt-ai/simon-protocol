@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { generateKey, keyToken, privateKeyFromSeed } from '@agnt-protocol/protocol';
+import { generateKey, keyToken, privateKeyFromSeed } from '@agnt-sdk/simon-protocol';
 import { loadConfig } from '../src/config.ts';
 
 const seed = Buffer.alloc(32, 7).toString('base64url');

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { it } from 'node:test';
-import { messageId, type AnyMessage } from '@agnt-protocol/protocol';
+import { messageId, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { Federation } from './harness.ts';
 
 const v = JSON.parse(fs.readFileSync(new URL('../../spec/vectors/v1.json', import.meta.url), 'utf8')).publications;

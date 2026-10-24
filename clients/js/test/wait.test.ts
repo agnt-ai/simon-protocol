@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { generateKey } from '@agnt-protocol/protocol';
+import { generateKey } from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, type Fetch } from '../src/index.ts';
 import { readWaitState, saveWaitState, waitFile, waitForMessage } from '../src/wait.ts';
 import { fakeServer } from './fake-server.ts';

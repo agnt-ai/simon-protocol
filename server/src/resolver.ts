@@ -37,7 +37,7 @@ import {
   type KeyEntry,
   type Resolution,
   type ServerDocument,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import type { Config } from './config.ts';
 import { Continuity } from './continuity.ts';

@@ -13,7 +13,7 @@ import {
   sha256Hex,
   signRequest,
   type AnyMessage,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { Extension } from '../src/extensions.ts';
 import { replyBody } from '../src/testing.ts';
 import { Federation, toRequest, type TestAgent } from './harness.ts';

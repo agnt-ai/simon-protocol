@@ -24,7 +24,7 @@ import {
   type AgentDocument,
   type KeyEntry,
   type ServerDocument,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { iso, type Context } from './context.ts';
 import { notFound, unavailable } from './errors.ts';
 import { json, type Route } from './http.ts';

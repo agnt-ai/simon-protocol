@@ -5,8 +5,8 @@
 #   - Python: the client's suite twice, once with the standard library only and once with
 #     `cryptography`, which the client signs with when it is installed.
 #   - The basic server's image, run as a deployment runs it, through `scripts/image-check.sh`.
-#   - The protocol library and the JavaScript client, packed and installed on Node 24.6.0, the oldest
-#     they support, with both suites run against the compiled files, through `scripts/test-built.sh`.
+#   - The four npm packages (protocol, client, CLI, MCP server), packed and installed on Node 24.6.0, the
+#     oldest they support, with their suites run against the compiled files, through `scripts/test-built.sh`.
 name: check
 on:
   push:

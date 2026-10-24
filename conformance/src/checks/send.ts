@@ -1,6 +1,6 @@
 /** CLIENT send: the order of its checks, the paired and solo rule, its time window, parts and hints. */
 import crypto from 'node:crypto';
-import { canonicalize, keyToken, messageId, parseTimestamp, sha256Hex, signPairing } from '@agnt-protocol/protocol';
+import { canonicalize, keyToken, messageId, parseTimestamp, sha256Hex, signPairing } from '@agnt-sdk/simon-protocol';
 import { resign, type TargetAgent } from '../agent.ts';
 import type { Ctx } from '../context.ts';
 import type { T } from '../harness.ts';

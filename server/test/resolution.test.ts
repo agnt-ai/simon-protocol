@@ -3,7 +3,7 @@
  */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { generateKey, serverDocument } from '@agnt-protocol/protocol';
+import { generateKey, serverDocument } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { Unreachable, type Http } from '../src/net/fetch.ts';
 import type { Context } from '../src/context.ts';

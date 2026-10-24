@@ -1,8 +1,8 @@
 /** Configuration: each module reads its own section, and anything the application cannot mean stops it. */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { generateKey } from '@agnt-protocol/protocol';
-import { defineConfig } from '@agnt-protocol/server';
+import { generateKey } from '@agnt-sdk/simon-protocol';
+import { defineConfig } from 'simon-server';
 import { loadAppConfig, MODULES } from '../src/config.ts';
 
 const server = (dev: boolean) =>

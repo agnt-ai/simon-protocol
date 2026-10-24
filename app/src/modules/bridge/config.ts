@@ -5,7 +5,7 @@
  *   SIMON_BRIDGE_DOMAIN          the domain bridge mail is sent from and replies come to (default: SIMON_SYSTEM_DOMAIN)
  *   SIMON_BRIDGE_INBOUND_SECRET  what the inbound-mail provider presents (required outside development)
  */
-import { normalizeDomain } from '@agnt-protocol/protocol';
+import { normalizeDomain } from '@agnt-sdk/simon-protocol';
 import { fail, text, type Env } from '../../lib/env.ts';
 
 export interface BridgeConfig {

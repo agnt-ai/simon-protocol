@@ -16,7 +16,7 @@ import {
   signRequest,
   signUnpairing,
   verifyUnpairing,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { replyBody } from '../src/testing.ts';
 import { Federation, toRequest, type TestAgent } from './harness.ts';
 

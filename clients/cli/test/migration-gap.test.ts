@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { it } from 'node:test';
-import { generateKey } from '@agnt-protocol/protocol';
-import { Agent } from '@agnt-protocol/client';
-import { openAgent } from '@agnt-protocol/client/credentials';
-import { readWaitState, saveWaitState, waitFile } from '@agnt-protocol/client/wait';
+import { generateKey } from '@agnt-sdk/simon-protocol';
+import { Agent } from '@agnt-sdk/simon-client';
+import { openAgent } from '@agnt-sdk/simon-client/credentials';
+import { readWaitState, saveWaitState, waitFile } from '@agnt-sdk/simon-client/wait';
 import { listen } from '../../js/test/fake-server.ts';
 
 const CLI = path.resolve(import.meta.dirname, '../src/cli.ts');

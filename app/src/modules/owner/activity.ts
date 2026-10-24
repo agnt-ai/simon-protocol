@@ -5,7 +5,7 @@
  * person's identifiers (what that identifier's agents did, its sign-ins) is shown only to sessions that
  * proved it; one about the whole person, to all of them.
  */
-import type { StoredMessage } from '@agnt-protocol/server';
+import type { StoredMessage } from 'simon-server';
 import { z } from 'zod';
 import type { Activity, ActivityFields, Ctx } from '../../context.ts';
 import { newId } from '../../lib/ids.ts';

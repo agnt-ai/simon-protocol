@@ -36,7 +36,7 @@ import {
   type Claim,
   type Hints,
   type Json,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { authenticateAgent } from './auth.ts';
 import { iso, later, type Context } from './context.ts';
 import { badRequest, conflict } from './errors.ts';

@@ -1,8 +1,8 @@
 /**
- * Errors in the protocol's shape (spec section 9, RFC 9457) beyond the ones @agnt-protocol/protocol makes. A 429 or
+ * Errors in the protocol's shape (spec section 9, RFC 9457) beyond the ones @agnt-sdk/simon-protocol makes. A 429 or
  * 503 says when to retry in `details.retryAfter`, in seconds, which also goes out as Retry-After.
  */
-import { WireError } from '@agnt-protocol/protocol';
+import { WireError } from '@agnt-sdk/simon-protocol';
 
 export const notFound = (what = 'Nothing is here.') => new WireError(404, 'not_found', what);
 

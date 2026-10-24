@@ -1,5 +1,5 @@
 /** Introductions (intros.ts): double-blind, routed through the requester's own contacts. */
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import { z } from 'zod';
 import type { Activity, Ctx, Module } from '../../context.ts';
 import type { Caller } from '../../http/route.ts';

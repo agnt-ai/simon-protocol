@@ -36,7 +36,7 @@ import {
   verifyRecovery,
   WireError,
   type Json,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import {
   account,
   canPublishAgent,

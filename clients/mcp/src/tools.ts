@@ -10,9 +10,9 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { keyToken, privateKeyObject } from '@agnt-protocol/protocol';
-import { SimonError, verifyAuthor, type Agent, type Part } from '@agnt-protocol/client';
-import { ensureKeyFile, keyFile, openAgent, readAddressFile, saveAddress } from '@agnt-protocol/client/credentials';
+import { keyToken, privateKeyObject } from '@agnt-sdk/simon-protocol';
+import { SimonError, verifyAuthor, type Agent, type Part } from '@agnt-sdk/simon-client';
+import { ensureKeyFile, keyFile, openAgent, readAddressFile, saveAddress } from '@agnt-sdk/simon-client/credentials';
 import {
   RULE,
   presentDelivery,
@@ -21,9 +21,9 @@ import {
   unwrapEntry,
   type PresentedEntry,
   type Untrusted,
-} from '@agnt-protocol/client/provenance';
-import { waitForMessage } from '@agnt-protocol/client/wait';
-import { readFile, workspace, writablePath, writeFile, type Workspace } from '@agnt-protocol/client/workspace';
+} from '@agnt-sdk/simon-client/provenance';
+import { waitForMessage } from '@agnt-sdk/simon-client/wait';
+import { readFile, workspace, writablePath, writeFile, type Workspace } from '@agnt-sdk/simon-client/workspace';
 
 export interface Context {
   /** The directory holding the key and address. */

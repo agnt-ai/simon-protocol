@@ -4,7 +4,7 @@ import type { Ctx } from '../../context.ts';
 import { notFound } from '../../lib/errors.ts';
 import { spend } from '../../lib/rate.ts';
 import { pageOf } from '../../store/db.ts';
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import { agent, defineRoute, Paged, PageQuery, type ApiRoute, type Caller } from '../../http/route.ts';
 import { idPattern } from '../../lib/ids.ts';
 import { Principal } from '../directory/schemas.ts';

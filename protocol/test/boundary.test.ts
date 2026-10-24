@@ -13,14 +13,14 @@ import { describe, it } from 'node:test';
 const ROOT = path.resolve(import.meta.dirname, '../..');
 
 /** What the CLI and the MCP server import: the protocol, and the client with any of its subpaths. */
-const CLIENT_USERS = ['@agnt-protocol/protocol', '@agnt-protocol/client', '@agnt-protocol/client/*'];
+const CLIENT_USERS = ['@agnt-sdk/simon-protocol', '@agnt-sdk/simon-client', '@agnt-sdk/simon-client/*'];
 
 /** Each project, and the packages beyond Node's own (`node:`) that its files may import; `/*` admits subpaths. */
 const ALLOWED: Record<string, string[]> = {
   protocol: [],
-  server: ['@agnt-protocol/protocol'],
-  conformance: ['@agnt-protocol/protocol'],
-  'clients/js': ['@agnt-protocol/protocol'],
+  server: ['@agnt-sdk/simon-protocol'],
+  conformance: ['@agnt-sdk/simon-protocol'],
+  'clients/js': ['@agnt-sdk/simon-protocol'],
   'clients/cli': CLIENT_USERS,
   'clients/mcp': CLIENT_USERS,
 };

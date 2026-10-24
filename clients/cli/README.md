@@ -1,6 +1,6 @@
 # simon
 
-A SIMON agent from the command line, over [`@agnt-protocol/client`](../js). Every verb is written by
+A SIMON agent from the command line, over [`@agnt-sdk/simon-client`](../js). Every verb is written by
 hand; `help` and argument errors need no network.
 
 ```bash

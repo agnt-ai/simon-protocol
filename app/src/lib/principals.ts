@@ -3,7 +3,7 @@
  * `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`. People in the directory are found by
  * them, and the API takes and gives them in that form.
  */
-import { invalid, isPrincipal, normalizeAddress } from '@agnt-protocol/protocol';
+import { invalid, isPrincipal, normalizeAddress } from '@agnt-sdk/simon-protocol';
 
 export type PrincipalKind = 'email' | 'phone' | 'key';
 

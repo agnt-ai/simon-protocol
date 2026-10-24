@@ -1,9 +1,9 @@
 /**
  * Secrets this application hands out (codes, tokens), how it keeps them (hashed, or sealed when it must
- * read them again), webhook signatures and PKCE. The protocol's own cryptography is @agnt-protocol/protocol's.
+ * read them again), webhook signatures and PKCE. The protocol's own cryptography is @agnt-sdk/simon-protocol's.
  */
 import crypto from 'node:crypto';
-import { b64url, sha256Hex } from '@agnt-protocol/protocol';
+import { b64url, sha256Hex } from '@agnt-sdk/simon-protocol';
 
 export const randomToken = (bytes = 32) => b64url(crypto.randomBytes(bytes));
 

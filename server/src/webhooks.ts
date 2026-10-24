@@ -1,6 +1,6 @@
 /** Verified, signed wakeups for clients that do not hold a sync connection open. */
 import crypto from 'node:crypto';
-import { canonicalBytes, invalid, signRequest } from '@agnt-protocol/protocol';
+import { canonicalBytes, invalid, signRequest } from '@agnt-sdk/simon-protocol';
 import { readBody } from './account.ts';
 import { authenticateAgent } from './auth.ts';
 import { iso, later, type Context } from './context.ts';

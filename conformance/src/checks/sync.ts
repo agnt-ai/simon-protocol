@@ -1,5 +1,12 @@
 /** CLIENT sync: its shape, carrier and claims, its parameters, and paging by opaque token. */
-import { canonicalize, isJsonObject, keyToken, messageId, parseTimestamp, verifyClaims } from '@agnt-protocol/protocol';
+import {
+  canonicalize,
+  isJsonObject,
+  keyToken,
+  messageId,
+  parseTimestamp,
+  verifyClaims,
+} from '@agnt-sdk/simon-protocol';
 import { buildFrom, type Ctx } from '../context.ts';
 import type { T } from '../harness.ts';
 import { awaitSync, def, readSync, type SyncEntry } from './common.ts';

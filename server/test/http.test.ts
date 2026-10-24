@@ -13,7 +13,7 @@ import {
   signRequest,
   timestamp,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';

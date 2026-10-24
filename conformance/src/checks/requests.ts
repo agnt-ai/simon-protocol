@@ -1,6 +1,6 @@
 /** PROTOCOL section 8: signed requests, the order of their refusals, and what a refusal tells the signer. */
 import crypto from 'node:crypto';
-import { requestSigningString } from '@agnt-protocol/protocol';
+import { requestSigningString } from '@agnt-sdk/simon-protocol';
 import { newNonce, TargetAgent } from '../agent.ts';
 import { problem, type Res, type T } from '../harness.ts';
 import type { Ctx } from '../context.ts';

@@ -15,7 +15,7 @@
  *   - **Retention is explicit.** Nothing expires except through `sweep`, which says what it removes.
  *   - Methods return copies; mutating a returned record changes nothing stored.
  */
-import type { AnyMessage, Claim, Hints, KeyEntry, SignedClaims } from '@agnt-protocol/protocol';
+import type { AnyMessage, Claim, Hints, KeyEntry, SignedClaims } from '@agnt-sdk/simon-protocol';
 
 /** Reference-host admission limits, separate from protocol limits. Accepted retractions are never evicted. */
 export interface RetractionCapacity {

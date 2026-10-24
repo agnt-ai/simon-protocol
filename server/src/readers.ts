@@ -9,7 +9,7 @@
  * A message with no `audience` header is for anyone. One with a label is for whoever the extensions'
  * `admitsReader` chain admits; with no extension deciding, for no one but its author.
  */
-import { header, VERSION, WireError, type AnyMessage, type Message } from '@agnt-protocol/protocol';
+import { header, VERSION, WireError, type AnyMessage, type Message } from '@agnt-sdk/simon-protocol';
 import { authenticateReader, isAgentSigned } from './auth.ts';
 import type { Context } from './context.ts';
 import type { Request } from './http.ts';

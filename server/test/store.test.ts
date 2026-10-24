@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, it } from 'node:test';
-import type { Message } from '@agnt-protocol/protocol';
+import type { Message } from '@agnt-sdk/simon-protocol';
 import type { StoredMessage } from '../src/store/store.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import { retractionCapacityContract, storeContract } from '../src/store/contract.ts';

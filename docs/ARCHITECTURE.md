@@ -17,11 +17,11 @@ the reasons behind the division are in [DECISIONS.md](DECISIONS.md), "Three proj
 | Project | Directories | What it is | Depends on |
 | --- | --- | --- | --- |
 | **The protocol** | `spec/`, `protocol/`, `conformance/` | What independent implementations must agree on: the specification, its test vectors, a library that implements every offline rule, and a black-box suite that tests any server over HTTP. | Node only |
-| **The basic server** | `server/` | The smallest complete server: the protocol and the client API, hardened, and nothing else. No people, directory or policy. Storage is sqlite. | Node and `@agnt-protocol/protocol` |
+| **The basic server** | `server/` | The smallest complete server: the protocol and the client API, hardened, and nothing else. No people, directory or policy. Storage is sqlite. | Node and `@agnt-sdk/simon-protocol` |
 | **The application template** | `app/` | The basic server with modules for a directory, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Storage is MongoDB. | The basic server's published entry points, MongoDB's driver, zod, nodemailer |
 
 Beside them:
-- **Clients** (`clients/`): `js` (the client API and verification, Node and `@agnt-protocol/protocol` only), `cli`
+- **Clients** (`clients/`): `js` (the client API and verification, Node and `@agnt-sdk/simon-protocol` only), `cli`
   and `mcp` (both on `js`), and `python` (a port maintained beside the JavaScript client, standard library only,
   `cryptography` optional).
 - **Examples** (`examples/`): agents and per-runtime guides, on the clients.
@@ -141,14 +141,14 @@ Its rules are written on the interface:
 - returned records are copies.
 
 `server/src/store/contract.ts` states those rules as tests, published as
-`@agnt-protocol/server/store-contract`. Among them, a reader following the inbox cursor never skips an
+`simon-server/store-contract`. Among them, a reader following the inbox cursor never skips an
 entry that concurrent writers add. A store proves itself by running them:
 `storeContract(name, () => freshStore())`. `SqliteStore` passes them in `server/test/store.test.ts`, and
 the application's `MongoStore` in `app/test/store.test.ts`.
 
 ### Testing seam
 
-`@agnt-protocol/server/testing` is the outside world as test doubles: a movable `Clock`, `FakeDns`, and
+`simon-server/testing` is the outside world as test doubles: a movable `Clock`, `FakeDns`, and
 `FakeNet`, whose origins answer in-process. The server's tests and the application's run whole
 federations of servers in one process on it.
 
@@ -168,9 +168,9 @@ are under `/simon/`, served by the basic server unchanged.
 | A file in | may import |
 | --- | --- |
 | `protocol/` | Node's built-in modules |
-| `server/`, `conformance/`, `clients/js/` | Node, `@agnt-protocol/protocol` |
-| `clients/cli/`, `clients/mcp/` | Node, `@agnt-protocol/protocol`, `@agnt-protocol/client` and its `/credentials`, `/provenance`, `/wait` and `/workspace` entries |
-| `app/` | Node, `@agnt-protocol/protocol`, `@agnt-protocol/client`, `@agnt-protocol/server` and its `/store-contract` and `/testing` entries, its npm dependencies, `skill/grade.js`; never a file inside `server/` |
+| `server/`, `conformance/`, `clients/js/` | Node, `@agnt-sdk/simon-protocol` |
+| `clients/cli/`, `clients/mcp/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-client` and its `/credentials`, `/provenance`, `/wait` and `/workspace` entries |
+| `app/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-client`, `simon-server` and its `/store-contract` and `/testing` entries, its npm dependencies, `skill/grade.js`; never a file inside `server/` |
 | `examples/` | Node, the published packages, and an example's own dependencies |
 
 A relative import stays inside its own project, with two exceptions:

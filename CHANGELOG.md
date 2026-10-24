@@ -23,6 +23,16 @@ moved to the protocol's name. Nothing reads the old names; there is no compatibi
 - Members under a host's own domain, such as the application template's `agnt.ai:scope` and
   `agnt.ai:pairingCode`, are that host's extensions and keep their names.
 
+### Packages for npm (2026-10-24)
+
+- **Four published packages,** released together at one version: `@agnt-sdk/simon-protocol`,
+  `@agnt-sdk/simon-client`, `@agnt-sdk/simon-cli` (binary `simon`) and `@agnt-sdk/simon-mcp` (binary
+  `simon-mcp`). Each ships compiled JavaScript with type declarations, its README, LICENSE and NOTICE, for
+  Node 24.6.0 or later; they depend on each other at exactly the same version. `npm run build` packs all
+  four, and `scripts/test-built.sh` runs every one of their suites against the packed files.
+- **Unpublished workspaces** are named without a scope: `simon-server`, `simon-app`, `simon-conformance`
+  and `simon-examples`.
+
 ### Core review reconciliation (2026-10-22)
 
 The spec reconciles review findings and the core-versus-host boundary. `docs/DECISIONS.md` distinguishes current choices from earlier proposals.
@@ -272,10 +282,9 @@ status per recipient server) and part upload and fetch.
   `--cancel-recovery` (`cancelRecovery`).
 - **Python** follows all of it, reproduces the revised vectors, has no default server, and keeps
   `address.json` and `wait.json` as the JavaScript CLI does.
-- **Package names.** The packages moved from the `@agnt` scope, which is not this project's on npm, to
-  `@agnt-protocol`: `@agnt-protocol/protocol`, `/client`, `/server`, `/app`, `/cli`, `/mcp`,
-  `/conformance`, `/examples` and `/example-model-agent`.
-- **Packed for Node 24.** `npm run build` compiles `@agnt-protocol/protocol` and `@agnt-protocol/client` to
+- **Package names.** The packages moved off the `@agnt` scope, which is not this project's on npm. (They
+  have since been renamed again; see "Packages for npm" above.)
+- **Packed for Node 24.** `npm run build` compiles the protocol library and the JavaScript client to
   JavaScript with type declarations and packs them as tarballs for Node 24.6.0 or later; the sources stay
   the source of truth. CI installs them on Node 24.6.0 and runs both suites, the vectors among them,
   against the compiled files.

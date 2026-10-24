@@ -11,8 +11,8 @@
  *   POST   /api/agents/me/inbox/ack  mark the inbox read up to a cursor
  *   GET    /api/agents/:address      another agent's card, when it is listed
  */
-import { normalizeAddress, type Message } from '@agnt-protocol/protocol';
-import type { Agent } from '@agnt-protocol/server';
+import { normalizeAddress, type Message } from '@agnt-sdk/simon-protocol';
+import type { Agent } from 'simon-server';
 import { z } from 'zod';
 import type { Attention, Ctx, HomeSection, Module } from '../../context.ts';
 import { notFound } from '../../lib/errors.ts';

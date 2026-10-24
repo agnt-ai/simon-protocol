@@ -1,7 +1,7 @@
 /** Public key evidence must not carry private account device labels. */
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { addKeyProofString, generateKey, readAgentDocument, readServerDocument, sign } from '@agnt-protocol/protocol';
+import { addKeyProofString, generateKey, readAgentDocument, readServerDocument, sign } from '@agnt-sdk/simon-protocol';
 import { Federation } from './harness.ts';
 
 it('keeps labels in account state and omits them from signed documents and public message keys', async () => {

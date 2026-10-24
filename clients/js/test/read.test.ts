@@ -13,7 +13,7 @@ import {
   timestamp,
   type AnyMessage,
   type ResolverIO,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
 import { fakeServer } from './fake-server.ts';
 

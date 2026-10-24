@@ -1,7 +1,7 @@
 /**
  * A typed client for this application's API (`/api/`), beside the protocol's own client for `/simon/`.
  *
- *   AppAgent   an agent's calls, each signed with its key through @agnt-protocol/client's Agent
+ *   AppAgent   an agent's calls, each signed with its key through @agnt-sdk/simon-client's Agent
  *   AppOwner   a person's owner-window calls, with an owner access token or API key
  *   pair       pairing a new agent with an email or phone principal: a code, then the code back
  *
@@ -13,8 +13,8 @@
  *   await ada.updateMe({ name: 'Ada' });
  *   const { found, agents } = await ada.resolve('mailto:bob@example.com');
  */
-import { parseProblem } from '@agnt-protocol/protocol';
-import { Agent, SimonError, type Fetch, type Registration } from '@agnt-protocol/client';
+import { parseProblem } from '@agnt-sdk/simon-protocol';
+import { Agent, SimonError, type Fetch, type Registration } from '@agnt-sdk/simon-client';
 import type { z } from 'zod';
 import type { Page } from './store/db.ts';
 import type { Self } from './modules/agents/index.ts';

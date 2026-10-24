@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
-import { generateKey, keyToken, privateKeyObject } from '@agnt-protocol/protocol';
+import { generateKey, keyToken, privateKeyObject } from '@agnt-sdk/simon-protocol';
 import {
   addressFile,
   ensureKeyFile,

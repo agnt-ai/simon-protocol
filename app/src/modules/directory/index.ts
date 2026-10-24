@@ -10,7 +10,7 @@
  * Hooks: verifyPrincipal and claimsFor (pairing), on.recovered (an agent recovered by its mailbox only
  * converses).
  */
-import type { Agent, Arrival } from '@agnt-protocol/server';
+import type { Agent, Arrival } from 'simon-server';
 import { z } from 'zod';
 import type { Activity, Ctx, Module } from '../../context.ts';
 import type { Caller } from '../../http/route.ts';

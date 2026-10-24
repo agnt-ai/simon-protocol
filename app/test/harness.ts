@@ -11,10 +11,10 @@
  *   await world.work();                                // every server's background work, settled
  */
 import type { KeyObject } from 'node:crypto';
-import { generateKey, keyToken, sign, signPairing } from '@agnt-protocol/protocol';
-import { Agent, type Delivered, SimonError, type Fetch } from '@agnt-protocol/client';
-import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from '@agnt-protocol/server';
-import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '@agnt-protocol/server/testing';
+import { generateKey, keyToken, sign, signPairing } from '@agnt-sdk/simon-protocol';
+import { Agent, type Delivered, SimonError, type Fetch } from '@agnt-sdk/simon-client';
+import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from 'simon-server';
+import { Clock, FakeDns, FakeNet, replyBody, toRequest } from 'simon-server/testing';
 import type { Db } from 'mongodb';
 import type { Email, Mailer } from '../src/adapters/mail.ts';
 import type { Scanner } from '../src/adapters/scanner.ts';

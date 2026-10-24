@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import type { KeyObject } from 'node:crypto';
 import { after, describe, it } from 'node:test';
-import { messageId, sign } from '@agnt-protocol/protocol';
+import { messageId, sign } from '@agnt-sdk/simon-protocol';
 import { isAwaiting } from '../src/client.ts';
 import { newId } from '../src/lib/ids.ts';
 import { consultedBytes } from '../src/modules/nudge/index.ts';

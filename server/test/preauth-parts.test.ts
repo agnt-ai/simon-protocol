@@ -1,7 +1,7 @@
 /** External signed part requests must use the same pre-authentication lookup budget as deliveries/readers. */
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { generateKey, signRequest } from '@agnt-protocol/protocol';
+import { generateKey, signRequest } from '@agnt-sdk/simon-protocol';
 import { Federation, toRequest } from './harness.ts';
 
 it('charges cold server-signed part lookups to the caller network and caches misses', async () => {

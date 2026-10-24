@@ -11,7 +11,7 @@ import {
   V1_ALGORITHMS,
   validAt,
   type Json,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { TargetAgent } from '../agent.ts';
 import type { Ctx } from '../context.ts';
 import type { T } from '../harness.ts';

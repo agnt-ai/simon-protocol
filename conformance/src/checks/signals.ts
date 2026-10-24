@@ -3,7 +3,7 @@
  * the receiving server answers; what it passes on to its agents is for its client API, and never stored.
  */
 import crypto from 'node:crypto';
-import { canonicalize, messageId, signSignal, timestamp, type UnsignedSignal } from '@agnt-protocol/protocol';
+import { canonicalize, messageId, signSignal, timestamp, type UnsignedSignal } from '@agnt-sdk/simon-protocol';
 import type { TargetAgent } from '../agent.ts';
 import { buildFrom, type Ctx } from '../context.ts';
 import { sleep, type Res, type T } from '../harness.ts';

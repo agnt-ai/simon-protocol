@@ -16,7 +16,7 @@ import {
   timestamp,
   verifyClaims,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { Federation, Peer, toRequest } from './harness.ts';
 
 const HOUR = 3_600_000;

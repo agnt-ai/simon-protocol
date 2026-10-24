@@ -31,7 +31,7 @@ import {
   signingBytes,
   type ServerDocument,
   type Signal,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { authenticateAgent } from './auth.ts';
 import { conflict } from './errors.ts';
 import { iso, later, type Context } from './context.ts';

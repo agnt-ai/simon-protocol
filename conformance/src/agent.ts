@@ -15,7 +15,7 @@ import {
   type AnyMessage,
   type Message,
   type Part,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { Req, Res, T } from './harness.ts';
 
 export interface SignOptions {

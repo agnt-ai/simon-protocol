@@ -18,7 +18,7 @@ import {
   signMessage,
   signRequest,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { systemDns, DnsFailure, type Lookups } from '../src/net/dns.ts';
 import { guardedHttp, Unreachable } from '../src/net/fetch.ts';
 import { clientKey, inNetworks, isBlockedAddress, parseNetwork, type Network } from '../src/net/ip.ts';

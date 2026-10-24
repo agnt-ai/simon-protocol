@@ -19,7 +19,7 @@ import {
   type MailboxNote,
   type ServerApi,
   type Store,
-} from '@agnt-protocol/server';
+} from 'simon-server';
 import type { Db } from 'mongodb';
 import { mailerFor, type Mailer } from './adapters/mail.ts';
 import type { Scanner } from './adapters/scanner.ts';

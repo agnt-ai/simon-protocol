@@ -17,7 +17,7 @@ import {
   timestamp,
   type Message,
   type ResolverIO,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { SimonError, fetchAgentDocument, verifyAuthor } from '../src/index.ts';
 
 const serverKey = generateKey();

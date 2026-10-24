@@ -9,7 +9,7 @@
  * `--help` lists every option.
  */
 import { parseArgs } from 'node:util';
-import { serverOrigin } from '@agnt-protocol/protocol';
+import { serverOrigin } from '@agnt-sdk/simon-protocol';
 import { AREAS, catalog, catalogMarkdown, DEFAULTS, runConformance, type CheckResult, type Report } from './suite.ts';
 
 const HELP = `Usage: node conformance/src/cli.ts --server <origin> [options]

@@ -9,7 +9,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { generateKey } from '@agnt-protocol/protocol';
+import { generateKey } from '@agnt-sdk/simon-protocol';
 import { Agent } from './agent.ts';
 import { invalid, originArg } from './errors.ts';
 import type { Transport } from './http.ts';

@@ -1,7 +1,7 @@
 /** Part success limits and bounded HTTP errors must not borrow one another's byte budget. */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { generateKey, sha256Hex } from '@agnt-protocol/protocol';
+import { generateKey, sha256Hex } from '@agnt-sdk/simon-protocol';
 import { Agent } from '../src/index.ts';
 import { exchange, failure, MAX_PROBLEM_BYTES } from '../src/http.ts';
 

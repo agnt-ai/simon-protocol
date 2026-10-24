@@ -1,7 +1,7 @@
 /** Cold foreign-reader authentication must charge every fetch before it starts. */
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { signRequest } from '@agnt-protocol/protocol';
+import { signRequest } from '@agnt-sdk/simon-protocol';
 import { Federation, toRequest } from './harness.ts';
 
 it('charges a cold reader chain, stops before its signing document, and reuses verified caches', async () => {

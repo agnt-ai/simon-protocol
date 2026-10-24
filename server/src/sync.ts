@@ -18,7 +18,7 @@
  * within this process, and looked for again every few seconds, for what another process wrote.
  */
 import crypto from 'node:crypto';
-import { invalid, unauthorized, WireError } from '@agnt-protocol/protocol';
+import { invalid, unauthorized, WireError } from '@agnt-sdk/simon-protocol';
 import { authenticateAgent, authenticateAgentKey } from './auth.ts';
 import { iso, type Context } from './context.ts';
 import { notFound } from './errors.ts';

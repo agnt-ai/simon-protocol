@@ -30,7 +30,7 @@ USER node
 WORKDIR /simon/app
 CMD ["node", "src/main.ts"]
 
-# The basic server: Node's standard library and @agnt-protocol/protocol, nothing from npm. Its sqlite file is
+# The basic server: Node's standard library and @agnt-sdk/simon-protocol, nothing from npm. Its sqlite file is
 # in the /data volume.
 FROM node:26-alpine AS server
 WORKDIR /simon
@@ -38,10 +38,10 @@ COPY protocol/package.json protocol/
 COPY protocol/src protocol/src
 COPY server/package.json server/
 COPY server/src server/src
-# @agnt-protocol/protocol resolves through a link, as npm's workspaces make one: Node strips types only from
+# @agnt-sdk/simon-protocol resolves through a link, as npm's workspaces make one: Node strips types only from
 # files outside node_modules, and the link's target is outside. npm itself is removed from the image.
-RUN mkdir -p node_modules/@agnt-protocol /data \
-  && ln -s ../../protocol node_modules/@agnt-protocol/protocol \
+RUN mkdir -p node_modules/@agnt-sdk /data \
+  && ln -s ../../protocol node_modules/@agnt-sdk/simon-protocol \
   && chown node:node /data \
   && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg

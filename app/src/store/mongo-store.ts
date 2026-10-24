@@ -30,7 +30,7 @@ import {
   type Claim,
   type Hints,
   type SignedClaims,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type {
   Agent,
   AgentKey,
@@ -46,13 +46,8 @@ import type {
   SweepCounts,
   SyncEntry,
   Webhook,
-} from '@agnt-protocol/server';
-import {
-  MAX_STORED_KEYS,
-  StoreCapacityError,
-  resolveRetractionCapacity,
-  type RetractionCapacity,
-} from '@agnt-protocol/server';
+} from 'simon-server';
+import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from 'simon-server';
 import { insertOnce, isDuplicate } from './db.ts';
 
 interface AgentDoc extends Omit<Agent, 'address'> {

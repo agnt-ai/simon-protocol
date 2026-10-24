@@ -1,14 +1,14 @@
-# @agnt-protocol/client
+# @agnt-sdk/simon-client
 
 The JavaScript client for the SIMON Protocol: an agent's signed calls to its own server
 ([spec/CLIENT.md](../../spec/CLIENT.md)), each request signed with the agent's key, and verification of
-what other agents send. Node 26, or Node 24.6 packed (below); no dependencies beyond [`@agnt-protocol/protocol`](../../protocol),
+what other agents send. Node 26, or Node 24.6 packed (below); no dependencies beyond [`@agnt-sdk/simon-protocol`](../../protocol),
 which holds the protocol itself (canonical JSON, keys, messages). This package re-exports only the types
 its API uses.
 
 ```ts
-import { generateKey } from '@agnt-protocol/protocol';
-import { Agent, verifyAuthor } from '@agnt-protocol/client';
+import { generateKey } from '@agnt-sdk/simon-protocol';
+import { Agent, verifyAuthor } from '@agnt-sdk/simon-client';
 
 const ada = new Agent({ server: 'https://simon.example.com', key: generateKey().privateKeyPem });
 await ada.register();                                   // a leased address: ada.address
@@ -59,7 +59,7 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 | `{address}` | An address on a hosted domain binds at once; any other is sent a code. |
 | `{address, code}` | The creation code that was sent. Existing-address recovery uses `recover`, never `register`. |
 | `{for}` | Pair with a key principal (`simon-key:<token>`). A leased address answers `pairing_required`. |
-| `{for, pairing}` | The principal's signature over `SIMON-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-protocol/protocol`). |
+| `{for, pairing}` | The principal's signature over `SIMON-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-sdk/simon-protocol`). |
 
 An account answer binds `address`, and `for`/`pairing` when given. `recover` is separate from
 creation and pairing: request a code, then repeat `recover` with the address and code. A waiting
@@ -146,7 +146,7 @@ A server's error is RFC 9457 problem details; the client reads it with the proto
 keeping `code`, `detail` (as `message`) and `details`, with `status` and `retryable` from the HTTP status.
 A body without a `code` is `bad_response`. `toJSON()` gives `{error:{code,message,status,retryable,details,retryAfter}}`.
 
-## `@agnt-protocol/client/credentials`
+## `@agnt-sdk/simon-client/credentials`
 
 The key and address on disk, shared by the CLI and the MCP server:
 
@@ -172,31 +172,32 @@ Three modules the CLI and the MCP server share, so neither hands a model more th
 
 | Module | |
 | --- | --- |
-| `@agnt-protocol/client/provenance` | `presentEntry(entry)` keeps the server's facts outside and puts the message, each claim and the signed claims inside `{untrusted:{from, basis, content, invisible?}}`; `invisibleIn(value)` lists tag characters, bidirectional controls and zero-width characters by path; `presentDelivery` labels a failure reason the protocol does not define; `unwrapEntry` gives back `{message, signedClaims?}` from any of these forms; `RULE` is the sentence every answer carries. |
-| `@agnt-protocol/client/workspace` | `workspace(home, env?)` is `SIMON_WORKSPACE` or the working directory; `readFile`, `writablePath` and `writeFile` resolve every link and refuse anything outside it, or under `SIMON_HOME`, or a hard link to a file there; writes never follow a link. |
-| `@agnt-protocol/client/wait` | `waitForMessage(agent, home, {from?, timeoutMs, intervalMs})`: the next message not yet shown, oldest first, or null at the deadline. What was shown is kept in `$SIMON_HOME/wait.json` (`{token,pending,seen}`: an opaque token, unmatched queued entries, recent ids), so a message delivered twice, or passed over by a wait for one correspondent, is shown exactly once. |
+| `@agnt-sdk/simon-client/provenance` | `presentEntry(entry)` keeps the server's facts outside and puts the message, each claim and the signed claims inside `{untrusted:{from, basis, content, invisible?}}`; `invisibleIn(value)` lists tag characters, bidirectional controls and zero-width characters by path; `presentDelivery` labels a failure reason the protocol does not define; `unwrapEntry` gives back `{message, signedClaims?}` from any of these forms; `RULE` is the sentence every answer carries. |
+| `@agnt-sdk/simon-client/workspace` | `workspace(home, env?)` is `SIMON_WORKSPACE` or the working directory; `readFile`, `writablePath` and `writeFile` resolve every link and refuse anything outside it, or under `SIMON_HOME`, or a hard link to a file there; writes never follow a link. |
+| `@agnt-sdk/simon-client/wait` | `waitForMessage(agent, home, {from?, timeoutMs, intervalMs})`: the next message not yet shown, oldest first, or null at the deadline. What was shown is kept in `$SIMON_HOME/wait.json` (`{token,pending,seen}`: an opaque token, unmatched queued entries, recent ids), so a message delivered twice, or passed over by a wait for one correspondent, is shown exactly once. |
 
 ## Packed for Node 24
 
-Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles this package and
-`@agnt-protocol/protocol` to JavaScript with type declarations, and packs each as a tarball in `packed/`. Each
-commit's build is its own version, `0.1.0-g<commit>`, and the client depends on the protocol package of
-the same build. They run on Node 24.6.0 or later, the first with ML-DSA-65 keys, and their declarations
-use `@types/node`.
+Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles the four packages
+(`@agnt-sdk/simon-protocol`, this one, `@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`) to JavaScript
+with type declarations, and packs each as a tarball in `packed/`. Each commit's build is its own version,
+`0.1.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
+later, the first with ML-DSA-65 keys, and their declarations use `@types/node`. A release publishes the
+same build, at the release's version, to npm (CONTRIBUTING.md, "Releasing").
 
-Install the two together, with the `@agnt-protocol` scope kept from every registry: these packages are
-not published, so nothing a registry serves under that scope is this project's build.
+To install a local build, keep the `@agnt-sdk` scope from every registry, so that nothing a registry
+serves stands in for the build:
 
 ```sh
-echo '@agnt-protocol:registry=https://registry.invalid/' >> .npmrc
-npm install ./packed/agnt-protocol-protocol-0.1.0-g<commit>.tgz ./packed/agnt-protocol-client-0.1.0-g<commit>.tgz
+echo '@agnt-sdk:registry=https://registry.invalid/' >> .npmrc
+npm install ./packed/agnt-sdk-simon-protocol-0.1.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.1.0-g<commit>.tgz
 ```
 
 ## Tests
 
 `npm test -w clients/js`: the calls, the documents, the key file, the trust record, provenance, the
 workspace and wait, against an in-process server (`test/fake-server.ts`) that checks every request
-signature with `@agnt-protocol/protocol` and speaks the current wire. `test/forge.test.ts` is the review panel's
+signature with `@agnt-sdk/simon-protocol` and speaks the current wire. `test/forge.test.ts` is the review panel's
 forge of `ceo@bank.example.com`, which must fail. No network.
 
 A fresh recovered paired agent needs its local principal state to compose messages. Pass `for` and

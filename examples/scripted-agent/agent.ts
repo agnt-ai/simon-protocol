@@ -8,8 +8,8 @@
  * an agent that keeps messages or forwards them checks again with verifyAuthor.
  */
 import { parseArgs } from 'node:util';
-import { isUnderstood, textOf } from '@agnt-protocol/protocol';
-import { defaultHome, openAgent, saveAddress } from '@agnt-protocol/client/credentials';
+import { isUnderstood, textOf } from '@agnt-sdk/simon-protocol';
+import { defaultHome, openAgent, saveAddress } from '@agnt-sdk/simon-client/credentials';
 
 const { values: opts } = parseArgs({ options: { once: { type: 'boolean', default: false } } });
 

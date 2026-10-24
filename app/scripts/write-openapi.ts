@@ -7,8 +7,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { generateKey } from '@agnt-protocol/protocol';
-import { defineConfig } from '@agnt-protocol/server';
+import { generateKey } from '@agnt-sdk/simon-protocol';
+import { defineConfig } from 'simon-server';
 import { MongoClient } from 'mongodb';
 import * as prettier from 'prettier';
 import { createApp } from '../src/app.ts';

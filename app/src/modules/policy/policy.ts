@@ -25,8 +25,8 @@ import {
   normalizeDomain,
   serverOrigin,
   type Message,
-} from '@agnt-protocol/protocol';
-import type { Arrival, Decision } from '@agnt-protocol/server';
+} from '@agnt-sdk/simon-protocol';
+import type { Arrival, Decision } from 'simon-server';
 import type { Ctx } from '../../context.ts';
 import { invalid, notFound } from '../../lib/errors.ts';
 import { newId } from '../../lib/ids.ts';

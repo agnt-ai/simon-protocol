@@ -11,7 +11,7 @@
  *   - a solo agent, or one waiting on that confirmation: itself, written `agent:<address>`, so its own
  *     edges and attestations still have an owner and nothing private to a person is shown.
  */
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import type { Activity, Ctx } from '../../context.ts';
 import { forbidden, notFound } from '../../lib/errors.ts';
 import { newId } from '../../lib/ids.ts';

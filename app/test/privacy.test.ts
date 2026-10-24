@@ -5,7 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import { sha256Hex } from '@agnt-protocol/protocol';
+import { sha256Hex } from '@agnt-sdk/simon-protocol';
 import type { Db, Filter } from 'mongodb';
 import { AppOwner } from '../src/client.ts';
 import { received, notices, strong, texts, World } from './harness.ts';

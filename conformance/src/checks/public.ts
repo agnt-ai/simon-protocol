@@ -12,7 +12,7 @@ import {
   verifyMessage,
   type KeyEntry,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { buildFrom, Prerequisite, type Ctx } from '../context.ts';
 import { sleep, type Res, type T } from '../harness.ts';
 import { agentDocument, awaitSync, def } from './common.ts';

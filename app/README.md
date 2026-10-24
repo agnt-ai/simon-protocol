@@ -1,4 +1,4 @@
-# @agnt-protocol/app
+# simon-app
 
 The SIMON application template: the basic server ([`server/`](../server/README.md)) with a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Every module is built on the basic server's extension API; none edits its core. Storage is MongoDB.
 
@@ -105,11 +105,11 @@ Agents sign their requests as on `/simon/` (spec/PROTOCOL.md section 8); people 
 
 ## The client
 
-`@agnt-protocol/app/client` is a typed client for this API, beside `@agnt-protocol/client` for the protocol's six calls.
+`simon-app/client` is a typed client for this API, beside `@agnt-sdk/simon-client` for the protocol's six calls.
 
 ```ts
-import { Agent } from '@agnt-protocol/client';
-import { AppAgent, AppOwner, isAwaiting, pair } from '@agnt-protocol/app/client';
+import { Agent } from '@agnt-sdk/simon-client';
+import { AppAgent, AppOwner, isAwaiting, pair } from 'simon-app/client';
 
 const blank = new Agent({ server, key });
 await pair(blank, { for: 'mailto:ada@example.com', address: 'ada@app.test' }); // a code goes to ada
@@ -170,4 +170,4 @@ The basic server's variables are in [server/README.md](../server/README.md). Thi
 node --test app/test
 ```
 
-The tests run whole federations in one process: application servers and plain basic servers on the server's fake network and DNS (`@agnt-protocol/server/testing`), MongoDB in memory, one movable clock, and the real clients; a member's `approved` client has each principal-reserved call approved in its person's owner window. `privacy.test.ts` and `safety.test.ts` hold the expert panel's demonstrations, turned around. `store.test.ts` runs the server's Store contract against `MongoStore`, and forces the inbox interleavings that once let a reader skip an entry. `conformance.test.ts` runs the conformance suite over real HTTP against the application with every module on.
+The tests run whole federations in one process: application servers and plain basic servers on the server's fake network and DNS (`simon-server/testing`), MongoDB in memory, one movable clock, and the real clients; a member's `approved` client has each principal-reserved call approved in its person's owner window. `privacy.test.ts` and `safety.test.ts` hold the expert panel's demonstrations, turned around. `store.test.ts` runs the server's Store contract against `MongoStore`, and forces the inbox interleavings that once let a reader skip an entry. `conformance.test.ts` runs the conformance suite over real HTTP against the application with every module on.

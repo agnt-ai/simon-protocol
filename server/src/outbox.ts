@@ -28,7 +28,14 @@
  * Caps, dead and throttled destinations are this process's; several workers on one store each keep their own.
  */
 import crypto from 'node:crypto';
-import { canonicalBytes, domainOf, envelopeFor, parseProblem, signEnvelope, type Hints } from '@agnt-protocol/protocol';
+import {
+  canonicalBytes,
+  domainOf,
+  envelopeFor,
+  parseProblem,
+  signEnvelope,
+  type Hints,
+} from '@agnt-sdk/simon-protocol';
 import { iso, later, type Context } from './context.ts';
 import { arrivalsFor } from './fanout.ts';
 import { Unreachable } from './net/fetch.ts';

@@ -10,8 +10,8 @@
  *     handle: ({ caller, query }) => policy.held(caller.address, query),
  *   })
  */
-import { parseJson, type Json } from '@agnt-protocol/protocol';
-import type { Agent, Reply, Request, Route, ServerApi } from '@agnt-protocol/server';
+import { parseJson, type Json } from '@agnt-sdk/simon-protocol';
+import type { Agent, Reply, Request, Route, ServerApi } from 'simon-server';
 import { z } from 'zod';
 import { invalid } from '../lib/errors.ts';
 

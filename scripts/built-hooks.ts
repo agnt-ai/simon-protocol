@@ -1,9 +1,9 @@
 /**
- * The protocol's and the JavaScript client's own suites, run against their packed builds: an import that
- * resolves into protocol/src or clients/js/src resolves instead to the compiled file of the package
- * installed under SIMON_BUILT, a directory whose node_modules holds both. scripts/test-built.sh runs:
+ * The packages' own suites, run against their packed builds: an import that resolves into protocol/src,
+ * clients/js/src, clients/cli/src or clients/mcp/src resolves instead to the compiled file of the package
+ * installed under SIMON_BUILT, a directory whose node_modules holds all four. scripts/test-built.sh runs:
  *
- *   SIMON_BUILT=<dir> NODE_OPTIONS=--import=<this file> node --test 'protocol/test/**' 'clients/js/test/**'
+ *   SIMON_BUILT=<dir> NODE_OPTIONS=--import=<this file> node --test 'protocol/test/**' 'clients/js/test/**' ...
  *
  * NODE_OPTIONS, not --import, so that a test's own child processes resolve the builds too.
  */
@@ -17,8 +17,10 @@ const root = pathToFileURL(path.resolve(import.meta.dirname, '..')).href;
 // The real path, as Node resolves installed packages: one module, never two copies under two paths.
 const installed = pathToFileURL(fs.realpathSync(path.resolve(process.env.SIMON_BUILT, 'node_modules'))).href;
 const BUILDS: [string, string][] = [
-  [`${root}/protocol/src/`, `${installed}/@agnt-protocol/protocol/dist/`],
-  [`${root}/clients/js/src/`, `${installed}/@agnt-protocol/client/dist/`],
+  [`${root}/protocol/src/`, `${installed}/@agnt-sdk/simon-protocol/dist/`],
+  [`${root}/clients/js/src/`, `${installed}/@agnt-sdk/simon-client/dist/`],
+  [`${root}/clients/cli/src/`, `${installed}/@agnt-sdk/simon-cli/dist/`],
+  [`${root}/clients/mcp/src/`, `${installed}/@agnt-sdk/simon-mcp/dist/`],
 ];
 
 registerHooks({

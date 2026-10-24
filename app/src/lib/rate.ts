@@ -2,7 +2,7 @@
  * This application's rate limits: fixed windows counted in the store, so a limit holds across processes.
  * Each counts calls, per the key its caller gives. Overrides: `SIMON_APP_RATES=name=count/seconds,...`.
  */
-import type { ServerApi } from '@agnt-protocol/server';
+import type { ServerApi } from 'simon-server';
 import { fail, list, type Env } from './env.ts';
 import { rateLimited } from './errors.ts';
 
@@ -73,4 +73,4 @@ export async function spend(api: ServerApi, name: RateName, rate: Rate, key: str
 }
 
 /** A client's network for per-IP limits: IPv6 by /64, as the server counts it. */
-export { clientKey } from '@agnt-protocol/server';
+export { clientKey } from 'simon-server';

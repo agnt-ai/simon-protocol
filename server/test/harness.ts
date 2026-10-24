@@ -1,6 +1,6 @@
 /**
  * Whole federations in one process: servers on a fake network with a fake DNS and one movable clock,
- * and agents that speak the client API with nothing but @agnt-protocol/protocol.
+ * and agents that speak the client API with nothing but @agnt-sdk/simon-protocol.
  *
  *   const fed = new Federation();
  *   const alpha = await fed.server('alpha');            // https://simon.alpha.test, hosting alpha.test
@@ -29,7 +29,7 @@ import {
   type Message,
   type Part,
   type Unsigned,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { defineConfig, type ConfigInput } from '../src/config.ts';
 import type { Extension } from '../src/extensions.ts';
 import type { MailboxNote } from '../src/context.ts';

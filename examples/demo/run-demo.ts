@@ -13,8 +13,8 @@
  * Any failure exits non-zero. Each run makes fresh keys, so it can run again and again.
  */
 import assert from 'node:assert/strict';
-import { generateKey, signPairing, textOf, type ResolverIO } from '@agnt-protocol/protocol';
-import { Agent, verifyAuthor, type Delivered } from '@agnt-protocol/client';
+import { generateKey, signPairing, textOf, type ResolverIO } from '@agnt-sdk/simon-protocol';
+import { Agent, verifyAuthor, type Delivered } from '@agnt-sdk/simon-client';
 
 const SERVER = process.env.SIMON_SERVER ?? 'http://localhost:8787';
 const DEV_RESOLVE = Object.fromEntries(

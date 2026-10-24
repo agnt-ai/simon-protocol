@@ -28,7 +28,7 @@ import {
   verifyUnpairing,
   WireError,
   type Json,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { authenticateAgent, authenticateAgentKey, checkActor, verifyAnyKey } from './auth.ts';
 import { iso, type Context } from './context.ts';
 import { badRequest, conflict, notFound } from './errors.ts';

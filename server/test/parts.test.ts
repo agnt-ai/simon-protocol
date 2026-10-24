@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import { canonicalBytes, generateKey, messageId, sha256Hex, signRequest } from '@agnt-protocol/protocol';
+import { canonicalBytes, generateKey, messageId, sha256Hex, signRequest } from '@agnt-sdk/simon-protocol';
 import { replyBody } from '../src/testing.ts';
 import { defineConfig } from '../src/config.ts';
 import {

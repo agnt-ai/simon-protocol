@@ -28,7 +28,7 @@ import {
   type AnyMessage,
   type Limits,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { listedKeys } from '../public.ts';
 import { SqliteStore } from './sqlite.ts';
 import { resolveRetractionCapacity, type Agent, type RetractionCapacity } from './store.ts';

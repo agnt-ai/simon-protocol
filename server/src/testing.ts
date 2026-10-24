@@ -9,7 +9,7 @@
  *   net.hosts.set(config.origin, req => server.handle(req));
  *   dns.point('example.test', config.origin);
  */
-import { canonicalize } from '@agnt-protocol/protocol';
+import { canonicalize } from '@agnt-sdk/simon-protocol';
 import type { Reply, Request } from './http.ts';
 import { DnsFailure, type Dns } from './net/dns.ts';
 import { Unreachable, type Http, type HttpRequest, type HttpResponse } from './net/fetch.ts';

@@ -10,7 +10,7 @@
  *   - **Inbox events** are written with the inbox entry and told afterwards, at least once: a crash between
  *     the two repeats the event, never loses it.
  */
-import type { Claim, Hints } from '@agnt-protocol/protocol';
+import type { Claim, Hints } from '@agnt-sdk/simon-protocol';
 import { iso, later, type Context } from './context.ts';
 import type { QueuedArrival, StoredMessage } from './store/store.ts';
 import { changed } from './sync.ts';

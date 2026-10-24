@@ -4,7 +4,7 @@
  *
  * Hooks: admit; on.stored and on.inbox, to know who wrote to whom.
  */
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import type { Ctx, Module } from '../../context.ts';
 import type { Caller } from '../../http/route.ts';
 import type { Directory } from '../directory/index.ts';

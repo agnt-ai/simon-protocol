@@ -5,9 +5,9 @@
 import assert from 'node:assert/strict';
 import net from 'node:net';
 import { after, before, describe, it } from 'node:test';
-import { generateKey } from '@agnt-protocol/protocol';
-import { runConformance, type Report } from '@agnt-protocol/conformance';
-import { defineConfig } from '@agnt-protocol/server';
+import { generateKey } from '@agnt-sdk/simon-protocol';
+import { runConformance, type Report } from 'simon-conformance';
+import { defineConfig } from 'simon-server';
 import { createApp, type App } from '../src/app.ts';
 import { loadAppConfig } from '../src/config.ts';
 import { freshDb, stopMongo } from './mongo.ts';

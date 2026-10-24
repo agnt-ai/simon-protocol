@@ -1,5 +1,5 @@
 /** CLIENT device labels and revocation, without imposing host key-ranking policy. */
-import { addKeyProofString, parseTimestamp, sign } from '@agnt-protocol/protocol';
+import { addKeyProofString, parseTimestamp, sign } from '@agnt-sdk/simon-protocol';
 import { TargetAgent } from '../agent.ts';
 import type { Ctx } from '../context.ts';
 import type { T } from '../harness.ts';

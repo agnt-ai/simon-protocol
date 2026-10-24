@@ -1,8 +1,8 @@
 /** Repeated forwarding retains its own file source after older grants expire, on the app's real store. */
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { generateKey, sha256Hex } from '@agnt-protocol/protocol';
-import { createServer, defineConfig, type SimonServer } from '@agnt-protocol/server';
+import { generateKey, sha256Hex } from '@agnt-sdk/simon-protocol';
+import { createServer, defineConfig, type SimonServer } from 'simon-server';
 import { MongoStore } from '../src/store/mongo-store.ts';
 import { World } from './harness.ts';
 import { freshDb } from './mongo.ts';

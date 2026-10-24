@@ -52,7 +52,7 @@ import {
   privateKeyFromSeed,
   serverOrigin,
   type Limits,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { parseNetwork, type Network } from './net/ip.ts';
 
 /** A limit of `limit` events per `seconds`, per key. */

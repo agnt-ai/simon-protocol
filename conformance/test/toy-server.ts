@@ -37,7 +37,7 @@ import {
   WireError,
   withinRepeatWindow,
   type KeyEntry,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 
 /** Optional client faults exercise the migrated suite without changing its protocol faults. */
 export interface ClientFaults {

@@ -5,8 +5,8 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import type { StoredMessage } from '@agnt-protocol/server';
-import { storeContract, retractionCapacityContract } from '@agnt-protocol/server/store-contract';
+import type { StoredMessage } from 'simon-server';
+import { storeContract, retractionCapacityContract } from 'simon-server/store-contract';
 import type { Collection, Db, Document } from 'mongodb';
 import { MongoStore } from '../src/store/mongo-store.ts';
 import { freshDb, stopMongo } from './mongo.ts';

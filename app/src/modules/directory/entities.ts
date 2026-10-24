@@ -5,7 +5,7 @@
  * evidence of an affiliation here, so it is recorded as corroborated; like anything said about someone
  * else, it waits for its subject to confirm it.
  */
-import { normalizeDomain } from '@agnt-protocol/protocol';
+import { normalizeDomain } from '@agnt-sdk/simon-protocol';
 import type { Ctx } from '../../context.ts';
 import { badRequest, conflict, forbidden, invalid, notFound, unprocessable } from '../../lib/errors.ts';
 import { newId } from '../../lib/ids.ts';

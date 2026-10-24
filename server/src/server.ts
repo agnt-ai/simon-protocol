@@ -6,7 +6,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import type { AddressInfo } from 'node:net';
-import { bodyTooLarge, WireError } from '@agnt-protocol/protocol';
+import { bodyTooLarge, WireError } from '@agnt-sdk/simon-protocol';
 import { addKey, cancelRecovery, endGrant, getAccount, getRecovery, revokeKey, unpair } from './account.ts';
 import { authenticateAgent } from './auth.ts';
 import type { Config } from './config.ts';

@@ -19,7 +19,7 @@ import {
   type Envelope,
   type Limits,
   type ServerDocument,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { buildMessage, TargetAgent, type MessageFields } from './agent.ts';
 import { CheckSkip, problem, T, type Exchange, type Res } from './harness.ts';
 import { Peer, type PeerAgent } from './peer.ts';

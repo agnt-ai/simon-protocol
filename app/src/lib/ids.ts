@@ -4,7 +4,7 @@
  * id is the SHA-256 of its signed bytes.
  */
 import crypto from 'node:crypto';
-import { sha256Hex } from '@agnt-protocol/protocol';
+import { sha256Hex } from '@agnt-sdk/simon-protocol';
 
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'; // Crockford base32
 

@@ -9,7 +9,7 @@
  * at signs count as the ASCII ones, and dot-like marks NFKC keeps apart (a middle dot, a katakana dot)
  * count as dots. What is stored is what was written.
  */
-import { invalid } from '@agnt-protocol/protocol';
+import { invalid } from '@agnt-sdk/simon-protocol';
 
 /** A dot, or a mark that reads as one, with something other than space or a dot on each side. */
 const DOTTED = /[^\s.。·‧∙⋅・⸱۔ꓸ][.。·‧∙⋅・⸱۔ꓸ][^\s.。·‧∙⋅・⸱۔ꓸ]/u;

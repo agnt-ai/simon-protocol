@@ -1,7 +1,7 @@
 /** Entities: find or name one, read it, claim it by DNS, name it, and attest who works there. */
 import { z } from 'zod';
 import type { Ctx } from '../../../context.ts';
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import { agent, anyone, defineRoute, type ApiRoute, type Caller } from '../../../http/route.ts';
 import { spend } from '../../../lib/rate.ts';
 import { entityView } from '../entities.ts';

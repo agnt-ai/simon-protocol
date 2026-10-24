@@ -20,15 +20,11 @@ const imports = (file: string) =>
   [...fs.readFileSync(file, 'utf8').matchAll(/^(?:import|export)[^'"]*from '([^']+)'/gm)].map(m => m[1]);
 
 describe('boundaries', () => {
-  it('reaches the server only through @agnt-protocol/server and its published entry points', () => {
-    const allowed = new Set([
-      '@agnt-protocol/server',
-      '@agnt-protocol/server/store-contract',
-      '@agnt-protocol/server/testing',
-    ]);
+  it('reaches the server only through simon-server and its published entry points', () => {
+    const allowed = new Set(['simon-server', 'simon-server/store-contract', 'simon-server/testing']);
     for (const file of sources(path.join(ROOT, 'app'))) {
       for (const spec of imports(file)) {
-        if (spec.startsWith('@agnt-protocol/server')) assert.ok(allowed.has(spec), `${file}: ${spec}`);
+        if (spec.startsWith('simon-server')) assert.ok(allowed.has(spec), `${file}: ${spec}`);
         // Relative imports stay in the application, but for the published grading rubric in skill/.
         const target = path.resolve(path.dirname(file), spec);
         if (spec.startsWith('.'))

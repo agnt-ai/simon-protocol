@@ -4,8 +4,8 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import { generateKey, signPairing, signRecovery } from '@agnt-protocol/protocol';
-import { Agent, type Delivered } from '@agnt-protocol/client';
+import { generateKey, signPairing, signRecovery } from '@agnt-sdk/simon-protocol';
+import { Agent, type Delivered } from '@agnt-sdk/simon-client';
 import { AppAgent, pair } from '../src/client.ts';
 import { received, World } from './harness.ts';
 

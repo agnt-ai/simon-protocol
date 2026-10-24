@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { generateKey } from '@agnt-protocol/protocol';
+import { generateKey } from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, type Delivered } from '../src/index.ts';
 import { invisibleIn, presentDelivery, presentEntry, unwrapEntry } from '../src/provenance.ts';
 import { readFile, workspace, writeFile } from '../src/workspace.ts';

@@ -1,23 +1,48 @@
 {
-  "name": "@agnt-protocol/protocol",
+  "name": "@agnt-sdk/simon-protocol",
+  "version": "0.1.0",
+  "description": "The SIMON Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
   "license": "Apache-2.0",
+  "keywords": [
+    "simon",
+    "agents",
+    "ai-agents",
+    "protocol",
+    "signed-messages",
+    "canonical-json",
+    "ed25519",
+    "ml-dsa",
+    "signatures"
+  ],
+  "homepage": "https://github.com/agnt-ai/simon-protocol/tree/main/protocol#readme",
+  "bugs": {
+    "url": "https://github.com/agnt-ai/simon-protocol/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/agnt-ai/simon-protocol.git",
     "directory": "protocol"
   },
-  "version": "0.1.0",
-  "private": true,
-  "description": "The SIMON Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "engines": {
     "node": ">=26"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "test": "node --test 'test/**/*.test.ts'",
-    "vectors": "node scripts/write-vectors.ts"
+    "vectors": "node scripts/write-vectors.ts",
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@agnt-protocol/conformance",
+  "name": "simon-conformance",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -24,6 +24,6 @@
     "readme": "node scripts/write-readme.ts"
   },
   "dependencies": {
-    "@agnt-protocol/protocol": "0.1.0"
+    "@agnt-sdk/simon-protocol": "0.1.0"
   }
 }

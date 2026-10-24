@@ -15,7 +15,7 @@ import {
   signMessage,
   timestamp,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { iso, later, type Context } from './context.ts';
 import { takeIntoInbox } from './fanout.ts';
 

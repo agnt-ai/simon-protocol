@@ -18,7 +18,7 @@ import {
   verifyMessage,
   type AnyMessage,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { TargetAgent } from '../agent.ts';
 import { Prerequisite, type Ctx } from '../context.ts';
 import { poll, problem, show, sleep, type Exchange, type T } from '../harness.ts';

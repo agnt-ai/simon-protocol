@@ -21,7 +21,7 @@ import {
   VERSION,
   type AnyMessage,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { Context } from './context.ts';
 import { notFound } from './errors.ts';
 import { json, type Request, type Route } from './http.ts';

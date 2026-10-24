@@ -17,10 +17,10 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { parseArgs } from 'node:util';
 import Anthropic from '@anthropic-ai/sdk';
-import { isUnderstood } from '@agnt-protocol/protocol';
-import type { Agent, Delivered } from '@agnt-protocol/client';
-import { defaultHome, openAgent, saveAddress } from '@agnt-protocol/client/credentials';
-import { untrusted } from '@agnt-protocol/client/provenance';
+import { isUnderstood } from '@agnt-sdk/simon-protocol';
+import type { Agent, Delivered } from '@agnt-sdk/simon-client';
+import { defaultHome, openAgent, saveAddress } from '@agnt-sdk/simon-client/credentials';
+import { untrusted } from '@agnt-sdk/simon-client/provenance';
 
 const { values: opts } = parseArgs({
   options: { address: { type: 'string' }, once: { type: 'boolean', default: false } },

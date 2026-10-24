@@ -47,7 +47,7 @@ import {
   WireError,
   type Envelope,
   type ServerDocument,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { iso, later, type Context } from './context.ts';
 import { arrivalsFor } from './fanout.ts';
 import { queuePrefetch } from './parts.ts';

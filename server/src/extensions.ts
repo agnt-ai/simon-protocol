@@ -12,7 +12,7 @@
  *   admitsReader     whether a published message's audience label admits a reader
  *   on               events: stored, inbox, delivered, deliveryFailed, unroutable, recovered, signal
  */
-import type { AnyMessage, Claim, Hints, Json, Signal } from '@agnt-protocol/protocol';
+import type { AnyMessage, Claim, Hints, Json, Signal } from '@agnt-sdk/simon-protocol';
 import type { Config } from './config.ts';
 import type { Request, Route } from './http.ts';
 import type { Agent, Store, StoredMessage } from './store/store.ts';

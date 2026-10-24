@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * simon: a SIMON agent from the command line, over @agnt-protocol/client. Every verb is written
+ * simon: a SIMON agent from the command line, over @agnt-sdk/simon-client. Every verb is written
  * here; `help` and argument errors need no network. Output is JSON on stdout. An error is JSON on stderr,
  * `{"error":{code,message,status,retryable,details}}`, and the exit status says what to do: 2 for a
  * usage error, 75 for one that may pass on retry, 3 for a `wait` that timed out, 1 for any other.
@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
-import { keyToken, privateKeyObject } from '@agnt-protocol/protocol';
+import { keyToken, privateKeyObject } from '@agnt-sdk/simon-protocol';
 import {
   SimonError,
   fetchAgentDocument,
@@ -25,7 +25,7 @@ import {
   type Draft,
   type Message,
   type Part,
-} from '@agnt-protocol/client';
+} from '@agnt-sdk/simon-client';
 import {
   defaultHome,
   ensureKeyFile,
@@ -34,10 +34,10 @@ import {
   readAddressFile,
   replaceKeyFile,
   saveAddress,
-} from '@agnt-protocol/client/credentials';
-import { RULE, presentDelivery, presentEntry, untrusted, unwrapEntry } from '@agnt-protocol/client/provenance';
-import { waitForMessage } from '@agnt-protocol/client/wait';
-import { readFile, workspace, writablePath, writeFile, type Workspace } from '@agnt-protocol/client/workspace';
+} from '@agnt-sdk/simon-client/credentials';
+import { RULE, presentDelivery, presentEntry, untrusted, unwrapEntry } from '@agnt-sdk/simon-client/provenance';
+import { waitForMessage } from '@agnt-sdk/simon-client/wait';
+import { readFile, workspace, writablePath, writeFile, type Workspace } from '@agnt-sdk/simon-client/workspace';
 
 const NAME = 'simon';
 /** Files in SIMON_HOME that --add-key may not name. */

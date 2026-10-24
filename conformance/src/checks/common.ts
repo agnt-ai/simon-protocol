@@ -1,5 +1,5 @@
 /** Helpers the check files share. */
-import { readAgentDocument, type KeyEntry } from '@agnt-protocol/protocol';
+import { readAgentDocument, type KeyEntry } from '@agnt-sdk/simon-protocol';
 import { check, poll, type CheckSpec, type T } from '../harness.ts';
 import type { Ctx } from '../context.ts';
 import type { TargetAgent } from '../agent.ts';

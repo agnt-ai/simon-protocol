@@ -5,7 +5,7 @@
  *
  * Hooks: upload.
  */
-import type { Upload } from '@agnt-protocol/server';
+import type { Upload } from 'simon-server';
 import { ClamdScanner, type Scanner } from '../../adapters/scanner.ts';
 import type { Ctx, Module } from '../../context.ts';
 import { rateLimited, unavailable, unprocessable } from '../../lib/errors.ts';

@@ -1,7 +1,7 @@
 /** Accepted same-author listing suppression survives deletion and reacceptance of its target. */
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
-import { messageId, type AnyMessage } from '@agnt-protocol/protocol';
+import { messageId, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { Federation } from './harness.ts';
 
 it('keeps a reaccepted relation out of the HTTP listing after its accepted retraction record is removed', async () => {

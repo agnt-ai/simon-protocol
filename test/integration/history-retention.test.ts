@@ -10,7 +10,7 @@ import {
   type KeyEntry,
   type Message,
   type ResolverIO,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { listedKeys } from '../../server/src/public.ts';
 import type { Agent } from '../../server/src/store/store.ts';
 import { fetchAgentDocument, verifyAuthor } from '../../clients/js/src/read.ts';

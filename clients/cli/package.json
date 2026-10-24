@@ -1,26 +1,48 @@
 {
-  "name": "@agnt-protocol/cli",
+  "name": "@agnt-sdk/simon-cli",
+  "version": "0.1.0",
+  "description": "Command-line client for the SIMON Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
   "license": "Apache-2.0",
+  "keywords": [
+    "simon",
+    "agents",
+    "ai-agents",
+    "protocol",
+    "signed-messages",
+    "cli"
+  ],
+  "homepage": "https://github.com/agnt-ai/simon-protocol/tree/main/clients/cli#readme",
+  "bugs": {
+    "url": "https://github.com/agnt-ai/simon-protocol/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/agnt-ai/simon-protocol.git",
     "directory": "clients/cli"
   },
-  "version": "0.1.0",
-  "private": true,
-  "description": "Command-line client for the SIMON Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
   "type": "module",
   "bin": {
     "simon": "./src/cli.ts"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
   "engines": {
     "node": ">=26"
   },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
-    "test": "node --test 'test/**/*.test.ts'"
+    "test": "node --test 'test/**/*.test.ts'",
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   },
   "dependencies": {
-    "@agnt-protocol/protocol": "0.1.0",
-    "@agnt-protocol/client": "0.1.0"
+    "@agnt-sdk/simon-protocol": "0.1.0",
+    "@agnt-sdk/simon-client": "0.1.0"
   }
 }

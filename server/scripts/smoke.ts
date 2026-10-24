@@ -1,6 +1,6 @@
 /**
  * Smoke test of the real thing: two `node server/src/main.ts` processes on localhost, two agents
- * registered with nothing but @agnt-protocol/protocol, a message each way, then both stopped.
+ * registered with nothing but @agnt-sdk/simon-protocol, a message each way, then both stopped.
  *
  *   node server/scripts/smoke.ts
  */
@@ -14,7 +14,7 @@ import {
   signRequest,
   timestamp,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 
 const main = path.resolve(import.meta.dirname, '../src/main.ts');
 const servers = { 'a.test': 'http://127.0.0.1:8701', 'b.test': 'http://127.0.0.1:8702' };

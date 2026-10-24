@@ -8,7 +8,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-protocol/protocol';
+import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-sdk/simon-protocol';
 import { CANCEL_CODE, CODE, listen } from '../../js/test/fake-server.ts';
 
 const CLI = path.resolve(import.meta.dirname, '../src/cli.ts');

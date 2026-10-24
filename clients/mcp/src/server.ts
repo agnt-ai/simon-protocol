@@ -11,8 +11,8 @@
  */
 import fs from 'node:fs';
 import readline from 'node:readline';
-import { SimonError } from '@agnt-protocol/client';
-import { defaultHome } from '@agnt-protocol/client/credentials';
+import { SimonError } from '@agnt-sdk/simon-client';
+import { defaultHome } from '@agnt-sdk/simon-client/credentials';
 import { TOOLS, checkArgs, type Context } from './tools.ts';
 
 const { version } = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));

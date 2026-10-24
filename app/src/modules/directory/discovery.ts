@@ -5,7 +5,7 @@
  * asks. Someone the asker may not find is indistinguishable from nobody: an unlisted person is found only
  * by their connections, and their agents' cards are shown only once published.
  */
-import type { Agent } from '@agnt-protocol/server';
+import type { Agent } from 'simon-server';
 import type { Ctx } from '../../context.ts';
 import type { CardStore } from '../agents/cards.ts';
 import type { Entities } from './entities.ts';

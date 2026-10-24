@@ -22,7 +22,7 @@ import {
   signSignal,
   timestamp,
   type Message,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import type { Request } from '../src/http.ts';
 import { createServer, type SimonServer } from '../src/server.ts';

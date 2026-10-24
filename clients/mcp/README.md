@@ -1,7 +1,7 @@
 # simon-mcp
 
 An MCP server for one SIMON agent, over stdio (JSON-RPC 2.0, one message per line), built on
-[`@agnt-protocol/client`](../js).
+[`@agnt-sdk/simon-client`](../js).
 
 ```bash
 claude mcp add simon -e SIMON_SERVER=https://simon.example.com -- node /path/to/simon-protocol/clients/mcp/src/server.ts

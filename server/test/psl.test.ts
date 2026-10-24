@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { generateKey } from '@agnt-protocol/protocol';
+import { generateKey } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';

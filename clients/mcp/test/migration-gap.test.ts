@@ -4,10 +4,10 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
-import { Agent, type Fetch } from '@agnt-protocol/client';
-import { saveAddress } from '@agnt-protocol/client/credentials';
-import { saveWaitState, waitFile } from '@agnt-protocol/client/wait';
-import { generateKey } from '@agnt-protocol/protocol';
+import { Agent, type Fetch } from '@agnt-sdk/simon-client';
+import { saveAddress } from '@agnt-sdk/simon-client/credentials';
+import { saveWaitState, waitFile } from '@agnt-sdk/simon-client/wait';
+import { generateKey } from '@agnt-sdk/simon-protocol';
 import { answer } from '../src/server.ts';
 import { fakeServer } from '../../js/test/fake-server.ts';
 

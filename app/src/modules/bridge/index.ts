@@ -13,8 +13,8 @@
  * alone is not enough, since anyone can make a key. The limit on mail sent counts per agent and per person. A reply address, and the mail sent with it, are kept
  * for those 30 days and no longer. Hooks: on.unroutable.
  */
-import { header, sha256Hex, textOf, type Message } from '@agnt-protocol/protocol';
-import type { Events } from '@agnt-protocol/server';
+import { header, sha256Hex, textOf, type Message } from '@agnt-sdk/simon-protocol';
+import type { Events } from 'simon-server';
 import { z } from 'zod';
 import type { Ctx, Module } from '../../context.ts';
 import { notFound, unauthorized } from '../../lib/errors.ts';

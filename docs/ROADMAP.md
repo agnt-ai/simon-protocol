@@ -25,7 +25,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Open and community-run.**
 - **`GOVERNANCE.md`:** who decides, how a change is proposed (an issue, then the spec, vectors and suite together, as CONTRIBUTING.md says), how maintainers are added, and how a vendor's vote is limited.
-- **The protocol is SIMON; AGNT is the platform built on it.** The protocol goes open and community-run, so it carries no vendor's name. AGNT stays a product, as Exchange is beside SMTP. A rename moves this repository, the `@agnt-protocol/*` packages and the spec text to SIMON.
+- **The protocol is SIMON; AGNT is the platform built on it.** The protocol goes open and community-run, so it carries no vendor's name. AGNT stays a product, as Exchange is beside SMTP. A rename moves this repository, the npm packages and the spec text to SIMON.
 - **A neutral home for SIMON, in two steps:**
   1. **At the public release,** the SIMON name and its repositories go to the Linux Foundation's Agentic AI Foundation, beside MCP and AGENTS.md. The registry, the conformance service in network mode, and key-transparency coordination move with them.
   2. **Once an independent second implementation passes** ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)), the wire spec goes to the IETF to become an RFC, with the IANA requests of PROTOCOL.md section 13. The agent-protocol coordination effort known as CATALIST has not yet chartered a working group.

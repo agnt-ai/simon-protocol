@@ -8,7 +8,7 @@ import {
   signRequest,
   signUnpairing,
   verifyUnpairing,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { defineConfig, loadConfig, type Config } from '../src/config.ts';
 import { createServer, type ServerOptions } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';

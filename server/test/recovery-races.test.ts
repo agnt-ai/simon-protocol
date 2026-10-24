@@ -8,7 +8,7 @@ import {
   privateKeyFromSeed,
   sign,
   signRecovery,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import type { Store } from '../src/store/store.ts';
 import { Federation, type Answer } from './harness.ts';
 

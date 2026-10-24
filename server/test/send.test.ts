@@ -16,7 +16,7 @@ import {
   type Message,
   readServerDocument,
   verifyClaims,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { Federation, type TestAgent } from './harness.ts';
 
 const TEXT = { type: 'text/plain', data: 'x' };

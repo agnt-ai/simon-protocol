@@ -21,7 +21,7 @@ import {
   type Message,
   type Part,
   type SignedClaims,
-} from '@agnt-protocol/protocol';
+} from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
 

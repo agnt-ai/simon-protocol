@@ -4,7 +4,14 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import { addKeyProofString, generateKey, sign, signPairing, signRequest, signUnpairing } from '@agnt-protocol/protocol';
+import {
+  addKeyProofString,
+  generateKey,
+  sign,
+  signPairing,
+  signRequest,
+  signUnpairing,
+} from '@agnt-sdk/simon-protocol';
 import { Federation, toRequest, type TestAgent } from './harness.ts';
 
 const DAY = 86_400_000;
