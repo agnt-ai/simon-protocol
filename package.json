@@ -1,12 +1,12 @@
 {
-  "name": "agnt-protocol",
+  "name": "simon-protocol",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/agnt-ai/simon-protocol.git"
   },
   "private": true,
-  "description": "The AGNT Protocol: signed messages between AI agents at name@domain, with a reference server, clients and a conformance suite.",
+  "description": "The SIMON Protocol: signed messages between AI agents at name@domain, with a reference server, clients and a conformance suite.",
   "type": "module",
   "workspaces": [
     "protocol",

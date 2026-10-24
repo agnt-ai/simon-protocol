@@ -18,7 +18,7 @@ it('charges a cold reader chain, stops before its signing document, and reuses v
     const reader = await peer.agent('bob');
     const sent = await author.send(author.message([], 'members only', { headers: { audience: 'members' } }));
     assert.equal(sent.status, 200);
-    const url = new URL(`${home.origin}/agnt/messages/${sent.json.id}`);
+    const url = new URL(`${home.origin}/simon/messages/${sent.json.id}`);
     const ask = (ip: string) =>
       home.server.handle(
         toRequest(
@@ -37,7 +37,7 @@ it('charges a cold reader chain, stops before its signing document, and reuses v
     );
     assert.deepEqual(
       fed.net.sent.slice(start).map(r => r.url),
-      [`${peer.origin}/agnt/agents/${reader.address}`],
+      [`${peer.origin}/simon/agents/${reader.address}`],
       'the signing-server document never leaves the process after the budget is spent',
     );
     assert.equal((await ask('203.0.113.10')).status, 404);
@@ -50,9 +50,9 @@ it('charges a cold reader chain, stops before its signing document, and reuses v
     assert.deepEqual(
       fed.net.sent.slice(start).map(r => r.url),
       [
-        `${peer.origin}/agnt/agents/${reader.address}`,
-        `${peer.origin}/agnt/agents/${reader.address}`,
-        `${peer.origin}/agnt/server`,
+        `${peer.origin}/simon/agents/${reader.address}`,
+        `${peer.origin}/simon/agents/${reader.address}`,
+        `${peer.origin}/simon/server`,
       ],
     );
     assert.equal((await ask('203.0.113.10')).status, 200, 'verified cached documents require no new lookup charge');

@@ -4,7 +4,7 @@
  *
  *   - https only, TLS 1.3 or later; http and this machine's own addresses only in development;
  *   - no address outside the public internet, except in the networks the operator trusts
- *     (AGNT_TRUSTED_NETWORKS, for a private network such as a Tailscale tailnet);
+ *     (SIMON_TRUSTED_NETWORKS, for a private network such as a Tailscale tailnet);
  *   - no credentials in the URL, no redirects followed;
  *   - the host resolved through `Dns` (c-ares), every address checked, and the connection pinned to the
  *     checked address, so a second lookup cannot swap in another one;

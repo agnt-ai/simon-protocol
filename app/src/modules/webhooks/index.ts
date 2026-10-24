@@ -1,7 +1,7 @@
 /**
  * Webhooks: a wake-up call, never the source of truth. An agent's endpoint hears `inbox.changed` and then
  * reads its inbox; a person's endpoint hears the part of their activity log the session that made it
- * may see. Each POST is signed `agnt-webhook-signature: v1=<hex HMAC-SHA256(secret, timestamp + "." +
+ * may see. Each POST is signed `simon-webhook-signature: v1=<hex HMAC-SHA256(secret, timestamp + "." +
  * body)>`, retried with backoff, and an endpoint that keeps failing is switched off (the inbox still has
  * everything). Where an agent is woken is its principal's to decide: its key alone only lists them.
  *
@@ -178,8 +178,8 @@ export class Webhooks {
             url: hook.url,
             headers: {
               'content-type': 'application/json',
-              'agnt-webhook-timestamp': timestamp,
-              'agnt-webhook-signature': `v1=${signature}`,
+              'simon-webhook-timestamp': timestamp,
+              'simon-webhook-signature': `v1=${signature}`,
             },
             body: Buffer.from(body),
             maxBytes: 65_536,

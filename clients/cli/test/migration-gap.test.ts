@@ -21,7 +21,7 @@ function run(home: string, workspace: string, args: string[]): Promise<{ code: n
       [CLI, ...args],
       {
         timeout: 5000,
-        env: { PATH: process.env.PATH, AGNT_HOME: home, AGNT_WORKSPACE: workspace, AGNT_TIMEOUT_MS: '1000' },
+        env: { PATH: process.env.PATH, SIMON_HOME: home, SIMON_WORKSPACE: workspace, SIMON_TIMEOUT_MS: '1000' },
       },
       (error, stdout, stderr) => {
         try {
@@ -43,7 +43,7 @@ it(
   'CLI JSON preserves migration details, requires --since, and leaves shared wait buffers untouched',
   { timeout: 15_000 },
   async () => {
-    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-cli-gap-'));
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-cli-gap-'));
     const home = path.join(directory, 'home'),
       workspace = path.join(directory, 'work');
     fs.mkdirSync(workspace);
@@ -63,7 +63,7 @@ it(
       const handle = server.fake.handle;
       server.fake.handle = async request => {
         const url = new URL(request.url);
-        if (url.pathname === '/agnt/sync') {
+        if (url.pathname === '/simon/sync') {
           calls.push(url);
           if (!url.searchParams.has('since'))
             return new Response(

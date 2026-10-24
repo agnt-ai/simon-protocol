@@ -1,4 +1,4 @@
-"""A client for the AGNT Protocol, version 1 (spec/PROTOCOL.md and spec/CLIENT.md).
+"""A client for the SIMON Protocol, version 1 (spec/PROTOCOL.md and spec/CLIENT.md).
 
 Standard library only. ``cryptography`` signs when it is installed, and ``dnspython`` resolves.
 """
@@ -22,7 +22,7 @@ from .envelope import (
     verify_claims,
     verify_envelope,
 )
-from .errors import AgntError, is_retryable, parse_problem
+from .errors import SimonError, is_retryable, parse_problem
 from .keys import (
     SigningKey,
     is_public_key,
@@ -69,7 +69,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "Agent",
-    "AgntError",
+    "SimonError",
     "NotVerified",
     "PrincipalTrust",
     "RULE",

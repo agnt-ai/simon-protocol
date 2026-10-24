@@ -12,7 +12,7 @@ import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-protoco
 import { CANCEL_CODE, CODE, listen } from '../../js/test/fake-server.ts';
 
 const CLI = path.resolve(import.meta.dirname, '../src/cli.ts');
-const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-cli-'));
+const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'simon-cli-'));
 
 interface Run {
   code: number;
@@ -29,7 +29,9 @@ function cli(home: string, args: string[], opts: { env?: Record<string, string>;
     const child = execFile(
       process.execPath,
       [CLI, ...args],
-      { env: { PATH: process.env.PATH, AGNT_HOME: home, AGNT_WORKSPACE: work, AGNT_TIMEOUT_MS: '5000', ...opts.env } },
+      {
+        env: { PATH: process.env.PATH, SIMON_HOME: home, SIMON_WORKSPACE: work, SIMON_TIMEOUT_MS: '5000', ...opts.env },
+      },
       (error, stdout, stderr) =>
         resolve({
           code: error ? Number(error.code) : 0,
@@ -112,14 +114,14 @@ describe('offline', () => {
   it('says to register first', async () => {
     const r = await cli(tempDir(), ['sync']);
     assert.deepEqual([r.code, r.err.code], [1, 'not_registered']);
-    assert.match(r.err.message, /agnt-protocol register --server URL/);
+    assert.match(r.err.message, /simon register --server URL/);
     assert.doesNotMatch(r.err.message, /\//, 'the message names no path');
   });
 
   it('names the URL when the server cannot be reached, with status 75', async () => {
     const r = await cli(tempDir(), ['register', '--server', 'http://127.0.0.1:9']);
     assert.deepEqual([r.code, r.err.code, r.err.retryable], [75, 'network_error', true]);
-    assert.match(r.err.message, /http:\/\/127\.0\.0\.1:9\/agnt\/register/);
+    assert.match(r.err.message, /http:\/\/127\.0\.0\.1:9\/simon\/register/);
   });
 });
 
@@ -133,7 +135,7 @@ describe('two agents', () => {
   after(() => server.close());
 
   it('register, send with an attachment, inbox, fetch-part, sent and verify', async () => {
-    const env = { AGNT_SERVER: server.origin };
+    const env = { SIMON_SERVER: server.origin };
     const a = await cli(ada, ['register'], { env });
     assert.equal(a.code, 0);
     assert.ok(Array.isArray(a.out.keys));
@@ -192,10 +194,10 @@ describe('two agents', () => {
         verified.code === 75,
       JSON.stringify(verified),
     );
-    assert.ok(!server.fake.requests.slice(asked).some(r => r.path.startsWith('/agnt/agents/')));
+    assert.ok(!server.fake.requests.slice(asked).some(r => r.path.startsWith('/simon/agents/')));
   });
 
-  it('reads and writes files only in the workspace, never in AGNT_HOME', async () => {
+  it('reads and writes files only in the workspace, never in SIMON_HOME', async () => {
     const outside = path.join(tempDir(), 'secret.txt');
     fs.writeFileSync(outside, 'SECRET');
     fs.symlinkSync(outside, path.join(work, 'link.txt'));
@@ -221,7 +223,7 @@ describe('two agents', () => {
     assert.equal(fs.readFileSync(outside, 'utf8'), 'SECRET');
   });
 
-  it('adds a second key, kept in AGNT_HOME by name', async () => {
+  it('adds a second key, kept in SIMON_HOME by name', async () => {
     const r = await cli(ada, ['register', '--add-key', 'backup.pem']);
     assert.deepEqual([r.code, Array.isArray(r.out.keys), r.out.keyFile], [0, true, 'backup.pem']);
     assert.equal(fs.statSync(path.join(ada, 'backup.pem')).mode & 0o777, 0o600);
@@ -246,7 +248,7 @@ describe('two agents', () => {
     assert.equal(r.out.status, 'code_sent');
     assert.equal(
       r.out.next,
-      `agnt-protocol register --server '${server.origin}' --address 'carol@example.com' --code <the code sent there>`,
+      `simon register --server '${server.origin}' --address 'carol@example.com' --code <the code sent there>`,
     );
   });
 
@@ -267,7 +269,7 @@ describe('two agents', () => {
     assert.equal(r.out.status, 'recovery_pending');
     assert.equal(
       r.out.next,
-      `agnt-protocol register --server '${server.origin}' --address '${address}' --code <the same code> --recover, after ${r.out.completesAt}`,
+      `simon register --server '${server.origin}' --address '${address}' --code <the same code> --recover, after ${r.out.completesAt}`,
     );
     const status = await cli(ada, ['register', '--recovery-status']);
     assert.deepEqual([status.code, status.out.recovery?.completesAt], [0, r.out.completesAt]);
@@ -289,28 +291,28 @@ describe('two agents', () => {
 
   it('follows safely quoted mailbox creation and recovery continuations with paired credentials', async () => {
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     // Valid dot-atom local part with a quote, backtick, pipe, fragment/query and path characters.
     const address = "a#b%c/d?e^f`g{h|i}j'k@example.com";
     const pairing = signPairing(principal.privateKey, address, id);
     const follow = (home: string, next: string): Promise<Run> =>
       new Promise(resolve => {
         const args = next
-          .replace(/^agnt-protocol /, '')
+          .replace(/^simon /, '')
           .replace('<the code sent there>', CODE)
           .replace('<the same code>', CODE)
           .replace(/, after .+$/, '');
         execFile(
           '/bin/sh',
-          ['-c', `exec "$AGNT_TEST_NODE" "$AGNT_TEST_CLI" ${args}`],
+          ['-c', `exec "$SIMON_TEST_NODE" "$SIMON_TEST_CLI" ${args}`],
           {
             env: {
               PATH: process.env.PATH,
-              AGNT_HOME: home,
-              AGNT_WORKSPACE: work,
-              AGNT_TIMEOUT_MS: '5000',
-              AGNT_TEST_NODE: process.execPath,
-              AGNT_TEST_CLI: CLI,
+              SIMON_HOME: home,
+              SIMON_WORKSPACE: work,
+              SIMON_TIMEOUT_MS: '5000',
+              SIMON_TEST_NODE: process.execPath,
+              SIMON_TEST_CLI: CLI,
             },
           },
           (error, stdout, stderr) =>
@@ -375,20 +377,20 @@ describe('two agents', () => {
     const sent = await cli(fresh, ['send', '--to', address, '--text', 'after mailbox recovery']);
     assert.equal(sent.code, 0, JSON.stringify(sent.err));
     const requests = server.fake.requests.slice(requestStart);
-    const recovered = requests.filter(r => r.path === '/agnt/recovery');
+    const recovered = requests.filter(r => r.path === '/simon/recovery');
     assert.equal(recovered.length, 3);
     for (const r of recovered) {
       const body = JSON.parse(Buffer.from(r.body).toString());
       assert.equal(Object.hasOwn(body, 'for'), false);
       assert.equal(Object.hasOwn(body, 'pairing'), false);
     }
-    const message = JSON.parse(Buffer.from(requests.findLast(r => r.path === '/agnt/send')!.body).toString());
+    const message = JSON.parse(Buffer.from(requests.findLast(r => r.path === '/simon/send')!.body).toString());
     assert.deepEqual([message.headers.for, message.headers.pairing], [id, pairing]);
   });
 
   it('principal recovery saves pairing and the next CLI process can send', async () => {
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const original = tempDir();
     const first = await cli(original, ['register', '--server', server.origin, '--for', id]);
     const address = first.out.address;
@@ -420,13 +422,13 @@ describe('two agents', () => {
   });
 
   it('says what to run next for a pairing, with the server and the leased address', async () => {
-    const forValue = `agnt-key:${generateKey().key}`;
+    const forValue = `simon-key:${generateKey().key}`;
     const r = await cli(tempDir(), ['register', '--server', server.origin, '--for', forValue]);
     assert.equal(r.out.status, 'pairing_required');
     assert.equal(
       r.out.next,
-      `agnt-protocol register --server '${server.origin}' --address '${r.out.address}' --for '${forValue}' --pairing ` +
-        `<the principal's signature over "AGNT-PAIR\\n${r.out.address}\\n${forValue}">`,
+      `simon register --server '${server.origin}' --address '${r.out.address}' --for '${forValue}' --pairing ` +
+        `<the principal's signature over "SIMON-PAIR\\n${r.out.address}\\n${forValue}">`,
     );
   });
 });

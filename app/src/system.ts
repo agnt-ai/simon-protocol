@@ -117,6 +117,6 @@ export class SystemAgents {
 /** A key that only this server key can make: an HMAC of the agent's address, as an Ed25519 seed. */
 function derive(serverKey: KeyObject, address: string): KeyObject {
   const secret = serverKey.export({ type: 'pkcs8', format: 'der' });
-  const seed = crypto.createHmac('sha256', secret).update(`AGNT-APP-SYSTEM-AGENT\n${address}`).digest();
+  const seed = crypto.createHmac('sha256', secret).update(`SIMON-APP-SYSTEM-AGENT\n${address}`).digest();
   return privateKeyFromSeed('ed25519', seed);
 }

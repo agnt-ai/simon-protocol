@@ -8,7 +8,7 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "The basic AGNT server: the whole protocol and client API, hardened, with Node's standard library only.",
+  "description": "The basic SIMON server: the whole protocol and client API, hardened, with Node's standard library only.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -16,7 +16,7 @@
     "./testing": "./src/testing.ts"
   },
   "bin": {
-    "agnt-server": "./src/main.ts"
+    "simon-server": "./src/main.ts"
   },
   "engines": {
     "node": ">=26"

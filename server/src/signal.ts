@@ -1,5 +1,5 @@
 /**
- * `POST /agnt/signal` (spec section 6.4): a short-lived note from another server about a message, checked in
+ * `POST /simon/signal` (spec section 6.4): a short-lived note from another server about a message, checked in
  * the section's order, answering the first failure:
  *
  *   1-3  body size and parse, shape, and the signal for this server, with no lookup     (parseSignal)
@@ -52,11 +52,11 @@ export async function signal(ctx: Context, req: Request): Promise<Reply> {
   const domain = domainOf(s.from);
   const peer = await ctx.resolver.peer(domain, charge);
   if (peer.outcome !== 'server' || peer.server === origin) {
-    throw forbidden('bad_signature', `${domain} names no other AGNT server, so no signal from it verifies.`);
+    throw forbidden('bad_signature', `${domain} names no other SIMON server, so no signal from it verifies.`);
   }
   const failures = `${client} ${peer.server}`;
   ctx.rate.check('badSignature', failures);
-  const bytes = signingBytes('AGNT-SIGNAL', s);
+  const bytes = signingBytes('SIMON-SIGNAL', s);
   const signs = (doc: ServerDocument | null) => !!doc && signedByAny(doc.keys, ctx.now(), bytes, s.signature);
   if (!signs(peer.document) && !signs(await ctx.resolver.serverDocument(peer.server, { refresh: true, charge }))) {
     ctx.rate.hit('badSignature', failures);
@@ -152,7 +152,7 @@ export async function sendSignal(ctx: Context, req: Request): Promise<Reply> {
         else
           await ctx.http.request({
             method: 'POST',
-            url: `${server}/agnt/signal`,
+            url: `${server}/simon/signal`,
             headers: { 'content-type': 'application/json' },
             body: canonicalBytes(s),
             maxBytes: 16_384,

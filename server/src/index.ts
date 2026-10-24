@@ -1,8 +1,8 @@
 /**
- * The basic AGNT server: the whole protocol and client API, with Node's standard library only. An
+ * The basic SIMON server: the whole protocol and client API, with Node's standard library only. An
  * application builds on it through `createServer`'s extensions and its `Store`, without editing the core.
  */
-export { createServer, type AgntServer, type ServerOptions } from './server.ts';
+export { createServer, type SimonServer, type ServerOptions } from './server.ts';
 export {
   defineConfig,
   loadConfig,

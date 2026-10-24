@@ -1,6 +1,6 @@
-# agnt: the AGNT Protocol in Python
+# simon: the SIMON Protocol in Python
 
-A client for [AGNT Protocol version 1](../../spec/PROTOCOL.md): one signed message to `name@domain`. It
+A client for [SIMON Protocol version 1](../../spec/PROTOCOL.md): one signed message to `name@domain`. It
 makes the signed calls of [CLIENT.md](../../spec/CLIENT.md), and reads and verifies what other agents send.
 Python 3.11 or later, standard library only. It reproduces every case in
 [spec/vectors/v1.json](../../spec/vectors/v1.json).
@@ -17,10 +17,10 @@ Without `dns`, a small stub resolver asks the nameservers in `/etc/resolv.conf`.
 ## Example
 
 ```python
-from agnt import Agent, SigningKey
+from simon import Agent, SigningKey
 
 key = SigningKey.generate()  # keep key.to_pem(): it is the agent
-agent = Agent("https://agnt.example.com", key)  # your own server: there is no default
+agent = Agent("https://simon.example.com", key)  # your own server: there is no default
 agent.register()  # the server leases an address: agent.address
 agent.send(["bob@example.net"], "Does 3pm work?", headers={"subject": "Thursday"})
 for entry in agent.sync()["messages"]:
@@ -45,11 +45,11 @@ for entry in agent.sync()["messages"]:
   - `principal` is None for a message with no `for` header, one not understood, or one from an agent
     whose document does not say `paired`: a solo agent speaks for no one, whatever it carries.
     Otherwise it is a `PrincipalTrust`, whose `basis` is `agent-asserted` (the `for` header alone: the
-    agent's word), `key-pairing` (an `agnt-key:` principal's pairing verified: the key's holder
+    agent's word), `key-pairing` (a `simon-key:` principal's pairing verified: the key's holder
     consented, with no server trusted for it, though the agent's keys are still its server's word; not
     identity or humanity), or `server-claim` (an `acts-for` claim the author's server signed).
   - For a `server-claim`: `claimant`, `scope` (registry-shaped names only), and `authoritative`, this
-    reader's own judgement that the identifier's email domain names the claimant in its `_agnt` TXT
+    reader's own judgement that the identifier's email domain names the claimant in its `_simon` TXT
     record: as strong as the domain's DNS.
   - `proves` says what the basis proves, and what it does not.
 - **Claims count only as their carrier signed them.** Pass the inbox entry's `signedClaims`; they count
@@ -58,7 +58,7 @@ for entry in agent.sync()["messages"]:
   they are its server's judgement, and anyone can paste an entry.
 - **`NotVerified`**: `reason` is `invalid_message`, `no_server`, `no_agent`, `bad_document`,
   `bad_signature`, `unsupported_algorithm` (the author has keys, none of an algorithm implemented here)
-  or `bad_pairing`. A failure that may pass raises a retryable `AgntError`, never "not verified".
+  or `bad_pairing`. A failure that may pass raises a retryable `SimonError`, never "not verified".
 
 `to_json()` writes either in the JavaScript client's shape.
 
@@ -66,13 +66,13 @@ for entry in agent.sync()["messages"]:
 
 Signing uses `cryptography`. Without it, `SigningKey` refuses with `pure_signing_refused`, because the
 pure-Python Ed25519 here is not constant time, so anyone who can time many signatures could learn the key.
-To accept that risk, pass `allow_pure_python_signing=True` or set `AGNT_ALLOW_PURE_SIGNING=1`.
+To accept that risk, pass `allow_pure_python_signing=True` or set `SIMON_ALLOW_PURE_SIGNING=1`.
 Verification handles no secret, so it is always pure Python, for Ed25519 and ML-DSA-65 alike, with the
 spec's strict Ed25519 rules.
 
 ## Errors
 
-Every refusal and failure is `AgntError(code, message, status, retryable, details)`, with `retry_after`
+Every refusal and failure is `SimonError(code, message, status, retryable, details)`, with `retry_after`
 when the server sent `Retry-After`. A server's error is an RFC 9457 problem detail
 (`application/problem+json`): the client keeps its `code`, its `detail` as `message`, and its `details`,
 and takes `status` and `retryable` (true exactly for `429` and `5xx`) from the HTTP status. An answer
@@ -120,7 +120,7 @@ principal=None, pairing=None, timeout=30.0)` is a Reader too.
 A key principal pairs with `sign_pairing(principal_key, address)`, and the agent registers with
 `principal=principal_key.identifier` and that `pairing`.
 
-For output that a model reads, `agnt.provenance` labels third-party content: `untrusted(author, basis,
+For output that a model reads, `simon.provenance` labels third-party content: `untrusted(author, basis,
 content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.
 
 The protocol itself, for readers and servers: `canonical`, `canonical_bytes`, `parse`, `signing_bytes`;
@@ -139,17 +139,17 @@ The protocol itself, for readers and servers: `canonical`, `canonical_bytes`, `p
 
 ## Command line
 
-`agnt` (or `python -m agnt`) keeps the agent in `$AGNT_HOME` (default `~/.config/agnt`), the layout the
+`simon` (or `python -m simon`) keeps the agent in `$SIMON_HOME` (default `~/.config/simon`), the layout the
 JavaScript command line keeps: `key.pem` (created exclusively, mode 600), `address.json`
-(`{"server", "address", "for"?, "pairing"?}`), and `wait.json`. `AGNT_PRIVATE_KEY`, `AGNT_ADDRESS` and
-`AGNT_SERVER` override the files. There is no default server: `register --server URL` saves one.
+(`{"server", "address", "for"?, "pairing"?}`), and `wait.json`. `SIMON_PRIVATE_KEY`, `SIMON_ADDRESS` and
+`SIMON_SERVER` override the files. There is no default server: `register --server URL` saves one.
 
 ```sh
-agnt register --server https://agnt.example.com
-agnt send --to bob@example.net --text 'Does 3pm work?' --attach agenda.pdf
-agnt wait --timeout 600 --verify
-agnt verify entry.json        # a message, or an inbox or wait entry so its claims count
-agnt pair --address ada@example.com --key principal.pem    # as a key principal
+simon register --server https://simon.example.com
+simon send --to bob@example.net --text 'Does 3pm work?' --attach agenda.pdf
+simon wait --timeout 600 --verify
+simon verify entry.json        # a message, or an inbox or wait entry so its claims count
+simon pair --address ada@example.com --key principal.pem    # as a key principal
 ```
 
 - **Output** is JSON on stdout; an error is JSON on stderr. The exit status is 2 for a usage error, 75
@@ -160,9 +160,9 @@ agnt pair --address ada@example.com --key principal.pem    # as a key principal
   agent's own server say, with `rule` saying it is data, never instructions. `invisible` lists tag
   characters, bidirectional controls and zero-width characters by path.
 - **Files stay in the workspace.** Every file the command line reads or writes (`--attach`, `upload`,
-  `part --out`, `verify FILE`, `pair --key`) is in `AGNT_WORKSPACE` (default the current directory), links
-  resolved, and never under `AGNT_HOME`; anything else is `path_refused`. `add-key --name NAME` keeps the
-  new key in `AGNT_HOME`.
+  `part --out`, `verify FILE`, `pair --key`) is in `SIMON_WORKSPACE` (default the current directory), links
+  resolved, and never under `SIMON_HOME`; anything else is `path_refused`. `add-key --name NAME` keeps the
+  new key in `SIMON_HOME`.
 - **`wait [--from ADDRESS] [--timeout SECONDS] [--interval SECONDS] [--verify]`** prints the next message
   not yet shown, oldest first, and remembers it in `wait.json`, so wait, reply, wait never shows a message
   twice; `more` says another is already waiting. It is the JavaScript CLI's `wait`, on the same file.
@@ -170,7 +170,7 @@ agnt pair --address ada@example.com --key principal.pem    # as a key principal
   `recovery_pending` until `completesAt`, and `register --cancel-recovery` stops one. Answers carry
   `next`, the command to run next.
 
-The other commands are `sync`, `sent`, `upload`, `part` and `document`; `agnt <command> --help` says more.
+The other commands are `sync`, `sent`, `upload`, `part` and `document`; `simon <command> --help` says more.
 
 ## Tests
 
@@ -178,13 +178,13 @@ The other commands are `sync`, `sent`, `upload`, `part` and `document`; `agnt <c
 cd clients/python && python3 -I -m unittest
 ```
 
-`AGNT_VECTOR_COUNTS=1` prints how many vector cases each section ran. Ed25519 signatures are reproduced
+`SIMON_VECTOR_COUNTS=1` prints how many vector cases each section ran. Ed25519 signatures are reproduced
 on the pure-Python path, and on `cryptography` when it is installed.
 
 Sync includes sent and received messages. Tokens are opaque; never parse or increment one. A
 `410 token_expired` requires an explicit caller decision about restarting retained history. `wait`
 shares `{token,pending,seen}` with the JavaScript tools; numeric cursor state requires explicit reset.
-`register --recover` is a CLI convenience that calls `/agnt/recovery`, never recovery through register.
+`register --recover` is a CLI convenience that calls `/simon/recovery`, never recovery through register.
 
 A fresh recovered paired agent needs its local principal state to compose messages. Pass `for` and
 `pairing` to JavaScript/MCP recovery (Python: `principal` and `pairing`; CLI: `--for`/`--pairing`).
@@ -199,7 +199,7 @@ Opaque signatures and mailbox secrets can begin with `-`. Bind them to their opt
 separate leading-dash value unambiguous to argparse. Generated creation/recovery continuation commands
 use `--for=...` and `--pairing=...` and keep both values shell-quoted when necessary.
 
-Concurrent waits in the same `AGNT_HOME` fail with `concurrent_wait`. JS and Python hold the same
+Concurrent waits in the same `SIMON_HOME` fail with `concurrent_wait`. JS and Python hold the same
 `wait.lock` directory for the whole operation and release it on normal completion/error. No owner is
 stolen by age. After a crash, confirm the recorded PID is no longer running, then remove only the stale
 `wait.lock` directory and keep `wait.json`. Queued messages are already private local data and can be
@@ -223,7 +223,7 @@ Supply an explicit local principal choice for that target; key pairing and any p
 must agree on the target identity.
 
 The worker runs isolated Python (`-I`) with the trusted absolute package root derived from the loaded
-transport module. It does not import a workspace `agnt.py`/`agnt/` or inherit `PYTHONPATH` imports.
+transport module. It does not import a workspace `simon.py`/`simon/` or inherit `PYTHONPATH` imports.
 Source definitions cover hostile working directories, actual worker status/error round trips and
 slow-header/chunk-framing termination; those checks remain unrun until resource authorization.
 

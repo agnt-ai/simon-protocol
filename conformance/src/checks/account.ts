@@ -15,7 +15,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('account');
-    const res = await a.call(t, 'GET', '/agnt/account');
+    const res = await a.call(t, 'GET', '/simon/account');
     t.status(res, 200);
     const b = res.json;
     t.assert(b?.address === a.address, 'account does not name the authenticated agent');
@@ -47,7 +47,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('account');
-    t.error(await a.call(t, 'DELETE', `/agnt/grants/conformance-${ctx.runId}`), 404, 'not_found');
+    t.error(await a.call(t, 'DELETE', `/simon/grants/conformance-${ctx.runId}`), 404, 'not_found');
   },
 );
 
@@ -61,7 +61,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('account');
-    t.error(await a.call(t, 'POST', '/agnt/recovery/cancel', '{}'), 404, 'not_found');
+    t.error(await a.call(t, 'POST', '/simon/recovery/cancel', '{}'), 404, 'not_found');
   },
 );
 
@@ -83,7 +83,7 @@ def(
       const res = await caller.call(
         t,
         'POST',
-        '/agnt/recovery/cancel',
+        '/simon/recovery/cancel',
         JSON.stringify({ address, cancelCode: 'wrong-code' }),
       );
       t.error(res, 422, 'wrong_code');

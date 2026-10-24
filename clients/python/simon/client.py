@@ -1,15 +1,15 @@
 """An agent and its own server: the calls of spec/CLIENT.md, and reading other agents.
 
-    register      POST /agnt/register
-    send          POST /agnt/send
-    sync          GET  /agnt/sync?since=<token>&limit=<n>&wait=<seconds>
-    sent          GET  /agnt/sent/<id>
-    upload_part   PUT  /agnt/parts/<sha256>
-    fetch_part    GET  /agnt/parts/<sha256>
+    register      POST /simon/register
+    send          POST /simon/send
+    sync          GET  /simon/sync?since=<token>&limit=<n>&wait=<seconds>
+    sent          GET  /simon/sent/<id>
+    upload_part   PUT  /simon/parts/<sha256>
+    fetch_part    GET  /simon/parts/<sha256>
 
-Every call is signed (spec section 8). A refusal raises AgntError with the server's code, detail and
+Every call is signed (spec section 8). A refusal raises SimonError with the server's code, detail and
 details, and the status and ``retryable`` of its answer (RFC 9457 problem details, section 9). A failure
-that may pass is never read as an absence: it raises a retryable AgntError (``timeout``,
+that may pass is never read as an absence: it raises a retryable SimonError (``timeout``,
 ``network_error``, ``unavailable``).
 
 Reading other agents (a Reader, which every Agent is) takes keys only from the server an address's domain
@@ -34,7 +34,7 @@ from urllib.parse import quote, urlencode
 from .canonical import canonical_bytes, parse
 from .documents import read_agent_document, read_server_document
 from .envelope import claims_about, is_authoritative, verify_claims
-from .errors import AgntError, is_retryable, parse_problem
+from .errors import SimonError, is_retryable, parse_problem
 from .keys import SigningKey, parse_key_token
 from .limits import (
     DOCUMENT_TTL_SECONDS,
@@ -94,12 +94,12 @@ _SCOPE = re.compile(r"[a-z][a-z0-9-]{0,63}")
 #: or what the principal is:
 #:
 #: - ``agent-asserted``: the ``for`` header alone, the agent's word, as an email's From line is.
-#: - ``key-pairing``: an ``agnt-key:`` principal's pairing signature verified: the key's holder consented
+#: - ``key-pairing``: a ``simon-key:`` principal's pairing signature verified: the key's holder consented
 #:   to this address speaking for that key, with no server trusted for it. Not identity, not humanity, and
 #:   the agent's keys are still its server's word.
 #: - ``server-claim``: an ``acts-for`` claim the author's server signed: that server's word that the
 #:   identifier approved this agent. ``authoritative`` only for a ``mailto:`` whose domain names that same
-#:   server in its ``_agnt`` TXT record, so it is as strong as the domain's DNS.
+#:   server in its ``_simon`` TXT record, so it is as strong as the domain's DNS.
 PrincipalBasis = Literal["agent-asserted", "key-pairing", "server-claim"]
 
 _PROVES = {
@@ -125,7 +125,7 @@ class PrincipalTrust:
     proves: str
     #: For ``server-claim``: the server whose word it is.
     claimant: str | None = None
-    #: For ``server-claim``: whether the identifier's email domain names the claimant in its ``_agnt`` TXT
+    #: For ``server-claim``: whether the identifier's email domain names the claimant in its ``_simon`` TXT
     #: record. This reader's own judgement, never the claim's or the word of whoever handed it over.
     authoritative: bool | None = None
     #: For ``server-claim``: the scope the claim lists, keeping only registry-shaped names.
@@ -237,8 +237,8 @@ class Reader:
         resolution = self._resolution(name)
         if resolution.outcome != "server":
             details = {"domain": name, "outcome": resolution.outcome}
-            raise AgntError(
-                "no_server", f"{name} resolves to no AGNT server: {resolution.outcome}.", details=details
+            raise SimonError(
+                "no_server", f"{name} resolves to no SIMON server: {resolution.outcome}.", details=details
             )
         return resolution.server
 
@@ -268,12 +268,12 @@ class Reader:
         count only when their signature verifies with a key of the server ``from``'s domain resolves to,
         the message's carrier (spec 6.1), read here. An entry's ``claims`` never count: they are its
         server's judgement, and anyone can paste an entry. Answers a Trust or a NotVerified; a failure that
-        may pass raises a retryable AgntError, never "not verified". There is no option naming the server
+        may pass raises a retryable SimonError, never "not verified". There is no option naming the server
         to ask.
         """
         try:
             m = check_message(message, _READER_LIMITS)
-        except AgntError:
+        except SimonError:
             return NotVerified(None, "invalid_message")
         id = message_id(m)
         try:
@@ -281,7 +281,7 @@ class Reader:
             verdict = "verified" if author is None else message_verdict(m, author["keys"])
             if verdict != "verified" and author is not None:
                 author = self.agent_document(m["from"], refresh=True)  # its keys may have changed
-        except AgntError as e:
+        except SimonError as e:
             if e.code in ("no_server", "bad_document"):
                 return NotVerified(id, e.code)
             raise
@@ -345,13 +345,13 @@ class Reader:
                 self._cache[("resolution", name)] = (time.monotonic() + ttl_ms / 1000, resolution)
         if resolution.outcome == "temporary":
             details = {"domain": name, "outcome": resolution.outcome}
-            raise AgntError(
+            raise SimonError(
                 "unavailable", f"Resolving {name} failed for now; try again later.", None, True, details
             )
         return resolution
 
     def _read_server_document(self, origin: str) -> dict[str, Any]:
-        response = self._document(f"{origin}/agnt/server")
+        response = self._document(f"{origin}/simon/server")
         doc = read_server_document(response.body, origin, self._now_ms()) if response.status == 200 else None
         if doc is None:
             raise _bad_document(
@@ -361,7 +361,7 @@ class Reader:
 
     def _read_agent_document(self, address: str) -> dict[str, Any] | None:
         server = self.server_of(domain_of(address))
-        response = self._document(f"{server}/agnt/agents/{address_segment(address)}")
+        response = self._document(f"{server}/simon/agents/{address_segment(address)}")
         if response.status == 404:
             return None
         if response.status != 200:
@@ -378,7 +378,7 @@ class Reader:
     def _document(self, url: str) -> Response:
         response = self._fetch("GET", url, max_bytes=MAX_DOCUMENT_BYTES)
         if is_retryable(response.status):
-            raise AgntError(
+            raise SimonError(
                 "unavailable",
                 f"{url} answered {response.status}; try again later.",
                 response.status,
@@ -411,11 +411,11 @@ class Reader:
         except TimeoutError:
             details = {"url": url, "timeout": timeout}
             message = f"{method} {url}: no answer within {timeout} s."
-            raise AgntError("timeout", message, None, True, details) from None
+            raise SimonError("timeout", message, None, True, details) from None
         except (HostNotFound, OSError) as e:
             cause = "no such host" if isinstance(e, HostNotFound) else str(e) or type(e).__name__
             message = f"{method} {url} failed: {cause}."
-            raise AgntError("network_error", message, None, True, {"url": url, "cause": cause}) from None
+            raise SimonError("network_error", message, None, True, {"url": url, "cause": cause}) from None
 
     def _now_ms(self) -> int:
         return int((time.time() + self._skew) * 1000)
@@ -482,7 +482,7 @@ class Agent(Reader):
                     raise _invalid(name, f"{name} is a string.")
                 body[name] = value
         # A leased address signs an empty identity even when this object previously had one.
-        result = self.call("POST", "/agnt/register", canonical_bytes(body), agent=body.get("address"))
+        result = self.call("POST", "/simon/register", canonical_bytes(body), agent=body.get("address"))
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
             if principal is not None:
@@ -491,7 +491,7 @@ class Agent(Reader):
 
     def account(self) -> dict[str, Any]:
         """The agent's address, keys (including labels), grants and pending recovery."""
-        return self.call("GET", "/agnt/account")
+        return self.call("GET", "/simon/account")
 
     def recover(self, address: str, principal_key: SigningKey | None = None, *, code: str | None = None,
                 at: str | None = None, recover: str | None = None,
@@ -508,16 +508,16 @@ class Agent(Reader):
             principal = principal_key.identifier
             pairing = sign_pairing(principal_key, address) if pairing is None else pairing
             at = timestamp(self._now_ms()) if at is None else at
-            recover = principal_key.sign(f"AGNT-RECOVER\n{address}\n{self._key().token}\n{at}".encode())
+            recover = principal_key.sign(f"SIMON-RECOVER\n{address}\n{self._key().token}\n{at}".encode())
         if principal is None and self.principal is not None and self.address != address:
             raise _invalid("principal", "Recovery of a different address requires an explicit local principal choice.")
         effective_principal = self.principal if principal is None else principal
         effective_pairing = (self.pairing if pairing is None else pairing) if principal is None else pairing
         if effective_pairing is not None and effective_principal is None:
             raise _invalid("principal", "Pairing needs its principal.")
-        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("agnt-key:") and not verify_pairing(address, effective_principal, effective_pairing))):
+        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("simon-key:") and not verify_pairing(address, effective_principal, effective_pairing))):
             raise _invalid("pairing", "Effective recovery principal must be valid; its key pairing must verify for the target address.")
-        if recover is not None and (effective_principal is None or not effective_principal.startswith("agnt-key:") or not isinstance(at, str) or not verify_recovery(address, effective_principal, self._key().token, at, recover)):
+        if recover is not None and (effective_principal is None or not effective_principal.startswith("simon-key:") or not isinstance(at, str) or not verify_recovery(address, effective_principal, self._key().token, at, recover)):
             raise _invalid("recover", "Recovery proof must verify for this same principal, target address, new key and timestamp.")
         body = {"address": address, "key": self._key().token}
         for name, value in (("code", code), ("at", at), ("recover", recover)):
@@ -525,7 +525,7 @@ class Agent(Reader):
                 if not isinstance(value, str):
                     raise _invalid(name, f"{name} is a string.")
                 body[name] = value
-        result = self.call("POST", "/agnt/recovery", canonical_bytes(body), agent=address)
+        result = self.call("POST", "/simon/recovery", canonical_bytes(body), agent=address)
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
             self.principal, self.pairing = effective_principal, effective_pairing
@@ -534,7 +534,7 @@ class Agent(Reader):
     def recovery_status(self) -> dict[str, Any]:
         """Read pending recovery state as the authorized agent."""
         self._address()
-        return self.call("GET", "/agnt/recovery")
+        return self.call("GET", "/simon/recovery")
 
     def recover_by_principal(self, address: str, at: str, recover: str, *, principal: str | None = None, pairing: str | None = None) -> dict[str, Any]:
         """Recover with an already-signed principal proof."""
@@ -548,12 +548,12 @@ class Agent(Reader):
             raise _invalid("cancelCode", "Provide both address and cancel_code, or neither.")
         if cancel_code is None:
             self._address()
-            return self.call("POST", "/agnt/recovery/cancel", canonical_bytes({}))
+            return self.call("POST", "/simon/recovery/cancel", canonical_bytes({}))
         if not isinstance(cancel_code, str):
             raise _invalid("cancelCode", "cancel_code is a string.")
         address = _address_arg("address", address)
         body = {"address": address, "cancelCode": cancel_code}
-        return self.call("POST", "/agnt/recovery/cancel", canonical_bytes(body), agent=address)
+        return self.call("POST", "/simon/recovery/cancel", canonical_bytes(body), agent=address)
 
     def add_key(self, new_key: SigningKey, label: str | None = None) -> dict[str, Any]:
         """Add a device key, with proof of possession and an optional private label."""
@@ -562,21 +562,21 @@ class Agent(Reader):
             if not isinstance(label, str) or len(label) > 64:
                 raise _invalid("label", "label is a string of at most 64 characters.")
             body["label"] = label
-        return self.call("POST", "/agnt/keys", canonical_bytes(body))
+        return self.call("POST", "/simon/keys", canonical_bytes(body))
 
     def revoke_key(self, key: str) -> dict[str, Any]:
         if parse_key_token(key) is None:
             raise _invalid("key", "key is a public key token.")
-        return self.call("DELETE", "/agnt/keys/" + quote(key, safe=""))
+        return self.call("DELETE", "/simon/keys/" + quote(key, safe=""))
 
     def end_grant(self, id: str) -> dict[str, Any]:
         if not isinstance(id, str) or not id:
             raise _invalid("id", "A grant id is a nonempty string.")
-        return self.call("DELETE", "/agnt/grants/" + quote(id, safe=""))
+        return self.call("DELETE", "/simon/grants/" + quote(id, safe=""))
 
     def unpair(self, address: str, unpairing: str) -> dict[str, Any]:
         address = _address_arg("address", address)
-        return self.call("POST", "/agnt/unpair", canonical_bytes({"address": address, "unpairing": unpairing}), agent=address)
+        return self.call("POST", "/simon/unpair", canonical_bytes({"address": address, "unpairing": unpairing}), agent=address)
 
     def compose(
         self,
@@ -639,13 +639,13 @@ class Agent(Reader):
         stranger = next((r for r in hints or {} if r not in message["to"]), None)
         if stranger is not None:
             raise _invalid("hints", f"hints name {stranger}, which is not in the message's to.")
-        headers = {"agnt-hints": _ascii_json(hints)} if hints else None
-        result = self.call("POST", "/agnt/send", canonical_bytes(message), headers)
+        headers = {"simon-hints": _ascii_json(hints)} if hints else None
+        result = self.call("POST", "/simon/send", canonical_bytes(message), headers)
         if result.get("id") != message_id(message):
-            raise AgntError(
+            raise SimonError(
                 "bad_response",
                 f"The server named the message {result.get('id')}; its id is {message_id(message)}.",
-                details={"url": self.origin + "/agnt/send"},
+                details={"url": self.origin + "/simon/send"},
             )
         return result
 
@@ -669,7 +669,7 @@ class Agent(Reader):
             if type(wait) is not int or not 0 <= wait <= 60:
                 raise _invalid("wait", "wait is a whole number from 0 to 60.")
             query["wait"] = wait
-        return self.call("GET", "/agnt/sync" + ("?" + urlencode(query) if query else ""), timeout=request_timeout if request_timeout is not None else max(self.timeout, (wait or 0) + 5))
+        return self.call("GET", "/simon/sync" + ("?" + urlencode(query) if query else ""), timeout=request_timeout if request_timeout is not None else max(self.timeout, (wait or 0) + 5))
 
     def send_signal(self, type: str, about: str, to: Iterable[str]) -> dict[str, Any]:
         """Ask the server to send a signal. Read/typing sharing is always opt-in."""
@@ -677,23 +677,23 @@ class Agent(Reader):
             raise _invalid("type", "type is a registry name.")
         body = {"type": type, "about": _hex64_arg("about", about),
                 "to": [_address_arg(f"to[{i}]", a) for i, a in enumerate(to)]}
-        return self.call("POST", "/agnt/send-signal", canonical_bytes(body))
+        return self.call("POST", "/simon/send-signal", canonical_bytes(body))
 
     def add_webhook(self, url: str) -> dict[str, Any]:
-        return self.call("POST", "/agnt/webhooks", canonical_bytes({"url": url}))
+        return self.call("POST", "/simon/webhooks", canonical_bytes({"url": url}))
 
     def verify_webhook(self, id: str, code: str) -> dict[str, Any]:
-        return self.call("POST", "/agnt/webhooks/" + quote(id, safe="") + "/verify", canonical_bytes({"code": code}))
+        return self.call("POST", "/simon/webhooks/" + quote(id, safe="") + "/verify", canonical_bytes({"code": code}))
 
     def remove_webhook(self, id: str) -> Any:
-        return self.call("DELETE", "/agnt/webhooks/" + quote(id, safe=""))
+        return self.call("DELETE", "/simon/webhooks/" + quote(id, safe=""))
 
     def sent(self, id: str) -> dict[str, Any]:
         """How delivery of this agent's own message is going, one entry per recipient server:
         ``{"id", "servers": [{"server", "recipients", "status", "reason"?}]}``. ``status`` is ``pending``,
         ``delivered`` or ``failed``; a failure's ``reason`` is the resolution outcome, the code the
         receiving server answered, or ``expired`` when the delivery deadline passed."""
-        return self.call("GET", f"/agnt/sent/{_hex64_arg('id', id)}")
+        return self.call("GET", f"/simon/sent/{_hex64_arg('id', id)}")
 
     def upload_part(
         self, data: bytes, type: str = "application/octet-stream", name: str | None = None
@@ -701,17 +701,17 @@ class Agent(Reader):
         """Upload a part's bytes before sending a message that names them. Returns the part for ``parts``,
         with ``name``, the file name suggested to its readers, when given."""
         sha256 = sha256_hex(data)
-        self.call("PUT", f"/agnt/parts/{sha256}", data, {"content-type": "application/octet-stream"})
+        self.call("PUT", f"/simon/parts/{sha256}", data, {"content-type": "application/octet-stream"})
         part = {"type": type, "sha256": sha256, "size": len(data)}
         return part if name is None else {**part, "name": name}
 
     def fetch_part(self, sha256: str, size: int | None = None) -> bytes:
         """The bytes of a part this agent uploaded, sent or received, checked against the hash, and the size
         when given. ``503 unavailable`` (retryable, with ``retry_after``) while the server fetches them."""
-        response = self._signed("GET", f"/agnt/parts/{_hex64_arg('sha256', sha256)}")
+        response = self._signed("GET", f"/simon/parts/{_hex64_arg('sha256', sha256)}")
         digest = sha256_hex(response.body)
         if digest != sha256 or (size is not None and len(response.body) != size):
-            raise AgntError(
+            raise SimonError(
                 "hash_mismatch",
                 f"{response.url} sent {len(response.body)} bytes hashing to {digest}.",
                 details={"url": response.url, "sha256": digest, "size": len(response.body)},
@@ -736,8 +736,8 @@ class Agent(Reader):
         response = self._signed(method, path, body, headers, agent=agent, timeout=timeout)
         try:
             return parse(response.body) if response.body else None
-        except AgntError:
-            raise AgntError(
+        except SimonError:
+            raise SimonError(
                 "bad_response",
                 f"{response.url} answered {response.status} with a body that is not JSON.",
                 response.status,
@@ -767,13 +767,13 @@ class Agent(Reader):
         def attempt() -> Response:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise AgntError("timeout", f"{method} {url}: no answer within {budget} s.", None, True, {"url": url, "timeout": budget})
+                raise SimonError("timeout", f"{method} {url}: no answer within {budget} s.", None, True, {"url": url, "timeout": budget})
             signature = sign_request(
                 self._key(), method, url, body or b"", now=time.time() + self._skew, agent=self.address if agent is _OWN_ADDRESS else agent
             )
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise AgntError("timeout", f"{method} {url}: no answer within {budget} s.", None, True, {"url": url, "timeout": budget})
+                raise SimonError("timeout", f"{method} {url}: no answer within {budget} s.", None, True, {"url": url, "timeout": budget})
             return self._fetch(method, url, body, {**signature, **(headers or {})}, timeout=remaining)
 
         response = attempt()
@@ -790,12 +790,12 @@ class Agent(Reader):
 
     def _key(self) -> SigningKey:
         if self.key is None:
-            raise AgntError("no_key", "This agent has no key to sign with.")
+            raise SimonError("no_key", "This agent has no key to sign with.")
         return self.key
 
     def _address(self) -> str:
         if self.address is None:
-            raise AgntError("not_registered", "This agent has no address yet: register first.")
+            raise SimonError("not_registered", "This agent has no address yet: register first.")
         return self.address
 
 
@@ -815,7 +815,7 @@ def _ascii_json(value: Any) -> str:
     return json.dumps(value, separators=(",", ":")).replace("\x7f", "\\u007f")
 
 
-def _error(response: Response) -> AgntError:
+def _error(response: Response) -> SimonError:
     """The error an answer carries: the server's problem details (section 9), or ``bad_response`` when it
     sent none. ``status`` and ``retryable`` follow the HTTP status; the code, detail and details are the
     server's."""
@@ -823,7 +823,7 @@ def _error(response: Response) -> AgntError:
     error = parse_problem(response.status, response.body, retry_after=retry_after)
     if error is not None:
         return error
-    return AgntError(
+    return SimonError(
         "bad_response",
         f"{response.url} answered {response.status} without problem details.",
         response.status,
@@ -846,18 +846,18 @@ def _retry_after(response: Response) -> int | None:
         return None
 
 
-def _bad_document(response: Response, message: str) -> AgntError:
-    return AgntError("bad_document", message, response.status, False, details={"url": response.url})
+def _bad_document(response: Response, message: str) -> SimonError:
+    return SimonError("bad_document", message, response.status, False, details={"url": response.url})
 
 
-def _invalid(field: str, message: str) -> AgntError:
-    return AgntError("invalid", message, details={"field": field})
+def _invalid(field: str, message: str) -> SimonError:
+    return SimonError("invalid", message, details={"field": field})
 
 
 def _origin_arg(field: str, value: str) -> str:
     origin = server_origin(value, allow_local=True)
     if origin is None:
-        raise _invalid(field, f"{field} is an origin such as https://agnt.example.com, not {value!r}.")
+        raise _invalid(field, f"{field} is an origin such as https://simon.example.com, not {value!r}.")
     return origin
 
 

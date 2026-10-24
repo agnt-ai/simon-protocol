@@ -88,8 +88,8 @@ const actsFor: ActsForClaim = {
 };
 const NOW = new Date('2026-10-14T21:00:00Z');
 /** Where the question goes: bob@example.net, at the server example.net resolves to. */
-const to = { server: 'https://agnt.example.net', recipients: ['bob@example.net'] };
-const receiver: Receiver = { origin: 'https://agnt.example.net' };
+const to = { server: 'https://simon.example.net', recipients: ['bob@example.net'] };
+const receiver: Receiver = { origin: 'https://simon.example.net' };
 /** A resolver over a fixed table; a domain not in it is not_found, and `flaky.example` is temporary. */
 const resolver =
   (table: Record<string, string>): Resolve =>
@@ -189,13 +189,13 @@ describe('keys', () => {
 });
 
 describe('envelopes', () => {
-  it('the carrying server signs AGNT-ENVELOPE and the envelope; claims and hints ride under its signature', () => {
+  it('the carrying server signs SIMON-ENVELOPE and the envelope; claims and hints ride under its signature', () => {
     const envelope = signEnvelope(
       { message: signedQuestion, ...to, claims: [actsFor], hints: { 'bob@example.net': { invite: '7KQ2' } } },
       exampleCom.privateKey,
     );
     assert.equal(verifyEnvelope(envelope, serverKeys, NOW), true);
-    assert.equal(verifyEnvelope({ ...envelope, server: 'https://agnt.example.org' }, serverKeys, NOW), false);
+    assert.equal(verifyEnvelope({ ...envelope, server: 'https://simon.example.org' }, serverKeys, NOW), false);
     assert.equal(
       verifyEnvelope({ ...envelope, recipients: ['bob@example.net', 'x@example.net'] }, serverKeys, NOW),
       false,
@@ -203,7 +203,7 @@ describe('envelopes', () => {
     assert.equal(verifyEnvelope(envelope, [keyEntry(ada.key)], NOW), false);
     assert.equal(verifyEnvelope({ ...envelope, claims: [] }, serverKeys, NOW), false);
     assert.equal(verifyEnvelope({ ...envelope, hints: {} }, serverKeys, NOW), false);
-    assert.equal(signingBytes('AGNT-ENVELOPE', envelope).subarray(0, 14).toString(), 'AGNT-ENVELOPE\n');
+    assert.equal(signingBytes('SIMON-ENVELOPE', envelope).subarray(0, 15).toString(), 'SIMON-ENVELOPE\n');
     assert.deepEqual(parseEnvelope(body(envelope)), envelope);
   });
 
@@ -284,8 +284,8 @@ describe('envelopes', () => {
   it('server is an origin, and recipients a non-empty list of distinct addresses that hints are keyed by', () => {
     const shape = (patch: Record<string, Json>) =>
       code(() => checkEnvelopeShape({ message: signedQuestion as unknown as Json, signature: 'AA', ...to, ...patch }));
-    assert.equal(shape({ server: 'https://AGNT.example.net:443/' }), 'accepted', 'any spelling of the origin');
-    for (const server of [undefined, 'agnt.example.net', 'http://agnt.example.net', 'https://agnt.example.net/x']) {
+    assert.equal(shape({ server: 'https://SIMON.example.net:443/' }), 'accepted', 'any spelling of the origin');
+    for (const server of [undefined, 'simon.example.net', 'http://simon.example.net', 'https://simon.example.net/x']) {
       assert.equal(shape({ server: server as Json }), '400 invalid server', String(server));
     }
     for (const recipients of [
@@ -317,8 +317,8 @@ describe('envelopes', () => {
         ),
       );
     assert.equal(deliver({}), 'accepted');
-    assert.equal(deliver({ server: 'https://AGNT.example.net/' }), 'accepted');
-    assert.equal(deliver({ server: 'https://agnt.example.org' }), '400 invalid server');
+    assert.equal(deliver({ server: 'https://SIMON.example.net/' }), 'accepted');
+    assert.equal(deliver({ server: 'https://simon.example.org' }), '400 invalid server');
     assert.equal(deliver({ recipients: ['carol@example.net'] }), '400 invalid recipients', 'not in to');
     const toTwo = { ...signedQuestion, to: ['bob@example.net', 'dan@example.org'] };
     assert.equal(deliver({ recipients: ['dan@example.org'] }, toTwo), 'accepted', 'not resolved before the signature');
@@ -334,7 +334,7 @@ describe('envelopes', () => {
     assert.equal(verifyEnvelope(envelope, serverKeys, NOW), true);
     assert.equal(verifyEnvelope({ ...envelope, claims: [{ ...actsFor, scope: ['commit'] }] }, serverKeys, NOW), false);
     const signed = { claims: envelope.claims!, signature: envelope.claimsSignature! };
-    assert.equal(claimsBytes([actsFor], messageId(signedQuestion)).subarray(0, 12).toString(), 'AGNT-CLAIMS\n');
+    assert.equal(claimsBytes([actsFor], messageId(signedQuestion)).subarray(0, 13).toString(), 'SIMON-CLAIMS\n');
     assert.equal(verifyClaims(signed, signedQuestion, serverKeys), true);
     assert.equal(verifyClaims({ ...signed, claims: [] }, signedQuestion, serverKeys), false, 'other claims');
     const other = { ...signedQuestion, sentAt: '2026-10-14T21:00:01Z' };
@@ -363,12 +363,15 @@ describe('envelopes', () => {
       ...signedQuestion,
       to: ['bob@example.net', 'x@nowhere.example', 'eve@example.org', 'dan@example.net', 'y@flaky.example'],
     };
-    const resolve = resolver({ 'example.net': 'https://agnt.example.net', 'example.org': 'https://agnt.example.net' });
+    const resolve = resolver({
+      'example.net': 'https://simon.example.net',
+      'example.org': 'https://simon.example.net',
+    });
     const split = await destinations(message.to, resolve);
     assert.deepEqual(split, [
       {
         outcome: 'server',
-        server: 'https://agnt.example.net',
+        server: 'https://simon.example.net',
         recipients: ['bob@example.net', 'eve@example.org', 'dan@example.net'],
       },
       { outcome: 'not_found', server: null, recipients: ['x@nowhere.example'] },
@@ -381,7 +384,7 @@ describe('envelopes', () => {
     });
     assert.deepEqual(envelope, {
       message,
-      server: 'https://agnt.example.net',
+      server: 'https://simon.example.net',
       recipients: ['bob@example.net', 'eve@example.org', 'dan@example.net'],
       claims: [actsFor],
       hints: { 'bob@example.net': { invite: 'a' } },
@@ -393,21 +396,21 @@ describe('envelopes', () => {
   });
 
   it('acts-for is authoritative when its for is a mailto: on a domain whose TXT record names the carrier', async () => {
-    const table = resolver({ 'example.org': 'https://agnt.example.com', 'example.net': 'https://agnt.example.net' });
+    const table = resolver({ 'example.org': 'https://simon.example.com', 'example.net': 'https://simon.example.net' });
     const resolve: Resolve = async domain =>
       domain === 'web.example'
-        ? { outcome: 'server', server: 'https://agnt.example.com', via: 'well-known' }
+        ? { outcome: 'server', server: 'https://simon.example.com', via: 'well-known' }
         : table(domain);
-    const carrier = 'https://agnt.example.com';
+    const carrier = 'https://simon.example.com';
     const judge = (forValue: string, c = carrier) => isAuthoritative({ for: forValue }, c, resolve);
     assert.equal(await judge('mailto:alice@example.org'), true);
     assert.equal(await judge('mailto:alice@web.example'), false, 'named only by its well-known answer');
-    assert.equal(await judge('mailto:alice@example.org', 'https://AGNT.example.com/'), true);
+    assert.equal(await judge('mailto:alice@example.org', 'https://SIMON.example.com/'), true);
     assert.equal(await judge('mailto:alice@example.net'), false, "another server's domain");
     assert.equal(await judge('mailto:alice@nowhere.example'), false);
     assert.equal(await judge('mailto:alice@flaky.example'), false);
     assert.equal(await judge('tel:+14155550100'), false, 'never for a phone number');
-    assert.equal(await judge(`agnt-key:${erin.key}`), false);
+    assert.equal(await judge(`simon-key:${erin.key}`), false);
     assert.deepEqual(await judgeClaims(signedQuestion, [actsFor, { type: 'x-other' }], 'paired', carrier, resolve), [
       { ...actsFor, authoritative: true },
       { type: 'x-other' },
@@ -477,7 +480,7 @@ describe('envelopes', () => {
       code(() => parseEnvelope(body({ message: bad, ...to, signature: 'AA' }))),
       '400 invalid id',
     );
-    const elsewhere = { ...to, server: 'https://agnt.example.org' };
+    const elsewhere = { ...to, server: 'https://simon.example.org' };
     assert.equal(
       code(() => parseEnvelope(body({ message: bad, ...elsewhere, signature: 'AA' }), MINIMUM_LIMITS, receiver)),
       '400 invalid id',
@@ -550,18 +553,18 @@ describe('envelopes', () => {
 });
 
 describe('paired and solo agents', () => {
-  const erinPrincipal = `agnt-key:${erin.key}`;
+  const erinPrincipal = `simon-key:${erin.key}`;
   const fromBob = (headers: Record<string, string>) =>
     ({ ...signedQuestion, from: 'bob@example.net', headers }) as Message;
   const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal);
 
-  it('a principal is mailto:, tel: or agnt-key:, written exactly, nothing percent-encoded', () => {
+  it('a principal is mailto:, tel: or simon-key:, written exactly, nothing percent-encoded', () => {
     for (const ok of [
       'mailto:alice@example.org',
       'tel:+12',
       'tel:+123456789012345',
       erinPrincipal,
-      'agnt-key:x-later:AAAA',
+      'simon-key:x-later:AAAA',
     ]) {
       assert.equal(isPrincipal(ok), true, ok);
     }
@@ -573,8 +576,8 @@ describe('paired and solo agents', () => {
       'tel:+1234567890123456',
       'tel:+01',
       'tel:+1%2023',
-      `agnt-key:${erin.key}=`,
-      'agnt-key:',
+      `simon-key:${erin.key}=`,
+      'simon-key:',
       'alice@example.org',
       1,
     ]) {
@@ -584,13 +587,13 @@ describe('paired and solo agents', () => {
     assert.equal(principalKey('mailto:alice@example.org'), null);
   });
 
-  it('a key principal pairs by signing AGNT-PAIR, the agent and itself, with either algorithm', () => {
-    assert.equal(pairingBytes('bob@example.net', erinPrincipal), `AGNT-PAIR\nbob@example.net\n${erinPrincipal}`);
+  it('a key principal pairs by signing SIMON-PAIR, the agent and itself, with either algorithm', () => {
+    assert.equal(pairingBytes('bob@example.net', erinPrincipal), `SIMON-PAIR\nbob@example.net\n${erinPrincipal}`);
     assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing), true);
     assert.equal(verifyPairing('ada@example.com', erinPrincipal, pairing), false, 'another agent');
-    assert.equal(verifyPairing('bob@example.net', `agnt-key:${frank.key}`, pairing), false, 'another principal');
+    assert.equal(verifyPairing('bob@example.net', `simon-key:${frank.key}`, pairing), false, 'another principal');
     assert.equal(verifyPairing('bob@example.net', 'mailto:erin@example.org', pairing), false, 'not a key principal');
-    const pq = `agnt-key:${frank.key}`;
+    const pq = `simon-key:${frank.key}`;
     assert.equal(verifyPairing('bob@example.net', pq, signPairing(frank.privateKey, 'bob@example.net', pq)), true);
   });
 
@@ -637,7 +640,7 @@ describe('documents', () => {
     Buffer.from(JSON.stringify(signAgentDocument(doc as never, k.privateKey)));
   const ada1 = { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] };
 
-  it('agent documents are signed over AGNT-AGENT by a server key valid at the time of reading', () => {
+  it('agent documents are signed over SIMON-AGENT by a server key valid at the time of reading', () => {
     const read = (b: Buffer, address = 'ada@example.com', keys = serverKeys) =>
       readAgentDocument(b, address, keys, NOW);
     assert.deepEqual(read(agent(ada1)), { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] });
@@ -667,10 +670,10 @@ describe('documents', () => {
   });
 
   it('a server document lists the algorithms it verifies, both of version 1 among them', () => {
-    const doc = serverDocument('https://agnt.example.com', serverKeys);
+    const doc = serverDocument('https://simon.example.com', serverKeys);
     assert.deepEqual(doc.algorithms, ['ed25519', 'ml-dsa-65']);
     const read = (algorithms: unknown) =>
-      readServerDocument(body(JSON.stringify({ ...doc, algorithms })), 'https://agnt.example.com', NOW)?.algorithms ??
+      readServerDocument(body(JSON.stringify({ ...doc, algorithms })), 'https://simon.example.com', NOW)?.algorithms ??
       null;
     assert.deepEqual(read(['ml-dsa-65', 'x-later', 'ed25519']), ['ml-dsa-65', 'x-later', 'ed25519']);
     for (const bad of [undefined, [], ['ed25519'], 'ed25519,ml-dsa-65', ['ed25519', 'ml-dsa-65', 'X']]) {
@@ -679,10 +682,10 @@ describe('documents', () => {
   });
 
   it('a server document is read by its origin as the URL standard writes it, with its four limits', () => {
-    const doc = serverDocument('https://agnt.example.com', serverKeys);
-    const read = (v: unknown, origin = 'https://agnt.example.com') =>
+    const doc = serverDocument('https://simon.example.com', serverKeys);
+    const read = (v: unknown, origin = 'https://simon.example.com') =>
       readServerDocument(body(JSON.stringify(v)), origin, NOW);
-    for (const server of ['https://agnt.example.com', 'https://AGNT.example.com/', 'https://agnt.example.com:443']) {
+    for (const server of ['https://simon.example.com', 'https://SIMON.example.com/', 'https://simon.example.com:443']) {
       assert.deepEqual(read({ ...doc, server }), doc, server);
     }
     assert.equal(read({ ...doc, server: 'https://x.example.com' }), null);
@@ -695,16 +698,16 @@ describe('documents', () => {
   });
 
   it('a document is at most 131072 bytes of strict JSON', () => {
-    const doc = serverDocument('https://agnt.example.com', serverKeys);
+    const doc = serverDocument('https://simon.example.com', serverKeys);
     const padded = (n: number) => {
       const s = JSON.stringify({ ...doc, pad: '' });
       return JSON.stringify({ ...doc, pad: 'x'.repeat(n - s.length) });
     };
-    assert.ok(readServerDocument(body(padded(131072)), 'https://agnt.example.com', NOW));
-    assert.equal(readServerDocument(body(padded(131073)), 'https://agnt.example.com', NOW), null);
+    assert.ok(readServerDocument(body(padded(131072)), 'https://simon.example.com', NOW));
+    assert.equal(readServerDocument(body(padded(131073)), 'https://simon.example.com', NOW), null);
     const repeated = JSON.stringify(doc).replace('{', '{"keys":[],');
     assert.equal(
-      readServerDocument(body(repeated), 'https://agnt.example.com', NOW),
+      readServerDocument(body(repeated), 'https://simon.example.com', NOW),
       null,
       'JSON.parse would take the last',
     );
@@ -716,46 +719,49 @@ describe('resolution', () => {
     txt: async name => txt[name] ?? [],
     get: async url => (url in wellKnown ? { status: 200, body: body(wellKnown[url]) } : null),
   });
-  const record = (s: string) => ({ '_agnt.example.com': [[s]] });
+  const record = (s: string) => ({ '_simon.example.com': [[s]] });
   const dns = (server: string) => ({ outcome: 'server', server, via: 'dns' });
 
-  it('DNS first, the well-known answer only when there is no agnt record', async () => {
+  it('DNS first, the well-known answer only when there is no simon record', async () => {
     assert.deepEqual(
-      await resolveDomain('example.com', io(record('v=agnt1; server=https://agnt.example.com'))),
-      dns('https://agnt.example.com'),
+      await resolveDomain('example.com', io(record('v=simon1; server=https://simon.example.com'))),
+      dns('https://simon.example.com'),
     );
     assert.deepEqual(
       await resolveDomain(
         'Example.COM',
-        io({ '_agnt.example.com': [['v=agnt1;server=https://ag', 'nt.example.com;'], ['x=y']] }),
+        io({ '_simon.example.com': [['v=simon1;server=https://si', 'mon.example.com;'], ['x=y']] }),
       ),
-      dns('https://agnt.example.com'),
+      dns('https://simon.example.com'),
     );
     assert.deepEqual(
-      await resolveDomain('example.com', io(record('v=agnt1; ttl=3600; server=HTTPS://AGNT.example.com/'))),
-      dns('https://agnt.example.com'),
+      await resolveDomain('example.com', io(record('v=simon1; ttl=3600; server=HTTPS://SIMON.example.com/'))),
+      dns('https://simon.example.com'),
     );
     assert.deepEqual(
       await resolveDomain(
         'example.com',
         io({
-          '_agnt.example.com': [['v=agnt1; server=https://a.example.com'], ['v=agnt1; server=https://b.example.com']],
+          '_simon.example.com': [
+            ['v=simon1; server=https://a.example.com'],
+            ['v=simon1; server=https://b.example.com'],
+          ],
         }),
       ),
       { outcome: 'conflict' },
     );
-    const wk = { 'https://example.com/.well-known/agnt': { server: 'https://agnt.example.com' } };
+    const wk = { 'https://example.com/.well-known/simon': { server: 'https://simon.example.com' } };
     for (const bad of [
-      'v=agnt1',
-      'v=agnt1; server=https://x.example.com/path',
-      'v=agnt1; server=http://x.example.com',
-      'v=agnt1; server=https://10.0.0.1',
+      'v=simon1',
+      'v=simon1; server=https://x.example.com/path',
+      'v=simon1; server=http://x.example.com',
+      'v=simon1; server=https://10.0.0.1',
     ]) {
       assert.deepEqual(await resolveDomain('example.com', io(record(bad), wk)), { outcome: 'invalid_record' }, bad);
     }
-    assert.deepEqual(await resolveDomain('example.com', io(record('V=AGNT1; server=https://a.example.com'), wk)), {
+    assert.deepEqual(await resolveDomain('example.com', io(record('V=SIMON1; server=https://a.example.com'), wk)), {
       outcome: 'server',
-      server: 'https://agnt.example.com',
+      server: 'https://simon.example.com',
       via: 'well-known',
     });
     assert.deepEqual(await resolveDomain('example.org', io({})), { outcome: 'not_found' });
@@ -794,7 +800,7 @@ describe('resolution', () => {
   });
 
   it('caching: a server for its source TTL up to an hour, not_found ten minutes, temporary a minute', () => {
-    const server = { outcome: 'server', server: 'https://agnt.example.com', via: 'dns' } as const;
+    const server = { outcome: 'server', server: 'https://simon.example.com', via: 'dns' } as const;
     assert.equal(resolutionCacheMs(server, 300_000), 300_000);
     assert.equal(resolutionCacheMs(server, 86_400_000), 3_600_000);
     assert.equal(resolutionCacheMs(server), 0);
@@ -804,11 +810,11 @@ describe('resolution', () => {
   });
 
   it('the well-known answer: 200 with a server, 429 and 5xx temporary, anything else not found', () => {
-    const answer = (status: number, b: unknown = { server: 'https://agnt.example.org' }) =>
+    const answer = (status: number, b: unknown = { server: 'https://simon.example.org' }) =>
       wellKnownOutcome({ status, body: body(JSON.stringify(b)) }).outcome;
     assert.equal(answer(200), 'server');
-    assert.equal(answer(200, { v: 2, server: 'https://agnt.example.org', more: 1 }), 'server');
-    assert.equal(answer(200, { server: 'https://agnt.example.org/x' }), 'not_found');
+    assert.equal(answer(200, { v: 2, server: 'https://simon.example.org', more: 1 }), 'server');
+    assert.equal(answer(200, { server: 'https://simon.example.org/x' }), 'not_found');
     assert.equal(answer(201), 'not_found');
     assert.equal(answer(301), 'not_found');
     assert.equal(answer(404), 'not_found');
@@ -821,14 +827,14 @@ describe('resolution', () => {
   });
 
   it('origins are https, a domain, an optional port of 1 to 65535, and nothing else', () => {
-    assert.equal(serverOrigin('HTTPS://AGNT.example.com:08443/'), 'https://agnt.example.com:8443');
-    assert.equal(serverOrigin('https://agnt.example.com:00443'), 'https://agnt.example.com');
+    assert.equal(serverOrigin('HTTPS://SIMON.example.com:08443/'), 'https://simon.example.com:8443');
+    assert.equal(serverOrigin('https://simon.example.com:00443'), 'https://simon.example.com');
     assert.equal(serverOrigin('https://xn--zz.example'), 'https://xn--zz.example', 'A-labels are not checked');
     for (const bad of [
-      'https://agnt.example.com:',
-      'https://agnt.example.com:0',
-      'https://agnt.example.com:65536',
-      'https://agnt.example.com:123456',
+      'https://simon.example.com:',
+      'https://simon.example.com:0',
+      'https://simon.example.com:65536',
+      'https://simon.example.com:123456',
       'https://bücher.example',
       'https://a.example.com/x',
       'https://u@a.example.com',
@@ -840,43 +846,43 @@ describe('resolution', () => {
     assert.equal(serverOrigin(`https://${'a'.repeat(63)}.${'b'.repeat(63)}.${'c'.repeat(63)}.${'d'.repeat(62)}`), null);
     assert.equal(serverOrigin('http://localhost:8080', true), 'http://localhost:8080');
     assert.equal(serverOrigin('http://127.0.0.1:80/', true), 'http://127.0.0.1');
-    assert.deepEqual(serversInTxt([['v=agnt1; server=https://x.example.com?']]), 'invalid');
+    assert.deepEqual(serversInTxt([['v=simon1; server=https://x.example.com?']]), 'invalid');
   });
 });
 
 describe('signed requests', () => {
-  const url = 'https://agnt.example.com/agnt/inbox?after=0&limit=5';
+  const url = 'https://simon.example.com/simon/inbox?after=0&limit=5';
   const now = Date.parse('2026-10-14T21:00:00Z');
 
-  it('are signed over AGNT-REQUEST, the method, the server, the actor, the target as sent, the time, the nonce and the body hash', () => {
+  it('are signed over SIMON-REQUEST, the method, the server, the actor, the target as sent, the time, the nonce and the body hash', () => {
     const headers = signRequest(bob.privateKey, { method: 'get', url, body: '{"a":1}', now, agent: 'bob@example.net' });
-    assert.equal(headers['agnt-key'], bob.key);
-    assert.equal(headers['agnt-agent'], 'bob@example.net');
-    assert.equal(headers['agnt-timestamp'], '1792011600');
+    assert.equal(headers['simon-key'], bob.key);
+    assert.equal(headers['simon-agent'], 'bob@example.net');
+    assert.equal(headers['simon-timestamp'], '1792011600');
     const signing = requestSigningString({
       method: 'GET',
-      origin: 'https://agnt.example.com',
+      origin: 'https://simon.example.com',
       actor: 'bob@example.net',
-      target: '/agnt/inbox?after=0&limit=5',
-      timestamp: headers['agnt-timestamp'],
-      nonce: headers['agnt-nonce'],
+      target: '/simon/inbox?after=0&limit=5',
+      timestamp: headers['simon-timestamp'],
+      nonce: headers['simon-nonce'],
       body: '{"a":1}',
     });
     assert.deepEqual(signing.split('\n').slice(0, 5), [
-      'AGNT-REQUEST',
+      'SIMON-REQUEST',
       'GET',
-      'https://agnt.example.com',
+      'https://simon.example.com',
       'bob@example.net',
-      '/agnt/inbox?after=0&limit=5',
+      '/simon/inbox?after=0&limit=5',
     ]);
     assert.equal(signing.split('\n').length, 8);
-    assert.equal(verify(bob.key, signing, headers['agnt-signature']), true);
+    assert.equal(verify(bob.key, signing, headers['simon-signature']), true);
     assert.equal(
-      verify(bob.key, signing.replace('agnt.example.com', 'other.example.com'), headers['agnt-signature']),
+      verify(bob.key, signing.replace('simon.example.com', 'other.example.com'), headers['simon-signature']),
       false,
     );
     assert.equal(
-      verify(bob.key, signing.replace('bob@example.net', 'eve@example.net'), headers['agnt-signature']),
+      verify(bob.key, signing.replace('bob@example.net', 'eve@example.net'), headers['simon-signature']),
       false,
       'naming another actor breaks the signature',
     );
@@ -886,26 +892,26 @@ describe('signed requests', () => {
   });
 
   it('the target is the path and query as Node sends them', () => {
-    assert.deepEqual(splitUrl('https://agnt.example.com:443/agnt/agents/ada@example.com'), {
-      origin: 'https://agnt.example.com',
-      target: '/agnt/agents/ada@example.com',
+    assert.deepEqual(splitUrl('https://simon.example.com:443/simon/agents/ada@example.com'), {
+      origin: 'https://simon.example.com',
+      target: '/simon/agents/ada@example.com',
     });
-    assert.equal(splitUrl('https://agnt.example.com/a b?q=x y#frag').target, '/a%20b?q=x%20y');
+    assert.equal(splitUrl('https://simon.example.com/a b?q=x y#frag').target, '/a%20b?q=x%20y');
     const raw = {
       method: 'GET',
-      origin: 'HTTPS://AGNT.EXAMPLE.COM:443/',
+      origin: 'HTTPS://SIMON.EXAMPLE.COM:443/',
       actor: 'ada@example.com',
-      target: '/agnt/agents/ada%2Fops@example.com?q=%2f%2F',
+      target: '/simon/agents/ada%2Fops@example.com?q=%2f%2F',
       timestamp: '1',
       nonce: 'unique-nonce',
       body: '',
     };
     const signing = requestSigningString(raw);
-    assert.equal(signing.split('\n')[2], 'https://agnt.example.com');
+    assert.equal(signing.split('\n')[2], 'https://simon.example.com');
     assert.equal(signing.split('\n')[4], raw.target);
     assert.notEqual(requestSigningString({ ...raw, target: raw.target.replace('%2f', '%2F') }), signing);
-    assert.equal(splitUrl('https://agnt.example.com').target, '/');
-    assert.equal(splitUrl('https://agnt.example.com/a?').target, '/a');
+    assert.equal(splitUrl('https://simon.example.com').target, '/');
+    assert.equal(splitUrl('https://simon.example.com/a?').target, '/a');
   });
 
   it('header grammar: anything missing or malformed is signature_required', () => {
@@ -914,42 +920,46 @@ describe('signed requests', () => {
       code(() => readSignedHeaders(h as Record<string, string>, new Date(now), { server }));
     assert.equal(read(ok), 'accepted');
     for (const [name, value] of [
-      ['agnt-key', undefined],
-      ['agnt-key', ['a', 'b']],
-      ['agnt-key', raw(ada.key)],
-      ['agnt-timestamp', '1234567890123'],
-      ['agnt-timestamp', '-1'],
-      ['agnt-timestamp', ''],
-      ['agnt-nonce', '1234567'],
-      ['agnt-nonce', 'x'.repeat(129)],
-      ['agnt-nonce', 'abcédefgh'],
-      ['agnt-signature', 'AB'],
+      ['simon-key', undefined],
+      ['simon-key', ['a', 'b']],
+      ['simon-key', raw(ada.key)],
+      ['simon-timestamp', '1234567890123'],
+      ['simon-timestamp', '-1'],
+      ['simon-timestamp', ''],
+      ['simon-nonce', '1234567'],
+      ['simon-nonce', 'x'.repeat(129)],
+      ['simon-nonce', 'abcédefgh'],
+      ['simon-signature', 'AB'],
     ] as const) {
       assert.equal(read({ ...ok, [name]: value }), '401 signature_required', `${name}: ${value}`);
     }
-    assert.equal(read({ ...ok, 'agnt-timestamp': '000000000001' }), 'accepted');
-    assert.equal(read({ ...ok, 'agnt-nonce': '~'.repeat(128) }), 'accepted');
+    assert.equal(read({ ...ok, 'simon-timestamp': '000000000001' }), 'accepted');
+    assert.equal(read({ ...ok, 'simon-nonce': '~'.repeat(128) }), 'accepted');
     assert.equal(read(ok, true), '401 signature_required', 'a server request names its server');
-    // agnt-server carries the serialised origin, the identity line it signs.
-    const fromServer = readSignedHeaders({ ...ok, 'agnt-server': 'https://agnt.example.net' }, new Date(now), {
+    // simon-server carries the serialised origin, the identity line it signs.
+    const fromServer = readSignedHeaders({ ...ok, 'simon-server': 'https://simon.example.net' }, new Date(now), {
       server: true,
     });
-    assert.equal(fromServer['agnt-server'], 'https://agnt.example.net');
-    for (const written of ['HTTPS://Agnt.Example.net/', 'https://agnt.example.net:443', 'https://agnt.example.net/']) {
-      assert.equal(read({ ...ok, 'agnt-server': written }, true), '401 signature_required', written);
+    assert.equal(fromServer['simon-server'], 'https://simon.example.net');
+    for (const written of [
+      'HTTPS://Simon.Example.net/',
+      'https://simon.example.net:443',
+      'https://simon.example.net/',
+    ]) {
+      assert.equal(read({ ...ok, 'simon-server': written }, true), '401 signature_required', written);
     }
-    const signedAs = signRequest(ada.privateKey, { method: 'GET', url, now, server: 'HTTPS://Agnt.Example.net:443/' });
-    assert.equal(signedAs['agnt-server'], 'https://agnt.example.net', 'a signer sends the serialised origin');
+    const signedAs = signRequest(ada.privateKey, { method: 'GET', url, now, server: 'HTTPS://Simon.Example.net:443/' });
+    assert.equal(signedAs['simon-server'], 'https://simon.example.net', 'a signer sends the serialised origin');
     const asAgent = signRequest(ada.privateKey, { method: 'GET', url, now, agent: 'ada@example.com' });
     const agentRead = (h: Record<string, unknown>, o = {}) =>
       code(() => readSignedHeaders(h as Record<string, string>, new Date(now), { agent: true, ...o }));
     assert.equal(agentRead(asAgent), 'accepted');
     assert.equal(agentRead(ok), '401 signature_required', 'an agent request names its agent');
     assert.equal(agentRead(ok, { optionalAgent: true }), 'accepted', 'unless the call may come before an address');
-    assert.equal(agentRead({ ...asAgent, 'agnt-agent': 'Ada@Example.com' }), '401 signature_required');
-    assert.equal(agentRead({ ...asAgent, 'agnt-agent': 'ada' }), '401 signature_required');
+    assert.equal(agentRead({ ...asAgent, 'simon-agent': 'Ada@Example.com' }), '401 signature_required');
+    assert.equal(agentRead({ ...asAgent, 'simon-agent': 'ada' }), '401 signature_required');
     assert.equal(
-      agentRead({ ...asAgent, 'agnt-server': 'https://agnt.example.com' }),
+      agentRead({ ...asAgent, 'simon-server': 'https://simon.example.com' }),
       '401 signature_required',
       'one actor, never two',
     );
@@ -959,7 +969,7 @@ describe('signed requests', () => {
       readSignedHeaders({}, new Date(now));
     } catch (e) {
       assert.ok(e instanceof WireError);
-      assert.deepEqual(e.details, { serverTime: 1792011600, header: 'agnt-key' });
+      assert.deepEqual(e.details, { serverTime: 1792011600, header: 'simon-key' });
     }
   });
 
@@ -967,9 +977,9 @@ describe('signed requests', () => {
     const headers = readSignedHeaders(signRequest(ada.privateKey, { method: 'GET', url, now }), new Date(now));
     const r = {
       method: 'GET',
-      origin: 'https://agnt.example.com',
+      origin: 'https://simon.example.com',
       actor: '',
-      target: '/agnt/inbox?after=0&limit=5',
+      target: '/simon/inbox?after=0&limit=5',
       body: '',
     };
     const check = async (o: { at?: number; entry?: KeyEntry | null; nonceSeen?: boolean; target?: string }) => {
@@ -992,7 +1002,7 @@ describe('signed requests', () => {
     const revoked = keyEntry(ada.key, '2026-10-01T00:00:00Z', '2026-10-14T00:00:00Z');
     assert.equal(await check({ entry: revoked }), '401 key_revoked');
     assert.equal(
-      await check({ target: '/agnt/inbox', nonceSeen: true }),
+      await check({ target: '/simon/inbox', nonceSeen: true }),
       '401 bad_signature',
       'a forger reads no nonce',
     );
@@ -1010,8 +1020,8 @@ describe('signed requests', () => {
           requestSigningString({
             ...r,
             target: '/x',
-            timestamp: headers['agnt-timestamp'],
-            nonce: headers['agnt-nonce'],
+            timestamp: headers['simon-timestamp'],
+            nonce: headers['simon-nonce'],
           }),
     );
   });
@@ -1031,9 +1041,9 @@ describe('signed requests', () => {
     );
     const r = {
       method: 'GET',
-      origin: 'https://agnt.example.com',
+      origin: 'https://simon.example.com',
       actor: '',
-      target: '/agnt/inbox?after=0&limit=5',
+      target: '/simon/inbox?after=0&limit=5',
       body: '',
     };
     const replay = (ms: number) =>
@@ -1053,13 +1063,18 @@ describe('signed requests', () => {
   });
 
   it('a server request is signed by a key of the server it names, and an ML-DSA key signs requests too', async () => {
-    const headers = signRequest(exampleCom.privateKey, { method: 'GET', url, now, server: 'https://agnt.example.com' });
+    const headers = signRequest(exampleCom.privateKey, {
+      method: 'GET',
+      url,
+      now,
+      server: 'https://simon.example.com',
+    });
     const read = readSignedHeaders(headers, new Date(now), { server: true });
     const r = {
       method: 'GET',
-      origin: 'https://agnt.example.com',
-      actor: 'https://agnt.example.com',
-      target: '/agnt/inbox?after=0&limit=5',
+      origin: 'https://simon.example.com',
+      actor: 'https://simon.example.com',
+      target: '/simon/inbox?after=0&limit=5',
       body: '',
     };
     assert.equal(
@@ -1107,7 +1122,7 @@ describe('errors and signature verdicts', () => {
     }
     assert.deepEqual(new WireError(503, 'unavailable', 'x', true, { a: 1 }).details, { a: 1 }, 'the older form');
     const u = unauthorized('bad_signature', 'x', NOW);
-    assert.equal(u.headers['www-authenticate'], 'AGNT');
+    assert.equal(u.headers['www-authenticate'], 'SIMON');
     assert.equal(forbidden('bad_signature', 'x').headers['www-authenticate'], undefined, '403 carries no challenge');
     assert.deepEqual(unsupportedVersion(7).toProblem().details, { field: 'v' });
   });

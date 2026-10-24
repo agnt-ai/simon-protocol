@@ -3,11 +3,11 @@
  * one paired with a key principal), write to each other both ways with a part sent by hash, read their
  * messages by opaque sync token, see delivery reported, and verify each other's signatures from the documents.
  *
- *   AGNT_SERVER=http://localhost:8787 npm run demo
+ *   SIMON_SERVER=http://localhost:8787 npm run demo
  *
  * Verification resolves each author's domain as any reader must; a development server's domains have no
- * DNS, so the demo answers them itself from AGNT_DEV_RESOLVE (domain=origin,..., the development server's
- * own setting, by default agents.test and lease.agents.test on AGNT_SERVER). That is a resolver passed in
+ * DNS, so the demo answers them itself from SIMON_DEV_RESOLVE (domain=origin,..., the development server's
+ * own setting, by default agents.test and lease.agents.test on SIMON_SERVER). That is a resolver passed in
  * code, the one seam the client keeps for local development.
  *
  * Any failure exits non-zero. Each run makes fresh keys, so it can run again and again.
@@ -16,17 +16,17 @@ import assert from 'node:assert/strict';
 import { generateKey, signPairing, textOf, type ResolverIO } from '@agnt-protocol/protocol';
 import { Agent, verifyAuthor, type Delivered } from '@agnt-protocol/client';
 
-const SERVER = process.env.AGNT_SERVER ?? 'http://localhost:8787';
+const SERVER = process.env.SIMON_SERVER ?? 'http://localhost:8787';
 const DEV_RESOLVE = Object.fromEntries(
-  (process.env.AGNT_DEV_RESOLVE ?? `agents.test=${SERVER},lease.agents.test=${SERVER}`)
+  (process.env.SIMON_DEV_RESOLVE ?? `agents.test=${SERVER},lease.agents.test=${SERVER}`)
     .split(',')
     .map(pair => pair.split('=', 2)),
 );
-/** The development network's names, answered as an agnt TXT record would answer them. */
+/** The development network's names, answered as a simon TXT record would answer them. */
 const resolver: ResolverIO = {
   txt: async name => {
-    const origin = DEV_RESOLVE[name.replace(/^_agnt\./, '')];
-    return origin ? [[`v=agnt1; server=${origin}`]] : [];
+    const origin = DEV_RESOLVE[name.replace(/^_simon\./, '')];
+    return origin ? [[`v=simon1; server=${origin}`]] : [];
   },
   get: async () => null,
 };
@@ -67,7 +67,7 @@ ok(`${ada.address}, key ${ada.key.slice(0, 24)}...`);
 
 say('Bob pairs with a key principal: pairing_required, then the principal signs.');
 const principal = generateKey();
-const id = `agnt-key:${principal.key}`;
+const id = `simon-key:${principal.key}`;
 const bob = agent();
 const pending = await bob.register({ for: id });
 assert.equal(pending.status, 'pairing_required');

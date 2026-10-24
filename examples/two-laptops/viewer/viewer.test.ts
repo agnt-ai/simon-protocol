@@ -8,7 +8,7 @@ import { after, test } from 'node:test';
 import { SqliteStore } from '../../../server/src/store/sqlite.ts';
 import { openDb, snapshot, viewer } from './viewer.ts';
 
-const dir = mkdtempSync(join(tmpdir(), 'agnt-viewer-'));
+const dir = mkdtempSync(join(tmpdir(), 'simon-viewer-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
 
 const hex = (c: string) => c.repeat(64);
@@ -25,7 +25,7 @@ const msg = (from: string, to: string, text: string, extra: object = {}) => ({
 });
 
 test('messages.json lists sent and received messages, safely', async () => {
-  const path = join(dir, 'agnt.sqlite');
+  const path = join(dir, 'simon.sqlite');
   const store = new SqliteStore(path);
   await store.createAgent({
     address: 'agent@a.test',

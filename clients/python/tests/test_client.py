@@ -22,15 +22,15 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import unquote, parse_qs, urlsplit
 
-from agnt import cli
-from agnt import keys as keys_module
-from agnt.canonical import canonical_bytes, parse, signing_bytes
-from agnt.client import Agent, NotVerified, Reader, Trust
-from agnt.envelope import claims_bytes, judge_claims
-from agnt.errors import AgntError
-from agnt.keys import SigningKey
-from agnt.limits import SEND_WINDOW_MS
-from agnt.messages import (
+from simon import cli
+from simon import keys as keys_module
+from simon.canonical import canonical_bytes, parse, signing_bytes
+from simon.client import Agent, NotVerified, Reader, Trust
+from simon.envelope import claims_bytes, judge_claims
+from simon.errors import SimonError
+from simon.keys import SigningKey
+from simon.limits import SEND_WINDOW_MS
+from simon.messages import (
     check_principal,
     check_supported_version,
     is_fresh,
@@ -44,10 +44,10 @@ from agnt.messages import (
     verify_pairing,
     verify_recovery,
 )
-from agnt.provenance import present_delivery
-from agnt.request import check_request, verify_add_key_proof
-from agnt.resolution import Resolution
-from agnt.wire import parse_timestamp, sha256_hex, timestamp
+from simon.provenance import present_delivery
+from simon.request import check_request, verify_add_key_proof
+from simon.resolution import Resolution
+from simon.wire import parse_timestamp, sha256_hex, timestamp
 
 SERVER_KEY = SigningKey(bytes(range(32)), allow_pure_python_signing=True)
 RECOVERY_WAIT_SECONDS = 72 * 3600
@@ -60,7 +60,7 @@ def entry(token: str) -> dict:
 
 
 class FakeServer:
-    """One AGNT server, with a clock ``skew`` seconds off this machine's. ``resolve`` is how it, and the
+    """One SIMON server, with a clock ``skew`` seconds off this machine's. ``resolve`` is how it, and the
     agents of a test, resolve domains, so authority can be judged; addresses it does not host are sent
     the code ``CODE``."""
 
@@ -76,7 +76,7 @@ class FakeServer:
         self.mailbox_addresses: set[str] = set()  # opt-in code-gated creation fixtures
         self.deliveries: dict[str, dict] = {}  # id -> the sent report
         self.claims: list[dict] = []  # claims "carried" with every message sent here
-        self.hints: str | None = None  # the last send's agnt-hints header, as it arrived
+        self.hints: str | None = None  # the last send's simon-hints header, as it arrived
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), self.handler())
         self.origin = f"http://127.0.0.1:{self.httpd.server_address[1]}"
         self.resolve = lambda domain: Resolution("server", self.origin, "dns")
@@ -113,7 +113,7 @@ class FakeServer:
                 headers = {"content-type": "application/json"}
                 try:
                     status, answer = server.route(method, self.path, body, self.headers)
-                except AgntError as e:
+                except SimonError as e:
                     status, answer, headers = e.status, e.to_problem(), e.problem_headers()
                 data = answer if isinstance(answer, bytes) else json.dumps(answer).encode()
                 self.send_response(status)
@@ -126,7 +126,7 @@ class FakeServer:
         return Handler
 
     def route(self, method: str, target: str, body: bytes, headers) -> tuple[int, object]:
-        if (method, target) == ("GET", "/agnt/server"):
+        if (method, target) == ("GET", "/simon/server"):
             limits = {
                 "messageBytes": 262144,
                 "recipients": 100,
@@ -135,75 +135,75 @@ class FakeServer:
             }
             doc = {"server": self.origin, "keys": [entry(self.key.token)], "limits": limits}
             return 200, {**doc, "algorithms": ["ed25519", "ml-dsa-65"]}
-        if method == "GET" and target.startswith("/agnt/agents/"):
-            address = unquote(target.removeprefix("/agnt/agents/"))
+        if method == "GET" and target.startswith("/simon/agents/"):
+            address = unquote(target.removeprefix("/simon/agents/"))
             agent = self.agents.get(address)
             if agent is None:
-                raise AgntError("not_found", "No such agent.", 404)
+                raise SimonError("not_found", "No such agent.", 404)
             doc = {"address": address, "kind": agent["kind"], "keys": [entry(k) for k in agent["keys"]]}
             if "retired" in agent:  # a retired document (spec section 4)
                 doc["keys"] = [{**k, "revoked": agent.get("revoked", agent["retired"])} for k in doc["keys"]]
                 doc = {**doc, "retired": agent["retired"], **agent.get("extra", {})}
-            return 200, {**doc, "signature": self.key.sign(signing_bytes("AGNT-AGENT", doc))}
+            return 200, {**doc, "signature": self.key.sign(signing_bytes("SIMON-AGENT", doc))}
         if target == "/unavailable":
             return 503, {"type": "about:blank", "status": 503, "code": "unavailable", "retryable": False}
 
         fields = {k.lower(): v for k, v in headers.items()}
         expected_type = "application/octet-stream" if method == "PUT" else "application/json"
         if body and fields.get("content-type") != expected_type:
-            raise AgntError("invalid", f"content-type {fields.get('content-type')}", 400)
-        request = parse(body) if method == "POST" and target in ("/agnt/register", "/agnt/recovery", "/agnt/recovery/cancel", "/agnt/keys") else None
-        address = self.address_of(fields.get("agnt-key"))
+            raise SimonError("invalid", f"content-type {fields.get('content-type')}", 400)
+        request = parse(body) if method == "POST" and target in ("/simon/register", "/simon/recovery", "/simon/recovery/cancel", "/simon/keys") else None
+        address = self.address_of(fields.get("simon-key"))
         if request is not None and (
-            request.get("key") == fields.get("agnt-key") or "cancelCode" in request
+            request.get("key") == fields.get("simon-key") or "cancelCode" in request
         ):
             # Signed by the key being registered, or by any key with a cancel code.
-            known = entry(fields["agnt-key"])
+            known = entry(fields["simon-key"])
         else:
-            known = entry(fields["agnt-key"]) if address else None
+            known = entry(fields["simon-key"]) if address else None
         check_request(
             method, self.origin, target, body, fields, now=self.now(), entry=known, nonce_seen=False
         )
-        if target == "/agnt/register":
+        if target == "/simon/register":
             return self.register(request, address)
-        if target == "/agnt/account":
+        if target == "/simon/account":
             return 200, self.active(address)
-        if target == "/agnt/recovery" and method == "GET":
+        if target == "/simon/recovery" and method == "GET":
             return 200, {"recovery": self.active(address)["recovery"]}
-        if target == "/agnt/recovery/cancel":
+        if target == "/simon/recovery/cancel":
             if "cancelCode" in request:
                 if request["cancelCode"] != CANCEL_CODE or self.recoveries.pop(request["address"], None) is None:
-                    raise AgntError("wrong_code", "Wrong cancel code.", 422)
+                    raise SimonError("wrong_code", "Wrong cancel code.", 422)
                 return 200, {"status": "cancelled", "address": request["address"]}
             if self.recoveries.pop(address, None) is None:
-                raise AgntError("not_found", "No recovery waiting.", 404)
+                raise SimonError("not_found", "No recovery waiting.", 404)
             return 200, {"status": "cancelled", "address": address}
-        if target == "/agnt/recovery":
+        if target == "/simon/recovery":
             return self.recover(request)
-        if target == "/agnt/keys":
+        if target == "/simon/keys":
             if not verify_add_key_proof(address, request["key"], request["proof"]):
-                raise AgntError("bad_proof", "The proof does not verify.", 401)
+                raise SimonError("bad_proof", "The proof does not verify.", 401)
             if request["key"] not in self.agents[address]["keys"]:
                 self.agents[address]["keys"].append(request["key"])
             return 200, self.active(address)
-        if target == "/agnt/send":
-            self.hints = fields.get("agnt-hints")
+        if target == "/simon/send":
+            self.hints = fields.get("simon-hints")
             message = parse_message(body)
             check_supported_version(message)
             agent = self.agents[address]
             check_principal(message, agent["kind"], agent["for"])
             if not is_fresh(message["sentAt"], int(self.now() * 1000), SEND_WINDOW_MS):
-                raise AgntError(
+                raise SimonError(
                     "invalid", "sentAt is outside the send window.", 400, details={"field": "sentAt"}
                 )
             self.deliver(message)
             return 200, {"id": message_id(message), "receivedAt": self.timestamp()}
-        if urlsplit(target).path == "/agnt/sync":
+        if urlsplit(target).path == "/simon/sync":
             query = parse_qs(urlsplit(target).query)
             since = query.get("since", [None])[0]
             previous = self.tokens.get(since)
             if since is not None and (previous is None or previous[0] != address):
-                raise AgntError("token_expired", "Unknown or expired token.", 410)
+                raise SimonError("token_expired", "Unknown or expired token.", 410)
             after = previous[1] if previous else 0
             limit = int(query.get("limit", [2])[0])
             entries = self.inboxes.get(address, [])
@@ -213,18 +213,18 @@ class FakeServer:
             self.tokens[token] = (address, cursor)
             messages = [{k: v for k, v in e.items() if k != "cursor"} for e in page]
             return 200, {"messages": messages, "signals": [], "marks": [], "removed": [], "token": token, "more": cursor < len(entries)}
-        if target.startswith("/agnt/sent/"):
+        if target.startswith("/simon/sent/"):
             id = target.rsplit("/", 1)[1]
             return 200, self.deliveries.get(id, {"id": id, "servers": []})
-        if target.startswith("/agnt/parts/"):
+        if target.startswith("/simon/parts/"):
             sha256 = target.rsplit("/", 1)[1]
             if method == "PUT":
                 if sha256_hex(body) != sha256:
-                    raise AgntError("invalid", "The bytes do not hash to the path.", 400)
+                    raise SimonError("invalid", "The bytes do not hash to the path.", 400)
                 self.parts[sha256] = body
                 return 200, {"sha256": sha256, "size": len(body)}
             return 200, self.parts[sha256]
-        raise AgntError("not_found", target, 404)
+        raise SimonError("not_found", target, 404)
 
     def deliver(self, message: dict) -> None:
         """Each recipient here gets an inbox entry, its claims judged as a receiving server judges them,
@@ -259,14 +259,14 @@ class FakeServer:
     def register(self, request: dict, address: str | None) -> tuple[int, dict]:
         wanted = request.get("address")
         if wanted in self.agents and address != wanted:
-            raise AgntError("address_in_use", "Use the dedicated recovery endpoint.", 409)
+            raise SimonError("address_in_use", "Use the dedicated recovery endpoint.", 409)
         if address in self.agents:
             return 200, self.active(address)
         if wanted in self.mailbox_addresses:
             if request.get("code") is None:
                 return 202, {"status": "code_sent", "address": wanted}
             if request["code"] != CODE:
-                raise AgntError("wrong_code", "Wrong creation code.", 422)
+                raise SimonError("wrong_code", "Wrong creation code.", 422)
         if address is None:
             address = wanted or self.leases.get(request["key"])
             if address is None:
@@ -276,7 +276,7 @@ class FakeServer:
             if "pairing" not in request:
                 return 202, {"status": "pairing_required", "address": address}
             if not verify_pairing(address, principal, request["pairing"]):
-                raise AgntError("bad_proof", "The pairing does not verify.", 401)
+                raise SimonError("bad_proof", "The pairing does not verify.", 401)
         kind = "paired" if principal else "solo"
         self.agents[address] = {"keys": [request["key"]], "kind": kind, "for": principal}
         return 200, self.active(address)
@@ -285,15 +285,15 @@ class FakeServer:
         wanted = request["address"]
         agent = self.agents.get(wanted)
         if agent is None:
-            raise AgntError("not_found", "No such agent.", 404)
+            raise SimonError("not_found", "No such agent.", 404)
         if "recover" in request:
             if not verify_recovery(wanted, agent["for"] or "", request["key"], request["at"], request["recover"]):
-                raise AgntError("bad_proof", "The recovery does not verify.", 401)
+                raise SimonError("bad_proof", "The recovery does not verify.", 401)
         else:
             if "code" not in request:
                 return 202, {"status": "code_sent", "address": wanted}
             if request["code"] != CODE:
-                raise AgntError("wrong_code", "Wrong recovery code.", 422)
+                raise SimonError("wrong_code", "Wrong recovery code.", 422)
             pending = self.recoveries.get(wanted)
             if pending is None or pending["key"] != request["key"]:
                 pending = {"key": request["key"], "completesAt": self.now() + RECOVERY_WAIT_SECONDS}
@@ -320,7 +320,7 @@ class FakeServer:
 
 class ClientTest(unittest.TestCase):
     def setUp(self):
-        patcher = mock.patch.dict("os.environ", {"AGNT_ALLOW_PURE_SIGNING": "1"})
+        patcher = mock.patch.dict("os.environ", {"SIMON_ALLOW_PURE_SIGNING": "1"})
         patcher.start()
         self.addCleanup(patcher.stop)
         self.server = FakeServer()
@@ -417,7 +417,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual((trust.principal.id, trust.principal.basis), (principal.identifier, "key-pairing"))
         self.assertIn("nothing about who holds the key", trust.principal.proves)
         self.assertNotIn("authoritative", trust.principal.to_json())
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.compose([], "x", headers={"for": "mailto:alice@example.org"})
         self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "headers"}))
 
@@ -588,7 +588,7 @@ class ClientTest(unittest.TestCase):
     def test_a_pairing_signed_for_another_address_is_refused(self):
         principal = SigningKey.generate()
         pairing = principal.sign(pairing_bytes("someone@example.com", principal.identifier))
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             self.agent().register("ada@example.com", principal=principal.identifier, pairing=pairing)
         self.assertEqual((caught.exception.status, caught.exception.code), (401, "bad_proof"))
 
@@ -606,7 +606,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(old.cancel_recovery(), {"status": "cancelled", "address": "ada@example.com"})
         self.assertNotIn("ada@example.com", self.server.recoveries)
         self.assertIsNone(old.recovery_status()["recovery"])
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             self.agent().cancel_recovery()
         self.assertEqual(caught.exception.code, "not_registered")
 
@@ -617,7 +617,7 @@ class ClientTest(unittest.TestCase):
         thief.recover("ada@example.com")
         thief.recover("ada@example.com", code=CODE)
         stranger = self.agent()
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             stranger.cancel_recovery(cancel_code="not-it", address="ada@example.com")
         self.assertEqual((caught.exception.status, caught.exception.code), (422, "wrong_code"))
         cancelled = stranger.cancel_recovery(cancel_code=CANCEL_CODE, address="ada@example.com")
@@ -637,7 +637,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(fresh.compose([], "recovered")["headers"]["for"], principal.identifier)
         fresh.send([], "recovered")
         self.assertEqual([k["key"] for k in recovered["keys"]], [fresh.key.token])
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             forged = sign_recovery(SigningKey.generate(), address, "x", at)
             self.agent().recover_by_principal(address, at, forged, principal=principal.identifier, pairing=sign_pairing(principal, address))
         self.assertEqual(caught.exception.code, "invalid")
@@ -652,12 +652,12 @@ class ClientTest(unittest.TestCase):
         fresh = self.agent()
         at = timestamp()
         with mock.patch.object(retained, "call") as request:
-            with self.assertRaises(AgntError) as caught:
+            with self.assertRaises(SimonError) as caught:
                 retained.recover(target, at=at, recover=sign_recovery(principal, target, retained.key.token, at))
             self.assertEqual(caught.exception.details, {"field": "principal"})
             request.assert_not_called()
         with mock.patch.object(fresh, "call") as request:
-            with self.assertRaises(AgntError) as caught:
+            with self.assertRaises(SimonError) as caught:
                 fresh.recover(target, at=at, recover=sign_recovery(other, target, fresh.key.token, at), principal=principal.identifier, pairing=sign_pairing(principal, target))
             self.assertEqual(caught.exception.details, {"field": "recover"})
             request.assert_not_called()
@@ -668,7 +668,7 @@ class ClientTest(unittest.TestCase):
         for principal in ("mailto:alice@example.com", "tel:+12025550123"):
             retained = self.agent(address="old@example.com", principal=principal)
             with mock.patch.object(retained, "call") as request:
-                with self.assertRaises(AgntError) as caught:
+                with self.assertRaises(SimonError) as caught:
                     retained.recover("other@example.com")
                 self.assertEqual(caught.exception.details, {"field": "principal"})
                 request.assert_not_called()
@@ -688,7 +688,7 @@ class ClientTest(unittest.TestCase):
         sha256 = sha256_hex(b"%PDF-1.7")
         self.assertEqual(part, {"type": "application/pdf", "sha256": sha256, "size": 8, "name": "brief.pdf"})
         self.assertEqual(agent.fetch_part(part["sha256"], 8), b"%PDF-1.7")
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.fetch_part(part["sha256"], 9)
         self.assertEqual(caught.exception.code, "hash_mismatch")
         message = agent.compose([], "attached", parts=[part])
@@ -705,13 +705,13 @@ class ClientTest(unittest.TestCase):
 
     def test_refusals_are_problem_details(self):
         agent = self.agent()
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.sync()  # not registered: the server does not know the key
         e = caught.exception
         self.assertEqual((e.status, e.code, e.retryable), (401, "unknown_key", False))
         self.assertIsInstance(e.details["serverTime"], int)
         agent.register()
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.call("GET", "/unavailable")  # retryable follows the status, whatever the body says
         self.assertEqual((caught.exception.code, caught.exception.retryable), ("unavailable", True))
 
@@ -720,7 +720,7 @@ class ClientTest(unittest.TestCase):
         agent.register()
         later = {"v": 2, "from": agent.address, "to": [], "sentAt": timestamp(), "signature": "AA"}
         later = sign_message(later, agent.key)
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.send_message(later)
         e = caught.exception
         self.assertEqual(
@@ -769,17 +769,17 @@ class ClientTest(unittest.TestCase):
             (lambda: agent.sent("ABC"), "id"),
             (lambda: agent.register("not an address"), "address"),
         ]:
-            with self.subTest(field), self.assertRaises(AgntError) as caught:
+            with self.subTest(field), self.assertRaises(SimonError) as caught:
                 call()
             self.assertEqual((caught.exception.code, caught.exception.status), ("invalid", None))
             self.assertEqual(caught.exception.details, {"field": field})
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             agent.compose([], "x")
         self.assertEqual(caught.exception.code, "not_registered")
 
     def test_network_failures_are_retryable(self):
         self.server.close()
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             Agent(self.server.origin, SigningKey.generate(), timeout=2).sync()
         e = caught.exception
         self.assertEqual((e.code, e.status, e.retryable), ("network_error", None, True))
@@ -789,7 +789,7 @@ class ClientTest(unittest.TestCase):
         message = Agent(self.server.origin, SigningKey.generate(), "eve@example.org").compose([], "hi")
         self.assertEqual(reader.verify_author(message).reason, "no_server")
         reader = Reader(resolver=lambda domain: Resolution("temporary"))
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             reader.verify_author(message)
         self.assertEqual((caught.exception.code, caught.exception.retryable), ("unavailable", True))
 
@@ -800,13 +800,13 @@ class ClientTest(unittest.TestCase):
             def resolve(domain):
                 asked.append(domain)
                 return Resolution(
-                    outcome, "https://agnt.example.com" if outcome == "server" else None, None, ttl_ms=ttl_ms
+                    outcome, "https://simon.example.com" if outcome == "server" else None, None, ttl_ms=ttl_ms
                 )
 
             return resolve
 
         clock = [1000.0]
-        with mock.patch("agnt.client.time.monotonic", lambda: clock[0]):
+        with mock.patch("simon.client.time.monotonic", lambda: clock[0]):
             for outcome, ttl_ms, kept in [
                 ("temporary", None, 60),
                 ("not_found", None, 600),
@@ -819,7 +819,7 @@ class ClientTest(unittest.TestCase):
                     reader, asked[:] = Reader(resolver=resolver(outcome, ttl_ms)), []
                     for at in (0, kept - 0.001, kept):
                         clock[0] = 1000.0 + at
-                        with self.assertRaises(AgntError) if outcome != "server" else _nothing():
+                        with self.assertRaises(SimonError) if outcome != "server" else _nothing():
                             reader.server_of("example.com")
                     self.assertEqual(len(asked), 2 if kept else 3)
 
@@ -835,17 +835,17 @@ class _nothing:
 class CommandLine(unittest.TestCase):
     def setUp(self):
         self.workspace = Path(tempfile.mkdtemp())
-        self.home = self.workspace / ".agnt"  # inside the workspace, and still out of reach
+        self.home = self.workspace / ".simon"  # inside the workspace, and still out of reach
         patcher = mock.patch.dict(
-            "os.environ", {"AGNT_ALLOW_PURE_SIGNING": "1", "AGNT_WORKSPACE": str(self.workspace)}
+            "os.environ", {"SIMON_ALLOW_PURE_SIGNING": "1", "SIMON_WORKSPACE": str(self.workspace)}
         )
         patcher.start()
         self.addCleanup(patcher.stop)
-        for name in ("AGNT_SERVER", "AGNT_ADDRESS", "AGNT_PRIVATE_KEY", "AGNT_HOME"):
+        for name in ("SIMON_SERVER", "SIMON_ADDRESS", "SIMON_PRIVATE_KEY", "SIMON_HOME"):
             os.environ.pop(name, None)
         self.server = FakeServer()
         self.addCleanup(self.server.close)
-        resolving = mock.patch("agnt.client.resolve", lambda domain: self.server.resolve(domain))
+        resolving = mock.patch("simon.client.resolve", lambda domain: self.server.resolve(domain))
         resolving.start()
         self.addCleanup(resolving.stop)
 
@@ -936,10 +936,10 @@ class CommandLine(unittest.TestCase):
                 "attach",
             ),
             (("send", "--to", "ada@example.com", "--attach", "link.txt"), "attach"),
-            (("upload", ".agnt/key.pem"), "file"),
+            (("upload", ".simon/key.pem"), "file"),
             (("upload", str(self.home / "key.pem")), "file"),
-            (("verify", ".agnt/address.json"), "file"),
-            (("part", "ab" * 32, "--out", ".agnt/key.pem"), "out"),
+            (("verify", ".simon/address.json"), "file"),
+            (("part", "ab" * 32, "--out", ".simon/key.pem"), "out"),
             (("part", "ab" * 32, "--out", str(outside)), "out"),
             (("part", "ab" * 32, "--out", "link.txt"), "out"),
         ]:
@@ -1044,17 +1044,17 @@ class CommandLine(unittest.TestCase):
         def environment(home):
             env = dict(os.environ)
             env["PYTHONPATH"] = str(Path(cli.__file__).resolve().parent.parent)
-            env["AGNT_TEST_PYTHON"] = sys.executable
-            env["AGNT_TEST_HOME"] = str(home)
+            env["SIMON_TEST_PYTHON"] = sys.executable
+            env["SIMON_TEST_HOME"] = str(home)
             return env
         def process(home, *args):
-            result = subprocess.run([sys.executable, "-m", "agnt", "--home", str(home), *args],
+            result = subprocess.run([sys.executable, "-m", "simon", "--home", str(home), *args],
                 env=environment(home), input=b"", capture_output=True, timeout=10)
             return result.returncode, json.loads(result.stdout or result.stderr)
         def follow(home, command):
             command = command.replace("<the code sent there>", CODE).replace("<the same code>", CODE)
-            args = command.split(", after ", 1)[0].removeprefix("agnt ")
-            result = subprocess.run(["/bin/sh", "-c", 'exec "$AGNT_TEST_PYTHON" -m agnt --home "$AGNT_TEST_HOME" ' + args],
+            args = command.split(", after ", 1)[0].removeprefix("simon ")
+            result = subprocess.run(["/bin/sh", "-c", 'exec "$SIMON_TEST_PYTHON" -m simon --home "$SIMON_TEST_HOME" ' + args],
                 env=environment(home), input=b"", capture_output=True, timeout=10)
             return result.returncode, json.loads(result.stdout or result.stderr)
         with mock.patch.object(self.server, "route", side_effect=record):
@@ -1090,7 +1090,7 @@ class CommandLine(unittest.TestCase):
             status, sent = process(fresh, "send", "--to", address, "--text", "after mailbox recovery")
             self.assertEqual(status, 0, sent)
             self.assertEqual((sent["message"]["headers"]["for"], sent["message"]["headers"]["pairing"]), (principal.identifier, pairing))
-        recoveries = [json.loads(body) for method, target, body in requests if target == "/agnt/recovery"]
+        recoveries = [json.loads(body) for method, target, body in requests if target == "/simon/recovery"]
         self.assertEqual(len(recoveries), 3)
         for body in recoveries:
             self.assertNotIn("for", body)
@@ -1126,14 +1126,14 @@ class SigningGate(unittest.TestCase):
             mock.patch.object(keys_module, "Ed25519PrivateKey", None),
             mock.patch.dict("os.environ", clear=True),
         ):
-            with self.assertRaises(AgntError) as caught:
+            with self.assertRaises(SimonError) as caught:
                 SigningKey.generate()
             self.assertEqual(caught.exception.code, "pure_signing_refused")
-            self.assertIn("AGNT_ALLOW_PURE_SIGNING", caught.exception.message)
+            self.assertIn("SIMON_ALLOW_PURE_SIGNING", caught.exception.message)
             self.assertTrue(SigningKey.generate(allow_pure_python_signing=True).token.startswith("ed25519:"))
         with (
             mock.patch.object(keys_module, "Ed25519PrivateKey", None),
-            mock.patch.dict("os.environ", {"AGNT_ALLOW_PURE_SIGNING": "1"}, clear=True),
+            mock.patch.dict("os.environ", {"SIMON_ALLOW_PURE_SIGNING": "1"}, clear=True),
         ):
             SigningKey.generate()
 

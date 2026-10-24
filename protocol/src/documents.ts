@@ -1,8 +1,8 @@
 /**
  * The two documents a server publishes, fetched without authentication and cacheable (spec section 4):
  *
- *   GET /agnt/server              { server, keys, algorithms, limits }
- *   GET /agnt/agents/<address>    { address, kind, keys, signature }   signed by the server, over AGNT-AGENT
+ *   GET /simon/server              { server, keys, algorithms, limits }
+ *   GET /simon/agents/<address>    { address, kind, keys, signature }   signed by the server, over SIMON-AGENT
  *                                 a retired address's adds `retired`, and `unpairing` when one retired it
  *
  * A reader takes a document's bytes: at most 131072 of them, JSON under the canonical rules (it need not be
@@ -64,7 +64,7 @@ export const serverDocument = (server: string, keys: KeyEntry[], limits: Limits 
 });
 
 export function signAgentDocument(doc: UnsignedAgentDocument, serverKey: string | KeyObject): AgentDocument {
-  return { ...doc, signature: sign(serverKey, signingBytes('AGNT-AGENT', doc)) };
+  return { ...doc, signature: sign(serverKey, signingBytes('SIMON-AGENT', doc)) };
 }
 
 /**
@@ -161,7 +161,7 @@ export function readAgentDocument(
   const doc = readObject(body);
   if (!doc || !isAddress(address) || doc.address !== address || typeof doc.kind !== 'string') return null;
   const keys = readKeys(doc.keys, now);
-  if (!keys || !signedByAny(serverKeys, now, signingBytes('AGNT-AGENT', doc), doc.signature)) return null;
+  if (!keys || !signedByAny(serverKeys, now, signingBytes('SIMON-AGENT', doc), doc.signature)) return null;
   const kind = doc.kind === 'paired' || doc.kind === 'solo' ? doc.kind : 'unknown';
   if (doc.retired === undefined) return { address, kind, keys };
   const retired = parseTimestamp(doc.retired);

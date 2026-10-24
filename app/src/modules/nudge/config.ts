@@ -1,4 +1,4 @@
-/** The agent-only nudge: `AGNT_NUDGE_TURNS`, the run of messages with no person consulted that earns a notice (default 12). */
+/** The agent-only nudge: `SIMON_NUDGE_TURNS`, the run of messages with no person consulted that earns a notice (default 12). */
 import { fail, int, type Env } from '../../lib/env.ts';
 
 export interface NudgeConfig {
@@ -6,6 +6,6 @@ export interface NudgeConfig {
 }
 
 export function readNudgeConfig(env: Env): NudgeConfig {
-  const turns = int(env, 'AGNT_NUDGE_TURNS', 12);
-  return turns >= 2 ? { turns } : fail('AGNT_NUDGE_TURNS is at least 2.');
+  const turns = int(env, 'SIMON_NUDGE_TURNS', 12);
+  return turns >= 2 ? { turns } : fail('SIMON_NUDGE_TURNS is at least 2.');
 }

@@ -1,6 +1,6 @@
 /**
  * This application's rate limits: fixed windows counted in the store, so a limit holds across processes.
- * Each counts calls, per the key its caller gives. Overrides: `AGNT_APP_RATES=name=count/seconds,...`.
+ * Each counts calls, per the key its caller gives. Overrides: `SIMON_APP_RATES=name=count/seconds,...`.
  */
 import type { ServerApi } from '@agnt-protocol/server';
 import { fail, list, type Env } from './env.ts';
@@ -45,11 +45,11 @@ export type Rates = Record<RateName, Rate>;
 
 export function readRates(env: Env): Rates {
   const rates: Rates = { ...DEFAULT_RATES };
-  for (const entry of list(env, 'AGNT_APP_RATES')) {
+  for (const entry of list(env, 'SIMON_APP_RATES')) {
     const m = /^([a-zA-Z]+)=(\d+)\/(\d+)$/.exec(entry);
     if (!m || !(m[1] in DEFAULT_RATES) || Number(m[2]) < 1 || Number(m[3]) < 1) {
       fail(
-        `AGNT_APP_RATES: ${entry} is not name=count/seconds with a name of ${Object.keys(DEFAULT_RATES).join(', ')}.`,
+        `SIMON_APP_RATES: ${entry} is not name=count/seconds with a name of ${Object.keys(DEFAULT_RATES).join(', ')}.`,
       );
     }
     rates[m[1] as RateName] = { limit: Number(m[2]), seconds: Number(m[3]) };

@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 /**
- * agnt-protocol: an AGNT agent from the command line, over @agnt-protocol/client. Every verb is written
+ * simon: a SIMON agent from the command line, over @agnt-protocol/client. Every verb is written
  * here; `help` and argument errors need no network. Output is JSON on stdout. An error is JSON on stderr,
  * `{"error":{code,message,status,retryable,details}}`, and the exit status says what to do: 2 for a
  * usage error, 75 for one that may pass on retry, 3 for a `wait` that timed out, 1 for any other.
  *
  * What other parties wrote is never mixed with what this tool and the agent's own server say: messages,
  * their headers and parts, and claims are printed inside {"untrusted":{"from","basis","content"}}.
- * Files are read and written only in the workspace, never in AGNT_HOME.
+ * Files are read and written only in the workspace, never in SIMON_HOME.
  *
- * Environment: AGNT_HOME (key and address, default ~/.config/agnt), AGNT_SERVER (the server to register
- * with), AGNT_WORKSPACE (the directory files are read from and written to, default the current one),
- * AGNT_TIMEOUT_MS (per request, default 30000).
+ * Environment: SIMON_HOME (key and address, default ~/.config/simon), SIMON_SERVER (the server to register
+ * with), SIMON_WORKSPACE (the directory files are read from and written to, default the current one),
+ * SIMON_TIMEOUT_MS (per request, default 30000).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 import { keyToken, privateKeyObject } from '@agnt-protocol/protocol';
 import {
-  AgntError,
+  SimonError,
   fetchAgentDocument,
   verifyAuthor,
   type Agent,
@@ -39,11 +39,11 @@ import { RULE, presentDelivery, presentEntry, untrusted, unwrapEntry } from '@ag
 import { waitForMessage } from '@agnt-protocol/client/wait';
 import { readFile, workspace, writablePath, writeFile, type Workspace } from '@agnt-protocol/client/workspace';
 
-const NAME = 'agnt-protocol';
-/** Files in AGNT_HOME that --add-key may not name. */
+const NAME = 'simon';
+/** Files in SIMON_HOME that --add-key may not name. */
 const RESERVED = new Set(['key.pem', 'address.json', 'wait.json', 'wait.lock']);
 const home = defaultHome();
-const timeoutMs = process.env.AGNT_TIMEOUT_MS ? Number(process.env.AGNT_TIMEOUT_MS) : undefined;
+const timeoutMs = process.env.SIMON_TIMEOUT_MS ? Number(process.env.SIMON_TIMEOUT_MS) : undefined;
 
 type Values = Record<string, string | boolean | (string | boolean)[] | undefined>;
 
@@ -56,7 +56,7 @@ interface Verb {
   run(values: Values, positionals: string[]): Promise<unknown>;
 }
 
-const usageError = (message: string) => new AgntError('invalid', message, { details: { field: 'arguments' } });
+const usageError = (message: string) => new SimonError('invalid', message, { details: { field: 'arguments' } });
 
 /** The workspace, found when a verb first touches a file. */
 let ws: Workspace | undefined;
@@ -65,9 +65,9 @@ const files = () => (ws ??= workspace(home));
 /** This machine's agent. `register` may make its key; every other verb needs a registered agent. */
 function agent(server?: string, registering = false): Agent {
   if (!registering && !readAddressFile(home)) {
-    throw new AgntError('not_registered', `No registered agent in AGNT_HOME. Run: ${NAME} register --server URL`);
+    throw new SimonError('not_registered', `No registered agent in SIMON_HOME. Run: ${NAME} register --server URL`);
   }
-  return openAgent(home, { server: server ?? process.env.AGNT_SERVER, timeoutMs });
+  return openAgent(home, { server: server ?? process.env.SIMON_SERVER, timeoutMs });
 }
 
 const shellArg = (value: string) => "'" + value.replaceAll("'", "'\"'\"'") + "'";
@@ -122,18 +122,18 @@ async function draftFrom(a: Agent, v: Values): Promise<Draft> {
 const VERBS: Record<string, Verb> = {
   register: {
     usage:
-      'register [--server URL] [--address A] [--code C] [--for agnt-key:K [--pairing SIG]] [--recover] [--cancel-recovery] [--recovery-status] [--cancel-code CODE] [--principal-recovery SIG --at T] [--add-key NAME]',
+      'register [--server URL] [--address A] [--code C] [--for simon-key:K [--pairing SIG]] [--recover] [--cancel-recovery] [--recovery-status] [--cancel-code CODE] [--principal-recovery SIG --at T] [--add-key NAME]',
     summary:
       'Register this key. No --address leases one; an address the server hosts binds at once; any other gets a code, ' +
       'then the same with --code. --for pairs with a key principal: a leased address answers pairing_required, then ' +
-      'repeat with --pairing, the principal\'s signature over "AGNT-PAIR\\n<address>\\n<for>". --recover makes a new key ' +
+      'repeat with --pairing, the principal\'s signature over "SIMON-PAIR\\n<address>\\n<for>". --recover makes a new key ' +
       'for an address whose keys are all lost (then --code); while the agent still holds a valid key the server may ' +
       'answer recovery_pending with completesAt, and the same command completes it after then. --cancel-recovery, ' +
       'run with a key held before the recovery started, cancels a recovery someone else started, as the server allows; ' +
       '--recovery-status reads it. --cancel-code CODE --address A cancels a recovery of A with the cancel code sent there ' +
       'with its news, whatever key signs. --principal-recovery SIG --at T --address A recovers A at once with this key, ' +
-      'where SIG is the key principal\'s signature over "AGNT-RECOVER\\n<address>\\n<this key>\\n<T>". --add-key NAME adds a ' +
-      'second key, kept in AGNT_HOME as NAME and made if missing; move it somewhere safe, since it can recover the agent.',
+      'where SIG is the key principal\'s signature over "SIMON-RECOVER\\n<address>\\n<this key>\\n<T>". --add-key NAME adds a ' +
+      'second key, kept in SIMON_HOME as NAME and made if missing; move it somewhere safe, since it can recover the agent.',
     options: {
       server: { type: 'string' },
       address: { type: 'string' },
@@ -153,7 +153,7 @@ const VERBS: Record<string, Verb> = {
       if (addKey !== undefined) {
         if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(addKey) || RESERVED.has(addKey)) {
           throw usageError(
-            `--add-key takes a file name for the new key in AGNT_HOME, such as backup.pem, not ${addKey}.`,
+            `--add-key takes a file name for the new key in SIMON_HOME, such as backup.pem, not ${addKey}.`,
           );
         }
         const r = await agent(str(v.server)).addKey(ensureKeyFile(path.join(home, addKey)));
@@ -207,7 +207,7 @@ const VERBS: Record<string, Verb> = {
         active: undefined,
         code_sent: `${again} --code <the code sent there>${v.recover ? ' --recover' : ''}${continuationLocal}`,
         recovery_pending: `${again} --code <the same code> --recover${continuationLocal}, after ${'completesAt' in r ? r.completesAt : ''}`,
-        pairing_required: `${again} --for ${shellArg(String(v.for))} --pairing <the principal's signature over "AGNT-PAIR\\n${r.address}\\n${str(v.for)}">`,
+        pairing_required: `${again} --for ${shellArg(String(v.for))} --pairing <the principal's signature over "SIMON-PAIR\\n${r.address}\\n${str(v.for)}">`,
       }[r.status ?? 'active'];
       return { ...r, next };
     },
@@ -244,12 +244,12 @@ const VERBS: Record<string, Verb> = {
   },
   'add-key': {
     usage: 'add-key NAME [--label TEXT]',
-    summary: 'Make or add a device key kept in AGNT_HOME under NAME.',
+    summary: 'Make or add a device key kept in SIMON_HOME under NAME.',
     positionals: ['name'],
     options: { label: { type: 'string' } },
     async run(v, [name]) {
       if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(name) || RESERVED.has(name))
-        throw usageError('NAME must be a nonreserved key file name in AGNT_HOME.');
+        throw usageError('NAME must be a nonreserved key file name in SIMON_HOME.');
       return { ...(await agent().addKey(ensureKeyFile(path.join(home, name)), str(v.label))), keyFile: name };
     },
   },
@@ -340,7 +340,7 @@ const VERBS: Record<string, Verb> = {
     usage: 'wait [--from ADDRESS] [--timeout SECONDS] [--interval SECONDS]',
     summary:
       'Wait for the next message not yet shown by wait, oldest first, print it and exit 0; or exit 3 after ' +
-      '--timeout seconds (600 by default) with nothing new. What wait has shown is remembered in AGNT_HOME, so ' +
+      '--timeout seconds (600 by default) with nothing new. What wait has shown is remembered in SIMON_HOME, so ' +
       'wait, reply, wait never shows a message twice. --from waits for one correspondent and leaves the rest ' +
       'for later. --interval is the seconds between polls (3 by default, at least 1). The message is printed ' +
       'inside {"untrusted":...} like the inbox; "more" says another is already waiting.',
@@ -416,7 +416,7 @@ const VERBS: Record<string, Verb> = {
     positionals: ['address'],
     async run(_, [address]) {
       const record = await fetchAgentDocument(address, { timeoutMs });
-      if (!record) throw new AgntError('not_found', `No agent ${address} on its server.`, { status: 404 });
+      if (!record) throw new SimonError('not_found', `No agent ${address} on its server.`, { status: 404 });
       return record;
     },
   },
@@ -478,11 +478,11 @@ main(process.argv.slice(2)).then(
   out => process.stdout.write(`${JSON.stringify(out ?? null, null, 2)}\n`),
   e => {
     const error =
-      e instanceof AgntError
+      e instanceof SimonError
         ? e
         : e instanceof SyntaxError
           ? usageError(`Not JSON: ${e.message}`)
-          : new AgntError('client_error', e instanceof Error ? e.message : String(e));
+          : new SimonError('client_error', e instanceof Error ? e.message : String(e));
     process.stderr.write(`${JSON.stringify(error, null, 2)}\n`);
     process.exitCode = error.code === 'invalid' && error.status === null ? 2 : error.retryable ? 75 : 1;
   },

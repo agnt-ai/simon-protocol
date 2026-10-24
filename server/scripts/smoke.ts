@@ -28,12 +28,12 @@ async function start(domain: string, origin: string): Promise<ChildProcess> {
   const child = spawn(process.execPath, [main], {
     env: {
       ...process.env,
-      AGNT_DEV: '1',
-      AGNT_ORIGIN: origin,
-      AGNT_PORT: new URL(origin).port,
-      AGNT_HOSTED_DOMAINS: domain,
-      AGNT_DB: ':memory:',
-      AGNT_DEV_RESOLVE: resolve,
+      SIMON_DEV: '1',
+      SIMON_ORIGIN: origin,
+      SIMON_PORT: new URL(origin).port,
+      SIMON_HOSTED_DOMAINS: domain,
+      SIMON_DB: ':memory:',
+      SIMON_DEV_RESOLVE: resolve,
     },
     stdio: ['ignore', 'inherit', 'pipe'],
   });
@@ -118,7 +118,7 @@ async function agent(domain: keyof typeof servers, name: string) {
     origin,
     key,
     'POST',
-    '/agnt/register',
+    '/simon/register',
     Buffer.from(JSON.stringify({ key: keyToken(key.privateKey), address: `${name}@${domain}` })),
   );
   if (res.status !== 200) throw new Error(`register: ${JSON.stringify(res.json)}`);
@@ -137,7 +137,7 @@ async function agent(domain: keyof typeof servers, name: string) {
         },
         key.privateKey,
       );
-      const sent = await call(origin, key, 'POST', '/agnt/send', canonicalBytes(m), res.json.address);
+      const sent = await call(origin, key, 'POST', '/simon/send', canonicalBytes(m), res.json.address);
       if (sent.status !== 200) throw new Error(`send: ${JSON.stringify(sent.json)}`);
       return sent;
     },
@@ -148,7 +148,7 @@ async function agent(domain: keyof typeof servers, name: string) {
           origin,
           key,
           'GET',
-          '/agnt/sync',
+          '/simon/sync',
           undefined,
           res.json.address,
           Math.max(1, deadline - Date.now()),

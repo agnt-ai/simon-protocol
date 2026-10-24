@@ -32,13 +32,13 @@ it('returns the published signed claims and follows every opaque feed page', asy
       });
     }
     const caller = home.newAgent();
-    const result = await caller.request('GET', `/agnt/messages/${v.post.id}`, { sign: false });
+    const result = await caller.request('GET', `/simon/messages/${v.post.id}`, { sign: false });
     assert.equal(result.status, 200);
     assert.deepEqual(result.json, r);
     let cursor: string | null = null;
     for (const page of v.feed.pages) {
       const query = `?limit=${page.limit}${cursor ? `&before=${encodeURIComponent(cursor)}` : ''}`;
-      const got = await caller.request('GET', `/agnt/feeds/${v.feed.address}/${v.feed.name}${query}`, { sign: false });
+      const got = await caller.request('GET', `/simon/feeds/${v.feed.address}/${v.feed.name}${query}`, { sign: false });
       assert.equal(got.status, 200);
       assert.deepEqual(
         got.json.messages.map((m: AnyMessage) => messageId(m)),

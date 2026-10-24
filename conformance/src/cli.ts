@@ -15,7 +15,7 @@ import { AREAS, catalog, catalogMarkdown, DEFAULTS, runConformance, type CheckRe
 const HELP = `Usage: node conformance/src/cli.ts --server <origin> [options]
 
 The server under test must resolve the peer domain to the peer origin, for example with the basic
-server's development setting AGNT_DEV_RESOLVE="peer.test=http://127.0.0.1:47100". A server elsewhere
+server's development setting SIMON_DEV_RESOLVE="peer.test=http://127.0.0.1:47100". A server elsewhere
 reaches the simulator through a tunnel to the peer port: give the tunnel's https origin as --peer-origin,
 and its name becomes the peer domain, resolved by the well-known answer the simulator gives.
 
@@ -27,14 +27,14 @@ and its name becomes the peer domain, resolved by the well-known answer the simu
                                 a tunnel's https://<name>, which is then the default peer domain
   --hosted-domain <domain>      a domain whose names agents take at once, for a server that leases
                                 none, and for the hosted-name checks
-  --unresolvable-domain <d>     a domain that names no AGNT server                 (${DEFAULTS.unresolvableDomain})
+  --unresolvable-domain <d>     a domain that names no SIMON server                 (${DEFAULTS.unresolvableDomain})
   --code-command <command>      a shell command printing the code the server sent to an address
-                                (given as $1 and AGNT_ADDRESS); enables the code and recovery checks
+                                (given as $1 and SIMON_ADDRESS); enables the code and recovery checks
   --code-address <address>      an address with a mailbox on a domain resolving to the server
   --cancel-code-command <cmd>   a shell command printing the cancel code the server sent to an address
                                 with the news of a recovery; enables register.cancel-code
   --retire-command <command>    a shell command retiring the agent at an address (given as $1 and
-                                AGNT_ADDRESS); enables public.retired
+                                SIMON_ADDRESS); enables public.retired
   --second-peer-domain <d>      a second domain the server resolves to a second simulator, for the
                                 one-envelope-per-server check
   --second-peer-port <port>     the second simulator's port                        (${DEFAULTS.secondPeerPort})

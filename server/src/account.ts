@@ -1,13 +1,13 @@
 /**
  * The agent's address and keys (CLIENT.md), beside `register` (register.ts):
  *
- *   GET    /agnt/account           the agent's address, keys, grants and pending recovery
- *   POST   /agnt/keys              a key added, by the new key's proof
- *   DELETE /agnt/keys/<key>        a key revoked: by itself or a key added before it, never the agent's last
- *   DELETE /agnt/grants/<id>       none: this server keeps no key to sign for an agent, so it offers no grants
- *   POST   /agnt/recovery/cancel   a pending recovery cancelled: by a key the agent held before it started,
+ *   GET    /simon/account           the agent's address, keys, grants and pending recovery
+ *   POST   /simon/keys              a key added, by the new key's proof
+ *   DELETE /simon/keys/<key>        a key revoked: by itself or a key added before it, never the agent's last
+ *   DELETE /simon/grants/<id>       none: this server keeps no key to sign for an agent, so it offers no grants
+ *   POST   /simon/recovery/cancel   a pending recovery cancelled: by a key the agent held before it started,
  *                                  once in 30 days, or by the cancel code sent to the address
- *   POST   /agnt/unpair            a key principal's unpairing: the address retires, whatever its keys say
+ *   POST   /simon/unpair            a key principal's unpairing: the address retires, whatever its keys say
  *
  * A cancel by code and an unpairing are authorised by what they carry, so any key may sign them (spec
  * section 8, "Exceptions"); every other call is signed by a key the agent holds. Ranking keys by age and
@@ -303,7 +303,7 @@ export async function unpair(ctx: Context, req: Request): Promise<Reply> {
   if (!agent?.principal || !verifyUnpairing(agent.address, agent.principal, body.unpairing)) {
     throw unauthorized(
       'bad_proof',
-      "unpairing is the key principal's signature over AGNT-UNPAIR, the address and the principal.",
+      "unpairing is the key principal's signature over SIMON-UNPAIR, the address and the principal.",
       now,
     );
   }

@@ -20,7 +20,7 @@ npm install --silent --no-audit --no-fund "$PACKED"/*.tgz
 cat >smoke.ts <<'EOF'
 import assert from 'node:assert/strict';
 import { canonicalize, generateKey, sign, verify } from '@agnt-protocol/protocol';
-import { Agent, AgntError } from '@agnt-protocol/client';
+import { Agent, SimonError } from '@agnt-protocol/client';
 import * as credentials from '@agnt-protocol/client/credentials';
 import * as provenance from '@agnt-protocol/client/provenance';
 import * as wait from '@agnt-protocol/client/wait';
@@ -34,7 +34,7 @@ for (const alg of ['ed25519', 'ml-dsa-65'] as const) {
 }
 for (const m of [credentials, provenance, wait, workspace]) assert.ok(Object.keys(m).length);
 assert.equal(typeof Agent, 'function');
-assert.equal(typeof AgntError, 'function');
+assert.equal(typeof SimonError, 'function');
 console.log('test-built: both packages import by name, and both algorithms sign and verify');
 EOF
 cat >tsconfig.json <<EOF
@@ -54,4 +54,4 @@ echo 'test-built: the declarations type-check'
 node smoke.ts
 
 cd "$ROOT"
-AGNT_BUILT="$CONSUMER" NODE_OPTIONS="--import=$ROOT/scripts/built-hooks.ts" node --test 'protocol/test/**/*.test.ts' 'clients/js/test/**/*.test.ts'
+SIMON_BUILT="$CONSUMER" NODE_OPTIONS="--import=$ROOT/scripts/built-hooks.ts" node --test 'protocol/test/**/*.test.ts' 'clients/js/test/**/*.test.ts'

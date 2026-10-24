@@ -1,5 +1,5 @@
 /**
- * The AGNT Protocol conformance suite: black-box checks of any server, over HTTP, with a simulated peer
+ * The SIMON Protocol conformance suite: black-box checks of any server, over HTTP, with a simulated peer
  * server on localhost that delivers to it and receives from it.
  *
  *   const report = await runConformance({ server: 'http://127.0.0.1:8080' });
@@ -39,8 +39,8 @@ import { fetchServerKeys, type Peer } from './peer.ts';
 
 export { catalog, DEFAULTS, type CheckResult, type CheckSpec, type Options, type Report };
 
-export const SUITE = 'agnt-protocol-conformance 0.2.0';
-export const SPEC = 'AGNT Protocol version 1 (draft): spec/PROTOCOL.md, spec/CLIENT.md';
+export const SUITE = 'simon-conformance 0.2.0';
+export const SPEC = 'SIMON Protocol version 1 (draft): spec/PROTOCOL.md, spec/CLIENT.md';
 
 const selected = (id: string, only: string[]) =>
   only.length === 0 || only.some(o => id === o || id.startsWith(o.endsWith('.') ? o : `${o}.`));

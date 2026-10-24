@@ -1,5 +1,5 @@
 /**
- * The AGNT application template: the basic server (@agnt-protocol/server) with a directory, recipient
+ * The SIMON application template: the basic server (@agnt-protocol/server) with a directory, recipient
  * policy, introductions, an owner window, webhooks, upload checks and an email bridge, each installed
  * through the server's extension API. The typed client for its API is `@agnt-protocol/app/client`.
  */

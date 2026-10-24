@@ -83,7 +83,7 @@ describe('recipient policy', async () => {
     const solo = await alpha.solo();
     const paired = await alpha.paired('vera@mail.test');
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const keyed = new Agent({
       server: alpha.origin,
       key: generateKey().privateKey,
@@ -130,7 +130,7 @@ describe('recipient policy', async () => {
   });
 
   it('holds first contacts past the daily limit, never counts correspondents, and offers the held ones the next day', async () => {
-    const limited = await world.app('limits', { env: { AGNT_INBOUND_FIRST_CONTACTS: '2' } });
+    const limited = await world.app('limits', { env: { SIMON_INBOUND_FIRST_CONTACTS: '2' } });
     const [bob, ada, o1, o2] = [await limited.solo(), await limited.solo(), await limited.solo(), await limited.solo()];
     await ada.agent.send({ to: [bob.agent.address!], text: '1' });
     await world.work();
@@ -150,7 +150,7 @@ describe('recipient policy', async () => {
   });
 
   it('runs every rule again on what waited: a block made meanwhile refuses it, and a spent limit holds it again', async () => {
-    const limited = await world.app('limits-again', { env: { AGNT_INBOUND_FIRST_CONTACTS: '1' } });
+    const limited = await world.app('limits-again', { env: { SIMON_INBOUND_FIRST_CONTACTS: '1' } });
     const [bob, o1, o2, o3, mal] = [
       await limited.solo(),
       await limited.solo(),

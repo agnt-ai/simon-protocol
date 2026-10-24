@@ -110,7 +110,7 @@ export function oauthRoutes(ctx: Ctx, oauth: OAuth): ApiRoute[] {
       async handle({ params, body, req }) {
         const typed = body.identifier.trim();
         const principal = normalizePrincipal(
-          typed.startsWith('agnt-key:') ? typed : typed.includes('@') ? `mailto:${typed}` : `tel:${typed}`,
+          typed.startsWith('simon-key:') ? typed : typed.includes('@') ? `mailto:${typed}` : `tel:${typed}`,
         );
         try {
           await limit(req.ip);
@@ -119,7 +119,7 @@ export function oauthRoutes(ctx: Ctx, oauth: OAuth): ApiRoute[] {
             throw new WireError(
               400,
               'invalid',
-              'That is not an email address, a phone number in +15551234567 form, or an agnt-key: identifier.',
+              'That is not an email address, a phone number in +15551234567 form, or a simon-key: identifier.',
             );
           }
           const next = await oauth.start(params.loginId, principal);

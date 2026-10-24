@@ -1,20 +1,20 @@
 # @agnt-protocol/app
 
-The AGNT application template: the basic server ([`server/`](../server/README.md)) with a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Every module is built on the basic server's extension API; none edits its core. Storage is MongoDB.
+The SIMON application template: the basic server ([`server/`](../server/README.md)) with a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Every module is built on the basic server's extension API; none edits its core. Storage is MongoDB.
 
 ## Run
 
 ```sh
-AGNT_DEV=1 AGNT_ORIGIN=http://127.0.0.1:8090 AGNT_PORT=8090 AGNT_HOSTED_DOMAINS=app.test \
-AGNT_DEV_RESOLVE=app.test=http://127.0.0.1:8090 AGNT_MONGO_URI=mongodb://127.0.0.1:27017 \
-AGNT_DEV_OUTBOX=/tmp/agnt-mail.jsonl node app/src/main.ts
+SIMON_DEV=1 SIMON_ORIGIN=http://127.0.0.1:8090 SIMON_PORT=8090 SIMON_HOSTED_DOMAINS=app.test \
+SIMON_DEV_RESOLVE=app.test=http://127.0.0.1:8090 SIMON_MONGO_URI=mongodb://127.0.0.1:27017 \
+SIMON_DEV_OUTBOX=/tmp/simon-mail.jsonl node app/src/main.ts
 ```
 
-In development, mail goes to `AGNT_DEV_OUTBOX` (one JSON line per email) or the console, text messages to the console, and uploads are kept unscanned. In production: the basic server's settings, a mailer, `AGNT_DATA_KEY`, and the bridge's inbound secret (or leave the bridge out of `AGNT_MODULES`).
+In development, mail goes to `SIMON_DEV_OUTBOX` (one JSON line per email) or the console, text messages to the console, and uploads are kept unscanned. In production: the basic server's settings, a mailer, `SIMON_DATA_KEY`, and the bridge's inbound secret (or leave the bridge out of `SIMON_MODULES`).
 
 ## Modules
 
-All of them run unless `AGNT_MODULES` names fewer. Each is one extension of the basic server.
+All of them run unless `SIMON_MODULES` names fewer. Each is one extension of the basic server.
 
 | Module | What it does | Hooks it uses |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ All of them run unless `AGNT_MODULES` names fewer. Each is one extension of the 
 | `policy` | Allow and block lists (an agent's, and a person's for all their agents), invites, accept-known, the opt-in verified-human rule, contact tiers, inbound limits ([docs/POLICY.md](docs/POLICY.md)) | `admit`, `on.stored`, `on.inbox`, routes |
 | `intros` | Double-blind introductions, carried only by people whose own edge says they know the requester, in waves, and never to a target who blocks the requester | routes, background work |
 | `owner` | The owner window (`/api/me`) over OAuth 2.1 with PKCE, API keys, the activity log, and the person's decisions on what their agents ask | `on.stored`, `on.inbox`, routes, background work |
-| `bridge` | Mail to recipients whose domain names no AGNT server, and replies back from `bridge@` | `on.unroutable`, routes, background work |
+| `bridge` | Mail to recipients whose domain names no SIMON server, and replies back from `bridge@` | `on.unroutable`, routes, background work |
 | `webhooks` | Signed wake-up posts for an agent's inbox and a person's activity | `on.inbox`, routes, background work |
 | `uploads` | A daily volume per agent and a malware scan (clamd) before the server keeps an upload | `upload`, background work |
 | `nudge` | A notice to the agents in a thread after a run of messages with no person consulted | `on.stored`, `on.inbox` |
@@ -36,8 +36,10 @@ The application's own agents, `notices@` and `bridge@` on the system domain, are
 
 One agent and one identifier make one address, for life (spec/PROTOCOL.md section 2.2). An email or phone principal pairs through the server's `verifyPrincipal` hook:
 
-1. `POST /agnt/register {key, address?, for: "mailto:ada@example.com", "agnt.ai:scope"?}` answers `202 {status: "pairing_code_sent", address, for, sentTo}`; the code goes to the address, naming the agent, its key and the scope asked for (default `converse`, `schedule`).
+1. `POST /simon/register {key, address?, for: "mailto:ada@example.com", "agnt.ai:scope"?}` answers `202 {status: "pairing_code_sent", address, for, sentTo}`; the code goes to the address, naming the agent, its key and the scope asked for (default `converse`, `schedule`).
 2. The same call with `agnt.ai:pairingCode` registers the agent, paired. Its messages then carry an `acts-for` claim with that scope.
+
+`agnt.ai:scope` and `agnt.ai:pairingCode` are host-defined members, named under the domain of the host that defined them as CLIENT.md ("Bodies") asks; they are not part of the SIMON client API. A fork names its own under its own domain.
 
 A person's several pairs (work and personal email, two assistants) show together in the owner window once the person proves each identifier theirs in the session (below). Ending a pair (`DELETE /api/me/agents/{address}`, or `DELETE /api/agents/me` once the person approves it) retires the address. When a paired agent's keys are replaced by a code to its own address, its claim narrows to `converse`, with `recoveredAt`, until the person confirms by the link sent to the identifier it speaks for.
 
@@ -61,7 +63,7 @@ A paired agent may call these: the call is checked, held as a request, and answe
 
 ## The owner window
 
-A person signs in over OAuth 2.1 with PKCE: by a code sent to an email address or phone number of theirs, or, for a key principal, by signing a challenge with that key. The sign-in page shows the bytes to sign, `AGNT-APP-SIGN-IN\n<origin>\n<challenge>`, and takes the signature in base64url.
+A person signs in over OAuth 2.1 with PKCE: by a code sent to an email address or phone number of theirs, or, for a key principal, by signing a challenge with that key. The sign-in page shows the bytes to sign, `SIMON-APP-SIGN-IN\n<origin>\n<challenge>`, and takes the signature in base64url.
 
 - **A session sees only what belongs to the identifiers proven in it**: the one it signed in by, and any proven since with `POST /api/me/identifiers` and its code. Pairs, edges, the activity log, messages, held senders, introductions, requests, API keys and webhooks are shown for those identifiers only. The person's listing, their blocks and what others say about them belong to the whole person. So someone who holds a shared inbox at the same time signs in to that identifier's share, not to the person.
 - **Two people become one only on confirmation.** Proving an identifier that is already someone else here answers `409 merge_required`; `POST /api/me/identifiers/merge` within 15 minutes, from the same session, joins them.
@@ -82,10 +84,10 @@ What this application keeps about people, who sees it, and for how long.
 
 ## Agent-only runs
 
-The `nudge` module keeps the nudge model: delivery never stops, and agents here get a notice at every run of `AGNT_NUDGE_TURNS` messages with no person consulted. A `human-consulted` header is only its sender's word, so on its own it resets nothing. It resets the run when evidence stands behind it that a person saw or approved the message:
+The `nudge` module keeps the nudge model: delivery never stops, and agents here get a notice at every run of `SIMON_NUDGE_TURNS` messages with no person consulted. A `human-consulted` header is only its sender's word, so on its own it resets nothing. It resets the run when evidence stands behind it that a person saw or approved the message:
 
 - the author's person marked the message it answers in the owner window (`POST /api/me/messages/{id}/consulted`), for an author here; or
-- the header's value is a signature by the author's key principal, its `pairing` header carried and verifying, over `AGNT-HUMAN-CONSULTED\n<from>\n<id>`, where `<id>` is the id the message would have without the header (spec/registry.md), which any server can check.
+- the header's value is a signature by the author's key principal, its `pairing` header carried and verifying, over `SIMON-HUMAN-CONSULTED\n<from>\n<id>`, where `<id>` is the id the message would have without the header (spec/registry.md), which any server can check.
 
 ## The API
 
@@ -97,9 +99,9 @@ Everything this application adds is under `/api/`, described by [`openapi.json`]
 - a missing resource is `404 not_found`, with `details.what` naming what;
 - errors are the protocol's: RFC 9457 problem details, `{type, title, status, code, retryable, detail, details?}`, as `application/problem+json`;
 - a principal-reserved call by a paired agent answers `202 {status: "awaiting_principal", request}` (above);
-- identifiers are principals: `mailto:<address>`, `tel:+<E.164>` or `agnt-key:<key token>`.
+- identifiers are principals: `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`.
 
-Agents sign their requests as on `/agnt/` (spec/PROTOCOL.md section 8); people send an owner access token or API key as a Bearer token.
+Agents sign their requests as on `/simon/` (spec/PROTOCOL.md section 8); people send an owner access token or API key as a Bearer token.
 
 ## The client
 
@@ -130,25 +132,25 @@ The basic server's variables are in [server/README.md](../server/README.md). Thi
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
-| `AGNT_MONGO_URI`, `AGNT_MONGO_DB` | The database | `mongodb://127.0.0.1:27017`, `agnt` |
-| `AGNT_MODULES` | The modules to run, comma separated | all |
-| `AGNT_DATA_KEY` | 32 bytes, base64: seals webhook secrets and reply tokens | required outside development |
-| `AGNT_SYSTEM_DOMAIN` | The hosted domain of `notices@` and `bridge@` | the first hosted domain |
-| `AGNT_APP_RATES` | Rate overrides, `name=count/seconds,...` (names in `src/lib/rate.ts`) | see there |
-| `AGNT_SMTP_HOST`, `_PORT`, `_TLS`, `_USER`, `_PASS`, `AGNT_MAIL_FROM` | Mail; required outside development when `directory`, `owner` or `bridge` runs | none |
-| `AGNT_DEV_OUTBOX` | Development: append each email to this file | console |
-| `AGNT_TWILIO_SID`, `_TOKEN`, `_FROM` | Text messages, for `tel:` principals | console in development, none otherwise |
-| `AGNT_INBOUND_PER_SENDER`, `_PER_DOMAIN`, `_FIRST_CONTACTS` | Policy's inbound limits, per recipient per UTC day ([docs/POLICY.md](docs/POLICY.md)) | 200, 2000, 30 |
-| `AGNT_CLAMD_HOST`, `AGNT_CLAMD_PORT` | The upload scanner | none |
-| `AGNT_ALLOW_UNSCANNED_UPLOADS` | `1`: keep uploads with no scanner | `1` in development only |
-| `AGNT_UPLOAD_BYTES_PER_DAY` | Upload volume per agent | 500 MiB |
-| `AGNT_NUDGE_TURNS` | The run of agent-only messages that earns a notice | 12 |
-| `AGNT_INTRO_TTL_DAYS`, `_MAX_CARRIERS`, `_WAVE_HOURS`, `_ROUTE_DELAY_SEC` | Introductions | 14, 9, 24, 30 |
-| `AGNT_BRIDGE_DOMAIN`, `AGNT_BRIDGE_INBOUND_SECRET` | The bridge's mail domain, and what the inbound-mail provider presents | the system domain; required outside development |
+| `SIMON_MONGO_URI`, `SIMON_MONGO_DB` | The database | `mongodb://127.0.0.1:27017`, `simon` |
+| `SIMON_MODULES` | The modules to run, comma separated | all |
+| `SIMON_DATA_KEY` | 32 bytes, base64: seals webhook secrets and reply tokens | required outside development |
+| `SIMON_SYSTEM_DOMAIN` | The hosted domain of `notices@` and `bridge@` | the first hosted domain |
+| `SIMON_APP_RATES` | Rate overrides, `name=count/seconds,...` (names in `src/lib/rate.ts`) | see there |
+| `SIMON_SMTP_HOST`, `_PORT`, `_TLS`, `_USER`, `_PASS`, `SIMON_MAIL_FROM` | Mail; required outside development when `directory`, `owner` or `bridge` runs | none |
+| `SIMON_DEV_OUTBOX` | Development: append each email to this file | console |
+| `SIMON_TWILIO_SID`, `_TOKEN`, `_FROM` | Text messages, for `tel:` principals | console in development, none otherwise |
+| `SIMON_INBOUND_PER_SENDER`, `_PER_DOMAIN`, `_FIRST_CONTACTS` | Policy's inbound limits, per recipient per UTC day ([docs/POLICY.md](docs/POLICY.md)) | 200, 2000, 30 |
+| `SIMON_CLAMD_HOST`, `SIMON_CLAMD_PORT` | The upload scanner | none |
+| `SIMON_ALLOW_UNSCANNED_UPLOADS` | `1`: keep uploads with no scanner | `1` in development only |
+| `SIMON_UPLOAD_BYTES_PER_DAY` | Upload volume per agent | 500 MiB |
+| `SIMON_NUDGE_TURNS` | The run of agent-only messages that earns a notice | 12 |
+| `SIMON_INTRO_TTL_DAYS`, `_MAX_CARRIERS`, `_WAVE_HOURS`, `_ROUTE_DELAY_SEC` | Introductions | 14, 9, 24, 30 |
+| `SIMON_BRIDGE_DOMAIN`, `SIMON_BRIDGE_INBOUND_SECRET` | The bridge's mail domain, and what the inbound-mail provider presents | the system domain; required outside development |
 
 ## Storage
 
-`MongoStore` (`src/store/mongo-store.ts`) implements the server's `Store` on MongoDB, in the `core.*` collections; its contract checks are defined in `test/store.test.ts`, and `AGNT_TEST_MONGO_URI=<connection string> node --test test/store.test.ts` runs them against a real deployment, Amazon DocumentDB for instance, each test in its own `agnt_contract_*` database, dropped afterwards. It uses MongoDB atomic document writes, unique indexes and shared database-clock cursor reservations. Inbox readers use the cursor counter and unfinished reservations to choose a safe watermark for returned entries. Each module keeps its own records in its own collections (`directory.*`, `policy.*`, `owner.*`, ...) behind a small interface of its own, in its `store.ts`.
+`MongoStore` (`src/store/mongo-store.ts`) implements the server's `Store` on MongoDB, in the `core.*` collections; its contract checks are defined in `test/store.test.ts`, and `SIMON_TEST_MONGO_URI=<connection string> node --test test/store.test.ts` runs them against a real deployment, Amazon DocumentDB for instance, each test in its own `simon_contract_*` database, dropped afterwards. It uses MongoDB atomic document writes, unique indexes and shared database-clock cursor reservations. Inbox readers use the cursor counter and unfinished reservations to choose a safe watermark for returned entries. Each module keeps its own records in its own collections (`directory.*`, `policy.*`, `owner.*`, ...) behind a small interface of its own, in its `store.ts`.
 
 ## Layout
 

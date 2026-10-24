@@ -10,7 +10,7 @@ export const def = (spec: CheckSpec, run: (t: T, ctx: Ctx) => Promise<void>) => 
 /** The agent document of `address` on the server, as section 4 reads it (null when unreadable). */
 export async function agentDocument(t: T, ctx: Ctx, address: string, label = 'agent document') {
   const { doc } = await ctx.serverDoc();
-  const res = await t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/agents/${address}` }, { label });
+  const res = await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/agents/${address}` }, { label });
   const read = res.status === 200 ? readAgentDocument(res.bytes, address, doc.keys, new Date(ctx.now())) : null;
   return { res, read };
 }

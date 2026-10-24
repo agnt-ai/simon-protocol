@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "common.json",
-  "title": "AGNT shared definitions",
-  "description": "Grammars every AGNT schema uses (spec/PROTOCOL.md section 2 and Appendix A). Lengths and rules a regular expression cannot state are given in each description.",
+  "title": "SIMON shared definitions",
+  "description": "Grammars every SIMON schema uses (spec/PROTOCOL.md section 2 and Appendix A). Lengths and rules a regular expression cannot state are given in each description.",
   "$defs": {
     "address": {
       "type": "string",
@@ -42,8 +42,8 @@
     },
     "principal": {
       "type": "string",
-      "pattern": "^(mailto:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+|tel:\\+[1-9][0-9]{1,14}|agnt-key:[a-z0-9-]+:[A-Za-z0-9_-]+)$",
-      "description": "A principal's identifier: mailto:, tel: (E.164) or agnt-key: (PROTOCOL.md 2.2)."
+      "pattern": "^(mailto:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+|tel:\\+[1-9][0-9]{1,14}|simon-key:[a-z0-9-]+:[A-Za-z0-9_-]+)$",
+      "description": "A principal's identifier: mailto:, tel: (E.164) or simon-key: (PROTOCOL.md 2.2)."
     },
     "origin": {
       "type": "string",

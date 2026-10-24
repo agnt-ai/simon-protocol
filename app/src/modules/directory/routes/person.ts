@@ -108,5 +108,5 @@ function page(o: { step: 'ask' | 'confirm' | 'end' | 'error'; token?: string; ag
 <form method="post" action="/api/recovery/${esc(o.token ?? '')}/confirm"><button type="submit">Yes, this is my agent</button></form>
 <form method="post" action="/api/recovery/${esc(o.token ?? '')}/end"><button type="submit" class="secondary">No, end it</button></form>`,
   };
-  return pageShell('AGNT agent keys', bodies[o.step]);
+  return pageShell('SIMON agent keys', bodies[o.step]);
 }

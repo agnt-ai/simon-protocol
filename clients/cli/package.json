@@ -8,10 +8,10 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "Command-line client for the AGNT Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
+  "description": "Command-line client for the SIMON Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
   "type": "module",
   "bin": {
-    "agnt-protocol": "./src/cli.ts"
+    "simon": "./src/cli.ts"
   },
   "engines": {
     "node": ">=26"

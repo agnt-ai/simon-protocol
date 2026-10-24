@@ -7,7 +7,7 @@
  *
  *   { v, from, to, inReplyTo, parts, headers, sentAt, signature }
  *
- * The id is the hex SHA-256 of the canonical bytes without `signature`; the signature is over `AGNT-MESSAGE`,
+ * The id is the hex SHA-256 of the canonical bytes without `signature`; the signature is over `SIMON-MESSAGE`,
  * a newline, and those same bytes. `id` is never a field: everyone computes it.
  */
 import type { KeyObject } from 'node:crypto';
@@ -86,7 +86,7 @@ const NOT_IN_ALT = /[\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
 export const messageId = (m: object) => sha256Hex(unsignedBytes(m));
 
 export function signMessage<M extends AnyMessage>(m: Unsigned<M>, key: string | KeyObject): M {
-  return { ...m, signature: sign(key, signingBytes('AGNT-MESSAGE', m)) } as M;
+  return { ...m, signature: sign(key, signingBytes('SIMON-MESSAGE', m)) } as M;
 }
 
 /**
@@ -96,7 +96,7 @@ export function signMessage<M extends AnyMessage>(m: Unsigned<M>, key: string | 
 export function messageVerdict(m: AnyMessage, keys: readonly KeyEntry[]): SignatureVerdict {
   const at = parseTimestamp(m.sentAt);
   if (at === null) return 'bad_signature';
-  return signatureVerdict(keys, new Date(at), signingBytes('AGNT-MESSAGE', m), m.signature);
+  return signatureVerdict(keys, new Date(at), signingBytes('SIMON-MESSAGE', m), m.signature);
 }
 
 /** Whether the signature verifies with one of the author's keys valid at the message's `sentAt`. */
@@ -216,13 +216,13 @@ function checkVersion1(m: Record<string, Json>, limits: Limits) {
   }
   const { for: forValue, pairing, critical } = m.headers;
   if (forValue !== undefined && !isPrincipal(forValue)) {
-    throw invalid('The for header is a principal: mailto: with an address, tel: with an E.164 number, or agnt-key:.', {
+    throw invalid('The for header is a principal: mailto: with an address, tel: with an E.164 number, or simon-key:.', {
       field: 'headers',
     });
   }
   // Presence and grammar only: whether the pairing verifies is for readers and the agent's own server.
   if ((pairing !== undefined) !== (typeof forValue === 'string' && principalKey(forValue) !== null)) {
-    throw invalid('The pairing header is present exactly when for is an agnt-key: principal.', { field: 'headers' });
+    throw invalid('The pairing header is present exactly when for is a simon-key: principal.', { field: 'headers' });
   }
   if (pairing !== undefined && !isB64url(pairing)) {
     throw invalid('The pairing header is a signature in canonical base64url.', { field: 'headers' });
@@ -372,7 +372,7 @@ export const textOf = (m: Pick<Message, 'parts'>, separator = '\n') =>
   m.parts.flatMap(p => ('data' in p && p.type.startsWith('text/') ? [p.data] : [])).join(separator);
 
 /** The media type of a part that carries another message whole (spec section 5.3). */
-export const CARRIED_MESSAGE_TYPE = 'application/agnt-message';
+export const CARRIED_MESSAGE_TYPE = 'application/simon-message';
 /**
  * How deep messages are carried inline: a message a part of the carrying message carries is at depth 1, one
  * its parts carry at depth 2, and so on. A message carried deeper is refused (spec section 5.3).

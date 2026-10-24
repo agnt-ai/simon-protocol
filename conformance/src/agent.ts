@@ -31,7 +31,7 @@ export interface SignOptions {
   timestamp?: string;
   skewSeconds?: number;
   nonce?: string;
-  /** Act as this address (`agnt-agent`) instead of the agent's own; null for no actor at all. */
+  /** Act as this address (`simon-agent`) instead of the agent's own; null for no actor at all. */
   agent?: string | null;
   /** Replace or drop (undefined) headers after signing. */
   override?: Record<string, string | undefined>;
@@ -40,7 +40,7 @@ export interface SignOptions {
 
 export const newNonce = () => crypto.randomBytes(16).toString('base64url');
 
-/** The signature headers over an agent's request, as section 8 builds them: `agnt-agent` when it acts as one. */
+/** The signature headers over an agent's request, as section 8 builds them: `simon-agent` when it acts as one. */
 export function signatureHeaders(
   key: KeyObject,
   r: {
@@ -56,11 +56,11 @@ export function signatureHeaders(
   const { agent, ...rest } = r;
   const signing = requestSigningString({ ...rest, actor: agent ?? '' });
   return {
-    'agnt-key': keyToken(key),
-    'agnt-timestamp': r.timestamp,
-    'agnt-nonce': r.nonce,
-    'agnt-signature': sign(key, signing),
-    ...(agent ? { 'agnt-agent': agent } : {}),
+    'simon-key': keyToken(key),
+    'simon-timestamp': r.timestamp,
+    'simon-nonce': r.nonce,
+    'simon-signature': sign(key, signing),
+    ...(agent ? { 'simon-agent': agent } : {}),
   };
 }
 
@@ -120,14 +120,14 @@ export class TargetAgent {
   }
 
   register(t: T, body: Record<string, unknown>, o: SignOptions = {}, label = 'register') {
-    return this.call(t, 'POST', '/agnt/register', JSON.stringify({ key: this.token, ...body }), o, label);
+    return this.call(t, 'POST', '/simon/register', JSON.stringify({ key: this.token, ...body }), o, label);
   }
 
   recover(t: T, body: Record<string, unknown>, o: SignOptions = {}, label = 'recover') {
     return this.call(
       t,
       'POST',
-      '/agnt/recovery',
+      '/simon/recovery',
       JSON.stringify({ key: this.token, ...body }),
       { agent: typeof body.address === 'string' ? body.address : this.address, ...o },
       label,
@@ -138,7 +138,7 @@ export class TargetAgent {
     return this.call(
       t,
       'POST',
-      '/agnt/recovery/cancel',
+      '/simon/recovery/cancel',
       JSON.stringify(body),
       { agent: typeof body.address === 'string' ? body.address : this.address, ...o },
       label,
@@ -146,11 +146,11 @@ export class TargetAgent {
   }
 
   send(t: T, m: AnyMessage | string, o: SignOptions = {}, label = 'send') {
-    return this.call(t, 'POST', '/agnt/send', typeof m === 'string' ? m : canonicalize(m), o, label);
+    return this.call(t, 'POST', '/simon/send', typeof m === 'string' ? m : canonicalize(m), o, label);
   }
 
   sync(t: T, query = 'limit=200', label = 'sync') {
-    return this.call(t, 'GET', `/agnt/sync${query ? `?${query}` : ''}`, undefined, {}, label);
+    return this.call(t, 'GET', `/simon/sync${query ? `?${query}` : ''}`, undefined, {}, label);
   }
 
   /** A version 1 message from this agent, signed. */

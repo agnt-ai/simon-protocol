@@ -7,7 +7,7 @@ import type { Ctx } from '../context.ts';
 import { def } from './common.ts';
 
 /** The call every check here signs: a cheap read that changes nothing. */
-const TARGET = '/agnt/sync?limit=1';
+const TARGET = '/simon/sync?limit=1';
 
 /** A 401 with this code, in the error shape, with an integer details.serverTime. */
 function refused(t: T, res: Res, code: string, what: string) {
@@ -38,11 +38,12 @@ def(
     section: 'PROTOCOL 8',
     level: 'must',
     title: 'Each missing signature header is 401 signature_required',
-    expected: 'dropping any one of agnt-key, agnt-timestamp, agnt-nonce or agnt-signature gives 401 signature_required',
+    expected:
+      'dropping any one of simon-key, simon-timestamp, simon-nonce or simon-signature gives 401 signature_required',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
-    for (const h of ['agnt-key', 'agnt-timestamp', 'agnt-nonce', 'agnt-signature']) {
+    for (const h of ['simon-key', 'simon-timestamp', 'simon-nonce', 'simon-signature']) {
       const res = await a.call(t, 'GET', TARGET, undefined, { override: { [h]: undefined } }, `without ${h}`);
       refused(t, res, 'signature_required', `without ${h}`);
     }
@@ -61,14 +62,14 @@ def(
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
     const cases: [string, Record<string, string>][] = [
-      ['a 13-digit timestamp', { 'agnt-timestamp': '1' + ts(ctx).padStart(12, '0') }],
-      ['a timestamp with a sign', { 'agnt-timestamp': `+${ts(ctx)}` }],
-      ['a 7-character nonce', { 'agnt-nonce': 'abcdefg' }],
-      ['a 129-character nonce', { 'agnt-nonce': 'n'.repeat(129) }],
-      ['a nonce with a space', { 'agnt-nonce': 'has a space' }],
-      ['a key with no algorithm', { 'agnt-key': a.token.split(':')[1] }],
-      ['a padded signature', { 'agnt-signature': 'AAAA=' }],
-      ['a signature with a non-base64url character', { 'agnt-signature': 'AA+A' }],
+      ['a 13-digit timestamp', { 'simon-timestamp': '1' + ts(ctx).padStart(12, '0') }],
+      ['a timestamp with a sign', { 'simon-timestamp': `+${ts(ctx)}` }],
+      ['a 7-character nonce', { 'simon-nonce': 'abcdefg' }],
+      ['a 129-character nonce', { 'simon-nonce': 'n'.repeat(129) }],
+      ['a nonce with a space', { 'simon-nonce': 'has a space' }],
+      ['a key with no algorithm', { 'simon-key': a.token.split(':')[1] }],
+      ['a padded signature', { 'simon-signature': 'AAAA=' }],
+      ['a signature with a non-base64url character', { 'simon-signature': 'AA+A' }],
     ];
     for (const [what, override] of cases) {
       const res = await a.call(t, 'GET', TARGET, undefined, { override }, what);
@@ -127,7 +128,7 @@ def(
     level: 'must',
     title: 'A key the server does not know is 401 unknown_key',
     expected:
-      '401 unknown_key for a well-formed request naming an agent there in agnt-agent, signed by a key that agent does not hold',
+      '401 unknown_key for a well-formed request naming an agent there in simon-agent, signed by a key that agent does not hold',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
@@ -161,11 +162,11 @@ async function badSignature(
   const signer = a.request(signedMethod ?? method, target, body, { timestamp, nonce, agent: signedAs, ...rest });
   const req = { ...signer(), method };
   // Signed as another address, but sent naming this agent's.
-  if (signedAs) req.headers = { ...req.headers, 'agnt-agent': a.address };
+  if (signedAs) req.headers = { ...req.headers, 'simon-agent': a.address };
   if (otherKey) {
     // Signed by another key over the right string, but naming this agent's key.
     const other = TargetAgent.fresh(ctx.server).request(method, target, body, { timestamp, nonce })();
-    req.headers = { ...req.headers, 'agnt-signature': other.headers!['agnt-signature'] };
+    req.headers = { ...req.headers, 'simon-signature': other.headers!['simon-signature'] };
   }
   const res = await t.http(req, { label: what });
   const err = refused(t, res, 'bad_signature', what);
@@ -191,7 +192,7 @@ def(
     level: 'must',
     title: 'A signature that does not verify is 401 bad_signature, with the signing string expected',
     expected:
-      '401 bad_signature with details.serverTime and details.signingString exactly the eight lines the server expected: AGNT-REQUEST, the method, its origin, the actor, the request target as sent, the timestamp, the nonce, the body hash',
+      '401 bad_signature with details.serverTime and details.signingString exactly the eight lines the server expected: SIMON-REQUEST, the method, its origin, the actor, the request target as sent, the timestamp, the nonce, the body hash',
   },
   async (t: T, ctx: Ctx) => {
     await badSignature(t, ctx, "signed by another key, naming the agent's", 'GET', TARGET, undefined, {
@@ -226,7 +227,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     await badSignature(t, ctx, 'signed over limit=2, sent limit=1', 'GET', TARGET, undefined, {
-      signedTarget: '/agnt/sync?limit=2',
+      signedTarget: '/simon/sync?limit=2',
     });
   },
 );
@@ -238,7 +239,7 @@ def(
     level: 'must',
     title: 'Who a request acts as is signed',
     expected:
-      '401 bad_signature for a request signed as one address and sent naming another in agnt-agent, the signing string naming the address sent',
+      '401 bad_signature for a request signed as one address and sent naming another in simon-agent, the signing string naming the address sent',
   },
   async (t: T, ctx: Ctx) => {
     await badSignature(t, ctx, 'signed as another address, sent as the agent', 'GET', TARGET, undefined, {
@@ -270,7 +271,7 @@ def(
       '401 bad_signature for a POST whose body differs from the one signed, the signing string ending in the hash of the body as sent',
   },
   async (t: T, ctx: Ctx) => {
-    await badSignature(t, ctx, 'body differs from the signed one', 'POST', '/agnt/send', '{"note":"sent"}', {
+    await badSignature(t, ctx, 'body differs from the signed one', 'POST', '/simon/send', '{"note":"sent"}', {
       signedBody: '{"note":"signed"}',
     });
   },
@@ -331,7 +332,7 @@ def(
     section: 'PROTOCOL 8',
     level: 'must',
     title: 'A request without a signature does not use up its nonce',
-    expected: 'nonce N with no agnt-signature: 401 signature_required; then a good request with N: 200',
+    expected: 'nonce N with no simon-signature: 401 signature_required; then a good request with N: 200',
   },
   async (t: T, ctx: Ctx) => {
     await nonceSurvives(t, ctx, 'a missing signature', 'signature_required', (a, nonce) =>
@@ -340,7 +341,7 @@ def(
         'GET',
         TARGET,
         undefined,
-        { nonce, override: { 'agnt-signature': undefined } },
+        { nonce, override: { 'simon-signature': undefined } },
         'no signature, nonce N',
       ),
     );
@@ -381,7 +382,7 @@ def(
         'GET',
         TARGET,
         undefined,
-        { skewSeconds: -3600, override: { 'agnt-nonce': 'short' } },
+        { skewSeconds: -3600, override: { 'simon-nonce': 'short' } },
         'malformed nonce and stale',
       ),
       'signature_required',
@@ -416,7 +417,7 @@ def(
     const used = a.request('GET', TARGET)();
     t.status(await t.http(used, { label: 'use a nonce' }), 200, 'a good request');
     const forged = a.request('GET', TARGET, undefined, {
-      nonce: used.headers!['agnt-nonce'],
+      nonce: used.headers!['simon-nonce'],
       signedTarget: '/elsewhere',
     })();
     refused(

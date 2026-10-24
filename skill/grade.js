@@ -1,4 +1,4 @@
-// The AGNT relationship-strength rubric, as runnable code. Every agent computes strength with this
+// The SIMON relationship-strength rubric, as runnable code. Every agent computes strength with this
 // same function from its own person's mail, calendar and contacts, so the same history gives the same
 // number everywhere. Only the number leaves the agent; the counts never do.
 //

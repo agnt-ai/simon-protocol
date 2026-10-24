@@ -55,18 +55,18 @@ describe('pairing', async () => {
       now: world.clock.now,
     });
     const body = { key: blank.key, address: 'prefixed@alpha.test', for: 'mailto:prefix@mail.test' };
-    const pending = await blank.call<{ status: string }>('POST', '/agnt/register', {
+    const pending = await blank.call<{ status: string }>('POST', '/simon/register', {
       ...body,
       pairingCode: 'ignored',
       scope: ['not-a-scope'],
     });
     assert.equal(pending.status, 'pairing_code_sent');
     assert.match(world.outbox.last('prefix@mail.test')!.text, /It asks to: converse, schedule/);
-    await assert.rejects(blank.call('POST', '/agnt/register', { ...body, 'agnt.ai:pairingCode': 5 }), {
+    await assert.rejects(blank.call('POST', '/simon/register', { ...body, 'agnt.ai:pairingCode': 5 }), {
       code: 'invalid',
       details: { field: 'agnt.ai:pairingCode' },
     });
-    const done = await blank.call<{ address: string }>('POST', '/agnt/register', {
+    const done = await blank.call<{ address: string }>('POST', '/simon/register', {
       ...body,
       'agnt.ai:pairingCode': world.outbox.code('prefix@mail.test'),
     });
@@ -103,12 +103,12 @@ describe('pairing', async () => {
   it('pairs a phone number by text message', async () => {
     const tel = await alpha.paired('tel:+15550101234');
     assert.equal((await tel.api.me()).principal, 'tel:+15550101234');
-    assert.match(world.outbox.last('+15550101234')!.text, /^AGNT code \d{8} for agent/);
+    assert.match(world.outbox.last('+15550101234')!.text, /^SIMON code \d{8} for agent/);
   });
 
   it('records a key principal as a person the first time it matters, with no code', async () => {
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const key = generateKey().privateKey;
     const agent = new Agent({ server: alpha.origin, key, fetch: world.fetch, now: world.clock.now });
     await agent.register({
@@ -122,7 +122,7 @@ describe('pairing', async () => {
 
   it('leaves the pair whole when a key principal recovers its agent, its own act', async () => {
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const address = 'rooted@alpha.test';
     const agent = new Agent({
       server: alpha.origin,
@@ -135,7 +135,7 @@ describe('pairing', async () => {
     const at = world.clock.now().toISOString();
     const fresh = new Agent({ server: alpha.origin, key, fetch: world.fetch, now: world.clock.now });
     const recover = signRecovery(principal.privateKey, address, fresh.key, at);
-    await fresh.call('POST', '/agnt/recovery', { key: fresh.key, address, at, recover });
+    await fresh.call('POST', '/simon/recovery', { key: fresh.key, address, at, recover });
     const recovered = new Agent({
       server: alpha.origin,
       key,
@@ -173,7 +173,7 @@ describe('pairing', async () => {
     await holder.recover({ address: box });
     const code = world.outbox.code(box);
     await holder.recover({ address: box, code });
-    assert.match(world.outbox.last(box)!.text, /cancel it with POST \/agnt\/recovery\/cancel/);
+    assert.match(world.outbox.last(box)!.text, /cancel it with POST \/simon\/recovery\/cancel/);
     // The server waits before a mailbox takes an agent that still holds a key, then completes on a repeat.
     world.clock.advance(72 * 3600_000);
     await holder.recover({ address: box, code });

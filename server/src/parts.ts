@@ -4,9 +4,9 @@
  * and the bytes fetched for messages in its inbox, so it can forward a part it received. Nothing is ever
  * served because a message merely names a hash.
  *
- *   PUT /agnt/parts/<sha256>   an agent uploads bytes before sending the message that names them; the
+ *   PUT /simon/parts/<sha256>   an agent uploads bytes before sending the message that names them; the
  *                              extensions' `upload` checks may refuse them
- *   GET /agnt/parts/<sha256>   to readers of a published message: bytes held for its author, when its
+ *   GET /simon/parts/<sha256>   to readers of a published message: bytes held for its author, when its
  *                              audience admits them; to a server that signs the request: bytes held for an
  *                              agent here whose message, delivered to that server, names them; to an agent
  *                              here: bytes held for it (`503` while they are being fetched), and what it
@@ -14,7 +14,7 @@
  *
  * The route is dispatched by who signs (spec section 7.2): an agent hosted here gets the client API's answers,
  * its `401` for a signature that fails and `503` while a fetch is underway included; a server, by
- * `agnt-server`, the files of messages delivered to it; anyone else, a request unsigned or whose signature
+ * `simon-server`, the files of messages delivered to it; anyone else, a request unsigned or whose signature
  * fails among them, the files of published messages it may read. Every refusal outside the first kind is
  * the same `404 not_found`.
  *
@@ -277,7 +277,7 @@ export class Fetcher {
 
   async #fetch(f: PartFetch): Promise<void> {
     const ctx = this.#ctx;
-    const url = `${f.carrier}/agnt/parts/${f.sha256}`;
+    const url = `${f.carrier}/simon/parts/${f.sha256}`;
     const headers = signRequest(ctx.config.serverKey, {
       method: 'GET',
       url,
@@ -378,7 +378,7 @@ export function partRoutes(ctx: Context): Route[] {
   return [
     {
       method: 'PUT',
-      path: '/agnt/parts/:sha256',
+      path: '/simon/parts/:sha256',
       maxBody: ctx.config.limits.partBytes,
       async handle(req): Promise<Reply> {
         const agent = await authenticateAgent(ctx, req);
@@ -394,12 +394,12 @@ export function partRoutes(ctx: Context): Route[] {
     },
     {
       method: 'GET',
-      path: '/agnt/parts/:sha256',
+      path: '/simon/parts/:sha256',
       async handle(req: Request): Promise<Reply> {
         const sha256 = req.params.sha256;
         if (!SHA256.test(sha256)) throw notFound();
         // Hosted dispatch is based on public service routing, never a hidden account/key record.
-        const address = req.headers['agnt-agent'];
+        const address = req.headers['simon-agent'];
         let hosted = false;
         /** Why whether the signer's domain names this server could not be known just now. */
         let outage: WireError | null = null;

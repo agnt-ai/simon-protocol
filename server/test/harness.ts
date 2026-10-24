@@ -3,7 +3,7 @@
  * and agents that speak the client API with nothing but @agnt-protocol/protocol.
  *
  *   const fed = new Federation();
- *   const alpha = await fed.server('alpha');            // https://agnt.alpha.test, hosting alpha.test
+ *   const alpha = await fed.server('alpha');            // https://simon.alpha.test, hosting alpha.test
  *   const ada = await alpha.agent('ada');               // ada@alpha.test, registered
  *   await ada.send(ada.message(['bob@beta.test'], 'hi'));
  *   await fed.work();                                   // every server's background work, settled
@@ -34,7 +34,7 @@ import { defineConfig, type ConfigInput } from '../src/config.ts';
 import type { Extension } from '../src/extensions.ts';
 import type { MailboxNote } from '../src/context.ts';
 import type { Reply, Request } from '../src/http.ts';
-import { createServer, type AgntServer } from '../src/server.ts';
+import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import type { Store } from '../src/store/store.ts';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '../src/testing.ts';
@@ -57,7 +57,7 @@ export interface ServerOpts {
   sendDelay?: Promise<void>;
   /** A mail server that refuses every recovery's cancel code. */
   cancelFails?: boolean;
-  /** Where the server's log goes, beside AGNT_TEST_LOG. */
+  /** Where the server's log goes, beside SIMON_TEST_LOG. */
   log?: (level: string, message: string, fields?: object) => void;
   /** Wrap the store the server uses, to watch it. */
   wrapStore?: (store: Store) => Store;
@@ -76,7 +76,7 @@ export class Federation {
 
   /** The origin a domain resolves to here: a test server's own domain, or its TXT record. */
   originOf(domain: string): string | undefined {
-    const record = this.dns.records.get(`_agnt.${domain}`)?.[0]?.join('');
+    const record = this.dns.records.get(`_simon.${domain}`)?.[0]?.join('');
     return this.servers.find(s => s.domain === domain)?.origin ?? /server=(\S+)/.exec(record ?? '')?.[1];
   }
 
@@ -106,7 +106,7 @@ export class TestServer {
   readonly domain: string;
   readonly leaseDomain: string;
   readonly store = new SqliteStore(':memory:');
-  readonly server: AgntServer;
+  readonly server: SimonServer;
   /** What this server sent addresses' mailboxes, oldest first. */
   readonly mail: ({ address: string } & MailboxNote)[] = [];
   readonly codes = new Map<string, string>();
@@ -115,7 +115,7 @@ export class TestServer {
 
   constructor(fed: Federation, name: string, opts: ServerOpts) {
     this.fed = fed;
-    this.origin = opts.wellKnown ? `https://${name}.test` : `https://agnt.${name}.test`;
+    this.origin = opts.wellKnown ? `https://${name}.test` : `https://simon.${name}.test`;
     this.domain = `${name}.test`;
     this.leaseDomain = `lease.${name}.test`;
     // Rate limits get their own tests; elsewhere they stay out of the way.
@@ -149,7 +149,7 @@ export class TestServer {
       now: fed.clock.now,
       log: (l, m, f) => {
         opts.log?.(l, m, f);
-        if (process.env.AGNT_TEST_LOG) console.error(l, m, f ?? '');
+        if (process.env.SIMON_TEST_LOG) console.error(l, m, f ?? '');
       },
       mailbox:
         opts.codes === false
@@ -226,7 +226,7 @@ export class TestAgent {
       sign?: boolean;
       key?: KeyObject;
       ip?: string;
-      /** Act as this address (`agnt-agent`); by default the agent's own, once it has one. */
+      /** Act as this address (`simon-agent`); by default the agent's own, once it has one. */
       agent?: string;
     } = {},
   ): Promise<Answer> {
@@ -248,7 +248,7 @@ export class TestAgent {
   async register(body: Record<string, Json> = {}) {
     // An explicit requested address is the actor; a no-address repeat may name its current holder.
     const asked = isAddress(body.address) ? body.address : undefined;
-    const res = await this.request('POST', '/agnt/register', {
+    const res = await this.request('POST', '/simon/register', {
       body: JSON.stringify({ key: this.token, ...body }),
       agent: asked ?? (this.address || undefined),
     });
@@ -258,7 +258,7 @@ export class TestAgent {
 
   /** Recover an existing address with mailbox or principal proof, signed as that address. */
   async recover(body: Record<string, Json>) {
-    const res = await this.request('POST', '/agnt/recovery', {
+    const res = await this.request('POST', '/simon/recovery', {
       body: JSON.stringify({ key: this.token, ...body }),
       agent: isAddress(body.address) ? body.address : undefined,
     });
@@ -268,7 +268,7 @@ export class TestAgent {
 
   /** Cancel by mailbox secret, independent of the request signer's membership. */
   cancelRecovery(body: Record<string, Json>) {
-    return this.request('POST', '/agnt/recovery/cancel', {
+    return this.request('POST', '/simon/recovery/cancel', {
       body: JSON.stringify(body),
       agent: isAddress(body.address) ? body.address : undefined,
     });
@@ -292,9 +292,9 @@ export class TestAgent {
   }
 
   send(m: object, hints?: object) {
-    return this.request('POST', '/agnt/send', {
+    return this.request('POST', '/simon/send', {
       body: canonicalBytes(m),
-      headers: hints ? { 'agnt-hints': JSON.stringify(hints) } : {},
+      headers: hints ? { 'simon-hints': JSON.stringify(hints) } : {},
     });
   }
 
@@ -303,7 +303,7 @@ export class TestAgent {
       ...(since === undefined ? {} : { since }),
       ...Object.fromEntries(Object.entries(query).map(([k, v]) => [k, String(v)])),
     });
-    return this.request('GET', `/agnt/sync${q.size ? `?${q}` : ''}`);
+    return this.request('GET', `/simon/sync${q.size ? `?${q}` : ''}`);
   }
 
   /** The entries of messages this agent received, as sync shows them, oldest first, each once. */
@@ -336,15 +336,15 @@ export class TestAgent {
   }
 
   sent(id: string) {
-    return this.request('GET', `/agnt/sent/${id}`);
+    return this.request('GET', `/simon/sent/${id}`);
   }
 
   upload(bytes: Buffer) {
-    return this.request('PUT', `/agnt/parts/${sha256Hex(bytes)}`, { body: bytes });
+    return this.request('PUT', `/simon/parts/${sha256Hex(bytes)}`, { body: bytes });
   }
 
   part(sha256: string) {
-    return this.request('GET', `/agnt/parts/${sha256}`);
+    return this.request('GET', `/simon/parts/${sha256}`);
   }
 }
 
@@ -373,14 +373,14 @@ export class Peer {
 
   constructor(fed: Federation, name: string) {
     this.fed = fed;
-    this.origin = `https://agnt.${name}.test`;
+    this.origin = `https://simon.${name}.test`;
     this.domain = `${name}.test`;
     fed.dns.point(this.domain, this.origin);
     fed.net.hosts.set(this.origin, async req => this.#answer(req));
   }
 
   async #answer(req: Request): Promise<Reply> {
-    if (req.path === '/agnt/server') {
+    if (req.path === '/simon/server') {
       if (typeof this.serverDocument === 'number') return { status: this.serverDocument, json: {} };
       if (this.serverDocument) return { status: 200, bytes: this.serverDocument };
       const keys = [this.key, ...this.extraKeys].map(k => ({
@@ -390,12 +390,12 @@ export class Peer {
       }));
       return { status: 200, json: serverDocument(this.origin, keys) };
     }
-    if (req.path === '/agnt/deliver') {
+    if (req.path === '/simon/deliver') {
       this.delivered++;
       if (this.hang) await new Promise(() => {});
       return this.refuse ?? { status: 202, json: { accepted: true } };
     }
-    const address = decodeURIComponent(req.path.slice('/agnt/agents/'.length));
+    const address = decodeURIComponent(req.path.slice('/simon/agents/'.length));
     const key = this.agents.get(address);
     if (this.agentStatus) return { status: this.agentStatus, json: {} };
     if (!key) return { status: 404, json: {} };
@@ -444,11 +444,11 @@ export class Peer {
     return signEnvelope({ message, server, recipients, ...extra } as UnsignedEnvelope, this.key);
   }
 
-  /** POST a body to a server's /agnt/deliver, as this peer. */
+  /** POST a body to a server's /simon/deliver, as this peer. */
   async post(to: TestServer, body: object | Buffer): Promise<Answer> {
     const res = await this.fed.net.request({
       method: 'POST',
-      url: `${to.origin}/agnt/deliver`,
+      url: `${to.origin}/simon/deliver`,
       body: Buffer.isBuffer(body) ? body : canonicalBytes(body),
       maxBytes: 1 << 20,
     });

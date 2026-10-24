@@ -1,8 +1,8 @@
 """The one directory the command line reads and writes files in, for a model that runs it on the word of
 whatever it last read. A path names a file in the workspace, after every symbolic link is resolved, and
-never one under AGNT_HOME, where the keys live, even when AGNT_HOME is inside the workspace.
+never one under SIMON_HOME, where the keys live, even when SIMON_HOME is inside the workspace.
 
-    AGNT_WORKSPACE      the workspace; default the current working directory
+    SIMON_WORKSPACE      the workspace; default the current working directory
 
 A refusal is ``path_refused``, with ``details.field`` naming the argument.
 """
@@ -15,14 +15,14 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from .errors import AgntError
+from .errors import SimonError
 
 
 @dataclass(frozen=True)
 class Workspace:
     #: The workspace, its links resolved.
     root: Path
-    #: AGNT_HOME, its links resolved as far as it exists.
+    #: SIMON_HOME, its links resolved as far as it exists.
     home: Path
 
 
@@ -32,18 +32,18 @@ def workspace(
     """The workspace for an environment and a key directory."""
     env = os.environ if env is None else env
     cwd = Path.cwd() if cwd is None else Path(cwd)
-    root = cwd / (env.get("AGNT_WORKSPACE") or ".")
+    root = cwd / (env.get("SIMON_WORKSPACE") or ".")
     try:
         real = Path(os.path.realpath(root, strict=True))
     except OSError:
-        raise _refused("AGNT_WORKSPACE", f"The workspace {root} does not exist.") from None
+        raise _refused("SIMON_WORKSPACE", f"The workspace {root} does not exist.") from None
     if not real.is_dir():
-        raise _refused("AGNT_WORKSPACE", f"The workspace {root} is not a directory.")
+        raise _refused("SIMON_WORKSPACE", f"The workspace {root} is not a directory.")
     return Workspace(real, _real_as_far_as_exists(cwd / Path(home)))
 
 
 def readable_path(ws: Workspace, file: str | Path, field: str = "path") -> Path:
-    """A file to read: it exists, and it and every link to it lie in the workspace and outside AGNT_HOME."""
+    """A file to read: it exists, and it and every link to it lie in the workspace and outside SIMON_HOME."""
     try:
         real = Path(os.path.realpath(ws.root / file, strict=True))
     except OSError:
@@ -91,7 +91,7 @@ def write_file(ws: Workspace, file: str | Path, data: bytes, field: str = "path"
 
 
 def _is_home_file(ws: Workspace, file: Path) -> bool:
-    """Whether a file is one of AGNT_HOME's own under another name, through a hard link."""
+    """Whether a file is one of SIMON_HOME's own under another name, through a hard link."""
     st = file.stat()
     if st.st_nlink < 2:
         return False
@@ -136,9 +136,9 @@ def _real_as_far_as_exists(path: Path) -> Path:
             at = at.parent
 
 
-def _link_refused(file: str | Path, field: str) -> AgntError:
+def _link_refused(file: str | Path, field: str) -> SimonError:
     return _refused(field, f"{file} is a symbolic link; files are written only as plain files.")
 
 
-def _refused(field: str, message: str) -> AgntError:
-    return AgntError("path_refused", message, details={"field": field})
+def _refused(field: str, message: str) -> SimonError:
+    return SimonError("path_refused", message, details={"field": field})

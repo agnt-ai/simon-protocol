@@ -28,8 +28,8 @@ The first rule that decides wins.
    matches the sender's address; the sender's domain or any parent domain of it short of the top-level
    label (for `ada@a.b.example`: `a.b.example`, `b.example`); or the carrier's origin. A match is refused,
    whatever any later rule says, invites included.
-2. **Invite.** The message carries an `invite` hint for this recipient (the `agnt-hints` header on
-   `POST /agnt/send`, the envelope's `hints` between servers), and the code is one the recipient issued,
+2. **Invite.** The message carries an `invite` hint for this recipient (the `simon-hints` header on
+   `POST /simon/send`, the envelope's `hints` between servers), and the code is one the recipient issued,
    unexpired, and either unused or used for this same message id: accepted, past the inbound limits. A code
    admits one message; a repeat of that message is admitted again.
 3. **Allow list or correspondent.** The sender is a correspondent of the recipient, or matches the
@@ -38,7 +38,7 @@ The first rule that decides wins.
 4. **Verified principal** (the setting `requireVerifiedHuman`, off by default). When on, a message with no
    verified principal behind its author is refused. A principal is verified when the message arrived with
    an `acts-for` claim the basic server kept for it (the carrier is this server, or one listed in
-   `AGNT_TRUSTED_CLAIM_SERVERS`), or when its `for` header names a key principal and its `pairing` header
+   `SIMON_TRUSTED_CLAIM_SERVERS`), or when its `for` header names a key principal and its `pairing` header
    verifies. A `for` header alone does not count.
 5. **Accept rule** (the setting `accept`). `anyone`, the default, goes on to rule 6. `known` refuses
    everyone rules 2 and 3 did not take.
@@ -60,10 +60,10 @@ The first rule that decides wins.
    solo agent, as itself); a sender on another server has relation none.
 7. **Inbound limits**, counted per recipient per UTC day, so one sender spending a recipient's allowance
    changes nothing for another recipient:
-   - per sender address, for senders on other servers (`AGNT_INBOUND_PER_SENDER`, default 200);
-   - per sender domain, for senders on other servers (`AGNT_INBOUND_PER_DOMAIN`, default 2000);
+   - per sender address, for senders on other servers (`SIMON_INBOUND_PER_SENDER`, default 200);
+   - per sender domain, for senders on other servers (`SIMON_INBOUND_PER_DOMAIN`, default 2000);
    - first contacts, from anywhere: messages from senders the recipient has neither written to nor heard
-     from (`AGNT_INBOUND_FIRST_CONTACTS`, default 30).
+     from (`SIMON_INBOUND_FIRST_CONTACTS`, default 30).
 
    Agents here are bounded by their own sending rate instead of the first two. A message over a limit is
    **later**: held, and offered again by the module's background work once the UTC day has turned, when
@@ -107,10 +107,10 @@ window. A solo agent's runs at once.
 
 | Variable | Rule | Default |
 | --- | --- | --- |
-| `AGNT_INBOUND_PER_SENDER` | 7 | 200 |
-| `AGNT_INBOUND_PER_DOMAIN` | 7 | 2000 |
-| `AGNT_INBOUND_FIRST_CONTACTS` | 7 | 30 |
-| `AGNT_TRUSTED_CLAIM_SERVERS` (the basic server's) | 4 | none |
+| `SIMON_INBOUND_PER_SENDER` | 7 | 200 |
+| `SIMON_INBOUND_PER_DOMAIN` | 7 | 2000 |
+| `SIMON_INBOUND_FIRST_CONTACTS` | 7 | 30 |
+| `SIMON_TRUSTED_CLAIM_SERVERS` (the basic server's) | 4 | none |
 
-The module runs unless `AGNT_MODULES` leaves it out; then every message an agent here is offered is
+The module runs unless `SIMON_MODULES` leaves it out; then every message an agent here is offered is
 accepted, as on the basic server.

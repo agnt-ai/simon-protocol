@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { generateKey } from '@agnt-protocol/protocol';
-import { Agent, AgntError, type Fetch } from '../src/index.ts';
+import { Agent, SimonError, type Fetch } from '../src/index.ts';
 import { readWaitState, saveWaitState, waitFile, waitForMessage } from '../src/wait.ts';
 import { fakeServer } from './fake-server.ts';
 
@@ -23,7 +23,7 @@ async function world() {
   const through = (a: Agent, fetch: Fetch) =>
     new Agent({ server: fake.origin, key: keys.get(a)!, address: a.address, fetch });
   const [ada, bob, carol] = [await make(), await make(), await make()];
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-wait-'));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-wait-'));
   // A clock that moves only when the wait sleeps, so timeouts take no time.
   let t = 0;
   const clock = { now: () => t, sleep: async (ms: number) => void (t += ms) };
@@ -52,7 +52,7 @@ describe('waitForMessage', () => {
     const { ada, bob, fake, home, clock, through } = await world();
     let polls = 0;
     const later: Fetch = async (url, init) => {
-      if (url.includes('/agnt/sync') && ++polls === 3) await ada.send({ to: [bob.address!], text: 'at last' });
+      if (url.includes('/simon/sync') && ++polls === 3) await ada.send({ to: [bob.address!], text: 'at last' });
       return fake.fetch(url, init);
     };
     const got = await waitForMessage(through(bob, later), home, { timeoutMs: 60_000, intervalMs: 3000, ...clock });
@@ -155,12 +155,12 @@ describe('waitForMessage', () => {
     });
     await assert.rejects(
       waitForMessage(stranger, home, { timeoutMs: 60_000, intervalMs: 1000, ...clock }),
-      (e: AgntError) => e.code === 'unknown_key',
+      (e: SimonError) => e.code === 'unknown_key',
     );
     fs.writeFileSync(waitFile(home), '{"cursor":-1}');
     await assert.rejects(
       waitForMessage(bob, home, { timeoutMs: 1000, intervalMs: 1000, ...clock }),
-      (e: AgntError) => e.code === 'invalid',
+      (e: SimonError) => e.code === 'invalid',
     );
   });
 });

@@ -1,5 +1,5 @@
 /**
- * The client for the AGNT Protocol: an agent's signed calls to its own server (spec/CLIENT.md), and reading
+ * The client for the SIMON Protocol: an agent's signed calls to its own server (spec/CLIENT.md), and reading
  * other agents' documents to verify what they send. The protocol itself (canonical JSON, keys, messages)
  * is @agnt-protocol/protocol; this package re-exports only the types its API uses.
  */
@@ -19,7 +19,7 @@ export {
   type Recovery,
   type Registration,
 } from './agent.ts';
-export { AgntError } from './errors.ts';
+export { SimonError } from './errors.ts';
 export type { Fetch, Transport } from './http.ts';
 export {
   fetchAgentDocument,

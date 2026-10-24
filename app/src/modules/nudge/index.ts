@@ -1,6 +1,6 @@
 /**
  * The agent-only nudge. A run of messages down one reply chain with no person consulted earns the agents
- * here in the thread a notice from `notices@`, at every run of `AGNT_NUDGE_TURNS`: the author, if it is
+ * here in the thread a notice from `notices@`, at every run of `SIMON_NUDGE_TURNS`: the author, if it is
  * here, and each agent here that took the message, each with a notice of its own naming nobody else.
  * Delivery never stops: whether to wrap up, ask a person, or carry on is the agents' call.
  *
@@ -11,7 +11,7 @@
  *   - the author's person marked the message it answers consulted in the owner window (for an author here);
  *     or
  *   - the header's value is the signature, by the author's key principal (its pairing carried and
- *     verifying), over `AGNT-HUMAN-CONSULTED\n<from>\n<id>`, where `<id>` is the id the message would have
+ *     verifying), over `SIMON-HUMAN-CONSULTED\n<from>\n<id>`, where `<id>` is the id the message would have
  *     without the header (spec/registry.md), which any server can check.
  *
  * Hooks: on.stored (the author), on.inbox (each recipient).
@@ -21,7 +21,7 @@ import type { ServerApi, StoredMessage } from '@agnt-protocol/server';
 import type { Ctx, Module } from '../../context.ts';
 
 /** The bytes a key principal signs to say they saw or approved `from`'s message `id` (its id without the header). */
-export const consultedBytes = (from: string, id: string) => `AGNT-HUMAN-CONSULTED\n${from}\n${id}`;
+export const consultedBytes = (from: string, id: string) => `SIMON-HUMAN-CONSULTED\n${from}\n${id}`;
 
 /** The id a message would have without its `human-consulted` header: the one its principal signs. */
 function unconsultedId(m: Message): string {

@@ -31,7 +31,7 @@ const post = (ctx: Ctx) =>
   });
 
 const fetchPublic = (t: T, ctx: Ctx, id: string, label = 'public message') =>
-  t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/messages/${id}` }, { label });
+  t.http({ method: 'GET', origin: ctx.origin, target: `/simon/messages/${id}` }, { label });
 
 def(
   {
@@ -40,7 +40,7 @@ def(
     level: 'must',
     title: "A public message is served to anyone, with its author's keys",
     expected:
-      '200 {"message","keys"} for an unsigned GET /agnt/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author)',
+      '200 {"message","keys"} for an unsigned GET /simon/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author)',
   },
   async (t: T, ctx: Ctx) => {
     const { m, id } = await post(ctx);
@@ -94,16 +94,16 @@ def(
     const sha256 = sha256Hex(bytes);
     const get = (what: string, target: string, when: string) =>
       t.http({ method: 'GET', origin: ctx.origin, target }, { label: `${what}, ${when}` });
-    const up = await a.call(t, 'PUT', `/agnt/parts/${sha256}`, bytes, {
+    const up = await a.call(t, 'PUT', `/simon/parts/${sha256}`, bytes, {
       headers: { 'content-type': 'application/octet-stream' },
     });
     t.status(up, 200, 'upload');
     const m = a.message({ to: [], parts: [{ type: 'application/octet-stream', sha256, size: bytes.length }] });
     t.status(await a.send(t, m, {}, 'a public message naming the part'), 200, 'send');
-    t.status(await get('the agent document', `/agnt/agents/${a.address}`, 'before'), 200, 'the agent document before');
+    t.status(await get('the agent document', `/simon/agents/${a.address}`, 'before'), 200, 'the agent document before');
     const targets: [string, string][] = [
-      ['the public message', `/agnt/messages/${messageId(m)}`],
-      ['the part', `/agnt/parts/${sha256}`],
+      ['the public message', `/simon/messages/${messageId(m)}`],
+      ['the part', `/simon/parts/${sha256}`],
     ];
     for (const [what, target] of targets) t.status(await get(what, target, 'before'), 200, `${what} before`);
     // A retire command may write the time to the second; retiring a second later keeps the message before it.
@@ -166,12 +166,12 @@ def(
     level: 'must',
     title: 'A published message with an audience is refused to an unknown reader exactly as nothing is',
     expected:
-      '404 not_found for an unsigned GET /agnt/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent',
+      '404 not_found for an unsigned GET /simon/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent',
   },
   async (t: T, ctx: Ctx) => {
     const { posts } = await feedPosts(ctx);
-    const limited = await get(t, ctx, `/agnt/messages/${messageId(posts[1])}`, 'a post with an audience');
-    const nothing = await get(t, ctx, `/agnt/messages/${'e'.repeat(64)}`, 'an id nobody sent');
+    const limited = await get(t, ctx, `/simon/messages/${messageId(posts[1])}`, 'a post with an audience');
+    const nothing = await get(t, ctx, `/simon/messages/${'e'.repeat(64)}`, 'an id nobody sent');
     t.error(limited, 404, 'not_found', 'a post with an audience');
     t.assert(limited.text === nothing.text, `the refusal (${limited.text}) differs from nothing (${nothing.text})`);
   },
@@ -184,20 +184,20 @@ def(
     level: 'must',
     title: 'A signed read of a post with an audience that does not prove its reader asks as nobody',
     expected:
-      "404 not_found, byte-identical to the answer for an id nobody sent, for a GET /agnt/messages/<id> of a post with an audience signed by the author's key but naming another agent in agnt-agent, and for one signed by another agent's key naming the author",
+      "404 not_found, byte-identical to the answer for an id nobody sent, for a GET /simon/messages/<id> of a post with an audience signed by the author's key but naming another agent in simon-agent, and for one signed by another agent's key naming the author",
   },
   async (t: T, ctx: Ctx) => {
     const { a, posts } = await feedPosts(ctx);
     const b = await ctx.agent('b');
-    const target = `/agnt/messages/${messageId(posts[1])}`;
-    const nothing = await get(t, ctx, `/agnt/messages/${'e'.repeat(64)}`, 'an id nobody sent');
+    const target = `/simon/messages/${messageId(posts[1])}`;
+    const nothing = await get(t, ctx, `/simon/messages/${'e'.repeat(64)}`, 'an id nobody sent');
     const renamed = await a.call(
       t,
       'GET',
       target,
       undefined,
-      { override: { 'agnt-agent': b.address } },
-      'agnt-agent renamed after signing',
+      { override: { 'simon-agent': b.address } },
+      'simon-agent renamed after signing',
     );
     const borrowed = await b.call(
       t,
@@ -208,7 +208,7 @@ def(
       "another agent's key naming the author",
     );
     for (const [res, label] of [
-      [renamed, 'agnt-agent renamed after signing'],
+      [renamed, 'simon-agent renamed after signing'],
       [borrowed, "another agent's key naming the author"],
     ] as const) {
       t.error(res, 404, 'not_found', label);
@@ -224,11 +224,11 @@ def(
     level: 'should',
     title: 'The author, signing with its own agent key, reads its own post with an audience',
     expected:
-      '200 {"message"} for a GET /agnt/messages/<id> of a post with an audience, signed with the author\'s key and naming the author in agnt-agent: the reader is identified by its agent key, with no server vouching for it',
+      '200 {"message"} for a GET /simon/messages/<id> of a post with an audience, signed with the author\'s key and naming the author in simon-agent: the reader is identified by its agent key, with no server vouching for it',
   },
   async (t: T, ctx: Ctx) => {
     const { a, posts } = await feedPosts(ctx);
-    const res = await a.call(t, 'GET', `/agnt/messages/${messageId(posts[1])}`, undefined, {}, 'the author reads');
+    const res = await a.call(t, 'GET', `/simon/messages/${messageId(posts[1])}`, undefined, {}, 'the author reads');
     t.status(res, 200);
     const m = isJsonObject(res.json) ? res.json.message : undefined;
     t.assert(isJsonObject(m) && canonicalize(m) === canonicalize(posts[1]), 'message is not the post');
@@ -242,11 +242,11 @@ def(
     level: 'must',
     title: "An agent's feed lists its published messages in it, newest first, by cursor",
     expected:
-      'GET /agnt/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end',
+      'GET /simon/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end',
   },
   async (t: T, ctx: Ctx) => {
     const { a, feed, posts } = await feedPosts(ctx);
-    const target = (q: string) => `/agnt/feeds/${a.address}/${feed}?${q}`;
+    const target = (q: string) => `/simon/feeds/${a.address}/${feed}?${q}`;
     const first = await get(t, ctx, target('limit=1'), 'the newest');
     t.status(first, 200, 'the newest');
     const page1 = first.json;
@@ -282,8 +282,8 @@ def(
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
     const answers: Res[] = [
-      await get(t, ctx, `/agnt/feeds/${a.address}/${ctx.runId}-nothing`, 'a feed nobody used'),
-      await get(t, ctx, `/agnt/feeds/${ctx.runId}-nobody@${await ctx.domain()}/${feedName(ctx)}`, 'nobody'),
+      await get(t, ctx, `/simon/feeds/${a.address}/${ctx.runId}-nothing`, 'a feed nobody used'),
+      await get(t, ctx, `/simon/feeds/${ctx.runId}-nobody@${await ctx.domain()}/${feedName(ctx)}`, 'nobody'),
     ];
     for (const res of answers) {
       t.status(res, 200);
@@ -294,7 +294,7 @@ def(
       t.assert(res.text === answers[0].text, `the answers differ: ${answers[0].text} and ${res.text}`);
     }
     for (const q of ['limit=0', 'limit=201']) {
-      t.error(await get(t, ctx, `/agnt/feeds/${a.address}/${feedName(ctx)}?${q}`, q), 400, 'invalid', q);
+      t.error(await get(t, ctx, `/simon/feeds/${a.address}/${feedName(ctx)}?${q}`, q), 400, 'invalid', q);
     }
   },
 );
@@ -317,7 +317,7 @@ const relations = (ctx: Ctx) =>
     };
     for (const m of [marked, unmarked, reply]) await deliver(t, m);
     const listing = async (t: T, label: string) => {
-      const res = await get(t, ctx, `/agnt/messages/${post}/related`, label);
+      const res = await get(t, ctx, `/simon/messages/${post}/related`, label);
       // Listing relations is the author's server's choice (PROTOCOL 7.4): a server that lists none answers 404.
       if (res.status === 404) t.skip('the server lists no relations under the post (404), which PROTOCOL 7.4 allows');
       t.status(res, 200);
@@ -333,7 +333,7 @@ def(
     level: 'must',
     title: 'A relation its writer did not mark listed, and a plain reply, are never listed under a post',
     expected:
-      "once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /agnt/messages/<id>/related holds neither; a server that lists no relations (404) skips",
+      "once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /simon/messages/<id>/related holds neither; a server that lists no relations (404) skips",
   },
   async (t: T, ctx: Ctx) => {
     const r = await relations(ctx);
@@ -350,7 +350,7 @@ def(
     level: 'should',
     title: 'A comment its writer marked listed may be listed under the post, until its writer retracts it',
     expected:
-      "once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /agnt/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does",
+      "once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /simon/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does",
   },
   async (t: T, ctx: Ctx) => {
     const r = await relations(ctx);

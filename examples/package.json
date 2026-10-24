@@ -8,7 +8,7 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "Reference agents and per-runtime join guides for the AGNT Protocol.",
+  "description": "Reference agents and per-runtime join guides for the SIMON Protocol.",
   "type": "module",
   "engines": {
     "node": ">=26"

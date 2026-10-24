@@ -42,14 +42,14 @@ const wrap = (store: Store, over: Partial<Record<keyof Store, Function>>): Store
   });
 
 const tick = () => new Promise(r => setImmediate(r));
-const posts = (fed: Federation) => fed.net.sent.filter(r => r.url.endsWith('/agnt/deliver')).length;
+const posts = (fed: Federation) => fed.net.sent.filter(r => r.url.endsWith('/simon/deliver')).length;
 
-/** Hold every POST to /agnt/deliver until the test answers it. */
+/** Hold every POST to /simon/deliver until the test answers it. */
 function gateDeliveries(fed: Federation) {
   const real = fed.net.request.bind(fed.net);
   const gates: { answer: (r: HttpResponse) => void; req: HttpRequest }[] = [];
   fed.net.request = async (r: HttpRequest) => {
-    if (!r.url.endsWith('/agnt/deliver')) return real(r);
+    if (!r.url.endsWith('/simon/deliver')) return real(r);
     fed.net.sent.push({ method: r.method, url: r.url });
     return new Promise<HttpResponse>(answer => gates.push({ answer, req: r }));
   };
@@ -241,7 +241,7 @@ describe('outbox claims', () => {
     let inFlight = 0;
     let peak = 0;
     fed.net.request = async (r: HttpRequest) => {
-      if (!r.url.endsWith('/agnt/deliver')) return real(r);
+      if (!r.url.endsWith('/simon/deliver')) return real(r);
       peak = Math.max(peak, ++inFlight);
       await new Promise(res => setTimeout(res, 5));
       return real(r).finally(() => inFlight--);
@@ -259,7 +259,7 @@ describe('outbox claims', () => {
     const tarpits = ['tar1', 'tar2'].map(name => {
       const p = new Peer(fed, name);
       p.hang = true;
-      fed.net.addresses.set(`agnt.${name}.test`, '203.0.113.66');
+      fed.net.addresses.set(`simon.${name}.test`, '203.0.113.66');
       return p;
     });
     await ada.send(ada.message(['x@tar1.test'], 'one'));
@@ -281,7 +281,7 @@ describe('outbox claims', () => {
     const serve = fed.net.hosts.get(busy.origin);
     assert.ok(typeof serve === 'function');
     fed.net.hosts.set(busy.origin, async req =>
-      req.path === '/agnt/deliver'
+      req.path === '/simon/deliver'
         ? { status: 429, json: { code: 'rate_limited' }, headers: { 'retry-after': '600' } }
         : serve(req),
     );
@@ -355,11 +355,11 @@ describe('deliver as an outbound-fetch primitive', () => {
       sentAt: '2026-10-15T12:00:00Z',
       signature: 'AAAA',
     };
-    return { message, server: 'https://agnt.alpha.test', recipients: [to], signature: 'AAAA' };
+    return { message, server: 'https://simon.alpha.test', recipients: [to], signature: 'AAAA' };
   };
   const post = (fed: Federation, body: object, ip = '198.51.100.9') =>
     fed.servers[0].server.handle(
-      toRequest('POST', new URL('https://agnt.alpha.test/agnt/deliver'), {}, canonicalBytes(body), ip),
+      toRequest('POST', new URL('https://simon.alpha.test/simon/deliver'), {}, canonicalBytes(body), ip),
     );
 
   it('remembers a temporary outcome for a minute, so a failing host is not fetched on every request', async () => {
@@ -367,7 +367,7 @@ describe('deliver as an outbound-fetch primitive', () => {
     await fed.server('alpha');
     fed.net.hosts.set('https://attacker.test', async () => ({ status: 503, json: {} }));
     for (let i = 0; i < 5; i++) assert.equal((await post(fed, junk('attacker.test'))).status, 503);
-    assert.equal(fed.net.sent.filter(r => r.url.includes('/.well-known/agnt')).length, 1);
+    assert.equal(fed.net.sent.filter(r => r.url.includes('/.well-known/simon')).length, 1);
     await fed.close();
   });
 
@@ -379,7 +379,7 @@ describe('deliver as an outbound-fetch primitive', () => {
     for (let i = 0; i < 3; i++) assert.equal((await post(fed, junk(`d${i}.test`))).status, 403);
     const refused = await post(fed, junk('d3.test'));
     assert.deepEqual([refused.status, (refused.json as { code: string }).code], [429, 'rate_limited']);
-    assert.equal(fed.net.sent.filter(r => r.url === 'https://d3.test/.well-known/agnt').length, 0, 'not made');
+    assert.equal(fed.net.sent.filter(r => r.url === 'https://d3.test/.well-known/simon').length, 0, 'not made');
     assert.equal((await post(fed, junk('d3.test'), '2001:db8:9::1')).status, 403, 'another network has its own');
 
     const peer = new Peer(fed, 'peer');
@@ -491,20 +491,20 @@ describe('signed requests (spec section 8)', () => {
     const ts = fed.clock.t;
     const headers = signRequest(ada.key, {
       method: 'GET',
-      url: `${alpha.origin}/agnt/sync`,
+      url: `${alpha.origin}/simon/sync`,
       now: ts,
       agent: ada.address,
     });
     const ask = () =>
       alpha.server.handle(
-        toRequest('GET', new URL(`${alpha.origin}/agnt/sync`), { ...headers }, Buffer.alloc(0), '192.0.2.1'),
+        toRequest('GET', new URL(`${alpha.origin}/simon/sync`), { ...headers }, Buffer.alloc(0), '192.0.2.1'),
       );
     fed.clock.t = ts - 300_000;
     assert.equal((await ask()).status, 200);
     fed.clock.t = ts + 300_999;
     const replay = await ask();
     assert.deepEqual([replay.status, (replay.json as { code: string }).code], [401, 'replayed_request']);
-    assert.equal(replay.headers?.['www-authenticate'], 'AGNT');
+    assert.equal(replay.headers?.['www-authenticate'], 'SIMON');
     await fed.close();
   });
 

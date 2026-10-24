@@ -4,7 +4,7 @@ Why the protocol is the way it is. Each entry gives the choice, the alternatives
 
 ## Audience: agents first
 
-The people who implement and use AGNT will mostly be agents, and they will be far more capable than today's models. So the spec is written to be implemented without asking anyone:
+The people who implement and use SIMON will mostly be agents, and they will be far more capable than today's models. So the spec is written to be implemented without asking anyone:
 - every rule is precise;
 - every grammar is in ABNF;
 - offline rules have vector coverage (section 15 lists the rules that do not have it yet);
@@ -67,9 +67,9 @@ Servers route versions they do not know. An agent's own server refuses to accept
 - The next algorithm is one more token name, not a new format.
 - **Downgrade.** An agent holding keys of two algorithms is only as strong as the weaker, so retiring an algorithm means revoking those keys. That is stated in section 2.3, rather than defended against with machinery.
 
-**Strict Ed25519.** Verification is cofactorless, rejects a small-order R, and requires S below L. Every verifier then agrees, following Chalkias et al. 2020, "Taming the many EdDSAs". ZIP-215 chose the cofactored equation, with explicit validity rules that also remove disagreement, so signatures can be batch-verified. Either choice gives agreement when every verifier follows it. AGNT verifies one message at a time and takes the cofactorless one.
+**Strict Ed25519.** Verification is cofactorless, rejects a small-order R, and requires S below L. Every verifier then agrees, following Chalkias et al. 2020, "Taming the many EdDSAs". ZIP-215 chose the cofactored equation, with explicit validity rules that also remove disagreement, so signatures can be batch-verified. Either choice gives agreement when every verifier follows it. SIMON verifies one message at a time and takes the cofactorless one.
 
-**Why signatures are less urgent than encryption.** "Record now, decrypt later" threatens encryption. AGNT does not encrypt messages: TLS carries them, and current TLS stacks default to hybrid post-quantum key exchange. What signatures need is a way to switch before forgery becomes possible, and the format now has one.
+**Why signatures are less urgent than encryption.** "Record now, decrypt later" threatens encryption. SIMON does not encrypt messages: TLS carries them, and current TLS stacks default to hybrid post-quantum key exchange. What signatures need is a way to switch before forgery becomes possible, and the format now has one.
 
 ## SHA-256 ids are an invariant
 
@@ -77,7 +77,7 @@ Grover's algorithm halves a hash's preimage security, which leaves SHA-256 with 
 
 ## Domain separation for every signature
 
-**Choice.** Every signed object starts with a context line: `AGNT-MESSAGE`, `AGNT-ENVELOPE`, `AGNT-CLAIMS`, `AGNT-SIGNAL`, `AGNT-AGENT`, `AGNT-PAIR`, `AGNT-UNPAIR`, `AGNT-ADD-KEY`, `AGNT-RECOVER`, `AGNT-REQUEST`. The registry adds `AGNT-HUMAN-CONSULTED`, and the application template `AGNT-APP-SIGN-IN`.
+**Choice.** Every signed object starts with a context line: `SIMON-MESSAGE`, `SIMON-ENVELOPE`, `SIMON-CLAIMS`, `SIMON-SIGNAL`, `SIMON-AGENT`, `SIMON-PAIR`, `SIMON-UNPAIR`, `SIMON-ADD-KEY`, `SIMON-RECOVER`, `SIMON-REQUEST`. The registry adds `SIMON-HUMAN-CONSULTED`, and the application template `SIMON-APP-SIGN-IN`.
 
 **Reason.** Without it, a server key that signs both envelopes and agent documents is safe only because their member sets happen not to overlap. Every pair of contexts is separated byte for byte.
 
@@ -96,12 +96,12 @@ Both are signed. Receivers fan out only to `recipients`, and deduplicate per (id
 
 Naming the recipients, as SMTP's RCPT TO does, closes all three. The cost is one more member.
 
-**Limitation, stated rather than hidden.** The carrier is always the server of the `from` domain. Relays, forwarding, backup servers and mailing-list exploders cannot carry a message for another domain. Email's answer was ARC's chain of re-signatures, which AGNT does not take on.
+**Limitation, stated rather than hidden.** The carrier is always the server of the `from` domain. Relays, forwarding, backup servers and mailing-list exploders cannot carry a message for another domain. Email's answer was ARC's chain of re-signatures, which SIMON does not take on.
 
 ## Resolution: TXT, then well-known; DNS defended in layers
 
 **Choice.**
-- TXT is tried first, then `/.well-known/agnt`.
+- TXT is tried first, then `/.well-known/simon`.
 - A DNSSEC validation failure is temporary.
 - The spec recommends authenticated resolvers, several vantage points, and key continuity by *possession*: a remembered key that actually signs.
 - A domain names exactly one server.
@@ -137,7 +137,7 @@ Naming the recipients, as SMTP's RCPT TO does, closes all three. The cost is one
 
 **Choice.**
 - Errors are RFC 9457 problem details, with `code` and `retryable` as extension members.
-- Request signature failures are `401`, with `WWW-Authenticate: AGNT`.
+- Request signature failures are `401`, with `WWW-Authenticate: SIMON`.
 - Message and envelope signature failures are `403`, because they are not request authentication.
 - Every connection is TLS 1.3 or later, authenticated as RFC 9525 says.
 - No call follows a redirect.
@@ -146,7 +146,7 @@ Naming the recipients, as SMTP's RCPT TO does, closes all three. The cost is one
 
 ## Request signing: our own fixed profile, not RFC 9421
 
-RFC 9421 (HTTP Message Signatures) is general: components are selected per request and encoded as structured fields. That generality is exactly where independent implementations diverge. AGNT's signing string is eight fixed lines, including the acting identity, with byte-exact vectors, and an agent can construct it in a shell. The origin line gives what 9421's `@authority` gives. Web Bot Auth chose 9421 for a different problem: signing arbitrary browser-like requests.
+RFC 9421 (HTTP Message Signatures) is general: components are selected per request and encoded as structured fields. That generality is exactly where independent implementations diverge. SIMON's signing string is eight fixed lines, including the acting identity, with byte-exact vectors, and an agent can construct it in a shell. The origin line gives what 9421's `@authority` gives. Web Bot Auth chose 9421 for a different problem: signing arbitrary browser-like requests.
 
 ## Silent refusal stays; delivery is reported honestly
 
@@ -187,7 +187,7 @@ The `for` header alone is the agent's word, as a From line in email is. A reader
 
 - **A key principal's own signature.** The `pairing` header travels on every message, and needs no server. It proves that the key's holder consented. It says nothing about identity or humanity, and it binds the address rather than the agent's current key, so it outlives a compromised agent key until the address retires.
 - **An `acts-for` claim.** This covers email and phone principals.
-  - The claim is **authoritative** when the email's domain names the carrier by its `_agnt` TXT record, the reasoning that makes DKIM trustworthy: the domain's DNS speaks for its mail. Until 2026-10-21 the well-known answer counted too; that handed a domain's mail identities to whoever runs its website.
+  - The claim is **authoritative** when the email's domain names the carrier by its `_simon` TXT record, the reasoning that makes DKIM trustworthy: the domain's DNS speaks for its mail. Until 2026-10-21 the well-known answer counted too; that handed a domain's mail identities to whoever runs its website.
   - A principal never counts for a solo agent, whatever its message carries.
   - Otherwise it is the carrier's word about someone else's identifier. Trusting a carrier's claims is a list of trusted carriers, as a browser keeps certificate authorities, without a transparency log.
 
@@ -219,7 +219,7 @@ Principal recovery is host policy; the spec defines the shape, not the obligatio
 > - a cancel code reaches the mailbox with the news, and cancels any recovery;
 > - a key the agent held before the recovery started can cancel once in 30 days, after which only the cancel code can;
 > - one recovery is pending at a time, and a request for a code while one is pending is answered `202 code_sent`; the server stores an unguessable code for the asking key and never sends it, so every later answer (`422`, then `410 code_locked` or `code_expired`) is the one a stranger gets when nothing is pending. A `202` alone is not enough: with no code stored, the next guess would answer `410 code_expired` instead of `422`, which would tell.
-> - a key principal recovers at once, by `AGNT-RECOVER`;
+> - a key principal recovers at once, by `SIMON-RECOVER`;
 > - an agent's keys can read a pending recovery's `completesAt` and whether they may cancel it, the status read, as `register {"recoveryStatus":true}`.
 >
 > (`client-credentials` does not answer `409 recovery_in_progress`: that would tell anyone holding a fresh key whether an address was being recovered, against the call's own rule that strangers learn nothing. That is why the status read exists.)
@@ -238,7 +238,7 @@ Version 1 messages keep email's ASCII local part. Homograph and normalisation at
 
 ## End-to-end encryption is an extension, not version 1
 
-*Anticipated 2026-10-22:* `encryptionKeys` and `application/agnt-sealed` are reserved, and section 5.3 states that a sealed message is an ordinary one. A carriage vector proves only carriage: groups will need an order for their changes and a way to distribute keys, which the profile may add as services.
+*Anticipated 2026-10-22:* `encryptionKeys` and `application/simon-sealed` are reserved, and section 5.3 states that a sealed message is an ordinary one. A carriage vector proves only carriage: groups will need an order for their changes and a way to distribute keys, which the profile may add as services.
 
 Ciphertext carriage fits ordinary messages. A complete encryption profile may require new server services for key distribution and ordering group changes; unchanged carriage alone does not establish encrypted lifecycle support. Agents publish encryption keys as a document member and send ciphertext as parts. The profile will use the IETF's standards:
 - HPKE (RFC 9180) for one recipient;
@@ -253,12 +253,12 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 **No end-to-end encryption.**
 - *Why not in version 1:* ciphertext carriage is already possible, but key distribution and group ordering remain profile work that may require server services; a rushed profile would freeze an incomplete lifecycle and key format.
-- *Meanwhile:* servers see contents, as mail servers do. A sender with confidential material sends a reference block (`application/agnt-reference+json`) to storage it controls, with access it can revoke, rather than a part.
+- *Meanwhile:* servers see contents, as mail servers do. A sender with confidential material sends a reference block (`application/simon-reference+json`) to storage it controls, with access it can revoke, rather than a part.
 - *Order:* the HPKE single-recipient profile first, then MLS for groups.
 
 **Signed plaintext that cannot be denied, and erasure.**
 - *Why:* see "Accountable, not deniable". A `mailto:` or `tel:` identifier in `for` is signed into every message, so a copy cannot be redacted without breaking its signature and id.
-- *Meanwhile:* hosts whose principals may ask to be forgotten name them by key (`agnt-key:`), held for them if need be, and carry their identifiers as claims, which travel beside the message and are not signed into it (PROTOCOL.md section 12). Erasure then means deleting the claims and the key's link to the person; the signed messages name only a key.
+- *Meanwhile:* hosts whose principals may ask to be forgotten name them by key (`simon-key:`), held for them if need be, and carry their identifiers as claims, which travel beside the message and are not signed into it (PROTOCOL.md section 12). Erasure then means deleting the claims and the key's link to the person; the signed messages name only a key.
 - *Left to:* hosts, through the client layer and the application template.
 
 **One server per domain, with no backup.**
@@ -273,7 +273,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 **Forwarding.**
 - *Was:* claims could not be forwarded verifiably, so agents pasted inbox entries, which was an attack surface.
-- *Now:* the `forward` relation carries the forwarded message whole (`application/agnt-message`, verifiable by its own signature) and its carrier-signed claims (`application/agnt-claims+json`, verifiable with the carrier's keys). A forward is then as verifiable as the original. Forwarding by a relay, on another domain's behalf, stays out (section 6.1).
+- *Now:* the `forward` relation carries the forwarded message whole (`application/simon-message`, verifiable by its own signature) and its carrier-signed claims (`application/simon-claims+json`, verifiable with the carrier's keys). A forward is then as verifiable as the original. Forwarding by a relay, on another domain's behalf, stays out (section 6.1).
 
 ## Abuse model
 
@@ -309,18 +309,18 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 **Choice.** The core is what the seven sentences at the top of PROTOCOL.md say, and nothing more: a feature enters only when it has existed for decades in some form and adding it later would force every server to change. [`docs/CORE.md`](CORE.md) maps every idea to core or registry and gives its precedent. The decisions that needed a choice between alternatives:
 
-- **Claims stay checkable end to end by a carrier signature over the claims and the message id** (`AGNT-CLAIMS`), carried into inbox entries. *Alternative:* a client trusts claims only from its own inbox call, which needs no wire change but makes every forwarded claim worthless; forwarding is exactly where agents will paste entries. The signature costs one more signature per envelope with claims, and gives what ARC gives email without re-signing at every hop.
-- **Email authority comes only from the `_agnt` TXT record.** *Alternatives:* TXT and the well-known answer both, as MTA-STS requires; or keep the fallback with a flag a domain can set to refuse it. Requiring both would make authority depend on a website as well as DNS for no gain against DNS attacks. A flag would leave every domain that never heard of AGNT exposed by default, which is the case that was demonstrated.
+- **Claims stay checkable end to end by a carrier signature over the claims and the message id** (`SIMON-CLAIMS`), carried into inbox entries. *Alternative:* a client trusts claims only from its own inbox call, which needs no wire change but makes every forwarded claim worthless; forwarding is exactly where agents will paste entries. The signature costs one more signature per envelope with claims, and gives what ARC gives email without re-signing at every hop.
+- **Email authority comes only from the `_simon` TXT record.** *Alternatives:* TXT and the well-known answer both, as MTA-STS requires; or keep the fallback with a flag a domain can set to refuse it. Requiring both would make authority depend on a website as well as DNS for no gain against DNS attacks. A flag would leave every domain that never heard of SIMON exposed by default, which is the case that was demonstrated.
 - **Signals get their own call** rather than riding deliver, because deliver stores what it carries and remembers repeats for a week, and a signal must be neither stored nor remembered.
 - ~~**Signals pass only between parties who have both written to each other.**~~ Dropped 2026-10-21: any server may drop any signal, and `read` is sent only by choice.
 - ~~**Readers ask for audience-limited posts through their own server.**~~ Replaced 2026-10-21: a reader signs with its own agent key, whoever holds it, as an author does; `?reader=` is gone. The earlier reasoning, kept for the record: readers asked through their own server, which signed the request and named the reader. The asked server then trusts a server for its own domain's addresses, the same rule as the carrier, and agents need not call foreign servers once the client API gives them a call to read through their own server (until then an agent's server reads for it only as a server feature).
 - **No chunking.** Big things travel as reference blocks, as MIMI's external parts do. Chunking is a client-to-server matter that would put a second transfer protocol in every server.
 - **The local part's NFC rule left the invariants.** A router judging normalisation depends on its runtime's Unicode tables, and two runtimes split on 34 code points. How a later version judges non-ASCII local parts is that version's to decide (revised 2026-10-21: the Unicode 17.0 pin is dropped).
-- **Unpairing, and the principal outranks the agent's keys.** A key principal ends a pairing with `AGNT-UNPAIR`, whatever the agent's keys say. That is retirement, not recovery. The core supplies no recovery call; dedicated CLIENT operations and the host's completed implementation define recovery authority and cancellation policy.
+- **Unpairing, and the principal outranks the agent's keys.** A key principal ends a pairing with `SIMON-UNPAIR`, whatever the agent's keys say. That is retirement, not recovery. The core supplies no recovery call; dedicated CLIENT operations and the host's completed implementation define recovery authority and cancellation policy.
 
 ## Related work
 
-| Work | What AGNT shares | Where it differs |
+| Work | What SIMON shares | Where it differs |
 | --- | --- | --- |
 | Email with SPF, DKIM, DMARC and ARC | addresses at domains, domain-keyed signatures, store and forward | every message signed by its author from the start; no relays (no ARC) |
 | Matrix | integer-only canonical JSON, signed server keys fetched unauthenticated, federation by domain | no rooms or replicated state; one message at a time; no notaries |
@@ -330,8 +330,8 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 | ActivityPub | public posts and replies over HTTPS | key documents fetched without authentication, avoiding authorized-fetch deadlocks |
 | WebFinger (RFC 7033, `acct:`) | looking up `name@domain` over HTTPS | one fixed well-known answer per domain, not per account |
 | DIDComm v2 | agent-to-agent signed messaging through mediators | no DIDs or DID resolution; no encryption in version 1 |
-| A2A, MCP | AI agents interoperating | A2A carries tasks and MCP carries tools; AGNT carries messages between addresses |
-| draft-li-atp, WIMSE/SPIFFE, OAuth on-behalf-of | agent identity and delegation | AGNT's principal model is paired and solo agents, with claims carried per message |
+| A2A, MCP | AI agents interoperating | A2A carries tasks and MCP carries tools; SIMON carries messages between addresses |
+| draft-li-atp, WIMSE/SPIFFE, OAuth on-behalf-of | agent identity and delegation | SIMON's principal model is paired and solo agents, with claims carried per message |
 | KERI, did:plc, KEYTRANS, CONIKS | key history and transparency | not in the core (see "Lasting forty years") |
 | MLS and MIMI | interoperable group messaging | groups are a `to` list; MLS is the planned encryption profile |
 
@@ -341,11 +341,11 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 **The answer, with no new mechanism:**
 - **The address is opaque and bound to the pair's ids,** not to any email. It never changes while the pair lasts.
-- **The principal is a key** (`for: agnt-key:...`), held for the person if they hold none. It never changes while the pairing lasts, and no email is signed into every message for good.
+- **The principal is a key** (`for: simon-key:...`), held for the person if they hold none. It never changes while the pairing lasts, and no email is signed into every message for good.
 - **Current identifiers travel as claims** (`identifier`, with `of: agent` or `of: principal`), one message at a time. An email can be added or dropped without touching the address, the key or the pairing.
 - **Sending to an email address is a lookup,** which section 14 leaves to servers and services: the sender's server finds the pair that identifier belongs to today.
 
-**Custodial keys are allowed, and said plainly.** A hosted agent reached through an API or MCP cannot keep a key on its own side, so a signing service holds it, as hosted mail providers hold DKIM keys. A signature cannot show who holds a key, and the spec says so (section 11.2). Keeping the keys apart from the AGNT server limits what one breach exposes. An agent that wants to hold its own key uses a client that does, such as this repository's CLI.
+**Custodial keys are allowed, and said plainly.** A hosted agent reached through an API or MCP cannot keep a key on its own side, so a signing service holds it, as hosted mail providers hold DKIM keys. A signature cannot show who holds a key, and the spec says so (section 11.2). Keeping the keys apart from the SIMON server limits what one breach exposes. An agent that wants to hold its own key uses a client that does, such as this repository's CLI.
 
 ## What probing for addresses costs
 
@@ -389,7 +389,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 ## Who takes a name on a hosted domain
 
-**The problem.** A name on a hosted domain, or a lease, has no mailbox behind it: the server gives it to the first key that asks. A hosting service that puts its own domain on AGNT cannot let a stranger take `support@` or a customer's chosen name before the service registers it.
+**The problem.** A name on a hosted domain, or a lease, has no mailbox behind it: the server gives it to the first key that asks. A hosting service that puts its own domain on SIMON cannot let a stranger take `support@` or a customer's chosen name before the service registers it.
 
 **The answer.** The server's extensions decide (`allowAddress`), with whatever proof the host defines carried in the register body, such as a signature by the host's own backend. The proof binds the address and the key, or whoever sees it could replay it for another. The protocol adds almost nothing: `register` already ignored members it does not know, now a server may define its own under a prefix of its domain, and a refusal is the `409 address_taken` a held name gets, in the same words. A name bound by a code is not asked about, because whoever reads the mailbox has proved the name is theirs. So a host decides who takes names only on domains it lists as hosted; a domain that merely resolves to the server leaves them to the mailboxes.
 
@@ -490,7 +490,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 > **Choice.** A server MUST bound the resolutions and document fetches it makes before a signature verifies, per client network (the IPv4 address, or the IPv6 `/64`) and per registrable domain (by the Public Suffix List) of the name looked up, with refetches after a failed signature counted and cache hits free, and SHOULD cache failures as long as sections 3 and 4 allow. Past the bound a delivery or signal is `429`, and a signed read asks as nobody, as section 7.1 already treats a reader whose document cannot be read. The values are the server's own; the reference server's defaults are in its notes. (IPv4 is bounded by address rather than `/24`, following the reference server, which limits per address, so that clients behind one cloud provider's range do not share a bound; IPv6 by `/64`, because one host is routinely given a whole `/64`.)
 >
-> **Reason.** An earlier decision kept one rule in the protocol, no recipient lookup before the carrier's signature verifies, because it protects third parties. The lookups that must come first, finding the carrier, reading its document, reading the document of the agent a request names, protect third parties for the same reason: the sender chooses the domain, random subdomains defeat caching, and an agent document is refetched whenever a signature fails. Unbounded, any AGNT server is a lookup amplifier against a victim's DNS and web servers. The rule meets that bar and fixes no number. The carrier's signature is checked before any *recipient* lookup, and the lookups before it are what this bounds.
+> **Reason.** An earlier decision kept one rule in the protocol, no recipient lookup before the carrier's signature verifies, because it protects third parties. The lookups that must come first, finding the carrier, reading its document, reading the document of the agent a request names, protect third parties for the same reason: the sender chooses the domain, random subdomains defeat caching, and an agent document is refetched whenever a signature fails. Unbounded, any SIMON server is a lookup amplifier against a victim's DNS and web servers. The rule meets that bar and fixes no number. The carrier's signature is checked before any *recipient* lookup, and the lookups before it are what this bounds.
 
 ### A relation is listed only when its writer marked it (M2)
 
@@ -542,7 +542,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 ### A failed TXT lookup is final (M5)
 
-**Choice.** The well-known answer is tried only when the TXT lookup answered and found no agnt record. A TXT lookup that ends `temporary` ends resolution `temporary`.
+**Choice.** The well-known answer is tried only when the TXT lookup answered and found no simon record. A TXT lookup that ends `temporary` ends resolution `temporary`.
 
 **Reason.** Section 3 did not say, and an implementation that fell back would let anyone who can drop TXT answers route a domain to whoever runs its website, which was decided may not speak for the domain's mail. Treating the failure as final costs a delay while DNS recovers, which section 3 already bounds to 60 seconds of caching.
 
@@ -555,8 +555,8 @@ The draft was revised against three high, eleven medium and nine low findings. E
 > **Choice.**
 > - Whoever judges authority SHOULD take the TXT answer from DNSSEC validation, or confirm it from several vantage points.
 > - Authority is judged when the message reaches the judge, and the judgement is kept: a later lookup never upgrades a claim already judged.
-> - A domain SHOULD NOT alias `_agnt` to a name it does not control.
-> - Alignment, a claim counting as authoritative only when the identifier's domain is the agent's own or names the agent's domain in its agnt record's `agents` field, moves from a MAY for readers to a SHOULD for whoever judges.
+> - A domain SHOULD NOT alias `_simon` to a name it does not control.
+> - Alignment, a claim counting as authoritative only when the identifier's domain is the agent's own or names the agent's domain in its simon record's `agents` field, moves from a MAY for readers to a SHOULD for whoever judges.
 > - A reader that first sees a message long after delivery still judges against the records of that moment; this is left to the claims' issued-at proposal (M4).
 >
 > **Alternatives.**
@@ -566,7 +566,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 >
 > **Reason.** Authority over email addresses rests on one TXT lookup, so that lookup deserves the defences section 11.1 recommends for routing, and a fixed moment of judgement. Alignment narrows authority and grants none.
 >
-> **Delegation keeps the custom-domain case.** Hosts put agents on their own domain: acme.com's people may have agents at host.example. Alignment alone would make the host's claims about acme.com addresses non-authoritative, though acme.com's TXT record names the host. So the identifier's domain can delegate, in the same TXT record: `v=agnt1; server=https://agnt.host.example; agents=host.example`. Authority still comes only from the TXT record, as already decided, and nothing in that decision is amended: the field only narrows, per domain, which agents a claim may be about. An old resolver ignores the field, as it ignores any field it does not know, and a malformed one is ignored too, so routing never depends on it. (Alignment as a SHOULD with no delegation would break the case.)
+> **Delegation keeps the custom-domain case.** Hosts put agents on their own domain: acme.com's people may have agents at host.example. Alignment alone would make the host's claims about acme.com addresses non-authoritative, though acme.com's TXT record names the host. So the identifier's domain can delegate, in the same TXT record: `v=simon1; server=https://simon.host.example; agents=host.example`. Authority still comes only from the TXT record, as already decided, and nothing in that decision is amended: the field only narrows, per domain, which agents a claim may be about. An old resolver ignores the field, as it ignores any field it does not know, and a malformed one is ignored too, so routing never depends on it. (Alignment as a SHOULD with no delegation would break the case.)
 >
 > **Late readers.** A rule that a reader judging more than 144 hours after `sentAt` treat a claim as not authoritative unless it judged it earlier was considered. That would void, for every stranger, the authority of a published post's claims six days after it was posted, which is what claims beside published messages are for. The issued-at time proposed under M4 is the better fix, because it lets the author's server re-sign current claims; until it is agreed, section 6.2 states the gap.
 
@@ -576,7 +576,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 **Earlier rationale (superseded where it differs):**
 
-> **Choice.** A part typed `application/agnt-message`, with or without parameters, carried inline, must decode to the canonical bytes of an object that meets items 1 to 3 of section 1's invariants (the signature, item 4, is a reader's to check), at most 8 deep, the directly carried message being depth 1. Anything else makes the carrying message `400 invalid`. A carried message of version 1 has its files checked; one of a version the server does not know is carried unchanged, and nothing inside it is looked into, for files, depth or form. (The check names items 1 to 3 and not "section 1's invariants", because those include the signature, which no server checks.) No server checks a carried message's signature.
+> **Choice.** A part typed `application/simon-message`, with or without parameters, carried inline, must decode to the canonical bytes of an object that meets items 1 to 3 of section 1's invariants (the signature, item 4, is a reader's to check), at most 8 deep, the directly carried message being depth 1. Anything else makes the carrying message `400 invalid`. A carried message of version 1 has its files checked; one of a version the server does not know is carried unchanged, and nothing inside it is looked into, for files, depth or form. (The check names items 1 to 3 and not "section 1's invariants", because those include the signature, which no server checks.) No server checks a carried message's signature.
 >
 > **Alternatives.**
 > - *Look leniently and skip what does not parse,* as the reference server does: it parses without requiring canonical form, skips bytes that do not parse, and stops looking at depth 8 while accepting deeper messages. Unspecified, implementations split between `400` and `202` on the same message.
@@ -604,7 +604,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 **Earlier rationale (superseded where it differs):**
 
-> **Choice.** `GET /agnt/parts/<sha256>` tells its caller by the request's signature. An agent the server hosts gets the client API's rules and answers (`401`, `503` while a fetch is underway), and also the files of published messages on the server it may read. Another server, asking with `agnt-server`, gets the files of messages delivered to it. Anyone else gets the files of published messages it may read. Every refusal outside the first kind is the same `404`.
+> **Choice.** `GET /simon/parts/<sha256>` tells its caller by the request's signature. An agent the server hosts gets the client API's rules and answers (`401`, `503` while a fetch is underway), and also the files of published messages on the server it may read. Another server, asking with `simon-server`, gets the files of messages delivered to it. Anyone else gets the files of published messages it may read. Every refusal outside the first kind is the same `404`.
 >
 > **Reason.** Section 7.2 answered every refusal `404` while CLIENT.md gave `401` and `503` on the same path, and a local agent admitted to a local post's audience could fetch its files under one and not the other. The client API's answers tell an agent only about its own requests, so they stay; everything a stranger can see stays one `404`.
 
@@ -625,7 +625,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 ### Low findings (L1 to L9)
 
 Each is a statement the draft left open or got slightly wrong; none changes a decision.
-- **L1. The signing string's origin and target.** The origin line is the serialised origin, so `HTTPS://X/` in a record signs as `https://x`; the `agnt-server` header carries the same form. The target line is the request line's raw bytes, checked before any decoding, and an address in a path percent-encodes exactly the characters that are not RFC 3986 `pchar`, with upper-case hex.
+- **L1. The signing string's origin and target.** The origin line is the serialised origin, so `HTTPS://X/` in a record signs as `https://x`; the `simon-server` header carries the same form. The target line is the request line's raw bytes, checked before any decoding, and an address in a path percent-encodes exactly the characters that are not RFC 3986 `pchar`, with upper-case hex.
 - **L2. Rosters.** A newcomer that lacks the root starts from the latest `add` naming it, in both PROTOCOL.md section 5.6 and the registry, which had said it two ways. That a removed member can backdate an `add` is stated as a known limit, not fixed: it depends on who may change a roster, which is an open question.
 - **L3. Timing of gated reads.** A server SHOULD read a signed reader's document whether or not the message asked for exists or has an audience.
 - **L4. `authoritative` in received claims** is dropped from the judged claims only; the signed claims keep it byte for byte, or their signature would fail.
@@ -633,7 +633,7 @@ Each is a statement the draft left open or got slightly wrong; none changes a de
 - **L6. Revocations are neither backdated nor set ahead.** A server sets `revoked` to when it first serves the revocation, never earlier and never more than 300 seconds later, so a revocation never withdraws signatures already made, and a reader refuses a document whose `revoked` lies more than 300 seconds in the future (which also closes the cap bypass under M4). The client-credentials text already revoked "at the time of the call, and never earlier".
 - **L7. Part members are open,** as section 5.3 says; the closed-set rationale above now says it covers a message's top-level members only.
 - **L8. The registry.** "No server behaviour depends on it" was not quite true: a receiving server judges the `identifier` claim, and readers follow the relation marks. Section 10 and the registry now name those entries.
-- **L9. Smaller gaps.** `GET /agnt/sent/<id>` answers `404` for a message the agent did not write, as for an unknown one. Size limits apply to decoded bytes, so a compressed answer cannot exceed them. A server signs the claims of a message written on it, so `signedClaims` is present whenever `claims` is.
+- **L9. Smaller gaps.** `GET /simon/sent/<id>` answers `404` for a message the agent did not write, as for an unknown one. Size limits apply to decoded bytes, so a compressed answer cannot exceed them. A server signs the claims of a message written on it, so `signedClaims` is present whenever `claims` is.
 
 ### Further corrections
 

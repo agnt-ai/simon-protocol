@@ -40,17 +40,17 @@ const read: UnsignedSignal = {
   to: ['bob@example.net'],
   about: 'a'.repeat(64),
   at: '2026-10-14T21:03:00Z',
-  server: 'https://agnt.example.net',
+  server: 'https://simon.example.net',
 };
-const receiver = { origin: 'https://agnt.example.net' };
+const receiver = { origin: 'https://simon.example.net' };
 
 describe('signals', () => {
-  it("are signed by the sender's server over AGNT-SIGNAL, and bound to the receiving server", () => {
+  it("are signed by the sender's server over SIMON-SIGNAL, and bound to the receiving server", () => {
     const signal = signSignal(read, exampleCom.privateKey);
     const keys = [keyEntry(exampleCom.key)];
     assert.equal(verifySignal(signal, keys, NOW), true);
     assert.equal(verifySignal({ ...signal, type: 'typing' }, keys, NOW), false);
-    assert.equal(verifySignal({ ...signal, server: 'https://agnt.example.org' }, keys, NOW), false);
+    assert.equal(verifySignal({ ...signal, server: 'https://simon.example.org' }, keys, NOW), false);
     assert.equal(verifySignal(signal, [keyEntry(ada.key)], NOW), false);
     assert.deepEqual(parseSignal(Buffer.from(canonicalize(signal)), receiver), signal);
   });
@@ -66,9 +66,9 @@ describe('signals', () => {
     assert.equal(parse({ to: ['bob@example.net', 'bob@example.net'] }), '400 invalid to');
     assert.equal(parse({ about: 'A'.repeat(64) }), '400 invalid about');
     assert.equal(parse({ at: '2026-10-14' }), '400 invalid at');
-    assert.equal(parse({ server: 'agnt.example.net' }), '400 invalid server');
+    assert.equal(parse({ server: 'simon.example.net' }), '400 invalid server');
     assert.equal(parse({ signature: 'A=' }), '400 invalid signature');
-    assert.equal(parse({ server: 'https://agnt.example.org' }), '400 invalid server', 'for another server');
+    assert.equal(parse({ server: 'https://simon.example.org' }), '400 invalid server', 'for another server');
     assert.equal(
       code(() => parseSignal(Buffer.from('[]'))),
       '400 invalid signal',
@@ -104,24 +104,24 @@ describe('signals', () => {
 });
 
 describe('unpairing', () => {
-  it("is the key principal's signature over AGNT-UNPAIR, address and identifier", () => {
-    const principal = `agnt-key:${erin.key}`;
+  it("is the key principal's signature over SIMON-UNPAIR, address and identifier", () => {
+    const principal = `simon-key:${erin.key}`;
     const unpairing = signUnpairing(erin.privateKey, 'bob@example.net', principal);
-    assert.equal(unpairingBytes('bob@example.net', principal), `AGNT-UNPAIR\nbob@example.net\n${principal}`);
+    assert.equal(unpairingBytes('bob@example.net', principal), `SIMON-UNPAIR\nbob@example.net\n${principal}`);
     assert.equal(verifyUnpairing('bob@example.net', principal, unpairing), true);
     assert.equal(verifyUnpairing('ada@example.com', principal, unpairing), false, 'another address');
-    assert.equal(verifyUnpairing('bob@example.net', `agnt-key:${frank.key}`, unpairing), false, 'another key');
+    assert.equal(verifyUnpairing('bob@example.net', `simon-key:${frank.key}`, unpairing), false, 'another key');
     assert.equal(verifyPairing('bob@example.net', principal, unpairing), false, 'never read as a pairing');
     assert.equal(verifyUnpairing('bob@example.net', 'mailto:erin@example.org', unpairing), false, 'keys only');
   });
 });
 
 describe("a key principal's recovery", () => {
-  it('is the signature over AGNT-RECOVER, the address, the new key and the time', () => {
-    const principal = `agnt-key:${erin.key}`;
+  it('is the signature over SIMON-RECOVER, the address, the new key and the time', () => {
+    const principal = `simon-key:${erin.key}`;
     const at = '2026-10-14T21:03:00Z';
     const recover = signRecovery(erin.privateKey, 'bob@example.net', ada.key, at);
-    assert.equal(recoveryBytes('bob@example.net', ada.key, at), `AGNT-RECOVER\nbob@example.net\n${ada.key}\n${at}`);
+    assert.equal(recoveryBytes('bob@example.net', ada.key, at), `SIMON-RECOVER\nbob@example.net\n${ada.key}\n${at}`);
     assert.equal(verifyRecovery('bob@example.net', principal, ada.key, at, recover), true);
     assert.equal(verifyRecovery('ada@example.com', principal, ada.key, at, recover), false, 'another address');
     assert.equal(verifyRecovery('bob@example.net', principal, carol.key, at, recover), false, 'another new key');
@@ -131,7 +131,7 @@ describe("a key principal's recovery", () => {
       'another time',
     );
     assert.equal(
-      verifyRecovery('bob@example.net', `agnt-key:${frank.key}`, ada.key, at, recover),
+      verifyRecovery('bob@example.net', `simon-key:${frank.key}`, ada.key, at, recover),
       false,
       'another key',
     );

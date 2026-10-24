@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "published.json",
-  "title": "AGNT published message answer",
-  "description": "GET /agnt/messages/<id>. keys are an unsigned convenience, never authenticated historical evidence. Verify against independently resolved authenticated author material; pruning or private retirement may prevent fresh verification of older messages. Public key projections exclude private device labels.",
+  "title": "SIMON published message answer",
+  "description": "GET /simon/messages/<id>. keys are an unsigned convenience, never authenticated historical evidence. Verify against independently resolved authenticated author material; pruning or private retirement may prevent fresh verification of older messages. Public key projections exclude private device labels.",
   "type": "object",
   "required": ["message", "keys"],
   "properties": {

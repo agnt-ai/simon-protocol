@@ -1,11 +1,11 @@
-"""The transport envelope one server posts to another, ``POST /agnt/deliver`` (spec section 6)::
+"""The transport envelope one server posts to another, ``POST /simon/deliver`` (spec section 6)::
 
     {message, server, recipients, claims?, claimsSignature?, hints?, signature}
 
 The message's signature proves its author; the envelope's, by the carrying server, proves which server
 carried it, and to whom: ``server`` is the receiving origin and ``recipients`` the addresses in ``to`` it
 serves, so an envelope can be neither replayed to another server nor stretched to other recipients. Claims
-(statements the carrier makes about the author) are also signed on their own, over ``AGNT-CLAIMS`` and
+(statements the carrier makes about the author) are also signed on their own, over ``SIMON-CLAIMS`` and
 ``{"claims","message":<id>}``, so they travel with the message into inboxes and stay checkable wherever it
 goes. Members a receiver does not know are ignored, and signed like any other.
 """
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .canonical import canonical, canonical_bytes, parse_with_members, signing_bytes
-from .errors import AgntError, invalid
+from .errors import SimonError, invalid
 from .keys import signed_by_any, valid_during, verify
 from .limits import (
     DELIVERY_AFTER_ACCEPT_MS,
@@ -53,7 +53,7 @@ def parse_envelope(
     canonical form); then ``check_message``. Given the ``receiver``, also step 5, ``check_destination``,
     which needs no lookup. The envelope itself need not be canonical."""
     if len(body) > limits["requestBodyBytes"]:
-        raise AgntError("body_too_large", f"The body is larger than {limits['requestBodyBytes']} bytes.", 413)
+        raise SimonError("body_too_large", f"The body is larger than {limits['requestBodyBytes']} bytes.", 413)
     value, members = parse_with_members(body)
     envelope = check_envelope_shape(value, allow_local=receiver is not None and receiver.allow_local)
     form = canonical(envelope["message"])
@@ -151,9 +151,9 @@ def check_served(
 
 
 def claims_bytes(claims: Iterable[Mapping[str, Any]], message: str) -> bytes:
-    """The bytes a carrier signs for its claims about one message (by id): ``AGNT-CLAIMS``, a newline, and
+    """The bytes a carrier signs for its claims about one message (by id): ``SIMON-CLAIMS``, a newline, and
     the canonical ``{"claims","message"}``."""
-    return signing_bytes("AGNT-CLAIMS", {"claims": list(claims), "message": message})
+    return signing_bytes("SIMON-CLAIMS", {"claims": list(claims), "message": message})
 
 
 def verify_envelope(
@@ -163,7 +163,7 @@ def verify_envelope(
     and, if it carries claims, signed them."""
     keys = list(server_keys)
     return signed_by_any(
-        keys, at_ms, signing_bytes("AGNT-ENVELOPE", dict(envelope)), envelope.get("signature")
+        keys, at_ms, signing_bytes("SIMON-ENVELOPE", dict(envelope)), envelope.get("signature")
     ) and (
         "claims" not in envelope
         or signed_by_any(
@@ -181,7 +181,7 @@ def check_envelope_signature(
     """Step 7 of section 6.3: the envelope, and its claims, verify with a carrier key valid now, or ``403
     bad_signature`` (a failed envelope or message signature is 403; a failed request signature is 401)."""
     if not verify_envelope(envelope, server_keys, now_ms):
-        raise AgntError(
+        raise SimonError(
             "bad_signature", "The envelope does not verify with a key of the carrier's server valid now.", 403
         )
 
@@ -246,11 +246,11 @@ def claims_about(
                 or (
                     c.get("of") == "principal"
                     and isinstance(principal, str)
-                    and principal.startswith("agnt-key:")
+                    and principal.startswith("simon-key:")
                 )
             )
             and is_principal(value)
-            and not value.startswith("agnt-key:")
+            and not value.startswith("simon-key:")
             and parse_timestamp(c.get("verifiedAt")) is not None
         )
 
@@ -267,7 +267,7 @@ def is_authoritative(
     agent: str | None = None,
 ) -> bool:
     """Whether an ``acts-for`` claim is authoritative (section 6.2): its ``for`` is a ``mailto:``
-    identifier whose domain names the carrier by its ``_agnt`` TXT record, so the domain's DNS speaks for
+    identifier whose domain names the carrier by its ``_simon`` TXT record, so the domain's DNS speaks for
     its mail as a DKIM key does. A domain whose server only its well-known answer names grants no
     authority: whoever runs a domain's website need not run its mail. Never for a phone number or a key.
     ``resolve(domain)`` answers a Resolution; any outcome but ``server`` is not authority, ``temporary``

@@ -52,10 +52,10 @@ describe('federation', () => {
     const laptop = await fed.server('laptop', { wellKnown: true });
     const delta = await fed.server('delta');
     const [lee, dee] = [await laptop.agent('lee'), await delta.agent('dee')];
-    const known = await lee.request('GET', '/.well-known/agnt', { sign: false });
+    const known = await lee.request('GET', '/.well-known/simon', { sign: false });
     assert.deepEqual([known.status, known.json], [200, { server: 'https://laptop.test' }]);
-    assert.equal(fed.dns.records.has('_agnt.laptop.test'), false, 'no TXT record');
-    assert.equal((await dee.request('GET', '/.well-known/agnt', { sign: false })).status, 404, 'not its own host');
+    assert.equal(fed.dns.records.has('_simon.laptop.test'), false, 'no TXT record');
+    assert.equal((await dee.request('GET', '/.well-known/simon', { sign: false })).status, 404, 'not its own host');
 
     await lee.send(lee.message([dee.address], 'over the tailnet'));
     await fed.work();
@@ -72,7 +72,7 @@ describe('federation', () => {
     const envelopes: Record<string, unknown>[] = [];
     const real = fed.net.request.bind(fed.net);
     fed.net.request = async r => {
-      if (r.url.endsWith('/agnt/deliver')) envelopes.push(JSON.parse(Buffer.from(r.body!).toString()));
+      if (r.url.endsWith('/simon/deliver')) envelopes.push(JSON.parse(Buffer.from(r.body!).toString()));
       return real(r);
     };
     await tom.send(tom.message([ida.address, 'ivy@iota.test', 'zoe@zeta.test'], 'to two servers'), {
@@ -117,13 +117,13 @@ describe('federation', () => {
     const [max, nat] = [await mu.agent('max'), mu.newAgent()];
     await nat.register({ address: 'nat@nu.test' });
     const xia = await xi.agent('xia');
-    fed.dns.failing.add('_agnt.nu.test');
+    fed.dns.failing.add('_simon.nu.test');
     fed.clock.advance(11 * 60_000);
     await xia.send(xia.message([max.address, nat.address], 'two domains, one server'), {
       [nat.address]: { invite: 'N' },
     });
     await fed.work();
-    fed.dns.failing.delete('_agnt.nu.test');
+    fed.dns.failing.delete('_simon.nu.test');
     fed.clock.advance(2 * 60_000);
     await fed.work();
     assert.deepEqual(seen.sort(), ['max@mu.test -', 'nat@nu.test N']);

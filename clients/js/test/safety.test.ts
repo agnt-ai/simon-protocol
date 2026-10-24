@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { generateKey } from '@agnt-protocol/protocol';
-import { Agent, AgntError, type Delivered } from '../src/index.ts';
+import { Agent, SimonError, type Delivered } from '../src/index.ts';
 import { invisibleIn, presentDelivery, presentEntry, unwrapEntry } from '../src/provenance.ts';
 import { readFile, workspace, writeFile } from '../src/workspace.ts';
 import { fakeServer } from './fake-server.ts';
@@ -93,17 +93,17 @@ describe('provenance', () => {
 
 describe('the workspace', () => {
   function layout() {
-    const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-ws-')));
+    const base = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'simon-ws-')));
     const root = path.join(base, 'work');
-    const home = path.join(root, '.agnt');
+    const home = path.join(root, '.simon');
     const outside = path.join(base, 'secret.txt');
     fs.mkdirSync(home, { recursive: true });
     fs.writeFileSync(path.join(home, 'key.pem'), 'PRIVATE');
     fs.writeFileSync(outside, 'SECRET');
     fs.writeFileSync(path.join(root, 'brief.txt'), 'brief');
-    return { base, root, home, outside, ws: workspace(home, { AGNT_WORKSPACE: root }, base) };
+    return { base, root, home, outside, ws: workspace(home, { SIMON_WORKSPACE: root }, base) };
   }
-  const refused = (field: string) => (e: AgntError) => e.code === 'path_refused' && e.details?.field === field;
+  const refused = (field: string) => (e: SimonError) => e.code === 'path_refused' && e.details?.field === field;
 
   it('reads and writes files in the workspace, relative to it', () => {
     const { root, ws } = layout();
@@ -112,10 +112,10 @@ describe('the workspace', () => {
     assert.equal(fs.readFileSync(path.join(root, 'saved.txt'), 'utf8'), 'saved');
   });
 
-  it('defaults to the working directory, and AGNT_WORKSPACE moves it', () => {
+  it('defaults to the working directory, and SIMON_WORKSPACE moves it', () => {
     const { root, base, home } = layout();
     assert.equal(workspace(home, {}, root).root, root);
-    assert.equal(workspace(home, { AGNT_WORKSPACE: 'work' }, base).root, root);
+    assert.equal(workspace(home, { SIMON_WORKSPACE: 'work' }, base).root, root);
   });
 
   it('refuses paths outside it, by .. or absolute or through a link', () => {
@@ -133,13 +133,13 @@ describe('the workspace', () => {
     assert.equal(fs.readFileSync(outside, 'utf8'), 'SECRET');
   });
 
-  it('refuses anything in AGNT_HOME, even inside the workspace, and links into it', () => {
+  it('refuses anything in SIMON_HOME, even inside the workspace, and links into it', () => {
     const { root, home, ws } = layout();
     fs.symlinkSync(path.join(home, 'key.pem'), path.join(root, 'notes.txt'));
-    for (const p of ['.agnt/key.pem', 'notes.txt', path.join(home, 'key.pem'), '.agnt']) {
+    for (const p of ['.simon/key.pem', 'notes.txt', path.join(home, 'key.pem'), '.simon']) {
       assert.throws(() => readFile(ws, p), refused('path'), p);
     }
-    assert.throws(() => writeFile(ws, '.agnt/address.json', new Uint8Array(1)), refused('path'));
+    assert.throws(() => writeFile(ws, '.simon/address.json', new Uint8Array(1)), refused('path'));
     fs.linkSync(path.join(home, 'key.pem'), path.join(root, 'hard.txt'));
     assert.throws(() => readFile(ws, 'hard.txt'), refused('path'));
     assert.equal(fs.readFileSync(path.join(home, 'key.pem'), 'utf8'), 'PRIVATE');

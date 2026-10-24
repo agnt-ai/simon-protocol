@@ -2,7 +2,7 @@
  * Who reads a published message, and whether its audience admits them (spec section 7.1).
  *
  * A reader proves who it is the way an author does: it signs the request with a key of its own agent
- * document and names itself in `agnt-agent` (section 8). A request that is not signed, or whose signature
+ * document and names itself in `simon-agent` (section 8). A request that is not signed, or whose signature
  * fails, asks as nobody in particular, and is answered exactly as one, so a refusal tells nothing about
  * the message.
  *
@@ -25,7 +25,7 @@ const NOBODY: Asker = { reader: async () => null };
 export const asReader = (address: string): Asker => ({ reader: async () => address });
 
 /**
- * Who asks, settled before anything is looked up for the request: a request naming `agnt-agent` is
+ * Who asks, settled before anything is looked up for the request: a request naming `simon-agent` is
  * authenticated at once, its reader's document fetched and charged to the client, whatever it asks for and
  * whether or not anything matches, so neither the answer nor the fetches it makes tell which ids, feeds or
  * parts hold audience-limited posts (spec section 7.1).

@@ -1,16 +1,16 @@
 /**
  * Resolution: which server a domain's agents live on (spec section 3). Exactly two methods, in this order:
  *
- *   _agnt.<domain>  TXT  "v=agnt1; server=https://<host>"
- *   GET https://<domain>/.well-known/agnt   {"server":"https://<host>"}
+ *   _simon.<domain>  TXT  "v=simon1; server=https://<host>"
+ *   GET https://<domain>/.well-known/simon   {"server":"https://<host>"}
  *
  * A TXT record is the join of its character strings, read as fields separated by `;`, spaces around each
- * ignored; a field's name is the text before its first `=`, or the whole field. A record is an agnt record
- * when its first field is exactly `v=agnt1`; it must then have exactly one field named `server`, whose value
- * is a server origin; every other field is ignored. Records that are not agnt records are ignored. A
- * malformed agnt record fails resolution (`invalid_record`) whatever the others say; otherwise agnt records
+ * ignored; a field's name is the text before its first `=`, or the whole field. A record is a simon record
+ * when its first field is exactly `v=simon1`; it must then have exactly one field named `server`, whose value
+ * is a server origin; every other field is ignored. Records that are not simon records are ignored. A
+ * malformed simon record fails resolution (`invalid_record`) whatever the others say; otherwise simon records
  * naming different servers fail it (`conflict`), and one or more naming the same server resolve to it. Only
- * when the TXT lookup answered and found no agnt record is the well-known answer tried, never through a
+ * when the TXT lookup answered and found no simon record is the well-known answer tried, never through a
  * redirect: a TXT lookup that fails for now ends resolution `temporary` (spec section 3), so whoever can make
  * TXT answers fail cannot send resolution to whoever runs the domain's website.
  *
@@ -77,24 +77,24 @@ export function serverOrigin(value: unknown, allowHttp = false): string | null {
   return `${scheme}://${host}${port === DEFAULT_PORT[scheme] ? '' : `:${port}`}`;
 }
 
-/** The fields of each agnt record among these, as `[name, value]` pairs; records that are not agnt records are left out. */
-function agntRecords(records: string[][]): [string, string][][] {
+/** The fields of each simon record among these, as `[name, value]` pairs; records that are not simon records are left out. */
+function simonRecords(records: string[][]): [string, string][][] {
   const found: [string, string][][] = [];
   for (const strings of records) {
     const [first, ...rest] = strings
       .join('')
       .split(';')
       .map(f => f.replace(/^ +| +$/g, ''));
-    if (first !== 'v=agnt1') continue;
+    if (first !== 'v=simon1') continue;
     found.push(rest.map(f => (f.includes('=') ? [f.slice(0, f.indexOf('=')), f.slice(f.indexOf('=') + 1)] : [f, ''])));
   }
   return found;
 }
 
-/** The servers the agnt records name, or 'invalid' when one of them is malformed. */
+/** The servers the simon records name, or 'invalid' when one of them is malformed. */
 export function serversInTxt(records: string[][], allowHttp = false): string[] | 'invalid' {
   const servers = new Set<string>();
-  for (const fields of agntRecords(records)) {
+  for (const fields of simonRecords(records)) {
     const values = fields.filter(([name]) => name === 'server').map(([, value]) => value);
     const origin = values.length === 1 ? serverOrigin(values[0], allowHttp) : null;
     if (!origin) return 'invalid';
@@ -131,7 +131,7 @@ export async function resolveDomain(
   if (!domain) return { outcome: 'invalid_domain' };
   let records: string[][];
   try {
-    records = await io.txt(`_agnt.${domain}`);
+    records = await io.txt(`_simon.${domain}`);
   } catch {
     return { outcome: 'temporary' };
   }
@@ -140,7 +140,7 @@ export async function resolveDomain(
   if (servers.length > 1) return { outcome: 'conflict' };
   if (servers.length === 1) return { outcome: 'server', server: servers[0], via: 'dns' };
   try {
-    return wellKnownOutcome(await io.get(`https://${domain}/.well-known/agnt`), opts.allowHttp);
+    return wellKnownOutcome(await io.get(`https://${domain}/.well-known/simon`), opts.allowHttp);
   } catch {
     return { outcome: 'temporary' };
   }

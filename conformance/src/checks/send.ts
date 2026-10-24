@@ -191,7 +191,7 @@ def(
       'for and pairing',
     );
     const other = crypto.generateKeyPairSync('ed25519').privateKey;
-    const otherFor = `agnt-key:${keyToken(other)}`;
+    const otherFor = `simon-key:${keyToken(other)}`;
     const cases: [string, Record<string, string>][] = [
       ['no for', {}],
       ['another principal', { for: otherFor, pairing: signPairing(other, a.address, otherFor) }],
@@ -266,7 +266,7 @@ def(
     const up = await b.call(
       t,
       'PUT',
-      `/agnt/parts/${hers}`,
+      `/simon/parts/${hers}`,
       bytes,
       { headers: { 'content-type': 'application/octet-stream' } },
       'agent b uploads',
@@ -418,9 +418,9 @@ def(
     id: 'send.hints',
     section: `${S} "Hints"`,
     level: 'must',
-    title: 'agnt-hints is an object keyed by recipients, and is not signed',
+    title: 'simon-hints is an object keyed by recipients, and is not signed',
     expected:
-      '200 with a valid agnt-hints header added after signing; 400 invalid for agnt-hints that is not JSON, an array, or names an address not in to',
+      '200 with a valid simon-hints header added after signing; 400 invalid for simon-hints that is not JSON, an array, or names an address not in to',
   },
   async (t: T, ctx: Ctx) => {
     const { a, b } = await pair(ctx);
@@ -428,7 +428,7 @@ def(
     const ok = await a.send(
       t,
       good,
-      { headers: { 'agnt-hints': JSON.stringify({ [b.address]: { invite: 'x' } }) } },
+      { headers: { 'simon-hints': JSON.stringify({ [b.address]: { invite: 'x' } }) } },
       'valid hints',
     );
     t.status(ok, 200, 'valid hints');
@@ -439,7 +439,7 @@ def(
     ];
     for (const [what, hints] of cases) {
       t.error(
-        await a.send(t, a.message({ to: [b.address] }), { headers: { 'agnt-hints': hints } }, what),
+        await a.send(t, a.message({ to: [b.address] }), { headers: { 'simon-hints': hints } }, what),
         400,
         'invalid',
         what,

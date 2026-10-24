@@ -99,7 +99,7 @@ def(
     } finally {
       ctx.peer.serverDocStatus = 200;
     }
-    const fetched = ctx.peer.requests.slice(before).some(r => r.target.split('?')[0] === '/agnt/server');
+    const fetched = ctx.peer.requests.slice(before).some(r => r.target.split('?')[0] === '/simon/server');
     if (res.status !== 503 && !fetched) {
       t.skip(
         `the server answered ${res.status} without fetching the simulator's server document during this check, so it holds it from an earlier run; run against a server that has not seen ${ctx.peer.origin} in the last ten minutes`,
@@ -260,8 +260,8 @@ def(
     await shapeCases(t, ctx, [
       ['no server', env({ omit: ['server'] }), 'server'],
       ['server a number', env({ members: { server: 8080 } }), 'server'],
-      ['server with a path', env({ members: { server: `${ctx.origin}/agnt` } }), 'server'],
-      ['server not a URL', env({ members: { server: 'agnt server' } }), 'server'],
+      ['server with a path', env({ members: { server: `${ctx.origin}/simon` } }), 'server'],
+      ['server not a URL', env({ members: { server: 'simon server' } }), 'server'],
     ]);
   },
 );
@@ -408,7 +408,7 @@ def(
 function withClaimsSignature(ctx: Ctx, e: Envelope, claimsSignature: string | undefined) {
   const { signature: _, claimsSignature: __, ...rest } = e;
   const unsigned = claimsSignature === undefined ? rest : { ...rest, claimsSignature };
-  return { ...unsigned, signature: sign(ctx.peer.serverKey, signingBytes('AGNT-ENVELOPE', unsigned)) };
+  return { ...unsigned, signature: sign(ctx.peer.serverKey, signingBytes('SIMON-ENVELOPE', unsigned)) };
 }
 
 def(
@@ -628,13 +628,13 @@ def(
     level: 'must',
     title: "A version 1 message breaking version 1's rules is 400, naming the field",
     expected:
-      '400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without an agnt-key for, an agnt-key for without pairing, and critical with spaces',
+      '400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without a simon-key for, a simon-key for without pairing, and critical with spaces',
   },
   async (t: T, ctx: Ctx) => {
     const { a, m } = await valid(ctx);
     const without = (k: string) => Object.fromEntries(Object.entries(m).filter(([n]) => n !== k));
     const text = { type: 'text/plain', data: 'x' };
-    const keyFor = `agnt-key:${keyToken(crypto.generateKeyPairSync('ed25519').privateKey)}`;
+    const keyFor = `simon-key:${keyToken(crypto.generateKeyPairSync('ed25519').privateKey)}`;
     const headers = (h: Record<string, unknown>) => ({ ...m, headers: h });
     await messageCases(
       t,
@@ -663,7 +663,7 @@ def(
         ['a header that is a number', headers({ subject: 7 }), 'headers'],
         ['for that is no principal', headers({ for: 'alice@example.org' }), 'headers'],
         ['pairing with a mailto: for', headers({ for: 'mailto:alice@example.org', pairing: 'AAAA' }), 'headers'],
-        ['an agnt-key: for without pairing', headers({ for: keyFor }), 'headers'],
+        ['a simon-key: for without pairing', headers({ for: keyFor }), 'headers'],
         ['critical with a space', headers({ critical: 'subject, x' }), 'headers'],
       ],
     );
@@ -683,7 +683,7 @@ def(
     const { a, m } = await valid(ctx);
     const file = (i: number) => ({ type: 'application/pdf', sha256: i.toString(16).padStart(64, '0'), size: 1 });
     const sealed = {
-      type: 'application/agnt-sealed',
+      type: 'application/simon-sealed',
       data: Buffer.from(`ciphertext ${Date.now()}`).toString('base64'),
     };
     const cases: [string, Part[]][] = [
@@ -776,7 +776,7 @@ def(
     });
     // A message carried inline is the canonical bytes of a message; nothing checks its signature.
     const carry = (parts: object[]) => ({
-      type: 'application/agnt-message',
+      type: 'application/simon-message',
       data: Buffer.from(canonicalize({ ...m, parts })).toString('base64'),
     });
     const many = (from: number) => Array.from({ length: 32 }, (_, i) => file(from + i));
@@ -846,11 +846,11 @@ def(
     level: 'should',
     title: "A server checks the pairing header's presence, not its signature",
     expected:
-      '202 for a message with an agnt-key: for and a well-formed pairing, valid or not: verifying it is for readers who rely on it',
+      '202 for a message with a simon-key: for and a well-formed pairing, valid or not: verifying it is for readers who rely on it',
   },
   async (t: T, ctx: Ctx) => {
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
-    const forValue = `agnt-key:${keyToken(principal)}`;
+    const forValue = `simon-key:${keyToken(principal)}`;
     const p = ctx.peer.agent('paired', { kind: 'paired' });
     const good = (
       await valid(ctx, { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue) } }, p)
@@ -1118,7 +1118,7 @@ def(
     level: 'must',
     title: 'An unauthenticated envelope makes the server look up no recipient domain',
     expected:
-      "no request to the second simulator's /.well-known/agnt while the server refuses a forged envelope naming a recipient on the second simulator's domain (needs a second simulator reached by its well-known answer, as behind a tunnel)",
+      "no request to the second simulator's /.well-known/simon while the server refuses a forged envelope naming a recipient on the second simulator's domain (needs a second simulator reached by its well-known answer, as behind a tunnel)",
   },
   async (t: T, ctx: Ctx) => {
     const second = ctx.secondPeer;
@@ -1137,8 +1137,8 @@ def(
     });
     t.error(await ctx.deliver(t, forged, 'forged, naming a recipient elsewhere'), 403, 'bad_signature');
     await sleep(500);
-    const asked = second!.requests.slice(before).filter(r => r.target.startsWith('/.well-known/agnt'));
-    t.assert(asked.length === 0, `the server fetched ${second!.origin}/.well-known/agnt before the envelope verified`);
+    const asked = second!.requests.slice(before).filter(r => r.target.startsWith('/.well-known/simon'));
+    t.assert(asked.length === 0, `the server fetched ${second!.origin}/.well-known/simon before the envelope verified`);
   },
 );
 

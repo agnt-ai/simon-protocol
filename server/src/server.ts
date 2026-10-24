@@ -65,7 +65,7 @@ export interface ServerOptions {
   retiredAgentDocuments?: 'public' | 'private';
 }
 
-export interface AgntServer {
+export interface SimonServer {
   /** What extensions see. */
   api: ServerApi;
   /** Answer one request, in-process. */
@@ -88,7 +88,7 @@ const defaultLog: Log = (level, message, fields) => {
   if (level !== 'debug') console.error(JSON.stringify({ time: new Date().toISOString(), level, message, ...fields }));
 };
 
-export function createServer(opts: ServerOptions): AgntServer {
+export function createServer(opts: ServerOptions): SimonServer {
   const retiredAgentDocuments =
     opts.retiredAgentDocuments === undefined
       ? (opts.config.retiredAgentDocuments ?? 'private')
@@ -169,21 +169,21 @@ export function createServer(opts: ServerOptions): AgntServer {
     path: string,
     handle: (ctx: Context, req: Request) => Promise<Reply>,
   ) => router.add({ method, path, handle: req => handle(ctx, req) });
-  core('POST', '/agnt/register', register);
-  core('GET', '/agnt/account', getAccount);
-  core('POST', '/agnt/recovery', recover);
-  core('GET', '/agnt/recovery', getRecovery);
-  core('POST', '/agnt/keys', addKey);
-  core('DELETE', '/agnt/keys/:key', revokeKey);
-  core('DELETE', '/agnt/grants/:id', endGrant);
-  core('POST', '/agnt/recovery/cancel', cancelRecovery);
-  core('POST', '/agnt/unpair', unpair);
-  core('POST', '/agnt/send', send);
-  core('GET', '/agnt/sync', sync);
-  core('GET', '/agnt/sent/:id', sent);
-  core('POST', '/agnt/deliver', deliver);
-  core('POST', '/agnt/signal', signal);
-  core('POST', '/agnt/send-signal', sendSignal);
+  core('POST', '/simon/register', register);
+  core('GET', '/simon/account', getAccount);
+  core('POST', '/simon/recovery', recover);
+  core('GET', '/simon/recovery', getRecovery);
+  core('POST', '/simon/keys', addKey);
+  core('DELETE', '/simon/keys/:key', revokeKey);
+  core('DELETE', '/simon/grants/:id', endGrant);
+  core('POST', '/simon/recovery/cancel', cancelRecovery);
+  core('POST', '/simon/unpair', unpair);
+  core('POST', '/simon/send', send);
+  core('GET', '/simon/sync', sync);
+  core('GET', '/simon/sent/:id', sent);
+  core('POST', '/simon/deliver', deliver);
+  core('POST', '/simon/signal', signal);
+  core('POST', '/simon/send-signal', sendSignal);
   for (const route of [
     ...publicRoutes(ctx, retiredAgentDocuments),
     ...publishedRoutes(ctx),

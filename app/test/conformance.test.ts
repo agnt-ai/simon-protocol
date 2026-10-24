@@ -55,9 +55,9 @@ describe('conformance', { timeout: 600_000 }, () => {
       },
     });
     const env = {
-      AGNT_INBOUND_PER_SENDER: '100000',
-      AGNT_INBOUND_PER_DOMAIN: '100000',
-      AGNT_INBOUND_FIRST_CONTACTS: '100000',
+      SIMON_INBOUND_PER_SENDER: '100000',
+      SIMON_INBOUND_PER_DOMAIN: '100000',
+      SIMON_INBOUND_FIRST_CONTACTS: '100000',
     };
     app = createApp({ config: loadAppConfig(env, server), db: await freshDb(), log: () => {} });
     await app.start();

@@ -39,7 +39,7 @@ export const ada = fixedKey('ada@example.com');
 export const bob = fixedKey('bob@example.net');
 /** An agent whose key is post-quantum. */
 export const carol = fixedKey('carol@example.org', 'ml-dsa-65');
-export const exampleCom = fixedKey('server https://agnt.example.com');
+export const exampleCom = fixedKey('server https://simon.example.com');
 /** Principals who pair with agents by key. */
 export const erin = fixedKey('principal erin');
 export const frank = fixedKey('principal frank', 'ml-dsa-65');
@@ -63,7 +63,7 @@ export function saveFixedSignatures() {
 }
 
 export function fixedSignMessage<M extends AnyMessage>(m: Unsigned<M>, k: FixedKey): M {
-  return { ...m, signature: fixedSign(k, signingBytes('AGNT-MESSAGE', m)) } as M;
+  return { ...m, signature: fixedSign(k, signingBytes('SIMON-MESSAGE', m)) } as M;
 }
 
 export const keyEntry = (key: string, added = '2026-10-01T00:00:00Z', revoked: string | null = null): KeyEntry => ({

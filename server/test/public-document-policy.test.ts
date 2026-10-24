@@ -57,7 +57,7 @@ async function fixture(
           agent: signed.address,
         })
       : {};
-    if (signed?.invalidSignature) headers['agnt-signature'] = 'broken';
+    if (signed?.invalidSignature) headers['simon-signature'] = 'broken';
     if (port === null) {
       const request = toRequest(method, new URL(path, config.origin), headers, body, '192.0.2.7');
       const reply = await server.handle(request);
@@ -122,38 +122,38 @@ for (const listener of [false, true]) {
         const active = await home.agent('active');
         const solo = await home.agent('solo');
         const principal = generateKey();
-        const forValue = `agnt-key:${principal.key}`;
+        const forValue = `simon-key:${principal.key}`;
         const paired = await home.agent('paired', forValue);
         const unpairing = signUnpairing(principal.privateKey, paired.address, forValue);
         const retire = () =>
-          home.call('POST', '/agnt/unpair', {
+          home.call('POST', '/simon/unpair', {
             ...paired,
             body: JSON.stringify({ address: paired.address, unpairing }),
           });
         await home.server.api.retire(solo.address);
         assert.equal((await retire()).status, 200);
         home.options.retiredAgentDocuments = policy === 'public' ? 'private' : 'public';
-        const serverResponse = await home.call('GET', '/agnt/server');
+        const serverResponse = await home.call('GET', '/simon/server');
         const server = readServerDocument(serverResponse.bytes, home.config.origin, home.now)!;
-        const visible = await home.call('GET', `/agnt/agents/${encodeURIComponent(active.address)}`);
+        const visible = await home.call('GET', `/simon/agents/${encodeURIComponent(active.address)}`);
         assert.equal(visible.status, 200);
         assert.ok(readAgentDocument(visible.bytes, active.address, server.keys, home.now));
         assert.ok(!visible.bytes.includes('Private device'));
-        assert.deepEqual(await home.call('GET', `/agnt/agents/${active.address}`, active), visible);
+        assert.deepEqual(await home.call('GET', `/simon/agents/${active.address}`, active), visible);
         assert.deepEqual(
-          await home.call('GET', `/agnt/agents/${active.address}`, { ...active, invalidSignature: true }),
+          await home.call('GET', `/simon/agents/${active.address}`, { ...active, invalidSignature: true }),
           visible,
         );
         for (const agent of [solo, paired]) {
-          const response = await home.call('GET', `/agnt/agents/${encodeURIComponent(agent.address)}`);
-          assert.deepEqual(await home.call('GET', `/agnt/agents/${agent.address}`, active), response);
+          const response = await home.call('GET', `/simon/agents/${encodeURIComponent(agent.address)}`);
+          assert.deepEqual(await home.call('GET', `/simon/agents/${agent.address}`, active), response);
           assert.deepEqual(
-            await home.call('GET', `/agnt/agents/${agent.address}`, { ...active, invalidSignature: true }),
+            await home.call('GET', `/simon/agents/${agent.address}`, { ...active, invalidSignature: true }),
             response,
           );
           if (policy !== 'public') {
             // Private is the default: an unset policy answers exactly as an explicit private one.
-            const absent = await home.call('GET', '/agnt/agents/nobody%40privacy.test');
+            const absent = await home.call('GET', '/simon/agents/nobody%40privacy.test');
             assert.deepEqual(response, absent, 'private retirement has exactly the absent-address refusal');
           } else {
             assert.equal(response.status, 200);
@@ -168,14 +168,14 @@ for (const listener of [false, true]) {
           const held = await home.store.agentByAddress(agent.address);
           assert.ok(held?.retiredAt);
           assert.equal((await home.store.agentByKey(agent.key.key))?.address, agent.address);
-          const denied = await home.call('GET', '/agnt/account', agent);
+          const denied = await home.call('GET', '/simon/account', agent);
           assert.deepEqual([denied.status, denied.json.code], [401, 'key_revoked']);
         }
         const before = await home.store.agentByAddress(paired.address);
         assert.equal(before?.unpairing, unpairing);
         assert.equal((await retire()).status, 200, 'the actual core unpairing retry remains idempotent');
         assert.deepEqual(await home.store.agentByAddress(paired.address), before);
-        for (const path of ['/agnt/agents/%', '/agnt/agents/', '/agnt/agents/x/extra'])
+        for (const path of ['/simon/agents/%', '/simon/agents/', '/simon/agents/x/extra'])
           assert.equal((await home.call('GET', path)).status, 404);
       } finally {
         await home.close();
@@ -202,12 +202,12 @@ for (const listener of [false, true]) {
           });
         return agent;
       };
-      assert.equal((await home.call('GET', `/agnt/agents/${active.address}`)).status, 200);
-      assert.equal((await home.call('GET', `/agnt/agents/${retired.address}`)).status, 404);
-      assert.equal((await home.call('GET', '/agnt/agents/unknown@privacy.test')).status, 404);
+      assert.equal((await home.call('GET', `/simon/agents/${active.address}`)).status, 200);
+      assert.equal((await home.call('GET', `/simon/agents/${retired.address}`)).status, 404);
+      assert.equal((await home.call('GET', '/simon/agents/unknown@privacy.test')).status, 404);
       const before = lookups;
       const addresses = [active.address, retired.address, 'unknown@privacy.test'];
-      const requests = addresses.map(address => home.call('GET', `/agnt/agents/${address}`));
+      const requests = addresses.map(address => home.call('GET', `/simon/agents/${address}`));
       const responses = await Promise.all(requests);
       const statuses = responses.map(response => response.status);
       assert.deepEqual(statuses, [429, 429, 429]);
@@ -236,12 +236,12 @@ for (const [env, expected] of [
   ['private', 'private'],
   ['public', 'public'],
 ] as const) {
-  it(`AGNT_RETIRED_AGENT_DOCUMENTS=${env} reaches the server as ${expected}`, async () => {
+  it(`SIMON_RETIRED_AGENT_DOCUMENTS=${env} reaches the server as ${expected}`, async () => {
     const config = loadConfig({
-      AGNT_ORIGIN: 'http://privacy.test',
-      AGNT_DEV: '1',
-      AGNT_HOSTED_DOMAINS: 'privacy.test',
-      ...(env === undefined ? {} : { AGNT_RETIRED_AGENT_DOCUMENTS: env }),
+      SIMON_ORIGIN: 'http://privacy.test',
+      SIMON_DEV: '1',
+      SIMON_HOSTED_DOMAINS: 'privacy.test',
+      ...(env === undefined ? {} : { SIMON_RETIRED_AGENT_DOCUMENTS: env }),
     });
     assert.equal(config.retiredAgentDocuments, expected);
     const store = new SqliteStore();
@@ -262,7 +262,7 @@ for (const [env, expected] of [
           retiredAt: null,
         });
         await server.api.retire(address);
-        const url = new URL(`/agnt/agents/${encodeURIComponent(address)}`, config.origin);
+        const url = new URL(`/simon/agents/${encodeURIComponent(address)}`, config.origin);
         const reply = await server.handle(toRequest('GET', url, {}, Buffer.alloc(0), '192.0.2.7'));
         assert.equal(reply.status, expected === 'private' ? 404 : 200);
         if (expected === 'public') assert.ok(JSON.parse(replyBody(reply).toString()).retired);
@@ -279,8 +279,8 @@ it('an explicit createServer option overrides the configured policy', async () =
   try {
     const agent = await home.agent('retired');
     await home.server.api.retire(agent.address);
-    const response = await home.call('GET', `/agnt/agents/${encodeURIComponent(agent.address)}`);
-    const absent = await home.call('GET', '/agnt/agents/nobody%40privacy.test');
+    const response = await home.call('GET', `/simon/agents/${encodeURIComponent(agent.address)}`);
+    const absent = await home.call('GET', '/simon/agents/nobody%40privacy.test');
     assert.deepEqual(response, absent);
   } finally {
     await home.close();

@@ -6,7 +6,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Problem.** Without end-to-end encryption, every server a message passes through reads it, as with email (PROTOCOL.md section 12).
 
-**Direction.** A profile, never a change to the core: agents publish encryption keys in their documents (`encryptionKeys`, reserved in the registry) and send ciphertext as parts (`application/agnt-sealed`, reserved). Servers carry it unchanged.
+**Direction.** A profile, never a change to the core: agents publish encryption keys in their documents (`encryptionKeys`, reserved in the registry) and send ciphertext as parts (`application/simon-sealed`, reserved). Servers carry it unchanged.
 - **One recipient:** HPKE (RFC 9180).
 - **Groups and gated feeds:** MLS (RFC 9420), as the IETF's MIMI work does for interoperable messaging. An encrypted gated post is the version of an audience that even the host cannot read.
 - **Post-quantum:** hybrid key agreement with ML-KEM, because "record now, decrypt later" is real for messages kept for years.
@@ -35,7 +35,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile once it exists (PROTOCOL.md section 15), ideally written by people outside the team.
 
-**Framework integrations.** LangChain, the OpenAI Agents SDK, the Claude Agent SDK and CrewAI: an AGNT address as a tool or channel, on the clients above, with the content-as-data rule built in (incoming text reaches the model labelled as someone else's words).
+**Framework integrations.** LangChain, the OpenAI Agents SDK, the Claude Agent SDK and CrewAI: a SIMON address as a tool or channel, on the clients above, with the content-as-data rule built in (incoming text reaches the model labelled as someone else's words).
 
 **Independent review.**
 - A cryptography review by people outside the team.
@@ -43,7 +43,7 @@ What comes after the core and the client layer, in short entries. Each names the
 - Review by models of other families, since models of one family share blind spots.
 
 **Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in PROTOCOL.md 2.2:
-- name principals by keys (`agnt-key:`), held for them if they hold none;
+- name principals by keys (`simon-key:`), held for them if they hold none;
 - carry their email and phone numbers as claims, message by message (the registry's `identifier`).
 
 Erasing a person then erases the claims a host keeps, and nothing signed names them. The application template should make key principals its default. The privacy section should say what an erasure request can and cannot reach: copies on other servers are theirs.

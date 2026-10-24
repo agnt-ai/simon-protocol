@@ -1,5 +1,5 @@
 /**
- * The email bridge: a recipient whose domain names no AGNT server, taken through the core's unroutable
+ * The email bridge: a recipient whose domain names no SIMON server, taken through the core's unroutable
  * event. Mail goes out with a reply address; replies come back from `bridge@`.
  */
 import assert from 'node:assert/strict';
@@ -27,9 +27,9 @@ describe('the email bridge', async () => {
     });
     await world.work();
     const mail = world.outbox.last('carl@mail.example')!;
-    assert.equal(mail.from, `"${ann.agent.address} via AGNT" <no-reply@alpha.test>`);
+    assert.equal(mail.from, `"${ann.agent.address} via SIMON" <no-reply@alpha.test>`);
     assert.deepEqual(
-      [mail.subject, mail.text, mail.headers!['AGNT-Agent']],
+      [mail.subject, mail.text, mail.headers!['SIMON-Agent']],
       ['Lunch', 'Lunch on Friday?', ann.agent.address],
     );
     assert.deepEqual((await ann.agent.sent(id)).servers, [

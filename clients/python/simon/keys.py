@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from . import ed25519, mldsa
-from .errors import AgntError
+from .errors import SimonError
 from .limits import KEY_ADDED_SKEW_MS
 from .wire import b64url, from_b64url, parse_timestamp
 
@@ -130,14 +130,14 @@ def signed_by_any(entries: Iterable[Mapping[str, Any]], at_ms: int, data: bytes,
 
 _PKCS8_ED25519 = bytes.fromhex("302e020100300506032b657004220420")
 _PEM = re.compile(r"\s*-----BEGIN PRIVATE KEY-----([A-Za-z0-9+/=\s]+)-----END PRIVATE KEY-----\s*")
-PURE_SIGNING_ENV = "AGNT_ALLOW_PURE_SIGNING"
+PURE_SIGNING_ENV = "SIMON_ALLOW_PURE_SIGNING"
 
 
 class SigningKey:
     """An Ed25519 private key, held as its 32-byte seed.
 
     Signing uses the ``cryptography`` package. Without it, a SigningKey is refused unless the caller opts
-    in with ``allow_pure_python_signing=True`` or ``AGNT_ALLOW_PURE_SIGNING=1``, because the pure-Python
+    in with ``allow_pure_python_signing=True`` or ``SIMON_ALLOW_PURE_SIGNING=1``, because the pure-Python
     fallback is not constant time and its timing can leak the key.
     """
 
@@ -153,9 +153,9 @@ class SigningKey:
             self._sign = lambda data: ed25519.sign(seed, data)
             public = ed25519.public_key(seed)
         else:
-            raise AgntError(
+            raise SimonError(
                 "pure_signing_refused",
-                "Signing needs the cryptography package: pip install 'agnt[crypto]'. The pure-Python Ed25519 "
+                "Signing needs the cryptography package: pip install 'simon-protocol[crypto]'. The pure-Python Ed25519 "
                 f"here is not constant time; to sign with it anyway, set {PURE_SIGNING_ENV}=1 or pass "
                 "allow_pure_python_signing=True.",
             )
@@ -181,8 +181,8 @@ class SigningKey:
 
     @property
     def identifier(self) -> str:
-        """This key as a key principal's identifier, ``agnt-key:<token>`` (section 2.2)."""
-        return "agnt-key:" + self.token
+        """This key as a key principal's identifier, ``simon-key:<token>`` (section 2.2)."""
+        return "simon-key:" + self.token
 
     def sign(self, data: bytes) -> str:
         """The base64url signature of these bytes."""

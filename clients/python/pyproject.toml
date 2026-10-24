@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agnt"
+name = "simon-protocol"
 version = "0.1.0"
-description = "Client for the AGNT Protocol: one signed message to name@domain."
+description = "Client for the SIMON Protocol: one signed message to name@domain."
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
@@ -21,14 +21,14 @@ crypto = ["cryptography>=40"]
 dns = ["dnspython>=2.4"]
 
 [project.scripts]
-agnt = "agnt.cli:main"
+simon = "simon.cli:main"
 
 [project.urls]
 Specification = "https://github.com/agnt-ai/simon-protocol/blob/main/spec/PROTOCOL.md"
 Repository = "https://github.com/agnt-ai/simon-protocol"
 
 [tool.setuptools]
-packages = ["agnt"]
+packages = ["simon"]
 
 [tool.ruff]
 line-length = 110

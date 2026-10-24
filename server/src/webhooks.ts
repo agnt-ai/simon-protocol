@@ -49,7 +49,7 @@ export function webhookRoutes(ctx: Context): Route[] {
   return [
     {
       method: 'POST',
-      path: '/agnt/webhooks',
+      path: '/simon/webhooks',
       async handle(req) {
         const agent = await authenticateAgent(ctx, req);
         ctx.rate.hit('send', agent.address);
@@ -87,7 +87,7 @@ export function webhookRoutes(ctx: Context): Route[] {
     },
     {
       method: 'POST',
-      path: '/agnt/webhooks/:id/verify',
+      path: '/simon/webhooks/:id/verify',
       async handle(req) {
         const agent = await authenticateAgent(ctx, req);
         const row = await owned(req.params.id, agent.address);
@@ -102,7 +102,7 @@ export function webhookRoutes(ctx: Context): Route[] {
     },
     {
       method: 'DELETE',
-      path: '/agnt/webhooks/:id',
+      path: '/simon/webhooks/:id',
       async handle(req) {
         const agent = await authenticateAgent(ctx, req);
         const row = await owned(req.params.id, agent.address);

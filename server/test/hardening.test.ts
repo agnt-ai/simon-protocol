@@ -93,7 +93,7 @@ describe('the outbox', () => {
     const alpha = await fed.server('alpha');
     const ada = await alpha.agent('ada');
     new Peer(fed, 'gone');
-    fed.net.hosts.set('https://agnt.gone.test', 'down');
+    fed.net.hosts.set('https://simon.gone.test', 'down');
     const { json } = await ada.send(ada.message(['x@gone.test'], 'x'));
     const gaps: number[] = [];
     for (let i = 0; i < 40; i++) {
@@ -159,7 +159,7 @@ describe('lookup pools', () => {
   /** An envelope `peer` signs for every recipient of `m`, posted to `to` in-process, past the network's deadline. */
   const post = (peer: Peer, to: TestServer, m: Message, ip = '192.0.2.9') => {
     const body = canonicalBytes(signEnvelope({ message: m, server: to.origin, recipients: m.to }, peer.key));
-    const url = new URL(`${to.origin}/agnt/deliver`);
+    const url = new URL(`${to.origin}/simon/deliver`);
     return to.server.handle(toRequest('POST', url, { 'content-type': 'application/json' }, body, ip));
   };
 
@@ -225,7 +225,7 @@ describe('lookup pools', () => {
           counts.peak = Math.max(counts.peak, ++counts.now);
           await new Promise(r => setTimeout(r, 20));
           counts.now--;
-          return { status: 200, json: { server: 'https://agnt.elsewhere.test' } };
+          return { status: 200, json: { server: 'https://simon.elsewhere.test' } };
         });
         return `x@${prefix}${i}.test`;
       });
@@ -321,7 +321,7 @@ describe('lookup pools', () => {
       return post(peer, alpha, peer.message(from, ['ada@alpha.test', `x@${d}`], d), '198.51.100.7').catch(() => null);
     });
     await new Promise(r => setTimeout(r, TARPIT_MS / 3));
-    const started = slow.filter(d => fed.net.sent.some(r => r.url === `https://${d}/.well-known/agnt`));
+    const started = slow.filter(d => fed.net.sent.some(r => r.url === `https://${d}/.well-known/simon`));
     assert.equal(started.length, 2 * MAX_LOOKUPS_PER_CARRIER, "neither tenant's lookups were refused for the other's");
     // ...which together hold the network's share: a third carrier there is refused for now, not one elsewhere.
     const extra = tarpits(fed, 2 * MAX_LOOKUPS_PER_CARRIER + 1).at(-1)!;
@@ -346,7 +346,7 @@ describe('lookup pools', () => {
     const alpha = await fed.server('alpha');
     const key = generateKey().privateKey;
     const gets = tarpits(fed).map(d => () => {
-      const url = new URL(`${alpha.origin}/agnt/parts/${'a'.repeat(64)}`);
+      const url = new URL(`${alpha.origin}/simon/parts/${'a'.repeat(64)}`);
       const headers = signRequest(key, { method: 'GET', url: url.href, now: fed.clock.t, server: `https://${d}` });
       return alpha.server.handle(toRequest('GET', url, headers, Buffer.alloc(0), '192.0.2.9'));
     });
@@ -359,14 +359,14 @@ describe('lookup pools', () => {
     const fed = new Federation();
     const alpha = await fed.server('alpha');
     const reads = Array.from({ length: 16 }, (_, i) => {
-      const origin = `https://agnt.rd${i}.test`;
+      const origin = `https://simon.rd${i}.test`;
       fed.dns.point(`rd${i}.test`, origin);
       // The agent document comes at once; the server document that would check it never does.
       fed.net.hosts.set(origin, req =>
-        req.path === '/agnt/server' ? new Promise(() => {}) : Promise.resolve({ status: 200, json: {} }),
+        req.path === '/simon/server' ? new Promise(() => {}) : Promise.resolve({ status: 200, json: {} }),
       );
       return () => {
-        const url = new URL(`${alpha.origin}/agnt/messages/${'0'.repeat(64)}`);
+        const url = new URL(`${alpha.origin}/simon/messages/${'0'.repeat(64)}`);
         const agent = `r@rd${i}.test`;
         const headers = signRequest(generateKey().privateKey, {
           method: 'GET',
@@ -387,11 +387,11 @@ describe('lookup pools', () => {
     // Each client may cause two lookups an hour: a reader's domain, then its agent document.
     const alpha = await fed.server('alpha', { config: { rates: { lookup: { limit: 2, seconds: 3600 } } } });
     const reader = (name: string, hang: boolean) => {
-      const origin = `https://agnt.${name}.test`;
+      const origin = `https://simon.${name}.test`;
       fed.dns.point(`${name}.test`, origin);
       fed.net.hosts.set(origin, () => (hang ? new Promise(() => {}) : Promise.resolve({ status: 404, json: {} })));
       return (ip: string) => {
-        const url = new URL(`${alpha.origin}/agnt/messages/${'0'.repeat(64)}`);
+        const url = new URL(`${alpha.origin}/simon/messages/${'0'.repeat(64)}`);
         const headers = signRequest(generateKey().privateKey, {
           method: 'GET',
           url: url.href,
@@ -410,7 +410,7 @@ describe('lookup pools', () => {
     await Promise.all(held);
     const before = fed.net.sent.length;
     await read('203.0.113.7');
-    const fetched = fed.net.sent.slice(before).filter(r => r.url.startsWith('https://agnt.late.test/agnt/agents/'));
+    const fetched = fed.net.sent.slice(before).filter(r => r.url.startsWith('https://simon.late.test/simon/agents/'));
     assert.equal(fetched.length, 1, "the reader's document is fetched");
     await fed.close();
   });
@@ -442,7 +442,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
       key,
     );
     const body = canonicalBytes(signEnvelope({ message: m, server: to.origin, recipients: m.to }, key));
-    const url = new URL(`${to.origin}/agnt/deliver`);
+    const url = new URL(`${to.origin}/simon/deliver`);
     return to.server.handle(toRequest('POST', url, { 'content-type': 'application/json' }, body, ip));
   };
 
@@ -451,7 +451,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     const rates = { lookupDomain: { limit: 3, seconds: 3600 } };
     const alpha = await fed.server('alpha', { config: { rates } });
     const second = await fed.server('alpha2', { config: { rates }, wrapStore: () => alpha.store });
-    const looked = (name: string) => fed.net.sent.filter(r => r.url === `https://${name}/.well-known/agnt`).length;
+    const looked = (name: string) => fed.net.sent.filter(r => r.url === `https://${name}/.well-known/simon`).length;
     // Random subdomains of one victim domain, each from a network of its own, so no per-client bound applies.
     const statuses = [];
     for (let i = 1; i <= 4; i++) statuses.push((await forged(alpha, `x@r${i}.victim.test`, `198.51.100.${i}`)).status);
@@ -468,7 +468,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     assert.ok(Number(refused.headers?.['retry-after']) > 0, 'with Retry-After');
     // A signed read past the bound asks as nobody in particular, and looks nothing up.
     const reader = generateKey().privateKey;
-    const url = new URL(`${alpha.origin}/agnt/feeds/ada@alpha.test/posts`);
+    const url = new URL(`${alpha.origin}/simon/feeds/ada@alpha.test/posts`);
     const signed = signRequest(reader, { method: 'GET', url: url.href, now: fed.clock.t, agent: 'eve@r6.victim.test' });
     const read = await alpha.server.handle(toRequest('GET', url, signed, Buffer.alloc(0), '198.51.100.12'));
     assert.equal(read.status, 200);
@@ -539,9 +539,9 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     const fed = new Federation();
     const alpha = await fed.server('alpha');
     const peer = new Peer(fed, 'peer');
-    const asked = () => fed.net.sent.filter(r => r.url.includes('/agnt/agents/ghost@peer.test')).length;
+    const asked = () => fed.net.sent.filter(r => r.url.includes('/simon/agents/ghost@peer.test')).length;
     const read = async () => {
-      const url = new URL(`${alpha.origin}/agnt/feeds/ada@alpha.test/posts`);
+      const url = new URL(`${alpha.origin}/simon/feeds/ada@alpha.test/posts`);
       const signed = signRequest(generateKey().privateKey, {
         method: 'GET',
         url: url.href,
@@ -625,7 +625,7 @@ describe('rate limits', () => {
     const fed = new Federation();
     const alpha = await fed.server('alpha', { config: { rates: { request: { limit: 2, seconds: 60 } } } });
     const ada = alpha.newAgent();
-    const get = (ip: string) => ada.request('GET', '/agnt/server', { sign: false, ip });
+    const get = (ip: string) => ada.request('GET', '/simon/server', { sign: false, ip });
     assert.equal((await get('2001:db8:5:6::1')).status, 200);
     assert.equal((await get('2001:db8:5:6::2')).status, 200);
     assert.equal((await get('2001:db8:5:6:a:b:c:d')).status, 429);
@@ -639,7 +639,7 @@ describe('rate limits', () => {
     const bob = await alpha.agent('bob');
     const prober = alpha.newAgent();
     const doc = (address: string, ip = '203.0.113.7') =>
-      prober.request('GET', `/agnt/agents/${address}`, { sign: false, ip });
+      prober.request('GET', `/simon/agents/${address}`, { sign: false, ip });
     for (let i = 0; i < 10; i++) assert.equal((await doc(bob.address)).status, 200, 'verifying a real agent is free');
     for (let i = 0; i < 3; i++) assert.equal((await doc(`nobody${i}@alpha.test`)).status, 404);
     const [known, unknown] = [await doc(bob.address), await doc('nobody9@alpha.test')];
@@ -673,7 +673,7 @@ describe('rate limits', () => {
     await alpha.server.api.retire(bob.address);
     const prober = alpha.newAgent();
     const doc = (address: string) =>
-      prober.request('GET', `/agnt/agents/${address}`, { sign: false, ip: '203.0.113.7' });
+      prober.request('GET', `/simon/agents/${address}`, { sign: false, ip: '203.0.113.7' });
     assert.equal((await doc(bob.address)).status, 200, 'a retired document (spec section 4)');
     const answers = await Promise.all(Array.from({ length: 20 }, (_, i) => doc(`nobody${i}@alpha.test`)));
     assert.deepEqual(
@@ -691,7 +691,7 @@ describe('rate limits', () => {
     });
     const backend = alpha.newAgent();
     for (let i = 0; i < 5; i++) {
-      const res = await backend.request('GET', `/agnt/agents/nobody${i}@alpha.test`, {
+      const res = await backend.request('GET', `/simon/agents/nobody${i}@alpha.test`, {
         sign: false,
         ip: '203.0.113.7',
       });
@@ -962,18 +962,18 @@ describe('DNS', () => {
       return new Response(JSON.stringify(body), { status: 200 });
     }) as typeof fetch;
   const txt = (data: string) => ({ Status: 0, Answer: [{ type: 16, data }] });
-  const record = [['v=agnt1; server=https://agnt.example.com']];
+  const record = [['v=simon1; server=https://simon.example.com']];
 
   it('confirms TXT answers with every DNS-over-HTTPS resolver', async () => {
     const dns = systemDns({
       resolver: resolver(record),
       doh: ['https://one.example/dns', 'https://two.example/dns'],
       fetch: doh({
-        'https://one.example': txt('"v=agnt1; server=https://agnt.example.com"'),
-        'https://two.example': txt('"v=agnt1; " "server=https://agnt.example.com"'),
+        'https://one.example': txt('"v=simon1; server=https://simon.example.com"'),
+        'https://two.example': txt('"v=simon1; " "server=https://simon.example.com"'),
       }),
     });
-    assert.deepEqual(await dns.txt('_agnt.example.com'), record);
+    assert.deepEqual(await dns.txt('_simon.example.com'), record);
   });
 
   it('treats disagreement, and a SERVFAIL such as a DNSSEC failure, as temporary', async () => {
@@ -981,20 +981,20 @@ describe('DNS', () => {
       resolver: resolver(record),
       doh: ['https://one.example/dns', 'https://two.example/dns'],
       fetch: doh({
-        'https://one.example': txt('"v=agnt1; server=https://agnt.example.com"'),
-        'https://two.example': txt('"v=agnt1; server=https://evil.example"'),
+        'https://one.example': txt('"v=simon1; server=https://simon.example.com"'),
+        'https://two.example': txt('"v=simon1; server=https://evil.example"'),
       }),
     });
-    await assert.rejects(disagree.txt('_agnt.example.com'), DnsFailure);
+    await assert.rejects(disagree.txt('_simon.example.com'), DnsFailure);
     const servfail = systemDns({
       resolver: resolver(record),
       doh: ['https://one.example/dns', 'https://two.example/dns'],
       fetch: doh({
         'https://one.example': { Status: 2 },
-        'https://two.example': txt('"v=agnt1; server=https://agnt.example.com"'),
+        'https://two.example': txt('"v=simon1; server=https://simon.example.com"'),
       }),
     });
-    await assert.rejects(servfail.txt('_agnt.example.com'), DnsFailure);
+    await assert.rejects(servfail.txt('_simon.example.com'), DnsFailure);
   });
 
   it('reads an absence as none and a server failure as temporary from c-ares', async () => {

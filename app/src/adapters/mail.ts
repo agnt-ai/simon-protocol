@@ -1,10 +1,10 @@
 /**
  * Mail: codes, notices to people, and the email bridge. Any SMTP server in production; in development a
- * file of JSON lines (AGNT_DEV_OUTBOX), so scripts can read codes, or the console.
+ * file of JSON lines (SIMON_DEV_OUTBOX), so scripts can read codes, or the console.
  *
- *   AGNT_SMTP_HOST, AGNT_SMTP_PORT, AGNT_SMTP_TLS (starttls | tls | none), AGNT_SMTP_USER, AGNT_SMTP_PASS
- *   AGNT_MAIL_FROM     the address codes and notices come from
- *   AGNT_DEV_OUTBOX    development only: append each email to this file
+ *   SIMON_SMTP_HOST, SIMON_SMTP_PORT, SIMON_SMTP_TLS (starttls | tls | none), SIMON_SMTP_USER, SIMON_SMTP_PASS
+ *   SIMON_MAIL_FROM     the address codes and notices come from
+ *   SIMON_DEV_OUTBOX    development only: append each email to this file
  */
 import fs from 'node:fs/promises';
 import { fail, int, oneOf, text, type Env } from '../lib/env.ts';
@@ -13,7 +13,7 @@ export interface Email {
   to: string;
   subject: string;
   text: string;
-  /** The sender; the configured AGNT_MAIL_FROM unless given. */
+  /** The sender; the configured SIMON_MAIL_FROM unless given. */
   from?: string;
   replyTo?: string;
   headers?: Record<string, string>;
@@ -39,19 +39,20 @@ const LOCAL = ['localhost', '127.0.0.1', '::1'];
 
 /** The mail path the environment names; null when none is set outside development. */
 export function readMailConfig(env: Env, dev: boolean): MailConfig | null {
-  const host = text(env, 'AGNT_SMTP_HOST');
+  const host = text(env, 'SIMON_SMTP_HOST');
   if (!host) {
     if (!dev) return null;
-    const outbox = text(env, 'AGNT_DEV_OUTBOX');
+    const outbox = text(env, 'SIMON_DEV_OUTBOX');
     return outbox ? { outbox } : { console: true };
   }
-  const from = text(env, 'AGNT_MAIL_FROM') ?? fail('AGNT_SMTP_HOST needs AGNT_MAIL_FROM, the address mail comes from.');
-  const tls = oneOf(env, 'AGNT_SMTP_TLS', ['starttls', 'tls', 'none'], 'starttls');
+  const from =
+    text(env, 'SIMON_MAIL_FROM') ?? fail('SIMON_SMTP_HOST needs SIMON_MAIL_FROM, the address mail comes from.');
+  const tls = oneOf(env, 'SIMON_SMTP_TLS', ['starttls', 'tls', 'none'], 'starttls');
   if (!dev && tls === 'none' && !LOCAL.includes(host)) {
-    fail('AGNT_SMTP_TLS=none is allowed outside development only for a relay on this host.');
+    fail('SIMON_SMTP_TLS=none is allowed outside development only for a relay on this host.');
   }
-  const port = int(env, 'AGNT_SMTP_PORT', tls === 'tls' ? 465 : tls === 'none' ? 25 : 587);
-  return { smtp: { host, port, tls, user: text(env, 'AGNT_SMTP_USER'), pass: text(env, 'AGNT_SMTP_PASS'), from } };
+  const port = int(env, 'SIMON_SMTP_PORT', tls === 'tls' ? 465 : tls === 'none' ? 25 : 587);
+  return { smtp: { host, port, tls, user: text(env, 'SIMON_SMTP_USER'), pass: text(env, 'SIMON_SMTP_PASS'), from } };
 }
 
 export function mailerFor(config: MailConfig): Mailer {

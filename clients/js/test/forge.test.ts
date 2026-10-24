@@ -18,14 +18,14 @@ import {
   type Message,
   type ResolverIO,
 } from '@agnt-protocol/protocol';
-import { AgntError, fetchAgentDocument, verifyAuthor } from '../src/index.ts';
+import { SimonError, fetchAgentDocument, verifyAuthor } from '../src/index.ts';
 
 const serverKey = generateKey();
 const agentKey = generateKey();
 const principal = generateKey();
 const from = 'ceo@bank.example.com';
-const forId = `agnt-key:${principal.key}`;
-const pairing = sign(principal.privateKey, `AGNT-PAIR\n${from}\n${forId}`);
+const forId = `simon-key:${principal.key}`;
+const pairing = sign(principal.privateKey, `SIMON-PAIR\n${from}\n${forId}`);
 const forged = signMessage<Message>(
   {
     v: 1,
@@ -39,9 +39,9 @@ const forged = signMessage<Message>(
   agentKey.privateKey,
 );
 
-/** The real domain's answer, as far as this test needs it: an agnt record naming a server the attacker does not run. */
+/** The real domain's answer, as far as this test needs it: a simon record naming a server the attacker does not run. */
 const honest: ResolverIO = {
-  txt: async name => (name === '_agnt.bank.example.com' ? [['v=agnt1; server=https://agnt.bank.example.com']] : []),
+  txt: async name => (name === '_simon.bank.example.com' ? [['v=simon1; server=https://simon.bank.example.com']] : []),
   get: async () => null,
 };
 
@@ -52,14 +52,14 @@ describe('a forged author', () => {
   before(async () => {
     attacker = http.createServer((req, res) => {
       asked.push(req.url ?? '');
-      if (req.url === '/agnt/server') {
+      if (req.url === '/simon/server') {
         return res.end(
           JSON.stringify(
             serverDocument(origin, [{ key: serverKey.key, added: '2020-01-01T00:00:00Z', revoked: null }]),
           ),
         );
       }
-      if (req.url === `/agnt/agents/${from}`) {
+      if (req.url === `/simon/agents/${from}`) {
         const keys = [{ key: agentKey.key, added: '2020-01-01T00:00:00Z', revoked: null }];
         return res.end(
           JSON.stringify(signAgentDocument({ address: from, kind: 'paired', keys }, serverKey.privateKey)),
@@ -74,7 +74,7 @@ describe('a forged author', () => {
   after(() => new Promise(resolve => attacker.close(resolve)));
 
   it('cannot point verification at the attacker: the server option is refused', async () => {
-    const refused = (e: AgntError) => e instanceof AgntError && e.code === 'invalid' && e.details?.field === 'server';
+    const refused = (e: SimonError) => e instanceof SimonError && e.code === 'invalid' && e.details?.field === 'server';
     await assert.rejects(verifyAuthor(forged, { server: origin } as object), refused);
     await assert.rejects(fetchAgentDocument(from, { server: origin } as object), refused);
     assert.deepEqual(asked, []);
@@ -84,11 +84,11 @@ describe('a forged author', () => {
     // The honest server answers that it has no such agent, or has it with other keys; either way, no forgery.
     const bank = generateKey();
     const fetch = async (url: string) => {
-      if (url === 'https://agnt.bank.example.com/agnt/server') {
+      if (url === 'https://simon.bank.example.com/simon/server') {
         const keys = [{ key: bank.key, added: '2020-01-01T00:00:00Z', revoked: null }];
-        return Response.json(serverDocument('https://agnt.bank.example.com', keys));
+        return Response.json(serverDocument('https://simon.bank.example.com', keys));
       }
-      if (url === `https://agnt.bank.example.com/agnt/agents/${from}`) {
+      if (url === `https://simon.bank.example.com/simon/agents/${from}`) {
         const keys = [{ key: generateKey().key, added: '2020-01-01T00:00:00Z', revoked: null }];
         return Response.json(signAgentDocument({ address: from, kind: 'paired', keys }, bank.privateKey));
       }

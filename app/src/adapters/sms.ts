@@ -2,7 +2,7 @@
  * Text messages, for codes to `tel:` principals: Twilio's Messages API over fetch, or the console in
  * development. With neither, phone numbers cannot be paired or sign in.
  *
- *   AGNT_TWILIO_SID, AGNT_TWILIO_TOKEN, AGNT_TWILIO_FROM
+ *   SIMON_TWILIO_SID, SIMON_TWILIO_TOKEN, SIMON_TWILIO_FROM
  */
 import { text, type Env } from '../lib/env.ts';
 
@@ -13,7 +13,7 @@ export interface Sms {
 export type SmsConfig = { twilio: { sid: string; token: string; from: string } } | { console: true };
 
 export function readSmsConfig(env: Env, dev: boolean): SmsConfig | null {
-  const [sid, token, from] = ['AGNT_TWILIO_SID', 'AGNT_TWILIO_TOKEN', 'AGNT_TWILIO_FROM'].map(n => text(env, n));
+  const [sid, token, from] = ['SIMON_TWILIO_SID', 'SIMON_TWILIO_TOKEN', 'SIMON_TWILIO_FROM'].map(n => text(env, n));
   if (sid && token && from) return { twilio: { sid, token, from } };
   return dev ? { console: true } : null;
 }

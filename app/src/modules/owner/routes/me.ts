@@ -124,9 +124,9 @@ export function meRoutes(o: {
           'identifier',
           caller.id,
           code => ({
-            subject: `Your AGNT code: ${code}`,
-            text: `Someone signed in to AGNT asks to add this address as theirs. Your code is ${code}; it expires in 15 minutes. If it was not you, ignore this message.`,
-            sms: `AGNT code ${code}, to add this number to an AGNT account. Ignore it if you did not ask.`,
+            subject: `Your SIMON code: ${code}`,
+            text: `Someone signed in to SIMON asks to add this address as theirs. Your code is ${code}; it expires in 15 minutes. If it was not you, ignore this message.`,
+            sms: `SIMON code ${code}, to add this number to a SIMON account. Ignore it if you did not ask.`,
           }),
           [`session:${caller.id}`, `person:${caller.person._id}`],
         );

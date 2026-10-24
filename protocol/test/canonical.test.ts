@@ -80,6 +80,6 @@ describe('canonical JSON', () => {
   });
 
   it('signing bytes are a context line, a newline, and the canonical form without signature', () => {
-    assert.equal(signingBytes('AGNT-AGENT', { b: 1, signature: 'x', a: 2 }).toString(), 'AGNT-AGENT\n{"a":2,"b":1}');
+    assert.equal(signingBytes('SIMON-AGENT', { b: 1, signature: 'x', a: 2 }).toString(), 'SIMON-AGENT\n{"a":2,"b":1}');
   });
 });

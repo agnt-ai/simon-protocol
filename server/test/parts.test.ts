@@ -37,7 +37,7 @@ describe('parts (spec section 7.2)', async () => {
 
   /** A part fetch signed by a server, as one server asks another. */
   const asServer = async (from: typeof beta, to: typeof alpha, sha256: string) => {
-    const url = new URL(`${to.origin}/agnt/parts/${sha256}`);
+    const url = new URL(`${to.origin}/simon/parts/${sha256}`);
     const headers = signRequest(from.server.api.config.serverKey, {
       method: 'GET',
       url: url.href,
@@ -50,16 +50,16 @@ describe('parts (spec section 7.2)', async () => {
   it('takes an upload whose hash is its path, and refuses any other', async () => {
     const res = await ada.upload(bytes);
     assert.deepEqual([res.status, res.json], [200, { sha256: part.sha256, size: part.size }]);
-    const wrong = await ada.request('PUT', `/agnt/parts/${'0'.repeat(64)}`, { body: bytes });
+    const wrong = await ada.request('PUT', `/simon/parts/${'0'.repeat(64)}`, { body: bytes });
     assert.deepEqual([wrong.status, wrong.json.code], [400, 'invalid']);
-    const huge = await ada.request('PUT', `/agnt/parts/${'0'.repeat(64)}`, { body: Buffer.alloc(26_214_401) });
+    const huge = await ada.request('PUT', `/simon/parts/${'0'.repeat(64)}`, { body: Buffer.alloc(26_214_401) });
     assert.equal(huge.status, 413);
   });
 
   it("serves an agent's own upload to it, and to nobody else", async () => {
     assert.deepEqual((await ada.part(part.sha256)).bytes, bytes);
     assert.equal((await eve.part(part.sha256)).status, 404);
-    assert.equal((await ada.request('GET', `/agnt/parts/${part.sha256}`, { sign: false })).status, 404);
+    assert.equal((await ada.request('GET', `/simon/parts/${part.sha256}`, { sign: false })).status, 404);
   });
 
   it('fetches a received part from its carrier soon after it arrives: 503 until then, never sooner', async () => {
@@ -67,7 +67,7 @@ describe('parts (spec section 7.2)', async () => {
       ada.message([bob.address], 'see attached', { parts: [{ type: 'text/plain', data: 'see attached' }, part] }),
     );
     await fed.work();
-    const fetches = () => fed.net.sent.filter(r => r.url === `${alpha.origin}/agnt/parts/${part.sha256}`).length;
+    const fetches = () => fed.net.sent.filter(r => r.url === `${alpha.origin}/simon/parts/${part.sha256}`).length;
     const first = await bob.part(part.sha256);
     assert.deepEqual([first.status, first.json.code], [503, 'unavailable']);
     assert.ok(Number(first.headers['retry-after']) <= PREFETCH_JITTER_MS / 1000);
@@ -92,12 +92,12 @@ describe('parts (spec section 7.2)', async () => {
     await ada.send(
       ada.message([], 'look', { parts: [TEXT, { type: 'image/png', sha256: sha256Hex(pub), size: pub.length }] }),
     );
-    const res = await eve.request('GET', `/agnt/parts/${sha256Hex(pub)}`, { sign: false });
+    const res = await eve.request('GET', `/simon/parts/${sha256Hex(pub)}`, { sign: false });
     assert.deepEqual([res.status, res.bytes], [200, pub]);
     const signed = await eve.part(sha256Hex(pub));
     assert.deepEqual([signed.status, signed.bytes], [200, pub], 'and to an agent here that signs, as clients do');
     // A server request whose signature fails asks as nobody in particular, and nobody may read a public post.
-    const url = new URL(`${alpha.origin}/agnt/parts/${sha256Hex(pub)}`);
+    const url = new URL(`${alpha.origin}/simon/parts/${sha256Hex(pub)}`);
     const forged = signRequest(generateKey().privateKey, {
       method: 'GET',
       url: url.href,
@@ -110,20 +110,20 @@ describe('parts (spec section 7.2)', async () => {
 
   it("answers an agent here as the client API does: a signature that fails is 401, not the parts path's 404", async () => {
     // Eve's own key, over another target than the one sent: the client API's 401.
-    const url = new URL(`${alpha.origin}/agnt/parts/${part.sha256}`);
-    const other = new URL(`${alpha.origin}/agnt/parts/${'f'.repeat(64)}`);
+    const url = new URL(`${alpha.origin}/simon/parts/${part.sha256}`);
+    const other = new URL(`${alpha.origin}/simon/parts/${'f'.repeat(64)}`);
     const signed = signRequest(eve.key, { method: 'GET', url: other.href, now: fed.clock.t, agent: eve.address });
     const res = await alpha.server.handle(toRequest('GET', url, signed, Buffer.alloc(0), '203.0.113.30'));
     assert.deepEqual(
       [res.status, (res.json as { code: string }).code, res.headers?.['www-authenticate']],
-      [401, 'bad_signature', 'AGNT'],
+      [401, 'bad_signature', 'SIMON'],
     );
     // Dispatch follows the publicly served domain, never the presence of a hidden account/key record.
-    const stranger = await eve.request('GET', `/agnt/parts/${part.sha256}`, { key: generateKey().privateKey });
-    const nobody = await eve.request('GET', `/agnt/parts/${part.sha256}`, { agent: 'nobody@alpha.test' });
+    const stranger = await eve.request('GET', `/simon/parts/${part.sha256}`, { key: generateKey().privateKey });
+    const nobody = await eve.request('GET', `/simon/parts/${part.sha256}`, { agent: 'nobody@alpha.test' });
     assert.deepEqual([stranger.status, stranger.json], [res.status, res.json]);
     assert.deepEqual([nobody.status, nobody.bytes], [stranger.status, stranger.bytes]);
-    const unsigned = await eve.request('GET', `/agnt/parts/${part.sha256}`, { sign: false });
+    const unsigned = await eve.request('GET', `/simon/parts/${part.sha256}`, { sign: false });
     assert.equal(unsigned.status, 404);
   });
 });
@@ -195,7 +195,7 @@ describe('parts are kept per source', async () => {
     await fed.work();
     assert.equal(refused.length, 1, 'policy refused it');
     assert.equal(
-      fed.net.sent.filter(r => r.url === `${alpha.origin}/agnt/parts/${sha256}`).length,
+      fed.net.sent.filter(r => r.url === `${alpha.origin}/simon/parts/${sha256}`).length,
       1,
       'and the carrier saw the fetch all the same',
     );
@@ -213,7 +213,7 @@ describe('parts are kept per source', async () => {
     await fed.work();
     fed.clock.advance(PREFETCH_JITTER_MS);
     await fed.work();
-    const fetched = fed.net.sent.filter(r => r.url === `${alpha.origin}/agnt/parts/${sha256}`);
+    const fetched = fed.net.sent.filter(r => r.url === `${alpha.origin}/simon/parts/${sha256}`);
     assert.equal(fetched.length, 1, 'the carrier learns nothing about who is there');
   });
 
@@ -224,7 +224,7 @@ describe('parts are kept per source', async () => {
       evil.message(zed, [bob.address], 'lost', { parts: [TEXT, { type: 'application/pdf', sha256: lost, size: 34 }] }),
     );
     assert.equal((await evil.post(beta, env)).status, 202);
-    const fetchesOf = () => fed.net.sent.filter(r => r.url.endsWith(`/agnt/parts/${lost}`)).length;
+    const fetchesOf = () => fed.net.sent.filter(r => r.url.endsWith(`/simon/parts/${lost}`)).length;
     for (let i = 0; i < 12; i++) {
       fed.clock.advance(3600_000);
       await fed.work();
@@ -287,7 +287,7 @@ describe('parts are kept per source', async () => {
     fed.clock.advance(PREFETCH_JITTER_MS);
     await fed.work();
     const dan = await delta.agent('dan');
-    const whole = { type: 'application/agnt-message', data: canonicalBytes(original).toString('base64') };
+    const whole = { type: 'application/simon-message', data: canonicalBytes(original).toString('base64') };
     const forward = bob.message([dan.address], 'forwarded', {
       inReplyTo: messageId(original),
       headers: { rel: 'forward' },
@@ -404,7 +404,7 @@ describe('local forwarding and publication grants compose', () => {
         'a separate failed hook cannot replace the private fetching response',
       );
       assert.equal(
-        (await reader.request('GET', `/agnt/parts/${part.sha256}`, { sign: false })).status,
+        (await reader.request('GET', `/simon/parts/${part.sha256}`, { sign: false })).status,
         404,
         'the failed policy alone grants an anonymous caller nothing',
       );
@@ -434,8 +434,8 @@ describe('local forwarding and publication grants compose', () => {
       const part = { type: 'application/octet-stream', sha256: sha256Hex(bytes), size: bytes.length };
       await author.upload(bytes);
       await author.send(author.message([], 'restricted', { parts: [part], headers: { audience: 'hidden' } }));
-      const denied = await reader.request('GET', `/agnt/parts/${part.sha256}`, { sign: false });
-      const absent = await reader.request('GET', `/agnt/parts/${'f'.repeat(64)}`, { sign: false });
+      const denied = await reader.request('GET', `/simon/parts/${part.sha256}`, { sign: false });
+      const absent = await reader.request('GET', `/simon/parts/${'f'.repeat(64)}`, { sign: false });
       assert.deepEqual([denied.status, denied.bytes, denied.headers], [absent.status, absent.bytes, absent.headers]);
       assert.equal(denied.status, 404);
       assert.ok(logs.includes('part audience policy failed'));
@@ -486,7 +486,7 @@ describe('local forwarding and publication grants compose', () => {
             const bRestricted = Number(audienceOf(b.message) !== null);
             return restrictedFirst ? bRestricted - aRestricted : aRestricted - bRestricted;
           });
-        request = reader.request('GET', `/agnt/parts/${part.sha256}`, { sign: false });
+        request = reader.request('GET', `/simon/parts/${part.sha256}`, { sign: false });
         const deadline = new Promise<never>((_resolve, reject) => {
           timer = setTimeout(() => reject(new Error('public grant waited for an unrelated policy')), 1000);
         });
@@ -541,7 +541,7 @@ describe('local forwarding and publication grants compose', () => {
               return failingFirst ? bBroken - aBroken : aBroken - bBroken;
             });
           const signed = await reader.part(part.sha256);
-          const anonymous = await reader.request('GET', `/agnt/parts/${part.sha256}`, { sign: false });
+          const anonymous = await reader.request('GET', `/simon/parts/${part.sha256}`, { sign: false });
           assert.deepEqual([signed.status, signed.bytes], [200, bytes]);
           assert.deepEqual([anonymous.status, anonymous.bytes], [200, bytes]);
         } finally {
@@ -568,21 +568,21 @@ describe('local forwarding and publication grants compose', () => {
         await author.upload(bytes);
         const m = author.message([], 'published', { parts: [part], headers: gated ? { audience: 'members' } : {} });
         assert.equal((await author.send(m)).status, 200);
-        assert.equal((await reader.request('GET', `/agnt/messages/${messageId(m)}`)).status, 200);
+        assert.equal((await reader.request('GET', `/simon/messages/${messageId(m)}`)).status, 200);
         assert.deepEqual((await reader.part(part.sha256)).bytes, bytes);
         assert.equal((await refused.part(part.sha256)).status, gated ? 404 : 200);
-        const url = new URL(`${home.origin}/agnt/parts/${part.sha256}`);
+        const url = new URL(`${home.origin}/simon/parts/${part.sha256}`);
         const badHeaders = signRequest(reader.key, {
           method: 'GET',
           url: url.href,
           now: fed.clock.t,
           agent: reader.address,
         });
-        badHeaders['agnt-signature'] = 'AAAA';
+        badHeaders['simon-signature'] = 'AAAA';
         const badHosted = await home.server.handle(toRequest('GET', url, badHeaders, Buffer.alloc(0), '203.0.113.20'));
         assert.deepEqual(
           [badHosted.status, (badHosted.json as { code: string }).code, badHosted.headers?.['www-authenticate']],
-          [401, 'bad_signature', 'AGNT'],
+          [401, 'bad_signature', 'SIMON'],
           'invalid hosted authentication remains a client error even when the bytes are public',
         );
         const foreignHeaders = signRequest(foreignReader.key, {
@@ -601,14 +601,14 @@ describe('local forwarding and publication grants compose', () => {
           now: fed.clock.t,
           agent: foreignReader.address,
         });
-        badForeignHeaders['agnt-signature'] = 'AAAA';
+        badForeignHeaders['simon-signature'] = 'AAAA';
         const badForeign = await home.server.handle(
           toRequest('GET', url, badForeignHeaders, Buffer.alloc(0), '203.0.113.22'),
         );
         assert.equal(badForeign.status, gated ? 404 : 200, 'foreign invalid authentication asks anonymously');
         if (!gated) assert.deepEqual(replyBody(badForeign), bytes);
         assert.equal(
-          (await reader.request('GET', `/agnt/parts/${part.sha256}`, { sign: false })).status,
+          (await reader.request('GET', `/simon/parts/${part.sha256}`, { sign: false })).status,
           gated ? 404 : 200,
         );
       } finally {
@@ -639,15 +639,15 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     const gamma = await fed.server('gamma');
     const counts = { now: 0, peak: 0 };
     const starts: string[] = [];
-    for (const c of ['https://agnt.slow1.test', 'https://agnt.slow2.test', 'https://agnt.slow3.test']) {
+    for (const c of ['https://simon.slow1.test', 'https://simon.slow2.test', 'https://simon.slow3.test']) {
       slow(fed, c, starts, counts);
     }
     const due = new Date(fed.clock.t).toISOString();
-    await queue(gamma, 'https://agnt.slow1.test', 10, 1000, due);
+    await queue(gamma, 'https://simon.slow1.test', 10, 1000, due);
     await gamma.server.work();
     assert.equal(counts.peak, MAX_FETCHES_PER_CARRIER, 'one carrier never holds every slot');
-    await queue(gamma, 'https://agnt.slow2.test', 10, 1000, due);
-    await queue(gamma, 'https://agnt.slow3.test', 10, 1000, due);
+    await queue(gamma, 'https://simon.slow2.test', 10, 1000, due);
+    await queue(gamma, 'https://simon.slow3.test', 10, 1000, due);
     counts.peak = 0;
     await gamma.server.work();
     assert.equal(counts.peak, MAX_FETCHES);
@@ -666,7 +666,7 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
       );
       assert.equal(await gamma.store.fetchDone(f.sha256, f.carrier, token), true);
     }
-    await queue(gamma, 'https://agnt.slow1.test', 3, 40 * 1024 * 1024, later);
+    await queue(gamma, 'https://simon.slow1.test', 3, 40 * 1024 * 1024, later);
     await gamma.server.work();
     assert.equal(counts.peak, 1, 'two of these would pass the byte budget');
     await fed.close();
@@ -677,16 +677,16 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     const gamma = await fed.server('gamma');
     const counts = { now: 0, peak: 0 };
     const starts: string[] = [];
-    slow(fed, 'https://agnt.flood.test', starts, counts);
-    slow(fed, 'https://agnt.honest.test', starts, counts);
+    slow(fed, 'https://simon.flood.test', starts, counts);
+    slow(fed, 'https://simon.honest.test', starts, counts);
     const due = new Date(fed.clock.t).toISOString();
-    await queue(gamma, 'https://agnt.flood.test', 200, 1000, due);
-    await queue(gamma, 'https://agnt.honest.test', 1, 1000, new Date(fed.clock.t + 1).toISOString());
+    await queue(gamma, 'https://simon.flood.test', 200, 1000, due);
+    await queue(gamma, 'https://simon.honest.test', 1, 1000, new Date(fed.clock.t + 1).toISOString());
     fed.clock.advance(1);
     await gamma.server.work();
     assert.ok(
-      starts.indexOf('https://agnt.honest.test') < MAX_FETCHES,
-      `honest started at ${starts.indexOf('https://agnt.honest.test')}`,
+      starts.indexOf('https://simon.honest.test') < MAX_FETCHES,
+      `honest started at ${starts.indexOf('https://simon.honest.test')}`,
     );
     await fed.close();
   });
@@ -709,8 +709,8 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
       log: () => {},
     } as never);
     const starts: string[] = [];
-    const flood = ['https://agnt.flood1.test', 'https://agnt.flood2.test'];
-    const honest = 'https://agnt.honest.test';
+    const flood = ['https://simon.flood1.test', 'https://simon.flood2.test'];
+    const honest = 'https://simon.honest.test';
     // Fetches of differing lengths, so slots free one at a time.
     for (const c of [...flood, honest])
       fed.net.hosts.set(c, async () => {
@@ -752,8 +752,8 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
         log: () => {},
       } as never);
       const starts: string[] = [];
-      const flood = Array.from({ length: k }, (_, i) => `https://agnt.flood${i}.test`);
-      const honest = 'https://agnt.honest.test';
+      const flood = Array.from({ length: k }, (_, i) => `https://simon.flood${i}.test`);
+      const honest = 'https://simon.honest.test';
       for (const c of [...flood, honest])
         fed.net.hosts.set(c, async () => {
           starts.push(c);
@@ -780,7 +780,7 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     const fed = new Federation();
     const gamma = await fed.server('gamma');
     const ada = await gamma.agent('ada');
-    const carrier = 'https://agnt.flood.test';
+    const carrier = 'https://simon.flood.test';
     const due = new Date(fed.clock.t + 3600_000).toISOString();
     // The queue helper names each hash by size and index: a size per batch keeps every hash distinct.
     for (let i = 0; i < MAX_PENDING_FETCHES_PER_CARRIER / 256; i++) await queue(gamma, carrier, 256, 10 + i, due);
@@ -814,16 +814,16 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     const due = new Date(fed.clock.t).toISOString();
     // 64 carriers, each declaring two parts of its whole hour's budget: after one attempt each, the rest wait.
     for (let i = 0; i < 64; i++) {
-      slow(fed, `https://agnt.flood${i}.test`, starts, counts);
-      await queue(gamma, `https://agnt.flood${i}.test`, 2, 1000, due);
+      slow(fed, `https://simon.flood${i}.test`, starts, counts);
+      await queue(gamma, `https://simon.flood${i}.test`, 2, 1000, due);
     }
-    slow(fed, 'https://agnt.honest.test', starts, counts);
-    await queue(gamma, 'https://agnt.honest.test', 1, 1000, new Date(fed.clock.t + 1).toISOString());
-    for (let minute = 0; minute < 30 && !starts.includes('https://agnt.honest.test'); minute++) {
+    slow(fed, 'https://simon.honest.test', starts, counts);
+    await queue(gamma, 'https://simon.honest.test', 1, 1000, new Date(fed.clock.t + 1).toISOString());
+    for (let minute = 0; minute < 30 && !starts.includes('https://simon.honest.test'); minute++) {
       fed.clock.advance(60_000);
       await gamma.server.work();
     }
-    assert.ok(starts.includes('https://agnt.honest.test'), 'the honest fetch started within 30 minutes');
+    assert.ok(starts.includes('https://simon.honest.test'), 'the honest fetch started within 30 minutes');
     await fed.close();
   });
 
@@ -848,11 +848,15 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
           },
         }),
     });
-    fed.net.hosts.set('https://agnt.slow1.test', async () => ({ status: 404, json: {} }));
-    await queue(gamma, 'https://agnt.slow1.test', 1, 500, new Date(fed.clock.t).toISOString());
+    fed.net.hosts.set('https://simon.slow1.test', async () => ({ status: 404, json: {} }));
+    await queue(gamma, 'https://simon.slow1.test', 1, 500, new Date(fed.clock.t).toISOString());
     await gamma.server.work();
     const now = new Date(fed.clock.t).toISOString();
-    assert.equal(await gamma.store.value(SLOT, 'https://agnt.slow1.test 0', now), 'another', "the other's slot stands");
+    assert.equal(
+      await gamma.store.value(SLOT, 'https://simon.slow1.test 0', now),
+      'another',
+      "the other's slot stands",
+    );
     await fed.close();
   });
 
@@ -877,8 +881,8 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
         }),
     });
     const requests: string[] = [];
-    fed.net.hosts.set('https://agnt.slow1.test', async req => (requests.push(req.path), { status: 404, json: {} }));
-    await queue(first, 'https://agnt.slow1.test', 1, 500, new Date(fed.clock.t).toISOString());
+    fed.net.hosts.set('https://simon.slow1.test', async req => (requests.push(req.path), { status: 404, json: {} }));
+    await queue(first, 'https://simon.slow1.test', 1, 500, new Date(fed.clock.t).toISOString());
     const late = second.server.work();
     await first.server.work();
     resume();
@@ -907,14 +911,14 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     });
     const files = [1, 2, 3].map(i => Buffer.from(`slow to store ${i}`));
     const requests: string[] = [];
-    fed.net.hosts.set('https://agnt.slow1.test', async req => {
+    fed.net.hosts.set('https://simon.slow1.test', async req => {
       requests.push(req.path);
       return { status: 200, bytes: files.find(b => req.path.endsWith(sha256Hex(b)))! };
     });
     for (const b of files) {
       await second.store.queueFetch({
         sha256: sha256Hex(b),
-        carrier: 'https://agnt.slow1.test',
+        carrier: 'https://simon.slow1.test',
         size: b.length,
         attempts: 0,
         dueAt: new Date(fed.clock.t).toISOString(),
@@ -937,7 +941,7 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     );
     written();
     await running;
-    assert.deepEqual(await second.store.part(sha256Hex(bytes), { carrier: 'https://agnt.slow1.test' }), bytes);
+    assert.deepEqual(await second.store.part(sha256Hex(bytes), { carrier: 'https://simon.slow1.test' }), bytes);
     await fed.close();
   });
 
@@ -970,8 +974,8 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
         }),
     });
     const bytes = Buffer.from('claimed away');
-    fed.net.hosts.set('https://agnt.slow1.test', async () => ({ status: 200, bytes }));
-    const f = { sha256: sha256Hex(bytes), carrier: 'https://agnt.slow1.test', size: bytes.length, attempts: 0 };
+    fed.net.hosts.set('https://simon.slow1.test', async () => ({ status: 200, bytes }));
+    const f = { sha256: sha256Hex(bytes), carrier: 'https://simon.slow1.test', size: bytes.length, attempts: 0 };
     await second.store.queueFetch({ ...f, dueAt: new Date(fed.clock.t).toISOString() });
     const running = first.server.work();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -1025,7 +1029,7 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
     const counts = { now: 0, peak: 0 };
     const starts: string[] = [];
     const fetched: string[] = [];
-    fed.net.hosts.set('https://agnt.slow1.test', async req => {
+    fed.net.hosts.set('https://simon.slow1.test', async req => {
       starts.push(req.path);
       fetched.push(req.path);
       counts.peak = Math.max(counts.peak, ++counts.now);
@@ -1033,7 +1037,7 @@ describe('part fetches are bounded, and shared fairly between carriers', () => {
       counts.now--;
       return { status: 404, json: {} };
     });
-    await queue(first, 'https://agnt.slow1.test', 6, 500, new Date(fed.clock.t).toISOString());
+    await queue(first, 'https://simon.slow1.test', 6, 500, new Date(fed.clock.t).toISOString());
     await Promise.all([first.server.work(), second.server.work()]);
     assert.ok(counts.peak <= MAX_FETCHES_PER_CARRIER, `${counts.peak} at once from one carrier, across processes`);
     assert.equal(starts.length, 4, 'four of 500 bytes fill the hour of 2000, whichever process ran them');
@@ -1060,11 +1064,11 @@ describe('an agent here whose domain cannot be resolved for now', () => {
     const bytes = Buffer.from('cy wrote this');
     await cy.upload(bytes);
     assert.equal((await cy.part(sha256Hex(bytes))).status, 200);
-    fed.dns.failing.add('_agnt.own.test');
+    fed.dns.failing.add('_simon.own.test');
     fed.clock.advance(11 * 60_000);
     assert.equal((await cy.part(sha256Hex(bytes))).status, 503, 'its own file, while the lookup fails');
     assert.equal((await cy.part('0'.repeat(64))).status, 503, 'and a file it has not, alike');
-    fed.dns.failing.delete('_agnt.own.test');
+    fed.dns.failing.delete('_simon.own.test');
     fed.clock.advance(2 * 60_000);
     assert.equal((await cy.part(sha256Hex(bytes))).status, 200);
     await fed.close();

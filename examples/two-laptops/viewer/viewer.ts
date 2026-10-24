@@ -1,7 +1,7 @@
 /**
- * A read-only, terminal-looking transcript of every message a local AGNT server holds, live in a browser.
+ * A read-only, terminal-looking transcript of every message a local SIMON server holds, live in a browser.
  *
- *   node viewer.ts [--db ~/agnt/server/agnt.sqlite] [--port 8090] [--address agent@host]
+ *   node viewer.ts [--db ~/simon/server/simon.sqlite] [--port 8090] [--address agent@host]
  *
  * It serves 127.0.0.1 only, opens the database read-only, and never writes to it. The server's store
  * (server/src/store/sqlite.ts) cannot open a file read-only (it sets WAL and creates the schema), and has no
@@ -137,19 +137,19 @@ async function poll() {
       last = text;
       const data = JSON.parse(text);
       const pinned = innerHeight + scrollY >= document.body.scrollHeight - 40;
-      head.textContent = 'agnt viewer · ' + (data.address || data.agents.join(', ') || 'no agents') + ' · ' + data.messages.length + ' messages · read-only';
+      head.textContent = 'simon viewer · ' + (data.address || data.agents.join(', ') || 'no agents') + ' · ' + data.messages.length + ' messages · read-only';
       out.replaceChildren(...data.messages.map(line));
       if (pinned) scrollTo(0, document.body.scrollHeight);
     }
-  } catch (e) { head.textContent = 'agnt viewer · cannot reach the viewer: ' + e.message; }
+  } catch (e) { head.textContent = 'simon viewer · cannot reach the viewer: ' + e.message; }
   setTimeout(poll, 2000);
 }
 poll();`;
 
 const sha = (s: string) => `'sha256-${createHash('sha256').update(s).digest('base64')}'`;
 const PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>agnt viewer</title><style>${STYLE}</style></head>
-<body><header id="head">agnt viewer · loading…</header><div id="log"></div><span class="cursor"></span>
+<title>simon viewer</title><style>${STYLE}</style></head>
+<body><header id="head">simon viewer · loading…</header><div id="log"></div><span class="cursor"></span>
 <script>${SCRIPT}</script></body></html>`;
 const CSP = `default-src 'none'; script-src ${sha(SCRIPT)}; style-src ${sha(STYLE)}; connect-src 'self'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
 
@@ -186,12 +186,12 @@ if (import.meta.main) {
     const i = args.indexOf(`--${name}`);
     return i >= 0 ? args[i + 1] : undefined;
   };
-  const dbPath = (flag('db') ?? `${homedir()}/agnt/server/agnt.sqlite`).replace(/^~(?=\/)/, homedir());
+  const dbPath = (flag('db') ?? `${homedir()}/simon/server/simon.sqlite`).replace(/^~(?=\/)/, homedir());
   const port = Number(flag('port') ?? 8090);
   try {
     const db = openDb(dbPath);
     viewer(db, { address: flag('address') ?? null }).listen(port, '127.0.0.1', () =>
-      console.log(`agnt viewer: http://127.0.0.1:${port} (reading ${dbPath} read-only)`),
+      console.log(`simon viewer: http://127.0.0.1:${port} (reading ${dbPath} read-only)`),
     );
   } catch (e) {
     console.error((e as Error).message);

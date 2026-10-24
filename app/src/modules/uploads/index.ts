@@ -1,5 +1,5 @@
 /**
- * Upload checks, before the server keeps an agent's bytes (`PUT /agnt/parts/<sha256>`): a daily volume per
+ * Upload checks, before the server keeps an agent's bytes (`PUT /simon/parts/<sha256>`): a daily volume per
  * agent, then a malware scan. With no scanner, uploads are refused unless the operator chose otherwise.
  * Bytes fetched from other servers are their authors' servers' to scan.
  *

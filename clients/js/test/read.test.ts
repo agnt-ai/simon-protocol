@@ -14,11 +14,11 @@ import {
   type AnyMessage,
   type ResolverIO,
 } from '@agnt-protocol/protocol';
-import { Agent, AgntError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
+import { Agent, SimonError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
 import { fakeServer } from './fake-server.ts';
 
 const resolvesTo = (server: string, others: Record<string, string> = {}): ResolverIO => ({
-  txt: async name => [[`v=agnt1; server=${others[name.slice('_agnt.'.length)] ?? server}`]],
+  txt: async name => [[`v=simon1; server=${others[name.slice('_simon.'.length)] ?? server}`]],
   get: async () => null,
 });
 
@@ -57,14 +57,14 @@ describe('verifyAuthor', () => {
       () => verifyAuthor(message, { ...opts, server: 'https://evil.test' } as object),
       () => fetchAgentDocument(message.from, { ...opts, server: 'https://evil.test' } as object),
     ]) {
-      await assert.rejects(call(), (e: AgntError) => e.code === 'invalid' && e.details?.field === 'server');
+      await assert.rejects(call(), (e: SimonError) => e.code === 'invalid' && e.details?.field === 'server');
     }
   });
 
   it("verifies a key principal's pairing, and refuses a pairing that does not verify", async () => {
     const { fake, opts } = await world();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const key = generateKey().privateKeyPem;
     const a = new Agent({ server: fake.origin, key, fetch: fake.fetch });
     const { address } = await a.register({ for: id });
@@ -85,7 +85,7 @@ describe('verifyAuthor', () => {
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {
     const { fake, opts } = await world();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const key = generateKey().privateKeyPem;
     const a = new Agent({ server: fake.origin, key, fetch: fake.fetch });
     const { address } = await a.register({ for: id });
@@ -130,7 +130,7 @@ describe('verifyAuthor', () => {
     assert.equal(await reason(message, { ...opts, resolver: nowhere }), 'no_server');
     const tampered: Fetch = async (url, init) => {
       const res = await fake.fetch(url, init);
-      if (!url.includes('/agnt/agents/')) return res;
+      if (!url.includes('/simon/agents/')) return res;
       return Response.json({ ...(await res.json()), kind: 'paired' });
     };
     assert.equal(await reason(message, { ...opts, fetch: tampered }), 'bad_document');
@@ -146,12 +146,12 @@ describe('verifyAuthor', () => {
     };
     const cases = [
       { ...opts, resolver: broken },
-      { ...opts, fetch: failing(fake.fetch, '/agnt/server', 503) },
-      { ...opts, fetch: failing(fake.fetch, '/agnt/agents/', 500) },
-      { ...opts, fetch: failing(fake.fetch, '/agnt/agents/', 429) },
+      { ...opts, fetch: failing(fake.fetch, '/simon/server', 503) },
+      { ...opts, fetch: failing(fake.fetch, '/simon/agents/', 500) },
+      { ...opts, fetch: failing(fake.fetch, '/simon/agents/', 429) },
     ];
     for (const o of cases) {
-      await assert.rejects(verifyAuthor(message, o), (e: AgntError) => e.code === 'unavailable' && e.retryable);
+      await assert.rejects(verifyAuthor(message, o), (e: SimonError) => e.code === 'unavailable' && e.retryable);
     }
   });
 });
@@ -247,9 +247,9 @@ describe('the basis of a principal', () => {
 
   it('is never authoritative for a domain that names the carrier only by its well-known answer', async () => {
     const wellKnownOnly = (origin: string): ResolverIO => ({
-      txt: async name => (name === '_agnt.agents.test' ? [[`v=agnt1; server=${origin}`]] : []),
+      txt: async name => (name === '_simon.agents.test' ? [[`v=simon1; server=${origin}`]] : []),
       get: async url =>
-        url === 'https://mail.test/.well-known/agnt'
+        url === 'https://mail.test/.well-known/simon'
           ? { status: 200, body: Buffer.from(`{"server":"${origin}"}`) }
           : null,
     });
@@ -263,7 +263,7 @@ describe('the basis of a principal', () => {
     for (const agents of ['', '; agents=agents.test', '; agents=sub.agents.test']) {
       const delegating = (origin: string): ResolverIO => ({
         txt: async name =>
-          name === '_agnt.agents.test' || name === '_agnt.acme.test' ? [[`v=agnt1; server=${origin}${agents}`]] : [],
+          name === '_simon.agents.test' || name === '_simon.acme.test' ? [[`v=simon1; server=${origin}${agents}`]] : [],
         get: async () => null,
       });
       const { entry, opts } = await delivered('mailto:ceo@acme.test', delegating);
@@ -275,7 +275,7 @@ describe('the basis of a principal', () => {
 
   it("is a third-party server-claim for another domain's email or a phone number", async () => {
     for (const forValue of ['mailto:ceo@bank.test', 'tel:+15550100']) {
-      const bank = (origin: string) => resolvesTo(origin, { 'bank.test': 'https://agnt.bank.test' });
+      const bank = (origin: string) => resolvesTo(origin, { 'bank.test': 'https://simon.bank.test' });
       const { entry, opts } = await delivered(forValue, bank);
       const v = await verifyAuthor(entry.message, { ...opts, signedClaims: entry.signedClaims });
       assert.ok(v.verified);
@@ -342,7 +342,7 @@ describe('documents', () => {
     const fake = fakeServer();
     const opts = { fetch: fake.fetch, resolver: resolvesTo(fake.origin) };
     assert.equal(await fetchAgentDocument('a/b?c@agents.test', opts), null);
-    assert.equal(fake.requests.at(-1)!.path, '/agnt/agents/a%2Fb%3Fc@agents.test');
+    assert.equal(fake.requests.at(-1)!.path, '/simon/agents/a%2Fb%3Fc@agents.test');
     const ada = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
     await ada.register();
     const record = await fetchAgentDocument(ada.address!.toUpperCase(), opts);
@@ -374,8 +374,8 @@ describe('bounded answers (spec section 9)', () => {
   it('stops reading a document once it passes 131072 bytes, as decoded, and reads it as no document', async () => {
     const { fetch, pulled } = endless();
     await assert.rejects(
-      fetchServerDocument('https://agnt.example.com', { fetch }),
-      (e: AgntError) => e.code === 'bad_document',
+      fetchServerDocument('https://simon.example.com', { fetch }),
+      (e: SimonError) => e.code === 'bad_document',
     );
     assert.ok(pulled.bytes <= 131072 + 2 * 65536, `${pulled.bytes} bytes read`);
   });
@@ -383,14 +383,14 @@ describe('bounded answers (spec section 9)', () => {
   it("stops reading a part once it passes the part's size", async () => {
     const { fetch, pulled } = endless();
     const a = new Agent({
-      server: 'https://agnt.example.com',
+      server: 'https://simon.example.com',
       key: generateKey().privateKeyPem,
       address: 'a@example.com',
       fetch,
     });
     await assert.rejects(
       a.fetchPart({ sha256: 'a'.repeat(64), size: 10 }),
-      (e: AgntError) => e.code === 'hash_mismatch',
+      (e: SimonError) => e.code === 'hash_mismatch',
     );
     assert.ok(pulled.bytes <= 2 * 65536, `${pulled.bytes} bytes read`);
   });

@@ -2,9 +2,9 @@
  * Published messages: messages written here with an empty `to` (spec section 7), served to whoever their
  * audience admits (readers.ts):
  *
- *   GET /agnt/messages/<id>                  the message and its author's keys valid at its `sentAt`
- *   GET /agnt/feeds/<address>/<feed>         the author's published messages in that feed, newest first
- *   GET /agnt/messages/<id>/related          the relations to it marked listed that this server shows, newest first
+ *   GET /simon/messages/<id>                  the message and its author's keys valid at its `sentAt`
+ *   GET /simon/feeds/<address>/<feed>         the author's published messages in that feed, newest first
+ *   GET /simon/messages/<id>/related          the relations to it marked listed that this server shows, newest first
  *
  * A message a reader may not see, an unknown one and a retired author's are answered alike: `404` for a
  * message and its relations, an empty page for a feed. Listings page with an opaque cursor, `before`.
@@ -112,7 +112,7 @@ export function publishedRoutes(ctx: Context): Route[] {
   return [
     {
       method: 'GET',
-      path: '/agnt/messages/:id',
+      path: '/simon/messages/:id',
       async handle(req) {
         const record = await readable(req.params.id, await askerOf(ctx, req));
         if (!record) throw notFound('No published message has this id here.');
@@ -130,7 +130,7 @@ export function publishedRoutes(ctx: Context): Route[] {
     },
     {
       method: 'GET',
-      path: '/agnt/feeds/:address/:feed',
+      path: '/simon/feeds/:address/:feed',
       async handle(req) {
         const { before, limit } = paging(req);
         const { address, feed } = req.params;
@@ -144,7 +144,7 @@ export function publishedRoutes(ctx: Context): Route[] {
     },
     {
       method: 'GET',
-      path: '/agnt/messages/:id/related',
+      path: '/simon/messages/:id/related',
       async handle(req) {
         const { before, limit } = paging(req);
         const record = await readable(req.params.id, await askerOf(ctx, req));

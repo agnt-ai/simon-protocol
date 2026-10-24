@@ -1,13 +1,13 @@
-# agnt-protocol
+# simon
 
-An AGNT agent from the command line, over [`@agnt-protocol/client`](../js). Every verb is written by
+A SIMON agent from the command line, over [`@agnt-protocol/client`](../js). Every verb is written by
 hand; `help` and argument errors need no network.
 
 ```bash
-alias agnt-protocol="node /path/to/agnt-protocol/clients/cli/src/cli.ts"
-agnt-protocol register --server https://agnt.example.com
-agnt-protocol send --to bob@example.net --text "Does 3pm work?"
-agnt-protocol sync
+alias simon="node /path/to/simon-protocol/clients/cli/src/cli.ts"
+simon register --server https://simon.example.com
+simon send --to bob@example.net --text "Does 3pm work?"
+simon sync
 ```
 
 **Output** is JSON on stdout. **An error** is JSON on stderr,
@@ -19,18 +19,18 @@ for an error that may pass on retry, 3 for a `wait` that timed out, and 1 for an
 say; `invisible` lists tag characters, bidirectional controls and zero-width characters by path.
 
 **Files stay in the workspace.** Every file the CLI reads or writes (`--attach`, `upload`, `--message`,
-`verify`, `fetch-part --out`) is in `AGNT_WORKSPACE`, links resolved, and never under `AGNT_HOME`;
+`verify`, `fetch-part --out`) is in `SIMON_WORKSPACE`, links resolved, and never under `SIMON_HOME`;
 anything else is `path_refused`. No output names where the key is kept.
 
-**Environment:** `AGNT_HOME` (the key and address; default `~/.config/agnt`), `AGNT_SERVER` (the server
-to register with), `AGNT_WORKSPACE` (default the current directory), `AGNT_TIMEOUT_MS` (per request;
+**Environment:** `SIMON_HOME` (the key and address; default `~/.config/simon`), `SIMON_SERVER` (the server
+to register with), `SIMON_WORKSPACE` (default the current directory), `SIMON_TIMEOUT_MS` (per request;
 default 30000). Every request has the timeout.
 
 ## Verbs
 
 | Verb | |
 | --- | --- |
-| `register [--server URL] [--address A] [--code C] [--for agnt-key:K [--pairing SIG]] [--recover] [--cancel-recovery] [--add-key NAME]` | Register this key. No address leases one; a hosted address binds at once; any other is sent a code, then the same with `--code`. `--for` pairs with a key principal (`pairing_required`, then `--pairing`). `--recover` makes a new key for an address whose keys are all lost; a server may answer `recovery_pending` until `completesAt`. `--cancel-recovery` cancels one. `--add-key NAME` adds a second key, kept as `$AGNT_HOME/NAME`. Answers include `next`, the command to run next. |
+| `register [--server URL] [--address A] [--code C] [--for simon-key:K [--pairing SIG]] [--recover] [--cancel-recovery] [--add-key NAME]` | Register this key. No address leases one; a hosted address binds at once; any other is sent a code, then the same with `--code`. `--for` pairs with a key principal (`pairing_required`, then `--pairing`). `--recover` makes a new key for an address whose keys are all lost; a server may answer `recovery_pending` until `completesAt`. `--cancel-recovery` cancels one. `--add-key NAME` adds a second key, kept as `$SIMON_HOME/NAME`. Answers include `next`, the command to run next. |
 | `compose --to A [--to B] [--text T] [--attach FILE:TYPE] [--in-reply-to ID] [--header name=value]` | A signed message, not sent. |
 | `send (draft options \| --message FILE) [--hints JSON]` | Send a message. `--attach` uploads a file and sends it by hash with its file name; a message needs no text, and without `--text` it carries only its attachments. `--message` sends what `compose` wrote (`-` is stdin); sending it again answers the same. |
 | `sync [--since TOKEN] [--limit N] [--wait SECONDS]` | Sent/received messages, signals, marks and removals. Save the opaque token unchanged; `more` requests another page. |
@@ -39,7 +39,7 @@ default 30000). Every request has the timeout.
 | `cancel-recovery [--server URL --address A --cancel-code C]`, `unpair --address A --unpairing SIG [--server URL]` | Explicit recovery cancellation or principal-signed retirement. |
 | `send-signal TYPE --about ID --to A` | Explicit opt-in typing, collected or read sharing. |
 | `webhook-create URL`, `webhook-verify ID CODE`, `webhook-delete ID` | Verify a webhook before wake notifications. |
-| `wait [--from ADDRESS] [--timeout SECONDS] [--interval SECONDS]` | The next message not yet shown, then exit 0; exit 3 after the timeout (600 s). Remembered in `AGNT_HOME`, so each message is shown once. |
+| `wait [--from ADDRESS] [--timeout SECONDS] [--interval SECONDS]` | The next message not yet shown, then exit 0; exit 3 after the timeout (600 s). Remembered in `SIMON_HOME`, so each message is shown once. |
 | `sent ID` | Delivery of a sent message, per recipient server. |
 | `upload FILE --type TYPE` | Upload a part; prints `{type, sha256, size, name}`. |
 | `fetch-part SHA256 --out FILE [--size N]` | Save a part's bytes, checked against hash and size. |
@@ -54,8 +54,8 @@ default 30000). Every request has the timeout.
 `npm test -w clients/cli` runs the CLI as a process against the test server over HTTP on localhost:
 two agents, labelled output, the workspace, a pending recovery, and conversations carried by `wait`.
 
-Registration success is an account object without `status`. Creation and pairing use `/agnt/register`;
-`register --recover` is a CLI convenience for the dedicated `/agnt/recovery` endpoint. Recovery status
+Registration success is an account object without `status`. Creation and pairing use `/simon/register`;
+`register --recover` is a CLI convenience for the dedicated `/simon/recovery` endpoint. Recovery status
 uses `register --recovery-status`; mailbox cancellation accepts `--cancel-code` with `--address`.
 A principal proof uses `--principal-recovery SIG --at T --address A`.
 
@@ -70,7 +70,7 @@ checked and saved locally and are never added to the recovery request body. Prin
 without saved or supplied principal state is rejected. For mailbox recovery of an email/tel pair,
 supply its existing principal explicitly; the account response does not infer it.
 
-Concurrent waits in the same `AGNT_HOME` fail with `concurrent_wait`. JS and Python hold the same
+Concurrent waits in the same `SIMON_HOME` fail with `concurrent_wait`. JS and Python hold the same
 `wait.lock` directory for the whole operation and release it on normal completion/error. No owner is
 stolen by age. After a crash, confirm the recorded PID is no longer running, then remove only the stale
 `wait.lock` directory and keep `wait.json`. Queued messages are already private local data and can be

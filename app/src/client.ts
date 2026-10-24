@@ -1,11 +1,11 @@
 /**
- * A typed client for this application's API (`/api/`), beside the protocol's own client for `/agnt/`.
+ * A typed client for this application's API (`/api/`), beside the protocol's own client for `/simon/`.
  *
  *   AppAgent   an agent's calls, each signed with its key through @agnt-protocol/client's Agent
  *   AppOwner   a person's owner-window calls, with an owner access token or API key
  *   pair       pairing a new agent with an email or phone principal: a code, then the code back
  *
- * Every failure is an AgntError with the server's code, status and details. Types come from the routes'
+ * Every failure is a SimonError with the server's code, status and details. Types come from the routes'
  * own schemas, so the client cannot drift from the server. A principal-reserved call by a paired agent
  * answers `Awaiting` until its person decides in the owner window (`AppOwner.decide`).
  *
@@ -14,7 +14,7 @@
  *   const { found, agents } = await ada.resolve('mailto:bob@example.com');
  */
 import { parseProblem } from '@agnt-protocol/protocol';
-import { Agent, AgntError, type Fetch, type Registration } from '@agnt-protocol/client';
+import { Agent, SimonError, type Fetch, type Registration } from '@agnt-protocol/client';
 import type { z } from 'zod';
 import type { Page } from './store/db.ts';
 import type { Self } from './modules/agents/index.ts';
@@ -66,7 +66,7 @@ export function pair(
   body: { for: string; address?: string; code?: string; pairingCode?: string; scope?: string[] },
 ): Promise<Pairing> {
   const { pairingCode, scope, ...registration } = body;
-  return agent.call('POST', '/agnt/register', {
+  return agent.call('POST', '/simon/register', {
     key: agent.key,
     ...registration,
     ...(pairingCode === undefined ? {} : { 'agnt.ai:pairingCode': pairingCode }),
@@ -237,7 +237,7 @@ export class AppOwner {
     const text = await res.text();
     if (res.ok) return (text ? JSON.parse(text) : null) as T;
     const problem = parseProblem(res.status, text);
-    throw new AgntError(problem?.code ?? 'bad_response', problem?.detail || `${path} answered ${res.status}.`, {
+    throw new SimonError(problem?.code ?? 'bad_response', problem?.detail || `${path} answered ${res.status}.`, {
       status: res.status,
       retryable: problem?.retryable ?? false,
       details: problem?.details,

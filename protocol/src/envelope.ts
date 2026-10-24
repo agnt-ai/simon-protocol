@@ -1,5 +1,5 @@
 /**
- * The transport envelope: what one server posts to another, `POST /agnt/deliver` (spec section 6).
+ * The transport envelope: what one server posts to another, `POST /simon/deliver` (spec section 6).
  *
  *   { message, server, recipients, claims?, claimsSignature?, hints?, signature }
  *
@@ -7,7 +7,7 @@
  * which server carried it, and to whom: `server` is the receiving origin and `recipients` the addresses in
  * `to` that it serves, so an envelope can be neither replayed to another server nor stretched to other
  * recipients. Hints (per-recipient notes for the receiving server's policy) rest on it too. Claims
- * (statements the carrier makes about the author) are also signed on their own, over `AGNT-CLAIMS` and
+ * (statements the carrier makes about the author) are also signed on their own, over `SIMON-CLAIMS` and
  * `{"claims","message":<id>}`, so they travel with the message into inboxes and stay checkable wherever it
  * goes. Members a receiver does not know are ignored, and are signed like any other, so an envelope is kept
  * exactly as it arrived.
@@ -102,21 +102,21 @@ export interface SignedClaims {
   signature: string;
 }
 
-/** The bytes a carrier signs for its claims about one message: `AGNT-CLAIMS`, then `{"claims","message"}`. */
+/** The bytes a carrier signs for its claims about one message: `SIMON-CLAIMS`, then `{"claims","message"}`. */
 export const claimsBytes = (claims: readonly Claim[], id: string) =>
-  signingBytes('AGNT-CLAIMS', { claims, message: id });
+  signingBytes('SIMON-CLAIMS', { claims, message: id });
 
 /** Sign an envelope; one that carries `claims` gets its `claimsSignature` first, by the same key. */
 export function signEnvelope(e: UnsignedEnvelope, serverKey: string | KeyObject): Envelope {
   const unsigned = e.claims
     ? { ...e, claimsSignature: sign(serverKey, claimsBytes(e.claims, messageId(e.message))) }
     : e;
-  return { ...unsigned, signature: sign(serverKey, signingBytes('AGNT-ENVELOPE', unsigned)) };
+  return { ...unsigned, signature: sign(serverKey, signingBytes('SIMON-ENVELOPE', unsigned)) };
 }
 
 /** Whether one of the carrying server's keys valid at `at` (when the envelope arrives) signed it. */
 export const verifyEnvelope = (e: Envelope, serverKeys: readonly KeyEntry[], at: Date) =>
-  signedByAny(serverKeys, at, signingBytes('AGNT-ENVELOPE', e), e.signature) &&
+  signedByAny(serverKeys, at, signingBytes('SIMON-ENVELOPE', e), e.signature) &&
   (e.claims === undefined ||
     signedByAny(serverKeys, at, claimsBytes(e.claims, messageId(e.message)), e.claimsSignature));
 
@@ -287,9 +287,9 @@ const isActsFor = (c: Claim, m: AnyMessage, forHeader: string | null): c is Acts
 // number is its own identifier, which an acts-for claim covers.
 const isIdentifier = (c: Claim, m: AnyMessage, forHeader: string | null): c is IdentifierClaim =>
   c.agent === m.from &&
-  (c.of === 'agent' || (c.of === 'principal' && !!forHeader?.startsWith('agnt-key:'))) &&
+  (c.of === 'agent' || (c.of === 'principal' && !!forHeader?.startsWith('simon-key:'))) &&
   isPrincipal(c.identifier) &&
-  !c.identifier.startsWith('agnt-key:') &&
+  !c.identifier.startsWith('simon-key:') &&
   parseTimestamp(c.verifiedAt) !== null;
 
 /**
@@ -312,7 +312,7 @@ export function claimsAbout(message: AnyMessage, claims: readonly Claim[], kind:
 
 /**
  * Whether an acts-for claim is authoritative (spec section 6.2): its `for` is a `mailto:` identifier whose
- * domain names the carrier by its `_agnt` TXT record, so the domain's DNS speaks for its mail as a DKIM key
+ * domain names the carrier by its `_simon` TXT record, so the domain's DNS speaks for its mail as a DKIM key
  * does. A domain whose server only its well-known answer names grants no authority: whoever runs a domain's
  * website need not run its mail. Never for a phone number or a key. An identifier claim is judged the same
  * way, by its `identifier` as the `for`.

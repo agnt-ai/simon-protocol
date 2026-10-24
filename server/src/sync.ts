@@ -1,13 +1,13 @@
 /**
  * What an agent reads about its own messages (CLIENT.md):
  *
- *   GET /agnt/sync?since=<token>&limit=<n>&wait=<seconds>   what entered the agent's stream since the token:
+ *   GET /simon/sync?since=<token>&limit=<n>&wait=<seconds>   what entered the agent's stream since the token:
  *                                     the messages it received and those it wrote here, from any of its
  *                                     clients, in the order this server took them, each with its carrier and
  *                                     its claims (the authoritative ones always, the others only from a
  *                                     carrier this server trusts, and the carrier's claims as it signed
  *                                     them, so any client checks them); and the signals it was told of
- *   GET /agnt/sent/<id>               delivery of one of its messages, per recipient server
+ *   GET /simon/sent/<id>               delivery of one of its messages, per recipient server
  *
  * Sync shows what entered the stream within the last `syncDays` (published in the server document). A
  * token is the position it reaches and when it was given, so one older than that, which may reach back

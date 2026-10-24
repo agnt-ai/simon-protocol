@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Agent, Delivered } from './agent.ts';
-import { AgntError, addressArg } from './errors.ts';
+import { SimonError, addressArg } from './errors.ts';
 
 export interface WaitState {
   token: string | null;
@@ -40,9 +40,9 @@ async function locked<T>(home: string, run: () => Promise<T>): Promise<T> {
     } catch {
       /* Unknown owners are never stolen. */
     }
-    throw new AgntError(
+    throw new SimonError(
       'concurrent_wait',
-      `Another wait owns AGNT_HOME/wait.lock${ownerPid ? ` (PID ${ownerPid})` : ''}. Stop it first. After confirming its owner is no longer running, remove only the stale wait.lock directory; keep wait.json.`,
+      `Another wait owns SIMON_HOME/wait.lock${ownerPid ? ` (PID ${ownerPid})` : ''}. Stop it first. After confirming its owner is no longer running, remove only the stale wait.lock directory; keep wait.json.`,
       { details: { field: 'wait.lock', ...(ownerPid ? { ownerPid } : {}) } },
     );
   }
@@ -92,7 +92,7 @@ export function readWaitState(home: string): WaitState {
     !Array.isArray(s.seen) ||
     !s.seen.every(id => typeof id === 'string' && HEX64.test(id))
   ) {
-    throw new AgntError(
+    throw new SimonError(
       'invalid',
       'The wait state is damaged or uses the old numeric cursor format; delete wait.json to start again from retained messages.',
       { details: { field: 'wait.json' } },
@@ -115,7 +115,7 @@ export async function waitForMessage(agent: Agent, home: string, opts: WaitOptio
     !Number.isFinite(opts.intervalMs) ||
     opts.intervalMs <= 0
   )
-    throw new AgntError('invalid', 'Wait timeout is nonnegative and its interval is positive.');
+    throw new SimonError('invalid', 'Wait timeout is nonnegative and its interval is positive.');
   const from = opts.from === undefined ? undefined : addressArg('from', opts.from);
   const now = opts.now ?? Date.now;
   const sleep = opts.sleep ?? (ms => new Promise<void>(resolve => setTimeout(resolve, ms)));
@@ -127,7 +127,7 @@ export async function waitForMessage(agent: Agent, home: string, opts: WaitOptio
         const found = await scan(agent, home, from, () => deadline - now(), opts.timeoutMs === 0);
         if (found) return found;
       } catch (e) {
-        if (!(e instanceof AgntError && e.retryable)) throw e;
+        if (!(e instanceof SimonError && e.retryable)) throw e;
         if (e.retryAfter !== undefined) pause = Math.max(pause, e.retryAfter * 1000);
       }
       const left = deadline - now();
@@ -187,7 +187,7 @@ async function scan(
           Array.isArray(e.claims),
       )
     ) {
-      throw new AgntError('bad_response', 'Sync did not return a valid opaque token and message page.');
+      throw new SimonError('bad_response', 'Sync did not return a valid opaque token and message page.');
     }
     const pendingIds = new Set(state.pending.map(e => e.id));
     for (const e of page.messages) {
@@ -199,7 +199,7 @@ async function scan(
       }
     }
     if (page.more && page.token === state.token)
-      throw new AgntError('bad_response', 'Sync pagination did not advance its token.');
+      throw new SimonError('bad_response', 'Sync pagination did not advance its token.');
     state.token = page.token;
     more = page.more;
     // Checkpoint each page so retrying a later page cannot lose messages just queued.

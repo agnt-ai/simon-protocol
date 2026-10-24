@@ -1,7 +1,7 @@
 /**
  * An agent's key and address on disk, shared by the CLI and the MCP server:
  *
- *   <home>              mode 700: AGNT_HOME, or ~/.config/agnt
+ *   <home>              mode 700: SIMON_HOME, or ~/.config/simon
  *     key.pem           the private key, PKCS #8 PEM, mode 600, created once and never overwritten
  *     address.json      {"server","address","for"?,"pairing"?} once registered, mode 600
  */
@@ -23,7 +23,7 @@ export interface AddressRecord {
 }
 
 export const defaultHome = (env: NodeJS.ProcessEnv = process.env) =>
-  env.AGNT_HOME ?? path.join(os.homedir(), '.config', 'agnt');
+  env.SIMON_HOME ?? path.join(os.homedir(), '.config', 'simon');
 
 export const keyFile = (home: string) => path.join(home, 'key.pem');
 export const addressFile = (home: string) => path.join(home, 'address.json');

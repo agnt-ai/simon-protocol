@@ -1,7 +1,7 @@
 """Resolution: which server a domain's agents live on (spec section 3). Two methods, in this order::
 
-    _agnt.<domain>  TXT  "v=agnt1; server=https://<host>"
-    GET https://<domain>/.well-known/agnt            {"server":"https://<host>"}
+    _simon.<domain>  TXT  "v=simon1; server=https://<host>"
+    GET https://<domain>/.well-known/simon            {"server":"https://<host>"}
 
 It ends in exactly one of six outcomes. ``temporary`` is a failure that may pass, never "no server". A
 host that does not exist, refuses the connection or presents a certificate not valid for it is an absence
@@ -20,7 +20,7 @@ from email.utils import parsedate_to_datetime
 
 from .canonical import parse
 from .dnsquery import LookupFailed, lookup_txt
-from .errors import AgntError
+from .errors import SimonError
 from .limits import MAX_DOCUMENT_BYTES, NOT_FOUND_CACHE_MS, SERVER_CACHE_MAX_MS, TEMPORARY_CACHE_MS
 from .transport import HostNotFound, fetch
 from .wire import normalize_domain
@@ -79,22 +79,22 @@ def server_origin(value: object, *, allow_local: bool = False) -> str | None:
     return f"{scheme}://{host}" if port == _DEFAULT_PORT[scheme] else f"{scheme}://{host}:{port}"
 
 
-def _agnt_records(records: list[list[str]]) -> list[list[tuple[str, str]]]:
-    """The fields of each agnt record among these, as ``(name, value)`` pairs; records that are not agnt
+def _simon_records(records: list[list[str]]) -> list[list[tuple[str, str]]]:
+    """The fields of each simon record among these, as ``(name, value)`` pairs; records that are not simon
     records are left out. Each record is its character strings, joined."""
     found = []
     for strings in records:
         first, *rest = (field.strip(" ") for field in "".join(strings).split(";"))
-        if first == "v=agnt1":
+        if first == "v=simon1":
             found.append([(f.partition("=")[0], f.partition("=")[2]) for f in rest])
     return found
 
 
 def servers_in_txt(records: list[list[str]]) -> list[str] | None:
-    """The servers the agnt records among these name, in order and without repeats, or None when one of
+    """The servers the simon records among these name, in order and without repeats, or None when one of
     them is malformed."""
     servers: list[str] = []
-    for fields in _agnt_records(records):
+    for fields in _simon_records(records):
         values = [value for name, value in fields if name == "server"]
         origin = server_origin(values[0]) if len(values) == 1 else None
         if origin is None:
@@ -119,7 +119,7 @@ def well_known_outcome(answer: tuple[int, bytes] | tuple[int, bytes, int | None]
         return Resolution("temporary")
     try:
         value = parse(body) if status == 200 and len(body) <= MAX_DOCUMENT_BYTES else None
-    except AgntError:
+    except SimonError:
         value = None
     server = server_origin(value.get("server")) if isinstance(value, dict) else None
     return Resolution("server", server, "well-known", ttl_ms=ttl_ms) if server else Resolution("not_found")
@@ -178,7 +178,7 @@ def resolve(domain: str, txt: TxtLookup = lookup_txt, get: WellKnownFetch = fetc
     if name is None:
         return Resolution("invalid_domain")
     try:
-        records = txt(f"_agnt.{name}")
+        records = txt(f"_simon.{name}")
     except (LookupFailed, OSError):
         return Resolution("temporary")
     servers = servers_in_txt(records)
@@ -190,6 +190,6 @@ def resolve(domain: str, txt: TxtLookup = lookup_txt, get: WellKnownFetch = fetc
         ttl_ms = getattr(records, "ttl_ms", None)
         return Resolution("server", servers[0], "dns", ttl_ms)
     try:
-        return well_known_outcome(get(f"https://{name}/.well-known/agnt"))
+        return well_known_outcome(get(f"https://{name}/.well-known/simon"))
     except (LookupFailed, OSError):
         return Resolution("temporary")

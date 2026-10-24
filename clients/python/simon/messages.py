@@ -6,7 +6,7 @@ size are all a server checks of a version it does not know. Version 1 has exactl
     {v, from, to, inReplyTo, parts, headers, sentAt, signature}
 
 The id is the hex SHA-256 of the canonical bytes without ``signature``. The signature is over
-``AGNT-MESSAGE``, a newline, and those same bytes.
+``SIMON-MESSAGE``, a newline, and those same bytes.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from .canonical import canonical, canonical_bytes, parse, signing_bytes, unsigned_bytes
-from .errors import AgntError, invalid
+from .errors import SimonError, invalid
 from .keys import SigningKey, parse_key_token, signature_verdict, verify
 from .limits import (
     MAX_ALT_BYTES,
@@ -46,7 +46,7 @@ PROTOCOL_HEADERS = frozenset({"for", "pairing", "critical", "rel", "feed", "audi
 _NOT_IN_NAME = re.compile(r"[/\\\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 _NOT_IN_ALT = re.compile(r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 _TEL = re.compile(r"tel:\+[1-9][0-9]{1,14}")
-_KEY_PRINCIPAL = "agnt-key:"
+_KEY_PRINCIPAL = "simon-key:"
 
 
 def message_id(message: Mapping[str, Any]) -> str:
@@ -56,7 +56,7 @@ def message_id(message: Mapping[str, Any]) -> str:
 
 def sign_message(unsigned: Mapping[str, Any], key: SigningKey) -> dict[str, Any]:
     message = {k: v for k, v in unsigned.items() if k != "signature"}
-    message["signature"] = key.sign(signing_bytes("AGNT-MESSAGE", message))
+    message["signature"] = key.sign(signing_bytes("SIMON-MESSAGE", message))
     return message
 
 
@@ -66,7 +66,7 @@ def message_verdict(message: Any, keys: Iterable[Mapping[str, Any]]) -> str:
     ``bad_signature``."""
     at = parse_timestamp(message.get("sentAt")) if isinstance(message, dict) else None
     try:
-        data = signing_bytes("AGNT-MESSAGE", message) if at is not None else None
+        data = signing_bytes("SIMON-MESSAGE", message) if at is not None else None
     except (TypeError, ValueError):  # not a JSON value
         return "bad_signature"
     if data is None:
@@ -85,11 +85,11 @@ def check_author_signature(message: Any, keys: Iterable[Mapping[str, Any]]) -> N
     bad_signature`` when none verifies, or no key was valid then at all."""
     verdict = message_verdict(message, keys)
     if verdict == "unsupported_algorithm":
-        raise AgntError(
+        raise SimonError(
             verdict, "The author has no key valid at sentAt of an algorithm this server implements.", 403
         )
     if verdict == "bad_signature":
-        raise AgntError(
+        raise SimonError(
             verdict, "The message does not verify with its author's keys valid at its sentAt.", 403
         )
 
@@ -98,7 +98,7 @@ def check_supported_version(message: Mapping[str, Any]) -> None:
     """``send`` takes only versions the server implements (CLIENT.md): ``400 unsupported_version`` on
     ``v`` otherwise, so no agent steps around a version's rules by naming another."""
     if message.get("v") != VERSION:
-        raise AgntError(
+        raise SimonError(
             "unsupported_version",
             f"This server does not implement version {message.get('v')} messages.",
             400,
@@ -112,7 +112,7 @@ def parse_message(body: bytes, limits: Mapping[str, int] = MINIMUM_LIMITS) -> di
     ``requestBodyBytes``, parsed, already in canonical form (the refusal carries the canonical form in
     ``details.canonical``), then ``check_message``."""
     if len(body) > limits["requestBodyBytes"]:
-        raise AgntError("body_too_large", f"The body is larger than {limits['requestBodyBytes']} bytes.", 413)
+        raise SimonError("body_too_large", f"The body is larger than {limits['requestBodyBytes']} bytes.", 413)
     value = parse(body)
     form = canonical_bytes(value)
     if form != body:
@@ -182,7 +182,7 @@ def _check_version_1(m: dict[str, Any], limits: Mapping[str, int]) -> None:
     _check_headers(m)
 
 
-CARRIED_MESSAGE_TYPE = "application/agnt-message"
+CARRIED_MESSAGE_TYPE = "application/simon-message"
 #: How deep messages are carried inline: a message a part of the carrying message carries is at depth 1, one
 #: its parts carry at depth 2, and so on. A message carried deeper is refused (section 5.3).
 MAX_CARRIED_DEPTH = 8
@@ -200,7 +200,7 @@ def _read_carried(data: str) -> dict[str, Any] | None:
         if not isinstance(value, dict) or canonical_bytes(value) != raw:
             return None
         check_invariants(value)
-    except AgntError:
+    except SimonError:
         return None
     return value
 
@@ -352,14 +352,14 @@ def _check_headers(m: dict[str, Any]) -> None:
     principal, pairing, critical = headers.get("for"), headers.get("pairing"), headers.get("critical")
     if principal is not None and not is_principal(principal):
         raise invalid(
-            "The for header is a principal: mailto:<address>, tel:<E.164 number> or agnt-key:<key token>.",
+            "The for header is a principal: mailto:<address>, tel:<E.164 number> or simon-key:<key token>.",
             field="headers",
         )
     if pairing is not None and not is_b64url(pairing):
         raise invalid("The pairing header is a signature in canonical base64url.", field="headers")
     if (pairing is not None) != (principal_key(principal) is not None):
         raise invalid(
-            "The pairing header is present exactly when the for header is an agnt-key: principal.",
+            "The pairing header is present exactly when the for header is a simon-key: principal.",
             field="headers",
         )
     if critical is not None and not is_critical_value(critical):
@@ -432,7 +432,7 @@ def is_fresh(sent_at: str, now_ms: int, past_ms: int, ahead_ms: int | None = SEN
     return t is not None and now_ms - past_ms <= t and (ahead_ms is None or t <= now_ms + ahead_ms)
 
 
-# Principals (section 2.2): mailto:<v1 address>, tel:<E.164>, or agnt-key:<key token>, written exactly.
+# Principals (section 2.2): mailto:<v1 address>, tel:<E.164>, or simon-key:<key token>, written exactly.
 
 
 def is_principal(value: object) -> bool:
@@ -454,14 +454,14 @@ def principal_key(principal: object) -> str | None:
 
 
 def pairing_bytes(agent: str, principal: str) -> bytes:
-    """What a key principal signs to pair with an agent: ``AGNT-PAIR``, the address and the identifier."""
-    return f"AGNT-PAIR\n{agent}\n{principal}".encode()
+    """What a key principal signs to pair with an agent: ``SIMON-PAIR``, the address and the identifier."""
+    return f"SIMON-PAIR\n{agent}\n{principal}".encode()
 
 
 def unpairing_bytes(agent: str, principal: str) -> bytes:
-    """What a key principal signs to end its pairing with an agent: ``AGNT-UNPAIR``, the address and the
+    """What a key principal signs to end its pairing with an agent: ``SIMON-UNPAIR``, the address and the
     identifier."""
-    return f"AGNT-UNPAIR\n{agent}\n{principal}".encode()
+    return f"SIMON-UNPAIR\n{agent}\n{principal}".encode()
 
 
 def sign_pairing(key: SigningKey, agent: str) -> str:
@@ -477,8 +477,8 @@ def verify_pairing(agent: str, principal: str, pairing: object) -> bool:
 
 def recover_bytes(agent: str, new_key: str, at: str) -> bytes:
     """What a key principal signs to recover its agent at once (CLIENT.md register, Appendix A
-    ``recover-signed``): ``AGNT-RECOVER``, the address, the new key token and ``at``, a timestamp."""
-    return f"AGNT-RECOVER\n{agent}\n{new_key}\n{at}".encode()
+    ``recover-signed``): ``SIMON-RECOVER``, the address, the new key token and ``at``, a timestamp."""
+    return f"SIMON-RECOVER\n{agent}\n{new_key}\n{at}".encode()
 
 
 def sign_recovery(key: SigningKey, agent: str, new_key: str, at: str) -> str:

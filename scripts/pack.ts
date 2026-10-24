@@ -28,7 +28,7 @@ if (run('git', ['status', '--porcelain', '--', ...PACKAGES])) {
 }
 const commit = run('git', ['rev-parse', 'HEAD']);
 const out = path.resolve(process.argv[2] ?? path.join(ROOT, 'packed'));
-const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-pack-'));
+const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-pack-'));
 fs.mkdirSync(out, { recursive: true });
 
 /** An export of the sources, `./src/<name>.ts`, as its compiled files. */

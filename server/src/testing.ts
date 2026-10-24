@@ -34,7 +34,7 @@ export class FakeDns implements Dns {
     return ['203.0.113.10'];
   }
   point(domain: string, origin: string) {
-    this.records.set(`_agnt.${domain}`, [[`v=agnt1; server=${origin}`]]);
+    this.records.set(`_simon.${domain}`, [[`v=simon1; server=${origin}`]]);
   }
 }
 

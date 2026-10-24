@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 import { generateKey, sha256Hex } from '@agnt-protocol/protocol';
-import { createServer, defineConfig, type AgntServer } from '@agnt-protocol/server';
+import { createServer, defineConfig, type SimonServer } from '@agnt-protocol/server';
 import { MongoStore } from '../src/store/mongo-store.ts';
 import { World } from './harness.ts';
 import { freshDb } from './mongo.ts';
@@ -10,10 +10,10 @@ import { freshDb } from './mongo.ts';
 it('Mongo-backed sends retain the final forward after source messages expire', async () => {
   const world = new World();
   let store: MongoStore | undefined;
-  let server: AgntServer | undefined;
+  let server: SimonServer | undefined;
   try {
     store = await new MongoStore(await freshDb()).init();
-    const origin = 'https://agnt.mongo.test';
+    const origin = 'https://simon.mongo.test';
     server = createServer({
       config: defineConfig({ origin, hostedDomains: ['mongo.test'], serverKey: generateKey().privateKey }),
       store,

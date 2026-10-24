@@ -6,7 +6,7 @@
 # key keeps the `added` time it was first published with. Needs Docker and Node 26; CI runs it on every push.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-NAME=agnt-image-check
+NAME=simon-image-check
 PORT="${PORT:-18080}"
 URL="http://127.0.0.1:$PORT"
 KEYS="$("$ROOT/scripts/server-keys.sh")"
@@ -30,8 +30,8 @@ docker volume create "$NAME" >/dev/null
 # Docker's bridge network stands in for the load balancer's subnets.
 start() {
   docker run -d --name "$NAME" -p "127.0.0.1:$PORT:8080" -v "$NAME:/data" \
-    -e AGNT_ORIGIN=https://agnt.example.com -e AGNT_SERVER_KEY \
-    -e AGNT_CLIENT_IP_HEADER=x-forwarded-for -e AGNT_TRUSTED_PROXIES=172.16.0.0/12 -e AGNT_KEEP_ALIVE_TIMEOUT=65 \
+    -e SIMON_ORIGIN=https://simon.example.com -e SIMON_SERVER_KEY \
+    -e SIMON_CLIENT_IP_HEADER=x-forwarded-for -e SIMON_TRUSTED_PROXIES=172.16.0.0/12 -e SIMON_KEEP_ALIVE_TIMEOUT=65 \
     "$NAME" >/dev/null
   for _ in $(seq 50); do
     [ "$(curl -fsS "$URL/health" 2>/dev/null)" = '{"status":"ok"}' ] && return
@@ -45,7 +45,7 @@ stop() {
   docker rm "$NAME" >/dev/null
 }
 added() {
-  curl -fsS "$URL/agnt/server" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0)).keys[0].added)'
+  curl -fsS "$URL/simon/server" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0)).keys[0].added)'
 }
 
 start

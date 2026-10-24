@@ -1,6 +1,6 @@
-/** One HTTP exchange with a timeout, and an answer read into JSON or into the AgntError it carries. */
+/** One HTTP exchange with a timeout, and an answer read into JSON or into the SimonError it carries. */
 import { isRetryable, parseProblem } from '@agnt-protocol/protocol';
-import { AgntError } from './errors.ts';
+import { SimonError } from './errors.ts';
 
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -63,14 +63,14 @@ export async function exchange(t: Transport, url: string, init: RequestInit = {}
   } catch (e) {
     if (caller?.aborted && signal.reason === caller.reason) throw caller.reason;
     if (deadline.aborted || (e instanceof Error && e.name === 'TimeoutError')) {
-      throw new AgntError('timeout', `${method} ${url}: no answer within ${timeoutMs} ms.`, {
+      throw new SimonError('timeout', `${method} ${url}: no answer within ${timeoutMs} ms.`, {
         retryable: true,
         details: { url, timeoutMs },
       });
     }
     const cause = (e as { cause?: { code?: string; message?: string } } | null)?.cause;
     const why = cause?.code ?? cause?.message ?? (e instanceof Error ? e.message : String(e));
-    throw new AgntError('network_error', `${method} ${url} failed: ${why}.`, {
+    throw new SimonError('network_error', `${method} ${url} failed: ${why}.`, {
       retryable: true,
       details: { url, cause: why },
     });
@@ -122,7 +122,7 @@ export function readJson<T>(a: Answer, now: Date): T {
   try {
     return (a.body.length ? JSON.parse(Buffer.from(a.body).toString('utf8')) : null) as T;
   } catch {
-    throw new AgntError('bad_response', `${a.url} answered ${a.status} with a body that is not JSON.`, {
+    throw new SimonError('bad_response', `${a.url} answered ${a.status} with a body that is not JSON.`, {
       status: a.status,
       details: { url: a.url },
     });
@@ -134,19 +134,19 @@ export function readJson<T>(a: Answer, now: Date): T {
  * read by the protocol's `parseProblem`, or `bad_response` when it sent none. `status` and `retryable`
  * follow the HTTP status, which is what a client acts on; the code, detail and details are the server's.
  */
-export function failure(a: Answer, now: Date): AgntError {
+export function failure(a: Answer, now: Date): SimonError {
   const retryAfter = readRetryAfter(a.headers.get('retry-after'), now);
   // Never accept a parseable JSON prefix of an oversized error body.
   const problem = a.body.length <= MAX_PROBLEM_BYTES ? parseProblem(a.status, a.body) : null;
   if (problem) {
-    return new AgntError(problem.code, problem.detail || problem.title, {
+    return new SimonError(problem.code, problem.detail || problem.title, {
       status: a.status,
       retryable: problem.retryable,
       details: problem.details,
       retryAfter,
     });
   }
-  return new AgntError('bad_response', `${a.url} answered ${a.status} without problem details.`, {
+  return new SimonError('bad_response', `${a.url} answered ${a.status} without problem details.`, {
     status: a.status,
     retryable: isRetryable(a.status),
     details: { url: a.url },

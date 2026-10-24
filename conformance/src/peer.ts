@@ -1,11 +1,11 @@
 /**
- * The peer simulator: an AGNT server the suite runs on localhost, so it can deliver to the server under
+ * The peer simulator: a SIMON server the suite runs on localhost, so it can deliver to the server under
  * test as another server would, and receive that server's deliveries and check them.
  *
- *   GET  /agnt/server              its server document (or a 503, on demand)
- *   GET  /agnt/agents/<address>    documents for the agents it controls, each with its own faults
- *   POST /agnt/deliver             records every envelope; answers 202, or 503 or 400 for chosen recipients
- *   GET  /agnt/parts/<sha256>      part bytes, only to a server request signed by a server it delivered to
+ *   GET  /simon/server              its server document (or a 503, on demand)
+ *   GET  /simon/agents/<address>    documents for the agents it controls, each with its own faults
+ *   POST /simon/deliver             records every envelope; answers 202, or 503 or 400 for chosen recipients
+ *   GET  /simon/parts/<sha256>      part bytes, only to a server request signed by a server it delivered to
  *
  * Its server keys come from fixed seeds, so a server under test that cached its document from an earlier
  * run still verifies it. Its agents get new addresses every run, so no agent document is ever stale.
@@ -159,7 +159,7 @@ export class Peer {
     this.runId = runId;
     const announced = origin === undefined ? `http://${host.includes(':') ? `[${host}]` : host}:${port}` : origin;
     this.origin = serverOrigin(announced, true) ?? fail(`The simulator's origin ${announced} is not an origin.`);
-    const seed = `agnt-conformance-peer ${domain} ${this.origin}`;
+    const seed = `simon-conformance-peer ${domain} ${this.origin}`;
     this.serverKey = seeded(`${seed} active`);
     this.revokedKey = seeded(`${seed} revoked`);
     this.futureKey = seeded(`${seed} future`);
@@ -278,11 +278,11 @@ export class Peer {
     const actor = o.server ?? this.origin;
     const signing = requestSigningString({ method, origin, actor, target, timestamp: ts, nonce, body: '' });
     return {
-      'agnt-key': keyToken(key),
-      'agnt-timestamp': ts,
-      'agnt-nonce': nonce,
-      'agnt-signature': sign(key, signing),
-      'agnt-server': actor,
+      'simon-key': keyToken(key),
+      'simon-timestamp': ts,
+      'simon-nonce': nonce,
+      'simon-signature': sign(key, signing),
+      'simon-server': actor,
     };
   }
 
@@ -333,10 +333,10 @@ export class Peer {
     for (const [k, v] of Object.entries(req.headers)) if (typeof v === 'string') headers[k] = v;
 
     // A domain that is the origin's own host, as a tunnel's name is, resolves by the well-known answer.
-    if (req.method === 'GET' && path === '/.well-known/agnt' && new URL(this.origin).hostname === this.domain) {
+    if (req.method === 'GET' && path === '/.well-known/simon' && new URL(this.origin).hostname === this.domain) {
       return json(res, 200, { server: this.origin });
     }
-    if (req.method === 'GET' && path === '/agnt/server') {
+    if (req.method === 'GET' && path === '/simon/server') {
       if (this.serverDocStatus !== 200) {
         return wireError(res, new WireError(this.serverDocStatus, 'unavailable', 'Try later.', true), {
           'retry-after': '1',
@@ -344,15 +344,15 @@ export class Peer {
       }
       return json(res, 200, this.serverDocument());
     }
-    if (req.method === 'GET' && path.startsWith('/agnt/agents/')) {
-      const address = decodeURIComponent(path.slice('/agnt/agents/'.length));
+    if (req.method === 'GET' && path.startsWith('/simon/agents/')) {
+      const address = decodeURIComponent(path.slice('/simon/agents/'.length));
       const a = this.agents.get(address);
       if (!a) return wireError(res, new WireError(404, 'not_found', 'No such agent.'));
       const d = this.agentDocument(a);
       return json(res, d.status, d.body, d.status === 503 || d.status === 429 ? { 'retry-after': '1' } : {});
     }
-    if (req.method === 'POST' && path === '/agnt/deliver') return this.deliver(at, headers, body, res);
-    if (req.method === 'GET' && path.startsWith('/agnt/parts/')) return this.part(at, headers, target, path, res);
+    if (req.method === 'POST' && path === '/simon/deliver') return this.deliver(at, headers, body, res);
+    if (req.method === 'GET' && path.startsWith('/simon/parts/')) return this.part(at, headers, target, path, res);
     return wireError(res, new WireError(404, 'not_found', 'Nothing here.'));
   }
 
@@ -396,30 +396,30 @@ export class Peer {
     path: string,
     res: http.ServerResponse,
   ) {
-    const sha256 = path.slice('/agnt/parts/'.length);
+    const sha256 = path.slice('/simon/parts/'.length);
     const f: PartFetch = {
       at,
       sha256,
       headers,
       target,
       refusal: null,
-      server: headers['agnt-server'] ?? null,
+      server: headers['simon-server'] ?? null,
       answer: 404,
     };
     this.partFetches.push(f);
     try {
       // A local run has the simulator and the server under test on http origins.
       const h = readSignedHeaders(headers, at, { server: true, allowHttp: true });
-      const server = h['agnt-server']!;
+      const server = h['simon-server']!;
       const keys = await this.keysOf(server);
-      const entry = keys?.find(k => k.key === h['agnt-key']) ?? null;
+      const entry = keys?.find(k => k.key === h['simon-key']) ?? null;
       await checkSignedRequest({ method: 'GET', origin: this.origin, actor: actorOf(headers), target, body: '' }, h, {
         now: at,
         entry,
         nonceSeen: (k, n) => this.#nonces.seen(k, n, at),
       });
-      this.#nonces.record(h['agnt-key'], h['agnt-nonce'], h['agnt-timestamp'], at);
-      f.server = h['agnt-server']!;
+      this.#nonces.record(h['simon-key'], h['simon-nonce'], h['simon-timestamp'], at);
+      f.server = h['simon-server']!;
     } catch (e) {
       f.refusal = e instanceof WireError ? `${e.status} ${e.code}: ${e.message}` : String(e);
       return wireError(res, new WireError(404, 'not_found', 'No such part.'));
@@ -438,7 +438,7 @@ export class Peer {
  */
 export async function fetchServerKeys(origin: string): Promise<KeyEntry[] | null> {
   try {
-    const res = await transport({ method: 'GET', origin, target: '/agnt/server' }, 10_000);
+    const res = await transport({ method: 'GET', origin, target: '/simon/server' }, 10_000);
     if (res.status !== 200) return null;
     const doc: Json = parseStrict(res.bytes);
     return isJsonObject(doc) && serverOrigin(doc.server, true) === origin ? readKeys(doc.keys, new Date()) : null;

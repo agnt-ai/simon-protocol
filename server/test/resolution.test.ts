@@ -18,7 +18,7 @@ function setup(wrap: (net: FakeNet) => Http = net => net) {
   const clock = new Clock();
   const dns = new FakeDns();
   const net = new FakeNet();
-  const config = defineConfig({ origin: 'https://agnt.self.test', serverKey: generateKey().privateKey });
+  const config = defineConfig({ origin: 'https://simon.self.test', serverKey: generateKey().privateKey });
   const store = new SqliteStore();
   const resolver = new Resolver({
     config,
@@ -38,15 +38,15 @@ function setup(wrap: (net: FakeNet) => Http = net => net) {
 describe('resolution (spec section 3)', () => {
   it('ends in each of its six outcomes', async () => {
     const { dns, resolver, wellKnown } = setup();
-    dns.records.set('_agnt.bad.example', [['v=agnt1; server=ftp://x']]);
-    dns.records.set('_agnt.two.example', [
-      ['v=agnt1; server=https://a.example'],
-      ['v=agnt1; server=https://b.example'],
+    dns.records.set('_simon.bad.example', [['v=simon1; server=ftp://x']]);
+    dns.records.set('_simon.two.example', [
+      ['v=simon1; server=https://a.example'],
+      ['v=simon1; server=https://b.example'],
     ]);
-    dns.point('txt.example', 'https://agnt.txt.example');
-    wellKnown('web.example', 200, { server: 'https://agnt.web.example' });
+    dns.point('txt.example', 'https://simon.txt.example');
+    wellKnown('web.example', 200, { server: 'https://simon.web.example' });
     wellKnown('busy.example', 503, {});
-    dns.failing.add('_agnt.down.example');
+    dns.failing.add('_simon.down.example');
 
     const outcome = async (d: string) => (await resolver.resolve(d)).outcome;
     assert.equal(await outcome('not a domain'), 'invalid_domain');
@@ -54,12 +54,12 @@ describe('resolution (spec section 3)', () => {
     assert.equal(await outcome('two.example'), 'conflict');
     assert.deepEqual(await resolver.resolve('txt.example'), {
       outcome: 'server',
-      server: 'https://agnt.txt.example',
+      server: 'https://simon.txt.example',
       via: 'dns',
     });
     assert.deepEqual(await resolver.resolve('web.example'), {
       outcome: 'server',
-      server: 'https://agnt.web.example',
+      server: 'https://simon.web.example',
       via: 'well-known',
     });
     assert.equal(await outcome('nowhere.example'), 'not_found');
@@ -69,16 +69,16 @@ describe('resolution (spec section 3)', () => {
 
   it('caches a server and not_found for ten minutes, and temporary for one minute only', async () => {
     const { clock, dns, resolver } = setup();
-    dns.failing.add('_agnt.flaky.example');
+    dns.failing.add('_simon.flaky.example');
     assert.equal((await resolver.resolve('flaky.example')).outcome, 'temporary');
-    dns.failing.delete('_agnt.flaky.example');
-    dns.point('flaky.example', 'https://agnt.flaky.example');
+    dns.failing.delete('_simon.flaky.example');
+    dns.point('flaky.example', 'https://simon.flaky.example');
     assert.equal((await resolver.resolve('flaky.example')).outcome, 'temporary', 'remembered for a minute');
     clock.advance(60_000);
     assert.equal((await resolver.resolve('flaky.example')).outcome, 'server');
 
     assert.equal((await resolver.resolve('later.example')).outcome, 'not_found');
-    dns.point('later.example', 'https://agnt.later.example');
+    dns.point('later.example', 'https://simon.later.example');
     assert.equal((await resolver.resolve('later.example')).outcome, 'not_found', 'cached');
     clock.advance(10 * 60_000);
     assert.equal((await resolver.resolve('later.example')).outcome, 'server');
@@ -94,14 +94,14 @@ describe('resolution (spec section 3)', () => {
     const { net, resolver, wellKnown } = setup(badCertificate);
     net.hosts.set('https://refused.example', 'down');
     wellKnown('moved.example', 301, {});
-    wellKnown('badcert.example', 200, { server: 'https://agnt.badcert.example' });
+    wellKnown('badcert.example', 200, { server: 'https://simon.badcert.example' });
     assert.equal((await resolver.resolve('refused.example')).outcome, 'not_found');
     assert.equal((await resolver.resolve('moved.example')).outcome, 'not_found', 'a redirect is never followed');
     assert.equal((await resolver.resolve('badcert.example')).outcome, 'not_found');
   });
   it("gives a re-resolution's minute back only when the whole call made no lookup", async () => {
     const { clock, dns, resolver, store } = setup();
-    dns.point('mover.example', 'https://agnt.mover.example');
+    dns.point('mover.example', 'https://simon.mover.example');
     const ctx = { store, now: clock.now, resolver } as unknown as Context;
     const taken = () => store.value('reresolve', 'mover.example', clock.now().toISOString());
     // The domain's resolution is made and paid; the server document's lookup is then refused by the payer.

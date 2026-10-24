@@ -240,7 +240,7 @@ describe('privacy', async () => {
       body: new URLSearchParams(body).toString(),
     });
     const asked = await world.fetch(`${alpha.origin}${page}/identifier`, form({ identifier: keyed.principal }));
-    assert.match(await asked.text(), /AGNT-APP-SIGN-IN/);
+    assert.match(await asked.text(), /SIMON-APP-SIGN-IN/);
     const forged = await world.fetch(`${alpha.origin}${page}/signature`, form({ signature: 'AAAA' }));
     assert.equal(forged.status, 400);
     assert.match(await forged.text(), /does not verify/);

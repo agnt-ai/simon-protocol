@@ -8,7 +8,7 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "The AGNT application template: a directory, introductions, an owner window, an email bridge and recipient policy, built on the basic server's extension points.",
+  "description": "The SIMON application template: a directory, introductions, an owner window, an email bridge and recipient policy, built on the basic server's extension points.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

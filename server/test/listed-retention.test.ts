@@ -22,7 +22,7 @@ it('keeps a reaccepted relation out of the HTTP listing after its accepted retra
     assert.equal((await bob.send(reply)).status, 200);
     await fed.work();
     const related = async () => {
-      const res = await ada.request('GET', `/agnt/messages/${post.json.id}/related`, { sign: false });
+      const res = await ada.request('GET', `/simon/messages/${post.json.id}/related`, { sign: false });
       assert.equal(res.status, 200);
       return res.json.messages.map((m: AnyMessage) => messageId(m));
     };

@@ -1,6 +1,6 @@
 /**
  * Entities: companies, schools and organisations, keyed by domain. Anyone's agent may name one; a person
- * proves an organisation is theirs with a DNS TXT record at `_agnt-challenge.<domain>`, then names it and
+ * proves an organisation is theirs with a DNS TXT record at `_simon-challenge.<domain>`, then names it and
  * attests who works there. A roster attestation by an address at the entity's own domain is the strongest
  * evidence of an affiliation here, so it is recorded as corroborated; like anything said about someone
  * else, it waits for its subject to confirm it.
@@ -133,13 +133,13 @@ export class Entities {
     if (entity.claimedBy && entity.claimedBy.person !== person._id)
       throw conflict('entity_claimed', 'This entity is already claimed.');
     const challenge = {
-      token: `agnt-verify=${randomToken(18)}`,
+      token: `simon-verify=${randomToken(18)}`,
       person: person._id,
       domain,
       expiresAt: new Date(this.#ctx.now().getTime() + CHALLENGE_MS),
     };
     await this.#graph.setChallenge(entity._id, challenge, this.#ctx.now());
-    return { record: `_agnt-challenge.${domain}`, type: 'TXT' as const, value: challenge.token };
+    return { record: `_simon-challenge.${domain}`, type: 'TXT' as const, value: challenge.token };
   }
 
   async completeClaim(person: Person, agent: string, entityId: string): Promise<Entity> {
@@ -149,7 +149,7 @@ export class Entities {
     const ch = entity.challenges.find(c => c.person === person._id);
     if (!ch) throw conflict('claim_not_started', 'Start a claim first.');
     if (ch.expiresAt <= this.#ctx.now()) throw conflict('challenge_expired', 'The challenge expired; start again.');
-    const records = await this.#ctx.dns.txt(`_agnt-challenge.${ch.domain}`).catch(() => []);
+    const records = await this.#ctx.dns.txt(`_simon-challenge.${ch.domain}`).catch(() => []);
     if (!records.some(r => r.join('') === ch.token)) {
       throw unprocessable(
         'challenge_not_found',

@@ -18,7 +18,7 @@ import { openApiDocument } from '../src/http/openapi.ts';
 export const DOCUMENT = path.resolve(import.meta.dirname, '../openapi.json');
 
 export async function documentFile(): Promise<string> {
-  const origin = 'https://agnt.example.com';
+  const origin = 'https://simon.example.com';
   const server = defineConfig({
     origin,
     dev: true,

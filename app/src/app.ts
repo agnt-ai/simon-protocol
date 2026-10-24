@@ -11,7 +11,7 @@ import {
   createServer,
   guardedHttp,
   systemDns,
-  type AgntServer,
+  type SimonServer,
   type Dns,
   type Extension,
   type Http,
@@ -62,7 +62,7 @@ export interface AppOptions {
 }
 
 export interface App {
-  server: AgntServer;
+  server: SimonServer;
   api: ServerApi;
   /** Every route this application adds, for its API document. */
   routes: ApiRoute[];
@@ -80,7 +80,7 @@ function mailboxEmail(address: string, note: MailboxNote): { subject: string; te
   switch (note.type) {
     case 'code':
       return {
-        subject: `Your AGNT code: ${note.code}`,
+        subject: `Your SIMON code: ${note.code}`,
         text: `Your code to bind ${address} to an agent is ${note.code}. If you did not ask, ignore this message.`,
       };
     case 'recovery':
@@ -88,7 +88,7 @@ function mailboxEmail(address: string, note: MailboxNote): { subject: string; te
         subject: `A recovery of ${address}`,
         text:
           `A code sent to ${address} was used to replace its agent's keys with ${note.key}. That happens at ` +
-          `${note.completesAt}. If you did not ask, cancel it with POST /agnt/recovery/cancel and ` +
+          `${note.completesAt}. If you did not ask, cancel it with POST /simon/recovery/cancel and ` +
           `{"address":"${address}","cancelCode":"${note.cancelCode}"}.`,
       };
     case 'recoveryPending':
@@ -97,7 +97,7 @@ function mailboxEmail(address: string, note: MailboxNote): { subject: string; te
         text:
           `A code was asked for ${address}, and none was sent: a recovery replacing its agent's keys with ` +
           `${note.key} is pending until ${note.completesAt}. If you did not ask for it, cancel it with POST ` +
-          `/agnt/recovery/cancel and {"address":"${address}","cancelCode":"${note.cancelCode}"}.`,
+          `/simon/recovery/cancel and {"address":"${address}","cancelCode":"${note.cancelCode}"}.`,
       };
     case 'recoveryCancelled':
       return {
@@ -171,7 +171,7 @@ export function createApp(opts: AppOptions): App {
     // What binds an address, and the news of its recovery, go to that address, by mail.
     mailbox: ctx.mail ? (address, note) => ctx.mail!.send({ to: address, ...mailboxEmail(address, note) }) : null,
     worker: opts.worker,
-    // Private unless AGNT_RETIRED_AGENT_DOCUMENTS=public chooses otherwise.
+    // Private unless SIMON_RETIRED_AGENT_DOCUMENTS=public chooses otherwise.
     retiredAgentDocuments: config.server.retiredAgentDocuments,
   });
   api = server.api;

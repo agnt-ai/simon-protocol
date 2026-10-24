@@ -7,7 +7,7 @@
  * believe whoever told it. Tests and local development replace the resolver itself (`resolver`), an
  * option only code can pass.
  *
- * A failure is never an absence. A lookup or fetch that may pass throws a retryable AgntError
+ * A failure is never an absence. A lookup or fetch that may pass throws a retryable SimonError
  * (`unavailable`, `timeout`, `network_error`); only a definite answer says that something does not exist.
  */
 import { Resolver } from 'node:dns/promises';
@@ -46,7 +46,7 @@ import {
   type ServerDocument,
   type SignedClaims,
 } from '@agnt-protocol/protocol';
-import { AgntError, invalid, originArg } from './errors.ts';
+import { SimonError, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, type Answer, type Transport } from './http.ts';
 
 export interface ReadOptions extends Transport {
@@ -91,12 +91,12 @@ export interface AgentRecord {
  * kind of evidence, though none of them proves who or what the principal is:
  *
  *   agent-asserted  the `for` header alone: the agent's word, as an email's From line is
- *   key-pairing     an `agnt-key:` principal's pairing signature verified: the key's holder consented to
+ *   key-pairing     a `simon-key:` principal's pairing signature verified: the key's holder consented to
  *                   this address speaking for that key, with no server trusted for it. Not identity, not
  *                   humanity, and the agent's keys are still its server's word.
  *   server-claim    an `acts-for` claim the author's server signed: that server's word that the identifier
  *                   approved this agent. Authoritative only for a `mailto:` whose domain names that same
- *                   server in its `_agnt` TXT record, so it is as strong as the domain's DNS.
+ *                   server in its `_simon` TXT record, so it is as strong as the domain's DNS.
  */
 export type PrincipalBasis = 'agent-asserted' | 'key-pairing' | 'server-claim';
 
@@ -106,7 +106,7 @@ export interface PrincipalTrust {
   basis: PrincipalBasis;
   /** For `server-claim`: the server whose word it is. */
   claimant?: string;
-  /** For `server-claim`: whether the identifier's email domain names the claimant in its `_agnt` TXT record. */
+  /** For `server-claim`: whether the identifier's email domain names the claimant in its `_simon` TXT record. */
   authoritative?: boolean;
   /** For `server-claim`: the scope the claim lists, keeping only registry-shaped names. */
   scope?: string[];
@@ -177,7 +177,7 @@ const PROVES: Record<string, string> = {
 /** A server's document, read from its origin. */
 export async function fetchServerDocument(server: string, opts: Transport = {}): Promise<ServerDocument> {
   const origin = originArg('server', server);
-  const a = await exchange(opts, `${origin}/agnt/server`, {}, MAX_DOCUMENT_BYTES);
+  const a = await exchange(opts, `${origin}/simon/server`, {}, MAX_DOCUMENT_BYTES);
   check(a);
   const doc = readServerDocument(a.body, origin, (opts.now ?? (() => new Date()))());
   if (!doc) throw badDocument(a, `${a.url} is not a readable server document naming ${origin}.`);
@@ -199,7 +199,7 @@ async function findAgent(address: string, opts: ReadOptions) {
   if (!wire) throw invalid('address', `Not an address (local@domain): ${address}`);
   const server = await resolveServer(domainOf(wire), opts);
   const { keys, algorithms } = await fetchServerDocument(server, opts);
-  const a = await exchange(opts, `${server}/agnt/agents/${addressSegment(wire)}`, {}, MAX_DOCUMENT_BYTES);
+  const a = await exchange(opts, `${server}/simon/agents/${addressSegment(wire)}`, {}, MAX_DOCUMENT_BYTES);
   if (a.status === 404) return null;
   check(a);
   const doc = readAgentDocument(a.body, wire, keys, (opts.now ?? (() => new Date()))());
@@ -233,7 +233,7 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
   try {
     found = await findAgent(m.from, opts);
   } catch (e) {
-    if (e instanceof AgntError && (e.code === 'no_server' || e.code === 'bad_document')) {
+    if (e instanceof SimonError && (e.code === 'no_server' || e.code === 'bad_document')) {
       return { verified: false, id, reason: e.code };
     }
     throw e;
@@ -334,7 +334,7 @@ function refuseServerOption(opts: object) {
 async function resolution(domain: string, opts: ReadOptions): Promise<Resolution> {
   const r = await resolveDomain(domain, opts.resolver ?? nodeResolver(opts), { allowHttp: opts.allowHttp });
   if (r.outcome === 'temporary') {
-    throw new AgntError('unavailable', `Resolving ${domain} failed for now; try again later.`, {
+    throw new SimonError('unavailable', `Resolving ${domain} failed for now; try again later.`, {
       retryable: true,
       details: { domain, outcome: r.outcome },
     });
@@ -346,7 +346,7 @@ async function resolution(domain: string, opts: ReadOptions): Promise<Resolution
 async function resolveServer(domain: string, opts: ReadOptions): Promise<string> {
   const r = await resolution(domain, opts);
   if (r.outcome === 'server') return r.server;
-  throw new AgntError('no_server', `${domain} resolves to no AGNT server: ${r.outcome}.`, {
+  throw new SimonError('no_server', `${domain} resolves to no SIMON server: ${r.outcome}.`, {
     details: { domain, outcome: r.outcome },
   });
 }
@@ -368,7 +368,7 @@ function nodeResolver(t: Transport): ResolverIO {
         const a = await exchange(t, url, { redirect: 'manual' }, MAX_DOCUMENT_BYTES);
         return { status: a.status, body: a.body };
       } catch (e) {
-        if (e instanceof AgntError && e.details?.cause === 'ENOTFOUND') return null;
+        if (e instanceof SimonError && e.details?.cause === 'ENOTFOUND') return null;
         throw e;
       }
     },
@@ -378,7 +378,7 @@ function nodeResolver(t: Transport): ResolverIO {
 /** A document answer that is not 200: 429 and 5xx may pass; 404 and the rest are no document. */
 function check(a: Answer) {
   if (a.status === 429 || a.status >= 500) {
-    throw new AgntError('unavailable', `${a.url} answered ${a.status}; try again later.`, {
+    throw new SimonError('unavailable', `${a.url} answered ${a.status}; try again later.`, {
       status: a.status,
       retryable: true,
       details: { url: a.url },
@@ -388,4 +388,4 @@ function check(a: Answer) {
 }
 
 const badDocument = (a: Answer, message: string) =>
-  new AgntError('bad_document', message, { status: a.status, details: { url: a.url } });
+  new SimonError('bad_document', message, { status: a.status, details: { url: a.url } });

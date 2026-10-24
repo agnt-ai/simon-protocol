@@ -47,7 +47,7 @@ export const agent: Caller<Agent> = { scheme: 'agentSignature', resolve: (req, a
 export const agentOrAnyone: Caller<Agent | null> = {
   scheme: 'agentSignature',
   optional: true,
-  resolve: (req, api) => (req.headers['agnt-key'] === undefined ? Promise.resolve(null) : api.authenticate(req)),
+  resolve: (req, api) => (req.headers['simon-key'] === undefined ? Promise.resolve(null) : api.authenticate(req)),
 };
 
 export interface Input<C, P, Q, B> {

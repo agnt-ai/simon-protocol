@@ -9,7 +9,7 @@ import { received, notices, texts, World } from './harness.ts';
 describe('agents', async () => {
   const world = new World();
   after(() => world.close());
-  const alpha = await world.app('alpha', { env: { AGNT_NUDGE_TURNS: '4', AGNT_UPLOAD_BYTES_PER_DAY: '1000' } });
+  const alpha = await world.app('alpha', { env: { SIMON_NUDGE_TURNS: '4', SIMON_UPLOAD_BYTES_PER_DAY: '1000' } });
 
   it('keeps a card the agent writes, readable by others only once it is published', async () => {
     const [ada, bob] = [await alpha.solo('ada'), await alpha.solo('bob')];
@@ -90,7 +90,7 @@ describe('agents', async () => {
       return { status: answer };
     });
     await assert.rejects(ada.approved.createWebhook('ftp://hooks.example/x'), { code: 'invalid' });
-    const hook = await ada.approved.createWebhook('https://hooks.example/agnt');
+    const hook = await ada.approved.createWebhook('https://hooks.example/simon');
     const bob = await alpha.solo();
     await bob.agent.send({ to: [ada.agent.address!], text: 'ping' });
     await world.work();
@@ -103,9 +103,9 @@ describe('agents', async () => {
     assert.equal(JSON.parse(body).type, 'inbox.changed');
     const expected = crypto
       .createHmac('sha256', hook.secret)
-      .update(`${headers['agnt-webhook-timestamp']}.${body}`)
+      .update(`${headers['simon-webhook-timestamp']}.${body}`)
       .digest('hex');
-    assert.equal(headers['agnt-webhook-signature'], `v1=${expected}`);
+    assert.equal(headers['simon-webhook-signature'], `v1=${expected}`);
     assert.equal((await ada.api.webhooks()).items[0].lastSuccessAt !== null, true);
   });
 
@@ -121,10 +121,10 @@ describe('agents', async () => {
       tarpittedWhenAdaHeard = tarpitted;
       return { status: 200 };
     });
-    await mal.approved.createWebhook('https://tarpit.example/agnt');
+    await mal.approved.createWebhook('https://tarpit.example/simon');
     for (let n = 0; n < 12; n++) await bob.agent.send({ to: [mal.agent.address!], text: `slow ${n}` });
     await world.work();
-    await ada.approved.createWebhook('https://ada-hooks.example/agnt');
+    await ada.approved.createWebhook('https://ada-hooks.example/simon');
     for (let n = 0; n < 12; n++) await bob.agent.send({ to: [mal.agent.address!], text: `slower ${n}` });
     await bob.agent.send({ to: [ada.agent.address!], text: 'ping' });
     await world.work();

@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { keyToken, privateKeyObject } from '@agnt-protocol/protocol';
-import { AgntError, verifyAuthor, type Agent, type Part } from '@agnt-protocol/client';
+import { SimonError, verifyAuthor, type Agent, type Part } from '@agnt-protocol/client';
 import { ensureKeyFile, keyFile, openAgent, readAddressFile, saveAddress } from '@agnt-protocol/client/credentials';
 import {
   RULE,
@@ -31,7 +31,7 @@ export interface Context {
   /** The server to register with, before the address file names one. */
   server?: string;
   timeoutMs?: number;
-  /** The directory files are read from and written to: AGNT_WORKSPACE, or the server's working directory. */
+  /** The directory files are read from and written to: SIMON_WORKSPACE, or the server's working directory. */
   workspace?: Workspace;
 }
 
@@ -89,7 +89,7 @@ const schema = (properties: Schema['properties'], required: string[] = []): Sche
 
 function registered(ctx: Context): Agent {
   if (!readAddressFile(ctx.home)) {
-    throw new AgntError('not_registered', 'No registered agent yet. Call register first.');
+    throw new SimonError('not_registered', 'No registered agent yet. Call register first.');
   }
   return openAgent(ctx.home, { timeoutMs: ctx.timeoutMs });
 }
@@ -114,13 +114,13 @@ export const TOOLS: Tool[] = [
       "Register this agent's key with its server; the key is made on first use and never leaves this machine. " +
       'With no address the server leases one. An address on a domain the server hosts is bound at once; any other ' +
       'address is sent a code: ask whoever reads that mailbox for it, then call again with the address and the code. ' +
-      'To pair with a key principal, pass for (agnt-key:<key token>); a leased address answers pairing_required with ' +
-      'the address, and the principal signs "AGNT-PAIR\\n<address>\\n<for>": call again with for and that signature as pairing. ' +
+      'To pair with a key principal, pass for (simon-key:<key token>); a leased address answers pairing_required with ' +
+      'the address, and the principal signs "SIMON-PAIR\\n<address>\\n<for>": call again with for and that signature as pairing. ' +
       'Use the separate recover tool for an existing address; register never replaces its keys.',
     inputSchema: schema({
       address: { type: 'string', description: 'The address to register, local@domain. Leave out to lease one.' },
       code: { type: 'string', description: 'The code sent to the address.' },
-      for: { type: 'string', description: 'A key principal to pair with: agnt-key:<key token>.' },
+      for: { type: 'string', description: 'A key principal to pair with: simon-key:<key token>.' },
       pairing: { type: 'string', description: "The principal's signature, base64url." },
       server: { type: 'string', description: 'The server to register with, as an origin, before the agent has one.' },
     }),
@@ -246,7 +246,7 @@ export const TOOLS: Tool[] = [
         !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(args.name) ||
         ['key.pem', 'address.json', 'wait.json', 'wait.lock'].includes(args.name)
       )
-        throw new AgntError('invalid', 'name must be a nonreserved key file name.', { details: { field: 'name' } });
+        throw new SimonError('invalid', 'name must be a nonreserved key file name.', { details: { field: 'name' } });
       return answer({
         ...(await registered(ctx).addKey(ensureKeyFile(path.join(ctx.home, args.name)), args.label)),
         keyFile: args.name,
@@ -273,7 +273,7 @@ export const TOOLS: Tool[] = [
     async run(args, ctx) {
       if (args.cancelCode !== undefined) {
         if (!args.address)
-          throw new AgntError('invalid', 'A cancel code needs address.', { details: { field: 'address' } });
+          throw new SimonError('invalid', 'A cancel code needs address.', { details: { field: 'address' } });
         return answer(
           await openAgent(ctx.home, { server: args.server ?? ctx.server, timeoutMs: ctx.timeoutMs }).cancelRecovery({
             address: args.address,
@@ -343,7 +343,7 @@ export const TOOLS: Tool[] = [
     async run(args, ctx) {
       const timeout = args.timeoutSeconds ?? 60;
       if (!(timeout >= 1 && timeout <= 300)) {
-        throw new AgntError('invalid', 'timeoutSeconds is 1 to 300.', { details: { field: 'timeoutSeconds' } });
+        throw new SimonError('invalid', 'timeoutSeconds is 1 to 300.', { details: { field: 'timeoutSeconds' } });
       }
       const got = await waitForMessage(registered(ctx), ctx.home, {
         from: args.from,
@@ -444,7 +444,7 @@ const TYPES: Record<string, (v: unknown) => boolean> = {
 
 /** Arguments checked against a tool's schema at its top level, or `invalid` naming the argument. */
 export function checkArgs(tool: Tool, args: unknown): Args {
-  const fail = (field: string, message: string) => new AgntError('invalid', message, { details: { field } });
+  const fail = (field: string, message: string) => new SimonError('invalid', message, { details: { field } });
   if (!TYPES.object(args)) throw fail('arguments', `${tool.name} takes an object of arguments.`);
   const a = args as Args;
   for (const name of tool.inputSchema.required ?? []) {

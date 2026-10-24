@@ -80,7 +80,7 @@ export function check<C>(spec: CheckSpec, run: (t: T, ctx: C) => Promise<void>) 
 export const catalog = (): CheckSpec[] => registry.map(({ run: _, ...spec }) => spec);
 export const registered = (): readonly Registered[] => registry;
 
-const SHOWN_HEADERS = /^(agnt-|content-type$|retry-after$|location$|www-authenticate$)/;
+const SHOWN_HEADERS = /^(simon-|content-type$|retry-after$|location$|www-authenticate$)/;
 const MAX_SHOWN = 4096;
 
 export function show(body: string | Buffer | undefined): Shown | undefined {

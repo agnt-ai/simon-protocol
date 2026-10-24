@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "problem.json",
-  "title": "AGNT error",
+  "title": "SIMON error",
   "description": "Every error, as application/problem+json: RFC 9457 problem details with code, retryable and details (PROTOCOL.md 9).",
   "type": "object",
   "required": ["type", "title", "status", "code", "retryable", "detail"],

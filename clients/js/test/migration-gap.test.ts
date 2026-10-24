@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { generateKey } from '@agnt-protocol/protocol';
-import { Agent, AgntError, type Fetch } from '../src/index.ts';
+import { Agent, SimonError, type Fetch } from '../src/index.ts';
 import { readWaitState, saveWaitState, waitFile, waitForMessage } from '../src/wait.ts';
 import { fakeServer } from './fake-server.ts';
 
@@ -24,7 +24,7 @@ async function migration() {
   const calls: URL[] = [];
   const fetch: Fetch = async (url, init) => {
     const requested = new URL(url);
-    if (requested.pathname === '/agnt/sync') {
+    if (requested.pathname === '/simon/sync') {
       calls.push(requested);
       if (!requested.searchParams.has('since'))
         return new Response(
@@ -47,13 +47,13 @@ async function migration() {
 }
 
 const errorIsGap = (details: object) => (error: unknown) => {
-  assert.ok(error instanceof AgntError);
+  assert.ok(error instanceof SimonError);
   assert.deepEqual([error.status, error.code, error.retryable], [410, 'token_expired', false]);
   assert.deepEqual(error.details, details);
   assert.deepEqual(
     JSON.parse(JSON.stringify(error)).error.details,
     details,
-    'AgntError JSON preserves the offered token',
+    'SimonError JSON preserves the offered token',
   );
   return true;
 };
@@ -81,7 +81,7 @@ describe('explicit migration-gap handoff', () => {
 
   it('preserves shared wait bytes and unmatched buffered messages on 410', async () => {
     const { agent, details, calls, entry } = await migration();
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-gap-wait-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-gap-wait-'));
     try {
       saveWaitState(home, { token: null, pending: [entry], seen: ['e'.repeat(64)] });
       const before = fs.readFileSync(waitFile(home));

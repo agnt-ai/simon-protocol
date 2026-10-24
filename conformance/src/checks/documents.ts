@@ -24,10 +24,10 @@ def(
     section: 'PROTOCOL 4',
     level: 'must',
     title: 'The server document is readable, unauthenticated',
-    expected: `GET /agnt/server without any signature answers 200 with a JSON object under section 5.1's rules, at most ${MAX_DOCUMENT_BYTES} bytes, whose keys are well-formed entries, at most ${MAX_DOCUMENT_KEYS} of them not yet revoked`,
+    expected: `GET /simon/server without any signature answers 200 with a JSON object under section 5.1's rules, at most ${MAX_DOCUMENT_BYTES} bytes, whose keys are well-formed entries, at most ${MAX_DOCUMENT_KEYS} of them not yet revoked`,
   },
   async (t: T, ctx: Ctx) => {
-    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/agnt/server' });
+    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/simon/server' });
     t.status(res, 200);
     t.assert(res.bytes.length <= MAX_DOCUMENT_BYTES, `the document is ${res.bytes.length} bytes`);
     let v: Json = null;
@@ -60,7 +60,7 @@ def(
       '`server` equals the origin of the URL it was fetched from, compared as the URL standard serialises origins',
   },
   async (t: T, ctx: Ctx) => {
-    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/agnt/server' });
+    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/simon/server' });
     t.status(res, 200);
     const server = res.json?.server;
     t.assert(
@@ -79,7 +79,7 @@ def(
     expected: `limits has messageBytes >= ${MINIMUM_LIMITS.messageBytes}, recipients >= ${MINIMUM_LIMITS.recipients}, requestBodyBytes >= ${MINIMUM_LIMITS.requestBodyBytes} and partBytes >= ${MINIMUM_LIMITS.partBytes}, each a safe integer`,
   },
   async (t: T, ctx: Ctx) => {
-    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/agnt/server' });
+    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/simon/server' });
     t.status(res, 200);
     const limits = res.json?.limits;
     t.assert(isJsonObject(limits), `limits is ${JSON.stringify(limits)}`);
@@ -99,7 +99,7 @@ def(
     expected: `algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ${V1_ALGORITHMS.join(' and ')}`,
   },
   async (t: T, ctx: Ctx) => {
-    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/agnt/server' });
+    const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/simon/server' });
     t.status(res, 200);
     const algorithms = res.json?.algorithms;
     t.assert(
@@ -136,7 +136,7 @@ def(
     level: 'must',
     title: "An agent's document is served at its address, with a literal @, signed by the server",
     expected:
-      'GET /agnt/agents/<address> (unsigned, `@` literal) answers 200 with the address asked for, and a signature over AGNT-AGENT that verifies with a server key valid now',
+      'GET /simon/agents/<address> (unsigned, `@` literal) answers 200 with the address asked for, and a signature over SIMON-AGENT that verifies with a server key valid now',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
@@ -148,7 +148,7 @@ def(
     );
     t.assert(
       read,
-      'the document is unreadable: its signature does not verify with a server key valid now over AGNT-AGENT\\n and the canonical document without signature, or a key entry is malformed',
+      'the document is unreadable: its signature does not verify with a server key valid now over SIMON-AGENT\\n and the canonical document without signature, or a key entry is malformed',
     );
   },
 );
@@ -160,7 +160,7 @@ def(
     level: 'must',
     title: 'An address in a path is read as one segment, its non-pchar characters percent-encoded',
     expected:
-      "for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { | }), GET /agnt/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other",
+      "for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { | }), GET /simon/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other",
   },
   async (t: T, ctx: Ctx) => {
     const domain = requireHosted(ctx);
@@ -168,10 +168,10 @@ def(
     const address = `${ctx.runId}-a#b%c/d?e^f\`g{h|i}j@${domain}`;
     t.status(await a.register(t, { address }, {}, 'a hosted name with every non-pchar character'), 200, 'register');
     const segment = addressSegment(address);
-    const res = await t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/agents/${segment}` });
+    const res = await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/agents/${segment}` });
     t.status(res, 200);
     t.assert(res.json?.address === address, `address is ${JSON.stringify(res.json?.address)}, asked for ${address}`);
-    const feed = await a.call(t, 'GET', `/agnt/feeds/${segment}/posts`, undefined, {}, 'its own feed, signed');
+    const feed = await a.call(t, 'GET', `/simon/feeds/${segment}/posts`, undefined, {}, 'its own feed, signed');
     t.status(feed, 200, 'its own feed, signed by it');
   },
 );
@@ -220,13 +220,13 @@ def(
     section: 'PROTOCOL 4, 9',
     level: 'must',
     title: 'An unknown agent is 404 not_found',
-    expected: 'GET /agnt/agents/<an address nobody holds> answers 404 not_found in the error shape',
+    expected: 'GET /simon/agents/<an address nobody holds> answers 404 not_found in the error shape',
   },
   async (t: T, ctx: Ctx) => {
     const res = await t.http({
       method: 'GET',
       origin: ctx.origin,
-      target: `/agnt/agents/${ctx.runId}-nobody@${await ctx.domain()}`,
+      target: `/simon/agents/${ctx.runId}-nobody@${await ctx.domain()}`,
     });
     t.error(res, 404, 'not_found');
   },

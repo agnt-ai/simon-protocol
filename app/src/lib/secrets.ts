@@ -11,7 +11,7 @@ export const randomToken = (bytes = 32) => b64url(crypto.randomBytes(bytes));
 export const randomCode = () => String(crypto.randomInt(0, 100_000_000)).padStart(8, '0');
 
 /** The hash a secret is stored and looked up by. */
-export const hashSecret = (secret: string) => sha256Hex(`agnt-app:${secret.trim()}`);
+export const hashSecret = (secret: string) => sha256Hex(`simon-app:${secret.trim()}`);
 
 export function sameSecret(a: string, b: string): boolean {
   const x = Buffer.from(a);

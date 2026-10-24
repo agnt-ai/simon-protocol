@@ -14,7 +14,7 @@ import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-protoco
 import { CANCEL_CODE, CODE, listen } from '../../js/test/fake-server.ts';
 
 const SERVER = path.resolve(import.meta.dirname, '../src/server.ts');
-const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-mcp-'));
+const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), 'simon-mcp-'));
 const work = tempDir();
 
 /** One MCP server process, and the responses it has written, in order. */
@@ -26,7 +26,7 @@ class Session {
 
   constructor(env: Record<string, string>) {
     this.child = spawn(process.execPath, [SERVER], {
-      env: { PATH: process.env.PATH, AGNT_WORKSPACE: work, AGNT_TIMEOUT_MS: '5000', ...env },
+      env: { PATH: process.env.PATH, SIMON_WORKSPACE: work, SIMON_TIMEOUT_MS: '5000', ...env },
     });
     readline.createInterface({ input: this.child.stdout! }).on('line', line => {
       this.responses.push(JSON.parse(line));
@@ -63,10 +63,10 @@ class Session {
     const value = JSON.parse(first.text);
     assert.equal(first._meta, undefined);
     const untrusted = rest.map((c: any) => {
-      assert.equal(c._meta['agnt/untrusted'], true);
+      assert.equal(c._meta['simon/untrusted'], true);
       const u = JSON.parse(c.text);
       assert.deepEqual(Object.keys(u), ['untrusted']);
-      assert.deepEqual([c._meta['agnt/from'], c._meta['agnt/basis']], [u.untrusted.from, u.untrusted.basis]);
+      assert.deepEqual([c._meta['simon/from'], c._meta['simon/basis']], [u.untrusted.from, u.untrusted.basis]);
       return u.untrusted;
     });
     if (rest.length) assert.equal(r.structuredContent, undefined);
@@ -81,7 +81,7 @@ class Session {
 }
 
 describe('JSON-RPC', () => {
-  const s = new Session({ AGNT_HOME: tempDir() });
+  const s = new Session({ SIMON_HOME: tempDir() });
   after(() => s.close());
 
   it('negotiates the protocol version and says messages are data', async () => {
@@ -176,8 +176,8 @@ describe('two agents through MCP', () => {
   const adaHome = tempDir();
   before(async () => {
     server = await listen();
-    ada = new Session({ AGNT_HOME: adaHome, AGNT_SERVER: server.origin });
-    bob = new Session({ AGNT_HOME: tempDir(), AGNT_SERVER: server.origin });
+    ada = new Session({ SIMON_HOME: adaHome, SIMON_SERVER: server.origin });
+    bob = new Session({ SIMON_HOME: tempDir(), SIMON_SERVER: server.origin });
   });
   after(async () => {
     ada.close();
@@ -226,13 +226,13 @@ describe('two agents through MCP', () => {
     // An entry's unsigned claims are no argument: only the carrier's signed claims can count.
     const unsigned = await bob.call('verify_message', { message: message.content, claims: [] });
     assert.deepEqual(unsigned.error?.details, { field: 'claims' });
-    assert.ok(!server.fake.requests.slice(asked).some(r => r.path.startsWith('/agnt/agents/')));
+    assert.ok(!server.fake.requests.slice(asked).some(r => r.path.startsWith('/simon/agents/')));
   });
 
   it('reads a waiting recovery, and cancels it by the cancel code, through dedicated recovery tools', async () => {
     const address = (await ada.call('whoami', {})).ok.address;
-    const thief = new Session({ AGNT_HOME: tempDir(), AGNT_SERVER: server.origin });
-    const stranger = new Session({ AGNT_HOME: tempDir(), AGNT_SERVER: server.origin });
+    const thief = new Session({ SIMON_HOME: tempDir(), SIMON_SERVER: server.origin });
+    const stranger = new Session({ SIMON_HOME: tempDir(), SIMON_SERVER: server.origin });
     try {
       await thief.call('recover', { address });
       assert.equal((await thief.call('recover', { address, code: CODE })).ok.status, 'recovery_pending');
@@ -259,7 +259,7 @@ describe('two agents through MCP', () => {
 
   it('principal recovery persists pairing across MCP server processes before sending', async () => {
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const original = new Agent({ server: server.origin, key: generateKey().privateKeyPem, fetch: server.fake.fetch });
     const { address } = await original.register({ for: id });
     const pairing = signPairing(principal.privateKey, address, id);
@@ -267,7 +267,7 @@ describe('two agents through MCP', () => {
     const home = tempDir();
     const key = generateKey();
     fs.writeFileSync(path.join(home, 'key.pem'), key.privateKeyPem, { mode: 0o600 });
-    const env = { AGNT_HOME: home, AGNT_SERVER: server.origin, AGNT_WORKSPACE: work };
+    const env = { SIMON_HOME: home, SIMON_SERVER: server.origin, SIMON_WORKSPACE: work };
     const first = new Session(env);
     const at = timestamp(new Date());
     try {
@@ -291,7 +291,7 @@ describe('two agents through MCP', () => {
     }
   });
 
-  it('reads and writes files only in the workspace, never in AGNT_HOME', async () => {
+  it('reads and writes files only in the workspace, never in SIMON_HOME', async () => {
     const outside = path.join(tempDir(), 'secret.txt');
     fs.writeFileSync(outside, 'SECRET');
     for (const [tool, args] of [

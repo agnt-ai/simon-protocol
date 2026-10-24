@@ -31,12 +31,12 @@ export const Principal = z
   .transform((value, ctx) => {
     const principal = normalizePrincipal(value);
     if (principal) return principal;
-    ctx.addIssue({ code: 'custom', message: 'A mailto:, tel: or agnt-key: identifier.' });
+    ctx.addIssue({ code: 'custom', message: 'A mailto:, tel: or simon-key: identifier.' });
     return z.NEVER;
   })
   .meta({
     id: 'Principal',
-    description: 'An identifier: `mailto:<address>`, `tel:+<E.164>` or `agnt-key:<key token>`.',
+    description: 'An identifier: `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`.',
     example: 'mailto:ada@example.com',
   });
 

@@ -103,7 +103,7 @@ import {
   type FixedKey,
 } from './fixtures.ts';
 
-const ORIGIN = 'https://agnt.example.com';
+const ORIGIN = 'https://simon.example.com';
 const NOW = '2026-10-14T21:00:00Z';
 const many = <T>(n: number, f: (i: number) => T) => Array.from({ length: n }, (_, i) => f(i));
 const at = (iso: string, deltaMs: number) => new Date(Date.parse(iso) + deltaMs).toISOString();
@@ -340,7 +340,7 @@ const version7 = fixedSignMessage<AnyMessage>(
 );
 
 /** Bob, paired with the key principal erin, who signed the pairing. */
-const erinPrincipal = `agnt-key:${erin.key}`;
+const erinPrincipal = `simon-key:${erin.key}`;
 const keyPaired = fixedSignMessage<Message>(
   {
     ...question,
@@ -356,7 +356,7 @@ function messageCase(name: string, unsigned: Unsigned<Message> | Unsigned<AnyMes
   return {
     name,
     signer: signer.key,
-    signingBytes: signingBytes('AGNT-MESSAGE', signed).toString('utf8'),
+    signingBytes: signingBytes('SIMON-MESSAGE', signed).toString('utf8'),
     id: messageId(signed),
     message: signed,
     transmitted: canonicalize(signed),
@@ -366,13 +366,13 @@ function messageCase(name: string, unsigned: Unsigned<Message> | Unsigned<AnyMes
 const post = {
   ...question,
   to: [],
-  headers: { subject: 'Hello, AGNT' },
+  headers: { subject: 'Hello, SIMON' },
   parts: [{ type: 'text/plain', data: 'First post.' }],
 };
 
 const messages = {
   about:
-    'Signed messages (sections 1 and 5): signingBytes is AGNT-MESSAGE, a newline, and the canonical message without signature; id is the SHA-256 of those canonical bytes without the prefix; signer is the key that verifies the signature.',
+    'Signed messages (sections 1 and 5): signingBytes is SIMON-MESSAGE, a newline, and the canonical message without signature; id is the SHA-256 of those canonical bytes without the prefix; signer is the key that verifies the signature.',
   cases: [
     messageCase('question with a for header', question),
     messageCase('reply carrying a content-addressed part', {
@@ -466,12 +466,15 @@ function messageChecks() {
   const file = (size: number) => ({ type: 'application/pdf', sha256: 'a'.repeat(64), size });
   /** A part carrying a message inline whose parts are `parts`; nothing checks a carried message's signature. */
   const carry = (parts: Json[]) => ({
-    type: 'application/agnt-message',
+    type: 'application/simon-message',
     data: Buffer.from(canonicalize({ ...signedQuestion, parts } as unknown as Json)).toString('base64'),
   });
   const forward = (parts: Json[]) => v1({ inReplyTo: messageId(question), headers: { rel: 'forward' }, parts });
   /** A part carrying exactly these bytes, whatever they are, in canonical base64. */
-  const carryRaw = (text: string) => ({ type: 'application/agnt-message', data: Buffer.from(text).toString('base64') });
+  const carryRaw = (text: string) => ({
+    type: 'application/simon-message',
+    data: Buffer.from(text).toString('base64'),
+  });
   /** The carried message of one file of size 1, its bytes changed by `edit`. */
   const carryEdited = (edit: (canonical: string) => string) =>
     carryRaw(edit(canonicalize({ ...signedQuestion, parts: [file(1)] } as unknown as Json)));
@@ -488,7 +491,7 @@ function messageChecks() {
     for (let i = 0; ; i++) {
       const { data } = carry([file(1), { type: 'text/plain', data: `${i} ~~~???>>>` }]);
       if (/[+/]/.test(data))
-        return { type: 'application/agnt-message', data: data.replace(/\+/g, '-').replace(/\//g, '_') };
+        return { type: 'application/simon-message', data: data.replace(/\+/g, '-').replace(/\//g, '_') };
     }
   })();
   const cases: [string, string][] = [
@@ -520,14 +523,14 @@ function messageChecks() {
       ([name, body]) =>
         [
           name,
-          forward([{ type: 'application/agnt-message; profile=forward', data: Buffer.from(body).toString('base64') }]),
+          forward([{ type: 'application/simon-message; profile=forward', data: Buffer.from(body).toString('base64') }]),
         ] as [string, string],
     ),
     [
       'invalid UTF-8 carried bytes are refused',
       forward([
         {
-          type: 'application/agnt-message',
+          type: 'application/simon-message',
           data: Buffer.concat([
             Buffer.from('{"v":1,"extra":"'),
             Buffer.from([0xff]),
@@ -541,7 +544,7 @@ function messageChecks() {
       forward([
         carry([
           {
-            type: ' APPLICATION/AGNT-MESSAGE ; opaque-parameter',
+            type: ' APPLICATION/SIMON-MESSAGE ; opaque-parameter',
             data: Buffer.from(
               canonicalize({ ...signedQuestion, parts: [file(MINIMUM_LIMITS.partBytes + 1)] }),
             ).toString('base64'),
@@ -554,7 +557,7 @@ function messageChecks() {
       forward([
         carry([
           {
-            type: 'application/agnt-message',
+            type: 'application/simon-message',
             data:
               Buffer.from(canonicalize({ ...signedQuestion, parts: [file(MINIMUM_LIMITS.partBytes + 1)] })).toString(
                 'base64',
@@ -590,7 +593,7 @@ function messageChecks() {
     [
       'a sealed message: its block is ciphertext, carried unchanged',
       v1({
-        parts: [{ type: 'application/agnt-sealed', data: Buffer.from('opaque ciphertext').toString('base64') }],
+        parts: [{ type: 'application/simon-sealed', data: Buffer.from('opaque ciphertext').toString('base64') }],
       }),
     ],
     [
@@ -601,7 +604,7 @@ function messageChecks() {
         parts: [
           TEXT,
           {
-            type: 'application/agnt-message',
+            type: 'application/simon-message',
             data: Buffer.from(
               canonicalize(fixedSignMessage({ ...question, parts: many(32, () => file(1)) } as Unsigned<Message>, ada)),
             ).toString('base64'),
@@ -636,7 +639,7 @@ function messageChecks() {
       'a carried file with a size that is not a whole number',
       forward([
         {
-          type: 'application/agnt-message',
+          type: 'application/simon-message',
           data: Buffer.from(
             canonicalize({ ...signedQuestion, parts: [file(1)] } as unknown as Json).replace('"size":1', '"size":1.5'),
           ).toString('base64'),
@@ -645,7 +648,7 @@ function messageChecks() {
     ],
     [
       'a carried file whose sha256 is not 64 lower-case hex',
-      forward([carry([{ type: 'application/pdf', sha256: '../../agnt/sync?since=0#', size: 1 }])]),
+      forward([carry([{ type: 'application/pdf', sha256: '../../simon/sync?since=0#', size: 1 }])]),
     ],
     [
       'a carried file over partBytes, two messages deep',
@@ -699,7 +702,7 @@ function messageChecks() {
     ['a key principal with its pairing', canonicalize(keyPaired)],
     [
       'a pairing header a routing server does not verify',
-      v1({ headers: { for: `agnt-key:${erin.key}`, pairing: 'AAAA' } }),
+      v1({ headers: { for: `simon-key:${erin.key}`, pairing: 'AAAA' } }),
     ],
     ['a sentAt in year 0000 (freshness is a later check)', v1({ sentAt: '0000-01-01T00:00:00Z' })],
     [
@@ -743,9 +746,9 @@ function messageChecks() {
     ['a for header without a label', v1({ headers: { for: 'alice@example.org' } })],
     ['a for header with a number that is not E.164', v1({ headers: { for: 'tel:4155550100' } })],
     ['a for header percent-encoded', v1({ headers: { for: 'mailto:alice%40example.org' } })],
-    ['a for header naming a key in upper case', v1({ headers: { for: `agnt-key:${erin.key.toUpperCase()}` } })],
-    ['a pairing that is not base64url', v1({ headers: { for: `agnt-key:${erin.key}`, pairing: 'AA==' } })],
-    ['a key for without a pairing', v1({ headers: { for: `agnt-key:${erin.key}` } })],
+    ['a for header naming a key in upper case', v1({ headers: { for: `simon-key:${erin.key.toUpperCase()}` } })],
+    ['a pairing that is not base64url', v1({ headers: { for: `simon-key:${erin.key}`, pairing: 'AA==' } })],
+    ['a key for without a pairing', v1({ headers: { for: `simon-key:${erin.key}` } })],
     ['a pairing without a for', v1({ headers: { pairing: keyPaired.headers.pairing } })],
     ['a pairing beside a mailto for', v1({ headers: { ...question.headers, pairing: keyPaired.headers.pairing } })],
     ['a critical header with a space', v1({ headers: { critical: 'for, subject' } })],
@@ -834,14 +837,14 @@ const headerValues = {
       'tel:+1-415-555-0100',
       'tel:%2B14155550100',
       'tel:+1%20415',
-      `agnt-key:${erin.key}`,
-      `agnt-key:${frank.key}`,
-      'agnt-key:x-later:AAAA',
-      `agnt-key:${erin.key.toUpperCase()}`,
-      `AGNT-KEY:${erin.key}`,
-      `agnt-key:${erin.key}=`,
-      `agnt-key:${erin.key.replace(':', '%3A')}`,
-      'agnt-key:',
+      `simon-key:${erin.key}`,
+      `simon-key:${frank.key}`,
+      'simon-key:x-later:AAAA',
+      `simon-key:${erin.key.toUpperCase()}`,
+      `SIMON-KEY:${erin.key}`,
+      `simon-key:${erin.key}=`,
+      `simon-key:${erin.key.replace(':', '%3A')}`,
+      'simon-key:',
       'https://example.org',
     ].map(value => ({ header: 'for', value, valid: isPrincipal(value) })),
     ...['for', 'for,x-thing', 'for, x-thing', 'for,', ',for', 'For', ''].map(value => ({
@@ -849,11 +852,13 @@ const headerValues = {
       value,
       valid: isCriticalValue(value),
     })),
-    ...[signPairing(erin.privateKey, 'bob@example.net', `agnt-key:${erin.key}`), 'AA', 'AB', 'AA==', ''].map(value => ({
-      header: 'pairing',
-      value,
-      valid: isB64url(value),
-    })),
+    ...[signPairing(erin.privateKey, 'bob@example.net', `simon-key:${erin.key}`), 'AA', 'AB', 'AA==', ''].map(
+      value => ({
+        header: 'pairing',
+        value,
+        valid: isB64url(value),
+      }),
+    ),
     ...['yes', 'Yes', 'YES', 'yes ', 'true', 'no', ''].map(value => ({
       header: 'listed',
       value,
@@ -864,8 +869,8 @@ const headerValues = {
 
 /** Pairings by key principals (sections 2.2 and 5.4), for both algorithms. */
 function pairings() {
-  const pair = (agent: string, k: FixedKey, signedAgent = agent, signedPrincipal = `agnt-key:${k.key}`) => {
-    const principal = `agnt-key:${k.key}`;
+  const pair = (agent: string, k: FixedKey, signedAgent = agent, signedPrincipal = `simon-key:${k.key}`) => {
+    const principal = `simon-key:${k.key}`;
     const pairing = fixedSign(k, pairingBytes(signedAgent, signedPrincipal));
     return {
       agent,
@@ -877,7 +882,7 @@ function pairings() {
   };
   return {
     about:
-      "Pairings (sections 2.2 and 5.4): bytes is AGNT-PAIR, the agent address and the principal, joined by newlines; pairing is the principal key's signature, the value of the pairing header; verifies is whether it verifies for this agent and principal.",
+      "Pairings (sections 2.2 and 5.4): bytes is SIMON-PAIR, the agent address and the principal, joined by newlines; pairing is the principal key's signature, the value of the pairing header; verifies is whether it verifies for this agent and principal.",
     cases: [
       { why: 'an Ed25519 principal', ...pair('bob@example.net', erin) },
       { why: 'an ML-DSA-65 principal', ...pair('bob@example.net', frank) },
@@ -895,7 +900,7 @@ function pairings() {
  * the verdicts a key of mixed order gets.
  */
 function signatures() {
-  const bytes = signingBytes('AGNT-MESSAGE', signedQuestion);
+  const bytes = signingBytes('SIMON-MESSAGE', signedQuestion);
   const sig = Buffer.from(signedQuestion.signature, 'base64url');
   const A = raw(ada.key);
   const a = scalarOf(Buffer.from(ada.seed, 'hex'));
@@ -985,16 +990,16 @@ async function requests() {
   ) => {
     const signingString = requestSigningString({ method, origin, actor: as, target, timestamp, nonce, body });
     const headers: SignedHeaders = {
-      'agnt-key': k.key,
-      'agnt-timestamp': timestamp,
-      'agnt-nonce': nonce,
-      'agnt-signature': fixedSign(k, signingString),
-      ...(server ? { 'agnt-server': as } : { 'agnt-agent': as }),
+      'simon-key': k.key,
+      'simon-timestamp': timestamp,
+      'simon-nonce': nonce,
+      'simon-signature': fixedSign(k, signingString),
+      ...(server ? { 'simon-server': as } : { 'simon-agent': as }),
     };
     return { method, origin, actor: as, target, timestamp, nonce, body, signingString, headers };
   };
 
-  const sync = '/agnt/sync?since=0';
+  const sync = '/simon/sync?since=0';
   /** A version 1 address holding every character that is not a pchar, and so is percent-encoded in a path. */
   const oddAddress = 'a#b%c/d?e^f`g{h|i}j@example.com';
   const asAda = 'ada@example.com';
@@ -1002,8 +1007,8 @@ async function requests() {
   const twelve = `00${timestamp}`;
   const twelveDigits = {
     ...ok,
-    'agnt-timestamp': twelve,
-    'agnt-signature': fixedSign(
+    'simon-timestamp': twelve,
+    'simon-signature': fixedSign(
       ada,
       requestSigningString({
         method: 'GET',
@@ -1018,9 +1023,9 @@ async function requests() {
   };
   const withNonce = (n: string) =>
     signRequest(ada.privateKey, { method: 'GET', url: ORIGIN + sync, now, nonce: n, agent: asAda });
-  const peer = 'https://agnt.example.net';
-  const peerKey = fixedKey('server https://agnt.example.net');
-  const partTarget = `/agnt/parts/${'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}`;
+  const peer = 'https://simon.example.net';
+  const peerKey = fixedKey('server https://simon.example.net');
+  const partTarget = `/simon/parts/${'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}`;
   const serverRequest = signRequest(peerKey.privateKey, {
     method: 'GET',
     url: ORIGIN + partTarget,
@@ -1050,40 +1055,40 @@ async function requests() {
       server: true,
       entry: keyEntry(peerKey.key),
     },
-    { name: 'no agnt-key', headers: { ...ok, 'agnt-key': undefined as never } },
-    { name: 'agnt-key not a key token', headers: { ...ok, 'agnt-key': raw(ada.key).toString('base64url') } },
+    { name: 'no simon-key', headers: { ...ok, 'simon-key': undefined as never } },
+    { name: 'simon-key not a key token', headers: { ...ok, 'simon-key': raw(ada.key).toString('base64url') } },
     { name: 'a timestamp of 12 digits, with leading zeros', headers: { ...twelveDigits } },
-    { name: 'a timestamp of 13 digits', headers: { ...ok, 'agnt-timestamp': `000${timestamp}` } },
-    { name: 'a timestamp with a sign', headers: { ...ok, 'agnt-timestamp': `+${timestamp}` } },
-    { name: 'a nonce of 7 characters', headers: { ...ok, 'agnt-nonce': '1234567' } },
-    { name: 'a nonce of 129 characters', headers: { ...ok, 'agnt-nonce': '~'.repeat(129) } },
-    { name: 'a nonce with a space', headers: { ...ok, 'agnt-nonce': 'n0nce 0123456789' } },
-    { name: 'a signature in padded base64', headers: { ...ok, 'agnt-signature': `${ok['agnt-signature']}==` } },
+    { name: 'a timestamp of 13 digits', headers: { ...ok, 'simon-timestamp': `000${timestamp}` } },
+    { name: 'a timestamp with a sign', headers: { ...ok, 'simon-timestamp': `+${timestamp}` } },
+    { name: 'a nonce of 7 characters', headers: { ...ok, 'simon-nonce': '1234567' } },
+    { name: 'a nonce of 129 characters', headers: { ...ok, 'simon-nonce': '~'.repeat(129) } },
+    { name: 'a nonce with a space', headers: { ...ok, 'simon-nonce': 'n0nce 0123456789' } },
+    { name: 'a signature in padded base64', headers: { ...ok, 'simon-signature': `${ok['simon-signature']}==` } },
     {
-      name: 'a server request without agnt-server',
-      headers: { ...ok, 'agnt-agent': undefined as never },
+      name: 'a server request without simon-server',
+      headers: { ...ok, 'simon-agent': undefined as never },
       server: true,
     },
-    { name: 'an agent request without agnt-agent', headers: { ...ok, 'agnt-agent': undefined as never } },
-    { name: 'agnt-agent not an address', headers: { ...ok, 'agnt-agent': 'ada' } },
-    { name: 'agnt-agent in upper case', headers: { ...ok, 'agnt-agent': 'Ada@example.com' } },
-    { name: 'both agnt-agent and agnt-server', headers: { ...ok, 'agnt-server': 'https://agnt.example.net' } },
-    { name: 'a signature made as another agent', headers: { ...ok, 'agnt-agent': 'bob@example.com' } },
+    { name: 'an agent request without simon-agent', headers: { ...ok, 'simon-agent': undefined as never } },
+    { name: 'simon-agent not an address', headers: { ...ok, 'simon-agent': 'ada' } },
+    { name: 'simon-agent in upper case', headers: { ...ok, 'simon-agent': 'Ada@example.com' } },
+    { name: 'both simon-agent and simon-server', headers: { ...ok, 'simon-server': 'https://simon.example.net' } },
+    { name: 'a signature made as another agent', headers: { ...ok, 'simon-agent': 'bob@example.com' } },
     {
-      name: 'agnt-server not an origin',
-      headers: { ...serverRequest, 'agnt-server': `${peer}/x` },
+      name: 'simon-server not an origin',
+      headers: { ...serverRequest, 'simon-server': `${peer}/x` },
       target: partTarget,
       server: true,
     },
     {
-      name: 'agnt-server an origin not serialised: upper case and a trailing slash',
-      headers: { ...serverRequest, 'agnt-server': 'HTTPS://AGNT.example.net/' },
+      name: 'simon-server an origin not serialised: upper case and a trailing slash',
+      headers: { ...serverRequest, 'simon-server': 'HTTPS://SIMON.example.net/' },
       target: partTarget,
       server: true,
     },
     {
-      name: 'agnt-server an origin not serialised: the default port',
-      headers: { ...serverRequest, 'agnt-server': `${peer}:443` },
+      name: 'simon-server an origin not serialised: the default port',
+      headers: { ...serverRequest, 'simon-server': `${peer}:443` },
       target: partTarget,
       server: true,
     },
@@ -1099,13 +1104,13 @@ async function requests() {
     {
       name: 'stale and badly signed: the window is checked first',
       headers: { ...ok },
-      target: '/agnt/sync?since=1',
+      target: '/simon/sync?since=1',
       now: at(NOW, 301_000),
     },
     {
       name: 'replayed and badly signed: the signature is checked before the nonce',
       headers: { ...ok },
-      target: '/agnt/sync?since=1',
+      target: '/simon/sync?since=1',
       nonceSeen: true,
     },
     {
@@ -1121,7 +1126,7 @@ async function requests() {
       entry: keyEntry(ada.key, '2026-10-01T00:00:00Z', '2026-10-14T20:00:00Z'),
     },
     { name: 'a key added after now', headers: { ...ok }, entry: keyEntry(ada.key, at(NOW, 301_000)) },
-    { name: 'a signature over another target', headers: { ...ok }, target: '/agnt/sync?since=1' },
+    { name: 'a signature over another target', headers: { ...ok }, target: '/simon/sync?since=1' },
   ];
   const checked = cases.map(async c => {
     const target = c.target ?? sync;
@@ -1159,29 +1164,29 @@ async function requests() {
   };
   return {
     about:
-      'Signed requests (section 8). signed: requests, the eight-line signing string the server rebuilds (its fourth line is actor, the value of agnt-agent or agnt-server), and headers whose signature verifies with agnt-key. checks: what a server answers to each request at now, given the key entry it holds for agnt-key (null: none), whether it holds the nonce from this key (a server keeps a nonce until the timestamp of its request leaves the window), and whether it is a server request (server: agnt-server required) or an agent request (agent: agnt-agent required); request.actor is the identity line the server signs over. The refusals come in the order of section 8: headers, window, key, validity, signature, and only then the nonce. details are as the server sends them. nonces: until when a server keeps a nonce, given the agnt-timestamp of its request: the first moment that timestamp is outside the window, checked in whole seconds. addKeyProofs: the proof a new key signs (CLIENT.md, register). signedFor: the origin line a request to a server whose origin is written as given signs, the serialised origin (section 3); agnt-server carries the same form, and any other is refused. addressSegments: an address as one path segment: every byte that is not an RFC 3986 pchar percent-encoded with upper-case hex, @ literal; a server reads the target exactly as sent, before any decoding.',
+      'Signed requests (section 8). signed: requests, the eight-line signing string the server rebuilds (its fourth line is actor, the value of simon-agent or simon-server), and headers whose signature verifies with simon-key. checks: what a server answers to each request at now, given the key entry it holds for simon-key (null: none), whether it holds the nonce from this key (a server keeps a nonce until the timestamp of its request leaves the window), and whether it is a server request (server: simon-server required) or an agent request (agent: simon-agent required); request.actor is the identity line the server signs over. The refusals come in the order of section 8: headers, window, key, validity, signature, and only then the nonce. details are as the server sends them. nonces: until when a server keeps a nonce, given the simon-timestamp of its request: the first moment that timestamp is outside the window, checked in whole seconds. addKeyProofs: the proof a new key signs (CLIENT.md, register). signedFor: the origin line a request to a server whose origin is written as given signs, the serialised origin (section 3); simon-server carries the same form, and any other is refused. addressSegments: an address as one path segment: every byte that is not an RFC 3986 pchar percent-encoded with upper-case hex, @ literal; a server reads the target exactly as sent, before any decoding.',
     signed: [
-      signed('POST', '/agnt/send', sendBody, ada, asAda),
+      signed('POST', '/simon/send', sendBody, ada, asAda),
       signed('GET', sync, '', ada, asAda),
       signed(
         'GET',
-        '/agnt/agents/ada%2Fops@example.com?q=%2f%2F',
+        '/simon/agents/ada%2Fops@example.com?q=%2f%2F',
         '',
         ada,
         asAda,
         false,
-        'HTTPS://AGNT.EXAMPLE.COM:443/',
+        'HTTPS://SIMON.EXAMPLE.COM:443/',
       ),
-      signed('GET', `/agnt/sent/${messageId(question)}`, '', carol, 'carol@example.org'),
+      signed('GET', `/simon/sent/${messageId(question)}`, '', carol, 'carol@example.org'),
       signed('GET', partTarget, '', peerKey, peer, true),
-      signed('GET', `/agnt/feeds/${addressSegment(oddAddress)}/posts`, '', ada, asAda),
+      signed('GET', `/simon/feeds/${addressSegment(oddAddress)}/posts`, '', ada, asAda),
     ],
     signedFor: [
-      'HTTPS://AGNT.Example.COM/',
-      'https://agnt.example.com:443',
-      'https://agnt.example.com',
-      'https://agnt.example.com:8443/',
-      'HTTPS://agnt.example.com:08443',
+      'HTTPS://SIMON.Example.COM/',
+      'https://simon.example.com:443',
+      'https://simon.example.com',
+      'https://simon.example.com:8443/',
+      'HTTPS://simon.example.com:08443',
     ].map(written => ({ written, origin: serverOrigin(written) })),
     addressSegments: [
       'ada@example.com',
@@ -1212,7 +1217,7 @@ function documents() {
     ['with members readers do not know, the old v among them', text({ v: 1, ...doc, contact: 'ops@example.com' })],
     [
       'naming its origin with a default port and a trailing slash',
-      text({ ...doc, server: 'https://AGNT.example.com:443/' }),
+      text({ ...doc, server: 'https://SIMON.example.com:443/' }),
     ],
     ['with whitespace, as JSON may have', JSON.stringify(doc, null, 2)],
     [
@@ -1225,7 +1230,7 @@ function documents() {
     ],
     ['of exactly 131072 bytes', padTo(131072)],
     ['naming another server', text({ ...doc, server: 'https://other.example.com' })],
-    ['fetched from another origin', text(doc), 'https://agnt.example.net'],
+    ['fetched from another origin', text(doc), 'https://simon.example.net'],
     ['with no server', text(without(doc, 'server'))],
     ['with a limit below its minimum', text({ ...doc, limits: { ...MINIMUM_LIMITS, recipients: 99 } })],
     ['with a limit missing', text({ ...doc, limits: { messageBytes: 262144, recipients: 100, partBytes: 26214400 } })],
@@ -1254,7 +1259,7 @@ function documents() {
     ],
     ['with a malformed key', text({ ...doc, keys: [keyEntry(ed25519(offCurve()))] })],
     ['of 131073 bytes', padTo(131073)],
-    ['repeating a member', text(doc).replace('{', '{"server":"https://agnt.example.com",')],
+    ['repeating a member', text(doc).replace('{', '{"server":"https://simon.example.com",')],
     ['an array', text([doc])],
   ];
 
@@ -1336,7 +1341,7 @@ function documents() {
       address,
       serverKeys: keys,
       body,
-      ...(name.startsWith('as served') && { signingBytes: signingBytes('AGNT-AGENT', agent).toString('utf8') }),
+      ...(name.startsWith('as served') && { signingBytes: signingBytes('SIMON-AGENT', agent).toString('utf8') }),
       read: readAgentDocument(Buffer.from(body), address, keys, new Date(NOW)),
     })),
   };
@@ -1360,7 +1365,7 @@ const identifierOf = (of: string, identifier: string, agent = 'ada@example.com')
 });
 
 /** The server the envelopes are for: bob@example.net's. */
-const RECEIVER = { origin: 'https://agnt.example.net', serves: ['example.net'] };
+const RECEIVER = { origin: 'https://simon.example.net', serves: ['example.net'] };
 const receiver = { origin: RECEIVER.origin };
 const forBob = { server: RECEIVER.origin, recipients: ['bob@example.net'] };
 
@@ -1372,7 +1377,7 @@ function envelopes() {
   const hintsOf = (n: number) => ({ 'bob@example.net': { pad: 'x'.repeat(n - extrasBase) } });
   /** Signed as an envelope, but with whatever claimsSignature it carries, or none. */
   const raw = (e: Record<string, unknown>) =>
-    canonicalize({ ...e, signature: sign(exampleCom.privateKey, signingBytes('AGNT-ENVELOPE', e)) });
+    canonicalize({ ...e, signature: sign(exampleCom.privateKey, signingBytes('SIMON-ENVELOPE', e)) });
   const besideBase = canonicalize({ ...forBob, signature: 'x'.repeat(86), pad: '' }).length;
   const accepted: [string, string][] = [
     [
@@ -1390,7 +1395,7 @@ function envelopes() {
     ],
     [
       'naming its server in another spelling of the same origin',
-      signed({ message, ...forBob, server: 'https://AGNT.example.net:443/' }),
+      signed({ message, ...forBob, server: 'https://SIMON.example.net:443/' }),
     ],
     ['for one of two servers the message goes to', signed({ message: toTwo, ...forBob })],
     ['carrying a version 7 message', signed({ message: version7, ...forBob })],
@@ -1407,8 +1412,8 @@ function envelopes() {
   ];
   const refused: [string, string][] = [
     ['no server', signed({ message, recipients: forBob.recipients })],
-    ['a server that is not an origin', signed({ message, ...forBob, server: 'https://agnt.example.net/deliver' })],
-    ['a server over http', signed({ message, ...forBob, server: 'http://agnt.example.net' })],
+    ['a server that is not an origin', signed({ message, ...forBob, server: 'https://simon.example.net/deliver' })],
+    ['a server over http', signed({ message, ...forBob, server: 'http://simon.example.net' })],
     ['no recipients', signed({ message, server: forBob.server })],
     ['empty recipients', signed({ message, ...forBob, recipients: [] })],
     ['a recipient twice', signed({ message, ...forBob, recipients: ['bob@example.net', 'bob@example.net'] })],
@@ -1440,7 +1445,7 @@ function envelopes() {
       'not JSON this protocol parses (a repeated member)',
       signed({ message, ...forBob }).replace('{"message":', '{"route":1,"route":2,"message":'),
     ],
-    ['for another server (step 5)', signed({ message, ...forBob, server: 'https://agnt.example.org' })],
+    ['for another server (step 5)', signed({ message, ...forBob, server: 'https://simon.example.org' })],
     ['a recipient not in to (step 5)', signed({ message, ...forBob, recipients: ['carol@example.net'] })],
     [
       'claims whose claimsSignature is over other claims (step 7)',
@@ -1457,7 +1462,7 @@ function envelopes() {
     ],
     [
       'for another server and with an invalid message: the message is checked first',
-      signed({ message: { ...message, id: 'x' }, ...forBob, server: 'https://agnt.example.org' }),
+      signed({ message: { ...message, id: 'x' }, ...forBob, server: 'https://simon.example.org' }),
     ],
   ];
   const parse = (bytes: string) => {
@@ -1468,7 +1473,7 @@ function envelopes() {
   };
   return {
     about:
-      'Envelopes (section 6) as posted to receiver, the server at origin that serves the domains listed, from the carrier whose keys are serverKeys. accepted: each passes section 6.3 steps 1 to 5, 7 and 8 there at now; signingBytes is AGNT-ENVELOPE, a newline, and the canonical envelope without signature, and claimsSigningBytes, for an envelope with claims, is AGNT-CLAIMS, a newline, and the canonical {"claims","message":<id>}. refused: the answer to each, under the minimum limits, in the order of steps 1 to 5, 7 and 8 (step 6 resolves the carrier, which these vectors fix): field is details.field.',
+      'Envelopes (section 6) as posted to receiver, the server at origin that serves the domains listed, from the carrier whose keys are serverKeys. accepted: each passes section 6.3 steps 1 to 5, 7 and 8 there at now; signingBytes is SIMON-ENVELOPE, a newline, and the canonical envelope without signature, and claimsSigningBytes, for an envelope with claims, is SIMON-CLAIMS, a newline, and the canonical {"claims","message":<id>}. refused: the answer to each, under the minimum limits, in the order of steps 1 to 5, 7 and 8 (step 6 resolves the carrier, which these vectors fix): field is details.field.',
     now: NOW,
     serverKeys,
     receiver: RECEIVER,
@@ -1477,7 +1482,7 @@ function envelopes() {
       return {
         name,
         bytes,
-        signingBytes: signingBytes('AGNT-ENVELOPE', e).toString('utf8'),
+        signingBytes: signingBytes('SIMON-ENVELOPE', e).toString('utf8'),
         ...(e.claims && { claimsSigningBytes: claimsBytes(e.claims, messageId(e.message)).toString('utf8') }),
       };
     }),
@@ -1540,7 +1545,7 @@ function problems() {
       'a request signature that does not verify',
       unauthorized('bad_signature', 'The signature does not verify over the signing string.', now, {
         signingString:
-          'AGNT-REQUEST\nGET\nhttps://agnt.example.com\nada@example.com\n/agnt/sync?since=0\n1792011600\nn0nce-0123456789\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+          'SIMON-REQUEST\nGET\nhttps://simon.example.com\nada@example.com\n/simon/sync?since=0\n1792011600\nn0nce-0123456789\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
       }),
     ],
     ['an envelope signature that does not verify', forbidden('bad_signature', 'The envelope does not verify.')],
@@ -1552,7 +1557,7 @@ function problems() {
   ];
   return {
     about:
-      'Errors (section 9) as sent: RFC 9457 problem details, application/problem+json, with code, retryable (true exactly for 429 and 5xx) and optional details. title is the code in words, since the type is about:blank. Every 401 carries WWW-Authenticate: AGNT, and details.serverTime. A 429 carries Retry-After; this implementation also gives the seconds as details.retryAfter, a convention, not a rule. detail is English and may change; a reader acts on status, code and retryable.',
+      'Errors (section 9) as sent: RFC 9457 problem details, application/problem+json, with code, retryable (true exactly for 429 and 5xx) and optional details. title is the code in words, since the type is about:blank. Every 401 carries WWW-Authenticate: SIMON, and details.serverTime. A 429 carries Retry-After; this implementation also gives the seconds as details.retryAfter, a convention, not a rule. detail is English and may change; a reader acts on status, code and retryable.',
     cases: examples.map(([name, e]) => ({ name, status: e.status, headers: e.headers, body: e.toProblem() })),
   };
 }
@@ -1567,7 +1572,7 @@ function principals() {
   const byKey = { kind: 'paired', for: erinPrincipal } as const;
   const { signature: _, ...keyPairedFields } = keyPaired as unknown as Record<string, Json>;
   const withPairing = (k: FixedKey) => {
-    const principal = `agnt-key:${k.key}`;
+    const principal = `simon-key:${k.key}`;
     return {
       ...keyPairedFields,
       headers: { for: principal, pairing: fixedSign(k, pairingBytes('bob@example.net', principal)) },
@@ -1587,7 +1592,7 @@ function principals() {
     [
       'an agent paired with an ML-DSA-65 key',
       sign(withPairing(frank), bob),
-      { kind: 'paired', for: `agnt-key:${frank.key}` },
+      { kind: 'paired', for: `simon-key:${frank.key}` },
     ],
     [
       'a key-paired agent with a pairing signed for another agent',
@@ -1644,7 +1649,7 @@ const consideredClaims: Claim[] = [
   identifierOf('agent', 'ada.mail@example.org'),
   identifierOf('agent', 'mailto:Ada.Mail@Example.ORG'),
   identifierOf('agent', 'mailto:ada.mail@example.org.'),
-  identifierOf('agent', `agnt-key:${erin.key}`),
+  identifierOf('agent', `simon-key:${erin.key}`),
   { ...identifierOf('agent', 'mailto:ada.mail@example.org'), verifiedAt: '2026-09-01' },
 ];
 
@@ -1664,7 +1669,7 @@ async function authority() {
     'example.com': { outcome: 'server', server: ORIGIN, via: 'dns' },
     'txt.example': { outcome: 'server', server: ORIGIN, via: 'dns' },
     'hosted.example': { outcome: 'server', server: ORIGIN, via: 'well-known' },
-    'example.org': { outcome: 'server', server: 'https://agnt.example.org', via: 'dns' },
+    'example.org': { outcome: 'server', server: 'https://simon.example.org', via: 'dns' },
     'nowhere.example': { outcome: 'not_found' },
     'flaky.example': { outcome: 'temporary' },
     'acme.example': { outcome: 'server', server: ORIGIN, via: 'dns' },
@@ -1682,7 +1687,7 @@ async function authority() {
     ['an address on a domain with no server', 'mailto:alice@nowhere.example', 'ada@nowhere.example'],
     ['an address on a domain that failed to resolve just now', 'mailto:alice@flaky.example', 'ada@flaky.example'],
     ['a phone number, never authoritative', 'tel:+14155550100', 'ada@example.com'],
-    ['a key, which a pairing proves instead', `agnt-key:${erin.key}`, 'ada@example.com'],
+    ['a key, which a pairing proves instead', `simon-key:${erin.key}`, 'ada@example.com'],
     [
       'an address on a domain naming the carrier, for an agent on another of its domains',
       'mailto:alice@txt.example',
@@ -1694,7 +1699,7 @@ async function authority() {
   ];
   return {
     about:
-      'Authority (section 6.2): an acts-for claim about the agent named is authoritative exactly when its for is a mailto: identifier whose domain names the carrier by its _agnt TXT record (via dns), A domain named only by its well-known answer (via well-known) grants no authority. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
+      'Authority (section 6.2): an acts-for claim about the agent named is authoritative exactly when its for is a mailto: identifier whose domain names the carrier by its _simon TXT record (via dns), A domain named only by its well-known answer (via well-known) grants no authority. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
     carrier,
     resolutions,
     cases: await Promise.all(
@@ -1718,7 +1723,7 @@ async function claimsJudged() {
   const carrier = ORIGIN;
   const resolutions: Record<string, Resolution> = {
     'example.com': { outcome: 'server', server: ORIGIN, via: 'dns' },
-    'example.org': { outcome: 'server', server: 'https://agnt.example.org', via: 'dns' },
+    'example.org': { outcome: 'server', server: 'https://simon.example.org', via: 'dns' },
   };
   const resolve: Resolve = async d => resolutions[d] ?? { outcome: 'not_found' };
   const cases: [string, AnyMessage, string, Claim[]][] = [
@@ -1786,7 +1791,7 @@ function claimsSignatures() {
   ];
   return {
     about:
-      'Claims as a carrier signed them for the message named (section 6.2), as an inbox entry carries them in signedClaims: signature is the carrier\'s over signingBytes, AGNT-CLAIMS, a newline, and the canonical {"claims","message":<id>}. verifies is whether a reader holding the keys given (the carrier\'s, read from the server the message\'s from domain resolves to) accepts the claims: one key valid at some moment from sentAt to 144 hours after signed them.',
+      'Claims as a carrier signed them for the message named (section 6.2), as an inbox entry carries them in signedClaims: signature is the carrier\'s over signingBytes, SIMON-CLAIMS, a newline, and the canonical {"claims","message":<id>}. verifies is whether a reader holding the keys given (the carrier\'s, read from the server the message\'s from domain resolves to) accepts the claims: one key valid at some moment from sentAt to 144 hours after signed them.',
     message: 'question with a for header',
     signature: signed.signature,
     signingBytes: claimsBytes(claims, messageId(signedQuestion)).toString('utf8'),
@@ -1811,10 +1816,10 @@ function signals() {
     server: RECEIVER.origin,
   };
   // The sending server holds an ed25519 key and a post-quantum one, whose signature alone passes 4096 bytes.
-  const pqServer = fixedKey('server https://agnt.example.com ml-dsa-65', 'ml-dsa-65');
+  const pqServer = fixedKey('server https://simon.example.com ml-dsa-65', 'ml-dsa-65');
   const signalKeys = [...serverKeys, keyEntry(pqServer.key)];
   const signed = (s: Record<string, unknown>, k: FixedKey = exampleCom) =>
-    canonicalize({ ...s, signature: fixedSign(k, signingBytes('AGNT-SIGNAL', s)) });
+    canonicalize({ ...s, signature: fixedSign(k, signingBytes('SIMON-SIGNAL', s)) });
   const check = (bytes: string) => {
     const s = parseSignal(Buffer.from(bytes), receiver);
     if (!verifySignal(s, signalKeys, new Date(now))) throw forbidden('bad_signature', 'The signal does not verify.');
@@ -1844,7 +1849,7 @@ function signals() {
     ['a type in upper case', signed({ ...read, type: 'Read' })],
     ['no recipients', signed({ ...read, to: [] })],
     ['about that is not a message id', signed({ ...read, about: 'x' })],
-    ['for another server', signed({ ...read, server: 'https://agnt.example.org' })],
+    ['for another server', signed({ ...read, server: 'https://simon.example.org' })],
     [
       'of 4097 bytes without its signature',
       signed({ ...read, pad: 'x'.repeat(4097 - canonicalize({ ...read, pad: '' }).length) }),
@@ -1852,7 +1857,7 @@ function signals() {
     ['a body of 16385 bytes', signed({ ...read, pad: 'x'.repeat(16385 - signed({ ...read, pad: '' }).length) })],
     [
       "signed by a key that is not the server's",
-      canonicalize({ ...read, signature: fixedSign(ada, signingBytes('AGNT-SIGNAL', read)) }),
+      canonicalize({ ...read, signature: fixedSign(ada, signingBytes('SIMON-SIGNAL', read)) }),
     ],
     ['changed after signing', signed(read).replace('"read"', '"typing"')],
     [
@@ -1864,14 +1869,14 @@ function signals() {
   ];
   return {
     about:
-      "Signals (section 6.4) posted to receiver from the server whose keys are serverKeys, at now. signingBytes is AGNT-SIGNAL, a newline, and the canonical signal without signature. The body is at most 16384 bytes (413), and the signal without its signature at most 4096 canonical bytes (400), so a post-quantum signature fits. refused: the answer to each, in the order of the section's checks (step 4, resolution, is fixed by these vectors). Whether a signal reaches an agent is the receiving server's own policy; no vector fixes it.",
+      "Signals (section 6.4) posted to receiver from the server whose keys are serverKeys, at now. signingBytes is SIMON-SIGNAL, a newline, and the canonical signal without signature. The body is at most 16384 bytes (413), and the signal without its signature at most 4096 canonical bytes (400), so a post-quantum signature fits. refused: the answer to each, in the order of the section's checks (step 4, resolution, is fixed by these vectors). Whether a signal reaches an agent is the receiving server's own policy; no vector fixes it.",
     now,
     serverKeys: signalKeys,
     receiver: RECEIVER,
     accepted: accepted.map(([name, bytes]) => ({
       name,
       bytes,
-      signingBytes: signingBytes('AGNT-SIGNAL', check(bytes)).toString('utf8'),
+      signingBytes: signingBytes('SIMON-SIGNAL', check(bytes)).toString('utf8'),
     })),
     refused: refused.map(([name, bytes]) => ({ name, bytes, ...outcome(() => check(bytes)) })),
   };
@@ -1882,7 +1887,7 @@ function signals() {
 function recoveries() {
   const at = '2026-10-14T20:00:00Z';
   const recovery = (agent: string, k: FixedKey, newKey: string, signed = { agent, newKey, at }) => {
-    const principal = `agnt-key:${k.key}`;
+    const principal = `simon-key:${k.key}`;
     const recover = fixedSign(k, recoverBytes(signed.agent, signed.newKey, signed.at));
     return {
       agent,
@@ -1896,7 +1901,7 @@ function recoveries() {
   };
   return {
     about:
-      "A key principal's recovery (CLIENT.md register): bytes is AGNT-RECOVER, the agent address, the new key token and at, joined by newlines (Appendix A recover-signed); recover is the principal key's signature; verifies is whether it recovers this agent to this key at this time for this principal. A server takes it only while at is at most 24 hours old and 5 minutes ahead.",
+      "A key principal's recovery (CLIENT.md register): bytes is SIMON-RECOVER, the agent address, the new key token and at, joined by newlines (Appendix A recover-signed); recover is the principal key's signature; verifies is whether it recovers this agent to this key at this time for this principal. A server takes it only while at is at most 24 hours old and 5 minutes ahead.",
     cases: [
       { why: 'an Ed25519 principal', ...recovery('bob@example.net', erin, carol.key) },
       { why: 'an ML-DSA-65 principal', ...recovery('bob@example.net', frank, ada.key) },
@@ -1922,7 +1927,7 @@ function recoveries() {
 
 function unpairings() {
   const unpair = (agent: string, k: FixedKey, signedAgent = agent) => {
-    const principal = `agnt-key:${k.key}`;
+    const principal = `simon-key:${k.key}`;
     const unpairing = fixedSign(k, unpairingBytes(signedAgent, principal));
     return {
       agent,
@@ -1934,7 +1939,7 @@ function unpairings() {
   };
   return {
     about:
-      "Unpairings (section 2.2): bytes is AGNT-UNPAIR, the agent address and the principal, joined by newlines; unpairing is the principal key's signature; verifies is whether it ends this agent's pairing with this principal. A pairing signature is never an unpairing.",
+      "Unpairings (section 2.2): bytes is SIMON-UNPAIR, the agent address and the principal, joined by newlines; unpairing is the principal key's signature; verifies is whether it ends this agent's pairing with this principal. A pairing signature is never an unpairing.",
     cases: [
       { why: 'an Ed25519 principal', ...unpair('bob@example.net', erin) },
       { why: 'an ML-DSA-65 principal', ...unpair('bob@example.net', frank) },
@@ -2054,49 +2059,49 @@ type ResolutionCase = {
 };
 
 async function resolution() {
-  const wellKnownBody = text({ server: 'https://agnt.example.org' });
+  const wellKnownBody = text({ server: 'https://simon.example.org' });
   const cases: ResolutionCase[] = [
-    { txt: [['v=agnt1; server=https://agnt.example.com']] },
-    { txt: [['v=agnt1;server=https://ag', 'nt.example.com;'], ['google-site-verification=abc']] },
-    { txt: [['v=agnt1; ttl=60; server=https://AGNT.example.com/']] },
-    { txt: [['v=agnt1; server=HTTPS://agnt.example.com']], why: 'the scheme in any case' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:0443']], why: 'leading zeros in the port' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:08443']] },
-    { txt: [['v=agnt1; server=https://agnt.example.com:65535']] },
-    { txt: [['v=agnt1; server=https://a.example.com'], ['v=agnt1; server=https://b.example.com']] },
-    { txt: [['v=agnt1; server=https://agnt.example.com/path']] },
+    { txt: [['v=simon1; server=https://simon.example.com']] },
+    { txt: [['v=simon1;server=https://si', 'mon.example.com;'], ['google-site-verification=abc']] },
+    { txt: [['v=simon1; ttl=60; server=https://SIMON.example.com/']] },
+    { txt: [['v=simon1; server=HTTPS://simon.example.com']], why: 'the scheme in any case' },
+    { txt: [['v=simon1; server=https://simon.example.com:0443']], why: 'leading zeros in the port' },
+    { txt: [['v=simon1; server=https://simon.example.com:08443']] },
+    { txt: [['v=simon1; server=https://simon.example.com:65535']] },
+    { txt: [['v=simon1; server=https://a.example.com'], ['v=simon1; server=https://b.example.com']] },
+    { txt: [['v=simon1; server=https://simon.example.com/path']] },
     {
-      txt: [['V=AGNT1; server=https://agnt.example.com']],
+      txt: [['V=SIMON1; server=https://simon.example.com']],
       wellKnown: 'nxdomain',
-      why: 'not an agnt record, and no well-known host',
+      why: 'not a simon record, and no well-known host',
     },
     {
-      txt: [['v=agnt1; server=https://agnt.example.com'], ['v=agnt1; server=https://AGNT.example.com:443']],
-      why: 'two agnt records naming the same server',
+      txt: [['v=simon1; server=https://simon.example.com'], ['v=simon1; server=https://SIMON.example.com:443']],
+      why: 'two simon records naming the same server',
     },
     {
-      txt: [[' v=agnt1 ;; note; server=https://agnt.example.com ']],
+      txt: [[' v=simon1 ;; note; server=https://simon.example.com ']],
       why: 'spaces around fields, an empty field and a field without = are ignored',
     },
-    { txt: [['v=agnt1; ttl=60']], why: 'no server field' },
-    { txt: [['v=agnt1; server']], why: 'a server field with no = has an empty value, which is no origin' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:0']], why: 'port 0' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:00000']], why: 'port 0, in five digits' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:000443']], why: 'six digits' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:65536']], why: 'port above 65535' },
-    { txt: [['v=agnt1; server=https://a.example.com; server=https://a.example.com']], why: 'two server fields' },
-    { txt: [['v=agnt1; server=http://agnt.example.com']], why: 'not https' },
-    { txt: [['v=agnt1; server=https://agnt.example.com:']], why: 'empty port' },
-    { txt: [['v=agnt1; server=https://10.0.0.1']], why: 'an IP address is not a domain' },
-    { txt: [['v=agnt1; server=https://u@agnt.example.com']], why: 'user information' },
-    { txt: [['v=agnt1; server=https://agnt.example.com?']], why: 'a query' },
+    { txt: [['v=simon1; ttl=60']], why: 'no server field' },
+    { txt: [['v=simon1; server']], why: 'a server field with no = has an empty value, which is no origin' },
+    { txt: [['v=simon1; server=https://simon.example.com:0']], why: 'port 0' },
+    { txt: [['v=simon1; server=https://simon.example.com:00000']], why: 'port 0, in five digits' },
+    { txt: [['v=simon1; server=https://simon.example.com:000443']], why: 'six digits' },
+    { txt: [['v=simon1; server=https://simon.example.com:65536']], why: 'port above 65535' },
+    { txt: [['v=simon1; server=https://a.example.com; server=https://a.example.com']], why: 'two server fields' },
+    { txt: [['v=simon1; server=http://simon.example.com']], why: 'not https' },
+    { txt: [['v=simon1; server=https://simon.example.com:']], why: 'empty port' },
+    { txt: [['v=simon1; server=https://10.0.0.1']], why: 'an IP address is not a domain' },
+    { txt: [['v=simon1; server=https://u@simon.example.com']], why: 'user information' },
+    { txt: [['v=simon1; server=https://simon.example.com?']], why: 'a query' },
     {
-      txt: [['v=agnt1;\tserver=https://agnt.example.com']],
+      txt: [['v=simon1;\tserver=https://simon.example.com']],
       why: 'only spaces are trimmed, so this record has no server field',
     },
     {
-      txt: [['v=agnt1; server=https://a.example.com'], ['v=agnt1; server=https://b.example.com'], ['v=agnt1']],
-      why: 'a malformed agnt record fails resolution before a conflict does',
+      txt: [['v=simon1; server=https://a.example.com'], ['v=simon1; server=https://b.example.com'], ['v=simon1']],
+      why: 'a malformed simon record fails resolution before a conflict does',
     },
     { domain: 'localhost', txt: [] },
     {
@@ -2111,61 +2116,61 @@ async function resolution() {
       why: 'a TXT lookup that ends temporary ends resolution: the well-known answer, though it would name a server, is not tried',
     },
     {
-      txt: [['v=agnt1; server=https://agnt.example.com; agents=example.com,host.example']],
+      txt: [['v=simon1; server=https://simon.example.com; agents=example.com,host.example']],
       why: 'an unknown agents field is ignored for routing and authority',
     },
     {
-      txt: [['v=agnt1; agents=host.example; server=https://agnt.example.com; agents=host.example']],
+      txt: [['v=simon1; agents=host.example; server=https://simon.example.com; agents=host.example']],
       why: 'an agents field repeated in a record is ignored, and routing is unchanged',
     },
     {
-      txt: [['v=agnt1; server=https://agnt.example.com; agents=Host.example']],
+      txt: [['v=simon1; server=https://simon.example.com; agents=Host.example']],
       why: 'an agents field naming a domain not in wire form is ignored',
     },
     {
-      txt: [['v=agnt1; server=https://agnt.example.com; agents=host.example, other.example']],
+      txt: [['v=simon1; server=https://simon.example.com; agents=host.example, other.example']],
       why: 'an agents field with a space is ignored',
     },
-    { txt: [['v=agnt1; server=https://agnt.example.com; agents=']], why: 'an empty agents field is ignored' },
+    { txt: [['v=simon1; server=https://simon.example.com; agents=']], why: 'an empty agents field is ignored' },
     {
       txt: [
-        ['v=agnt1; server=https://agnt.example.com; agents=host.example'],
-        ['v=agnt1; server=https://agnt.example.com'],
+        ['v=simon1; server=https://simon.example.com; agents=host.example'],
+        ['v=simon1; server=https://simon.example.com'],
       ],
-      why: 'agnt records that do not all carry the same agents field: all are ignored',
+      why: 'simon records that do not all carry the same agents field: all are ignored',
     },
     {
       txt: [
-        ['v=agnt1; server=https://agnt.example.com; agents=host.example'],
-        ['v=agnt1; server=https://agnt.example.com; agents=other.example'],
+        ['v=simon1; server=https://simon.example.com; agents=host.example'],
+        ['v=simon1; server=https://simon.example.com; agents=other.example'],
       ],
-      why: 'agnt records whose agents fields differ: all are ignored',
+      why: 'simon records whose agents fields differ: all are ignored',
     },
     {
       txt: [
-        ['v=agnt1; server=https://agnt.example.com; agents=host.example'],
-        ['v=agnt1; server=https://AGNT.example.com/; agents=host.example'],
+        ['v=simon1; server=https://simon.example.com; agents=host.example'],
+        ['v=simon1; server=https://SIMON.example.com/; agents=host.example'],
       ],
-      why: 'agnt records with the same agents field',
+      why: 'simon records with the same agents field',
     },
     {
-      txt: [['v=agnt1; agents=host.example']],
+      txt: [['v=simon1; agents=host.example']],
       why: 'an agents field does not make a record without a server well formed',
     },
     { txt: 'dnssec_failure', why: 'a DNSSEC validation failure is temporary, never an answer' },
     { txt: [], wellKnown: { status: 200, body: wellKnownBody } },
     {
       txt: [],
-      wellKnown: { status: 200, body: text({ v: 1, server: 'https://agnt.example.org/', note: 'x' }) },
+      wellKnown: { status: 200, body: text({ v: 1, server: 'https://simon.example.org/', note: 'x' }) },
       why: 'other members are ignored',
     },
-    { txt: [], wellKnown: { status: 200, body: text({ server: 'https://agnt.example.org/x' }) } },
+    { txt: [], wellKnown: { status: 200, body: text({ server: 'https://simon.example.org/x' }) } },
     {
       txt: [],
       wellKnown: { status: 200, body: '{"server":"https://a.example.org","server":"https://b.example.org"}' },
       why: 'not JSON under the canonical rules',
     },
-    { txt: [], wellKnown: { status: 200, body: text(['https://agnt.example.org']) } },
+    { txt: [], wellKnown: { status: 200, body: text(['https://simon.example.org']) } },
     { txt: [], wellKnown: { status: 302, body: '' }, why: 'redirects are not followed' },
     { txt: [], wellKnown: { status: 404, body: '' } },
     { txt: [], wellKnown: { status: 429, body: '' } },
@@ -2179,20 +2184,20 @@ async function resolution() {
   ];
   return {
     about:
-      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _agnt.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/agnt: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest a resolver may cache each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime).',
+      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _simon.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/simon: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest a resolver may cache each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime).',
     cases: await Promise.all(cases.map(async c => ({ ...c, result: await resolveCase(c) }))),
     origins: [
-      'https://agnt.example.com',
-      'HTTPS://AGNT.Example.COM/',
-      'https://agnt.example.com:443',
-      'https://agnt.example.com:00443',
-      'https://agnt.example.com:8443/',
-      'https://agnt.example.com//',
-      'https://agnt.example.com:',
+      'https://simon.example.com',
+      'HTTPS://SIMON.Example.COM/',
+      'https://simon.example.com:443',
+      'https://simon.example.com:00443',
+      'https://simon.example.com:8443/',
+      'https://simon.example.com//',
+      'https://simon.example.com:',
       'https://bücher.example',
       'https://xn--bcher-kva.example',
-      'https://agnt.example.com#x',
-      'http://agnt.example.com',
+      'https://simon.example.com#x',
+      'http://simon.example.com',
     ].map(input => ({ input, origin: serverOrigin(input) })),
     cacheMs: (
       [
@@ -2302,7 +2307,7 @@ export async function buildVectors() {
   const key = (k: FixedKey) => ({ alg: k.alg, seed: k.seed, key: k.key });
   return {
     about:
-      'AGNT Protocol version 1 test vectors (spec/PROTOCOL.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
+      'SIMON Protocol version 1 test vectors (spec/PROTOCOL.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
     keys: {
       about:
         'The keys every section uses, from their seeds. erin and frank are principals who pair with agents by key.',

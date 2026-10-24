@@ -1,6 +1,6 @@
-# The AGNT Protocol, draft 0.1
+# The SIMON Protocol, draft 0.1
 
-AGNT delivers one signed message to `name@domain`. The test for every rule here is whether a server can route, store, deliver and verify a message without understanding it; anything a server needs to understand belongs to a server feature or a service, not to the protocol. A2A carries tasks, MCP carries tools; this protocol carries messages between agents at addresses, the way email carries mail between people.
+SIMON delivers one signed message to `name@domain`. The test for every rule here is whether a server can route, store, deliver and verify a message without understanding it; anything a server needs to understand belongs to a server feature or a service, not to the protocol. A2A carries tasks, MCP carries tools; this protocol carries messages between agents at addresses, the way email carries mail between people.
 
 **The protocol in seven sentences.**
 1. An address is `name@domain`, and its keys prove who wrote what.
@@ -40,8 +40,8 @@ These invariants hold for every version, present and future, so a server built t
    - `sentAt`, a timestamp;
    - `signature`, a base64url string. A later version that wants more than one signature, by keys of different algorithms for instance, carries the others in members of its own, so every server still checks this one.
 3. Its **id** is the lower-case hex SHA-256 of the canonical bytes of the message without `signature`.
-4. It is **signed**: over the bytes `AGNT-MESSAGE\n` followed by those same canonical bytes, by a key of the author valid at `sentAt` (section 2.4).
-5. A server finds a domain's server and keys by the mechanisms of sections 3 and 4, or by a successor that those mechanisms advertise. It delivers by an HTTPS `POST` to `/agnt/deliver` on that server, of an envelope: an object with members `message` and `signature`.
+4. It is **signed**: over the bytes `SIMON-MESSAGE\n` followed by those same canonical bytes, by a key of the author valid at `sentAt` (section 2.4).
+5. A server finds a domain's server and keys by the mechanisms of sections 3 and 4, or by a successor that those mechanisms advertise. It delivers by an HTTPS `POST` to `/simon/deliver` on that server, of an envelope: an object with members `message` and `signature`.
 
 Everything else belongs to a version.
 
@@ -75,23 +75,23 @@ An agent is one of two kinds, fixed for the life of its address.
 **Identifiers.** A principal's identifier is a labelled string in one of three forms, written exactly as shown. The labels look like URI schemes but these are not URIs: nothing in them is percent-encoded, and a generic URI parser does not apply.
 - **`mailto:`** followed by an email address in the version 1 address form (section 2.1);
 - **`tel:`** followed by an E.164 number: `+`, a digit from 1 to 9, then 1 to 14 more digits;
-- **`agnt-key:`** followed by a key token (section 2.3). This is for a principal who holds a key rather than an email address or a phone number. The key may be long-lived, or made for one pairing and then discarded.
+- **`simon-key:`** followed by a key token (section 2.3). This is for a principal who holds a key rather than an email address or a phone number. The key may be long-lived, or made for one pairing and then discarded.
 
 **How a principal is verified.** A `for` header on its own is only the agent's word, as a From line in email is. A reader MUST NOT treat a principal as verified unless the author's agent document says `paired` (section 4) and one of these holds:
 - **A key principal:** the message carries a `pairing` header that verifies.
-  - The principal approved the pairing by signing the bytes `AGNT-PAIR\n<agent address>\n<identifier>` with its key, and every message the agent sends carries that signature.
+  - The principal approved the pairing by signing the bytes `SIMON-PAIR\n<agent address>\n<identifier>` with its key, and every message the agent sends carries that signature.
   - Any recipient can check the pairing without trusting any server. The message's own signature is still checked with the keys the agent's server publishes, so a server that lies about its agent's keys can make its own messages carry the pairing: the pairing proves the principal's consent, not that the server is honest.
   - It proves that the key's holder consented to this address speaking for that key. It says nothing about who or what holds the key, or whether it is a human.
 - **An email or phone principal:** the carrier made an `acts-for` claim about the message (section 6.2), the reader checked the carrier's signature over it, and the reader trusts the carrier for it.
   - The carrier verified the identifier, typically by sending a code to it.
-  - When the identifier's domain names the carrier by its `_agnt` TXT record (section 3), the claim is **authoritative**: that server speaks for its own domain's addresses, as a domain's DKIM key does. A domain named only by its well-known answer routes to its server, but grants it no authority over the domain's email addresses, because whoever runs a domain's website need not run its mail.
+  - When the identifier's domain names the carrier by its `_simon` TXT record (section 3), the claim is **authoritative**: that server speaks for its own domain's addresses, as a domain's DKIM key does. A domain named only by its well-known answer routes to its server, but grants it no authority over the domain's email addresses, because whoever runs a domain's website need not run its mail.
   - Any other claim, including every claim about a phone number, is the carrier's word about someone else's identifier. It is worth as much as the carrier.
 
 A principal never counts for a solo agent, or for an agent of a kind the reader does not know, whatever the message carries.
 
 **What a pairing does not say.** It carries no scope or limit on what the agent may do for its principal. That is a matter for applications, and claims may carry it (section 6.2). A key pairing binds the address, not the agent's current key, so it survives key rotation and key compromise alike. It ends when its address retires, or when its principal ends it.
 
-**A key principal ends its pairing** by signing the bytes `AGNT-UNPAIR\n<agent address>\n<identifier>`. The signature is the **unpairing**.
+**A key principal ends its pairing** by signing the bytes `SIMON-UNPAIR\n<agent address>\n<identifier>`. The signature is the **unpairing**.
 - A server that hosts the agent and is given a valid unpairing retires the address at once (CLIENT.md says how it is given). No key of the agent can stop it, because the principal outranks the agent's keys.
 - A reader that holds a valid unpairing for an address treats that address's pairing as ended, whatever messages it sees later.
 - A pairing has no expiry. Whoever controls the address's domain after it lapses can present an old pairing (section 11.2).
@@ -117,7 +117,7 @@ Applications may present several pairs together; the protocol never mixes them. 
 
 A server SHOULD give paired agents local parts that do not reveal their principal.
 
-**When identifiers change.** An address and a `for` header last as long as the agent and its pairing, but people change email addresses and phone numbers. A host whose principals' identifiers change SHOULD name each principal by a key (`agnt-key:`), held for them if they hold none, and carry their current identifiers as claims (the registry's `identifier`), one message at a time. An email address then never has to be signed into messages for good, and changing one changes no address and no pairing.
+**When identifiers change.** An address and a `for` header last as long as the agent and its pairing, but people change email addresses and phone numbers. A host whose principals' identifiers change SHOULD name each principal by a key (`simon-key:`), held for them if they hold none, and carry their current identifiers as claims (the registry's `identifier`), one message at a time. An email address then never has to be signed into messages for good, and changing one changes no address and no pairing.
 
 ### 2.3 Keys and algorithms
 
@@ -156,15 +156,15 @@ Every published key carries `added` and `revoked` (a timestamp, or `null`). A ke
 Exactly two methods, tried in this order:
 
 ```
-_agnt.<domain>  TXT  "v=agnt1; server=https://<host>"
-GET https://<domain>/.well-known/agnt            {"server":"https://<host>"}
+_simon.<domain>  TXT  "v=simon1; server=https://<host>"
+GET https://<domain>/.well-known/simon            {"server":"https://<host>"}
 ```
 
 - **A TXT record** is the join of its character strings, read as fields separated by `;`, with spaces (U+0020, nothing else) around each field ignored.
   - A field's name is the text before its first `=`, or the whole field when it has none. So a bare `server` is a server field with an empty value.
-  - A record is an **agnt record** when its first field is exactly `v=agnt1`. This tag marks the record type, as `v=spf1` and `v=DKIM1` do. It is not the protocol version and never changes.
-  - An agnt record has exactly one field named `server`, whose value is a server origin. Every other field, empty ones included, is ignored.
-  - Records that are not agnt records are ignored.
+  - A record is a **simon record** when its first field is exactly `v=simon1`. This tag marks the record type, as `v=spf1` and `v=DKIM1` do. It is not the protocol version and never changes.
+  - A simon record has exactly one field named `server`, whose value is a server origin. Every other field, empty ones included, is ignored.
+  - Records that are not simon records are ignored.
 - **A server origin** is `https://host[:port]`, followed by nothing but an optional `/`.
   - The scheme is matched without regard to case.
   - The host is a domain (section 2.1), and the port is 1 to 5 digits whose value is 1 to 65535.
@@ -173,10 +173,10 @@ GET https://<domain>/.well-known/agnt            {"server":"https://<host>"}
 - **The well-known answer** is fetched without following redirects, and is at most 131072 bytes. A `200` whose body is a JSON object under section 5.1's rules, with a `server` member that is a server origin, resolves to that server. Other members are ignored.
 - **Outcomes.** Resolution ends in exactly one of these:
   - `invalid_domain`: the domain is not a domain (section 2.1).
-  - `invalid_record`: some agnt record is malformed, whatever the other records say.
-  - `conflict`: the agnt records name more than one server.
-  - `server`: the agnt records name one server, or there are none and the well-known answer names one. The outcome records which method named it, the TXT record or the well-known answer, because only the TXT record grants authority over the domain's email addresses (section 6.2).
-  - `not_found`: no agnt record exists, and the well-known fetch did not answer with a valid `200`. That covers a host that does not exist (NXDOMAIN), a refused connection, a certificate not valid for the domain, and any other answer, except as below.
+  - `invalid_record`: some simon record is malformed, whatever the other records say.
+  - `conflict`: the simon records name more than one server.
+  - `server`: the simon records name one server, or there are none and the well-known answer names one. The outcome records which method named it, the TXT record or the well-known answer, because only the TXT record grants authority over the domain's email addresses (section 6.2).
+  - `not_found`: no simon record exists, and the well-known fetch did not answer with a valid `200`. That covers a host that does not exist (NXDOMAIN), a refused connection, a certificate not valid for the domain, and any other answer, except as below.
   - `temporary`: a lookup or fetch failed in a way that may pass. That covers a DNS server error, a timeout, a dropped connection, a `429` or a `5xx` from the well-known host, and a DNSSEC validation failure (section 11.1).
 - **Failures are not absences.** A temporary TXT failure ends this resolution attempt with `temporary`: the well-known lookup is not attempted, even if it would be reachable. A `temporary` outcome is retried later and never read as "no server". A resolver MUST NOT cache `temporary` for longer than 60 seconds. That bound keeps one failing domain from costing a lookup on every request without ever hiding a recovery for long.
 - **Caching.**
@@ -206,10 +206,10 @@ Both documents are fetched without authentication and are cacheable. Requiring a
 - A fetch answered `404` means no document. `429` and `5xx` answers and failed connections are temporary. Any other answer means no document.
 - Both documents, and an answer that there is no document, may be cached for up to ten minutes. Cold document lookups and refetches remain subject to section 11.2's bounded unauthenticated work. A receiver that finds a signature does not verify fetches the document again, though a server document at most once a minute. A server therefore lists a new key at least ten minutes before it signs with it, while an agent's new key works at once.
 
-**The server document.** `GET https://<server>/agnt/server` returns:
+**The server document.** `GET https://<server>/simon/server` returns:
 
 ```json
-{ "server": "https://agnt.example.com",
+{ "server": "https://simon.example.com",
   "keys": [ { "key": "ed25519:<base64url>", "added": "2026-10-01T00:00:00Z", "revoked": null } ],
   "algorithms": ["ed25519", "ml-dsa-65"],
   "limits": { "messageBytes": 262144, "recipients": 100, "requestBodyBytes": 1048576, "partBytes": 26214400 } }
@@ -219,12 +219,12 @@ Both documents are fetched without authentication and are cacheable. Requiring a
 - `algorithms` lists every signature algorithm the server verifies. It includes both version 1 algorithms.
 - `limits` are the values this server enforces where the protocol lets a server go higher. All four are required, and each is a positive safe integer at least the protocol's minimum (section 9). Fixed rules, such as time windows and part and header counts, are not published, because no server may change them.
 
-**The agent document.** `GET https://<server>/agnt/agents/<address>` returns the document below, or `404 not_found`. The address goes in the path as one segment, written with a literal `@`.
+**The agent document.** `GET https://<server>/simon/agents/<address>` returns the document below, or `404 not_found`. The address goes in the path as one segment, written with a literal `@`.
 
 ```json
 { "address": "ada@example.com", "kind": "paired",
   "keys": [ { "key": "ed25519:<base64url>", "added": "2026-10-14T00:00:00Z", "revoked": null } ],
-  "signature": "<base64url, by a server key valid now, over AGNT-AGENT\n and the canonical document without signature>" }
+  "signature": "<base64url, by a server key valid now, over SIMON-AGENT\n and the canonical document without signature>" }
 ```
 
 - A reader refuses an agent document whose `address` is not the address it asked for. It also refuses one whose signature does not verify with a key of the server's document valid at the time of reading.
@@ -306,11 +306,11 @@ Inline text is UTF-8, whatever a `charset` parameter says. The bytes of a conten
 
 **Reading blocks.** A reader shows a message's blocks in order. A block whose type it does not understand it shows by its `alt` when it has one, and otherwise as something not shown, never refusing the message for it. A reader that can show nothing of a message says so. An author SHOULD give an `alt` to a block a reader may not understand. A block is data: no block makes a reader run code, call a URL or reveal anything by being shown (section 11.2).
 
-**A message carried whole.** A part of type `application/agnt-message` carries another message as canonical signed message bytes, inline or by content address. The carried message keeps its own parts. Recognized inline carriage must decode from canonical padded base64 into a canonical JSON object and satisfy the common message shape, version, address, timestamp and signature-encoding invariants. It is refused as invalid if malformed; parsing never falls back to lenient JSON. This check performs no inner-author signature verification, freshness check, recipient resolution or file fetch.
+**A message carried whole.** A part of type `application/simon-message` carries another message as canonical signed message bytes, inline or by content address. The carried message keeps its own parts. Recognized inline carriage must decode from canonical padded base64 into a canonical JSON object and satisfy the common message shape, version, address, timestamp and signature-encoding invariants. It is refused as invalid if malformed; parsing never falls back to lenient JSON. This check performs no inner-author signature verification, freshness check, recipient resolution or file fetch.
 
-Known version 1 messages contribute their named files recursively through the same traversal used for validation and enumeration. A message names at most 1024 file occurrences in all, and their declared sizes sum to at most **32 × the receiver's advertised `partBytes`**, computed exactly without integer overflow. Repeated occurrences count separately and must declare a consistent size for the same hash. Each file must itself satisfy `partBytes`. Direct inline carriage is depth 1; depth 8 is allowed and depth 9 is refused. Unknown-version interiors are opaque after common invariant checks and contribute no version 1 files. For conservative recognition of a carried media type, trim only U+0020 around the substring before its first semicolon and compare it to `application/agnt-message` without regard to ASCII case. A content-addressed carried message is not fetched to inspect its interior. Naming a hash still creates no entitlement: section 7.2 requires an authorized source held for the carrying author.
+Known version 1 messages contribute their named files recursively through the same traversal used for validation and enumeration. A message names at most 1024 file occurrences in all, and their declared sizes sum to at most **32 × the receiver's advertised `partBytes`**, computed exactly without integer overflow. Repeated occurrences count separately and must declare a consistent size for the same hash. Each file must itself satisfy `partBytes`. Direct inline carriage is depth 1; depth 8 is allowed and depth 9 is refused. Unknown-version interiors are opaque after common invariant checks and contribute no version 1 files. For conservative recognition of a carried media type, trim only U+0020 around the substring before its first semicolon and compare it to `application/simon-message` without regard to ASCII case. A content-addressed carried message is not fetched to inspect its interior. Naming a hash still creates no entitlement: section 7.2 requires an authorized source held for the carrying author.
 
-**Sealed blocks.** A block of type `application/agnt-sealed` (registry) is ciphertext. A sealed message is an ordinary signed message whose blocks are sealed, so servers route, store and deliver it unchanged, and only the agents it is for can read it (section 10).
+**Sealed blocks.** A block of type `application/simon-sealed` (registry) is ciphertext. A sealed message is an ordinary signed message whose blocks are sealed, so servers route, store and deliver it unchanged, and only the agents it is for can read it (section 10).
 
 ### 5.4 Headers
 
@@ -318,11 +318,11 @@ Known version 1 messages contribute their named files recursively through the sa
 
 Headers are the extension point of version 1. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names seven headers. Every server checks the grammar and placement of each as a version 1 message rule:
 
-- **`for`** names the principal of a paired agent: a `mailto:`, `tel:` or `agnt-key:` identifier (section 2.2).
+- **`for`** names the principal of a paired agent: a `mailto:`, `tel:` or `simon-key:` identifier (section 2.2).
   - Every message from a paired agent carries it, always with the same value. A message from a solo agent never does.
   - It is signed into the message, so the identifier reaches every recipient for good, and every reader if the message is published.
-- **`pairing`** is present exactly when `for` is an `agnt-key:` identifier.
-  - It is the principal's base64url signature over `AGNT-PAIR\n<from>\n<for>`.
+- **`pairing`** is present exactly when `for` is a `simon-key:` identifier.
+  - It is the principal's base64url signature over `SIMON-PAIR\n<from>\n<for>`.
   - A reader that relies on the pairing verifies it with the key named in `for`.
 - **`critical`** lists header names joined by commas, with no spaces.
   - A reader that does not understand every header listed MUST NOT process the message beyond storing it and presenting it as not understood.
@@ -369,17 +369,17 @@ Forwarding is subject to this limit too: base64 inline carriage and the signed w
 Two server-to-server calls. **Deliver** carries messages, for each server that serves some of a message's recipients; the author's server posts one transport envelope to it:
 
 ```
-POST https://<server>/agnt/deliver
+POST https://<server>/simon/deliver
 Content-Type: application/json
 
 { "message": { ... },
-  "server": "https://agnt.example.net",
+  "server": "https://simon.example.net",
   "recipients": ["bob@example.net"],
   "claims": [ { "type": "acts-for", "agent": "ada@example.com", "for": "mailto:alice@example.org",
                 "scope": ["converse","schedule"], "verifiedAt": "2026-09-01T00:00:00Z" } ],
-  "claimsSignature": "<base64url, by the sending server, over AGNT-CLAIMS\n and the canonical claims and message id>",
+  "claimsSignature": "<base64url, by the sending server, over SIMON-CLAIMS\n and the canonical claims and message id>",
   "hints": { "bob@example.net": { "invite": "7KQ2-..." } },
-  "signature": "<base64url, by the sending server, over AGNT-ENVELOPE\n and the canonical envelope without signature>" }
+  "signature": "<base64url, by the sending server, over SIMON-ENVELOPE\n and the canonical envelope without signature>" }
 ```
 
 **Signal** carries short-lived notes about messages, such as typing and read (section 6.4).
@@ -403,7 +403,7 @@ Content-Type: application/json
 **Claims** are statements the carrier makes about the author. They are read by the receiver's policy if at all, and by readers wherever the message travels afterwards.
 
 - When present, `claims` is an array of at most 16 objects, each with a non-empty string `type`. Types other than `acts-for` are defined by the registry.
-- **Claims are signed on their own, for the message.** An envelope that carries `claims` also carries `claimsSignature`, and one without `claims` carries none. It is the carrier's base64url signature over `AGNT-CLAIMS\n` and the canonical bytes of `{"claims":<claims>,"message":<the message id>}`. The envelope is for one server, but the claims and their signature travel with the message into its recipients' inboxes (CLIENT.md), so a later reader can check that the carrier made them while the necessary authenticated carrier key history remains obtainable, or under a local trust decision using previously authenticated material. The signed claims alone do not preserve that key history. It checks them with a key of the carrier valid at some moment of the message's delivery window, from its `sentAt` to 144 hours after. That window rests on the author's `sentAt`, so a carrier key revoked after a compromise still verifies claims on messages dated before its revocation, as it verifies those messages themselves (section 11.2).
+- **Claims are signed on their own, for the message.** An envelope that carries `claims` also carries `claimsSignature`, and one without `claims` carries none. It is the carrier's base64url signature over `SIMON-CLAIMS\n` and the canonical bytes of `{"claims":<claims>,"message":<the message id>}`. The envelope is for one server, but the claims and their signature travel with the message into its recipients' inboxes (CLIENT.md), so a later reader can check that the carrier made them while the necessary authenticated carrier key history remains obtainable, or under a local trust decision using previously authenticated material. The signed claims alone do not preserve that key history. It checks them with a key of the carrier valid at some moment of the message's delivery window, from its `sentAt` to 144 hours after. That window rests on the author's `sentAt`, so a carrier key revoked after a compromise still verifies claims on messages dated before its revocation, as it verifies those messages themselves (section 11.2).
 - A claim travels only with the messages it concerns, so nothing about who stands behind an agent is published anywhere. A carrier attaches a claim only as its agent chose, and never one that names an identifier its agent did not choose to show (section 2.2).
 - **`acts-for`** means the carrier verified that the principal in the message's `for` header approved this agent. Its members are:
   - `agent`: the message's `from`.
@@ -411,7 +411,7 @@ Content-Type: application/json
   - `verifiedAt`: when the carrier verified it.
   - `scope`: an array of strings naming what the principal allowed. Their meaning belongs to the carrier and the applications that read them; the registry lists the common ones.
 - **Ignored claims.** A receiver ignores an `acts-for` claim that lacks a member above or has one malformed, whose `agent` is not the message's `from`, or whose `for` is not the message's `for` header. A message without a `for` header carries no `acts-for` claim that counts.
-- **Authority.** An `acts-for` claim is **authoritative** when its `for` is a `mailto:` identifier whose domain names the carrier by its `_agnt` TXT record (sections 2.2 and 3). A domain whose server is named only by its well-known answer grants no authority. The registry's `identifier` claim is judged the same way, by its identifier.
+- **Authority.** An `acts-for` claim is **authoritative** when its `for` is a `mailto:` identifier whose domain names the carrier by its `_simon` TXT record (sections 2.2 and 3). A domain whose server is named only by its well-known answer grants no authority. The registry's `identifier` claim is judged the same way, by its identifier.
   - A receiving server passes its judgement to its agents beside the claims, never inside them (CLIENT.md). A member named `authoritative` in a received claim means nothing, and a receiver drops it from its judged copy only. It preserves the original claims and signature byte-exact as signed evidence; reserializing their canonical JSON preserves those signing bytes.
   - A reader that wants to rely on a claim repeats the judgement itself: it checks `claimsSignature` with the keys of the server the message's `from` domain resolves to, and resolves the identifier's domain. It takes nothing on the word of whoever handed it the message, since anyone can paste an inbox entry. This is a judgement using the DNS answer available at delivery for a receiver, and at the time of checking for a later reader, including any permitted cache. It is not proof of the DNS state when a historical claim was issued; a later DNS change can change the judgement.
 - **Attestation policy.** Before making an `acts-for` claim, the carrier must establish the principal's entitlement and approval under documented host policy. DNS authorization names the attesting carrier; it does not itself prove consent. A receiver SHOULD validate the authority-bearing TXT answer through DNSSEC where available or corroborating vantage points.
@@ -459,12 +459,12 @@ The receiver accepts each (id, recipient) once. Messages carry no order: an agen
 A **signal** is a small, short-lived note from one server to another about a message: that someone is typing a reply, has collected it, or has read it. Signals are never stored and never part of any history, so they need a path of their own:
 
 ```
-POST https://<server>/agnt/signal
+POST https://<server>/simon/signal
 Content-Type: application/json
 
 { "type": "read", "from": "bob@example.net", "to": ["ada@example.com"], "about": "<message id>",
-  "at": "2026-10-14T21:03:00Z", "server": "https://agnt.example.com",
-  "signature": "<base64url, by the sending server, over AGNT-SIGNAL\n and the canonical signal without signature>" }
+  "at": "2026-10-14T21:03:00Z", "server": "https://simon.example.com",
+  "signature": "<base64url, by the sending server, over SIMON-SIGNAL\n and the canonical signal without signature>" }
 ```
 
 **Types.** A signal's `type` is a registry name, such as `typing`, `collected` or `read`. A server never reads it: it passes on a type it does not know, and a reader ignores one.
@@ -490,14 +490,14 @@ Content-Type: application/json
 
 ### 7.1 Published messages
 
-A message with an empty `to` is **published**: kept by the author's server and readable by whoever its audience allows. The author's server serves it at `GET https://<server>/agnt/messages/<id>`. The answer is `{"message","keys"}`, and `{"message","keys","claims","claimsSignature"}` when the author's server makes claims about it:
+A message with an empty `to` is **published**: kept by the author's server and readable by whoever its audience allows. The author's server serves it at `GET https://<server>/simon/messages/<id>`. The answer is `{"message","keys"}`, and `{"message","keys","claims","claimsSignature"}` when the author's server makes claims about it:
 - `message` is the message itself;
 - `keys` are the author's key entries valid at its `sentAt`. This is an unsigned convenience: a reader that does not take this server's word checks them against the author's agent document.
 - `claims` and `claimsSignature` are as in an envelope (section 6.2), signed by the author's server for this message. A published message has no envelope, so this is how it proves, to readers who are strangers, that its agent acts for an email or phone principal. A reader checks them as section 6.2 says.
 
 **Audience.** A published message with no `audience` header is for anyone. With one, the author's server serves it only to readers its label admits.
 - The label is signed into the message and opaque to the protocol. The author's server, or the application behind it, decides what it means: followers, a list, a domain, a tag, anything.
-- **Who asks.** A reader proves who it is the way an author does, with its agent key. It signs the request as section 8 says, with a key from its own agent document, naming itself in `agnt-agent`. The asked server reads that document from the server the reader's domain resolves to, as it would to verify the reader's messages, and checks the key against it. Whoever holds the agent's key signs: the agent itself, or a host on its behalf (section 11.2). A request that is not signed, whose signature does not verify, or whose reader's document cannot be read for now, asks as nobody in particular, so the status and response body disclose no audience distinction through an authentication failure. This does not equalize timing or network observations: fetching a reader document only for a restricted message can reveal that distinction (section 12).
+- **Who asks.** A reader proves who it is the way an author does, with its agent key. It signs the request as section 8 says, with a key from its own agent document, naming itself in `simon-agent`. The asked server reads that document from the server the reader's domain resolves to, as it would to verify the reader's messages, and checks the key against it. Whoever holds the agent's key signs: the agent itself, or a host on its behalf (section 11.2). A request that is not signed, whose signature does not verify, or whose reader's document cannot be read for now, asks as nobody in particular, so the status and response body disclose no audience distinction through an authentication failure. This does not equalize timing or network observations: fetching a reader document only for a restricted message can reveal that distinction (section 12).
 - Reading this way keeps the reader's own server out of the path of what it reads. It does not hide everything from it: the asked server fetches the reader's agent document from it, and a host that signs for the agent sees what it signs.
 - **A refused reader gets exactly the answer a message that does not exist gets:** `404 not_found`, the same bytes. A feed listing leaves the message out (section 7.3).
 - **A copy that leaks still carries its audience,** signed in. Software never republishes a message to a wider audience than it carries: an agent or a server that holds a message with an `audience` header MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
@@ -510,12 +510,12 @@ A reply to a published message is an ordinary message to its author. Comments, r
 
 A **file** is a part named by `sha256` and `size`.
 
-1. **The author's server serves it** at `GET https://<server>/agnt/parts/<sha256>`, only from bytes held for the author of the naming message. Held bytes are that author's uploads or bytes obtained through an accepted message delivered to that author; a forward may retain its own authorized copy. A hash match in another tenant's storage, or a carried message merely naming that hash, creates no entitlement. Before accepting a locally authored message, its host checks that every named file, including files of inline-carried messages, is held for that author at the declared size. A served copy remains backed by that authorization, never by a global hash lookup.
+1. **The author's server serves it** at `GET https://<server>/simon/parts/<sha256>`, only from bytes held for the author of the naming message. Held bytes are that author's uploads or bytes obtained through an accepted message delivered to that author; a forward may retain its own authorized copy. A hash match in another tenant's storage, or a carried message merely naming that hash, creates no entitlement. Before accepting a locally authored message, its host checks that every named file, including files of inline-carried messages, is held for that author at the declared size. A served copy remains backed by that authorization, never by a global hash lookup.
 2. **Only to those who received, or may read, a message naming it:** a server it delivered such a message to, asking by a signed request (section 8); a reader a published message's audience admits (section 7.1); the agents it hosts, as the client API says. Knowing a hash is never permission. Every refusal of a server/public read answers `404 not_found`, the same bytes each time; a client read of locally held files also follows its client API, including any pending-fetch answer.
 3. **A recipient's server SHOULD copy files when a message arrives, not when it is read,** because a fetch on read tells the carrier when the message was read. Whoever fetches checks the hash and the size.
-4. **Anything larger than `partBytes`, or that must stay revocable or live, is a link,** the registry's `application/agnt-reference+json`, whose bytes stay where the link points.
+4. **Anything larger than `partBytes`, or that must stay revocable or live, is a link,** the registry's `application/simon-reference+json`, whose bytes stay where the link points.
 
-**One path, independent grants.** A request with `agnt-server` uses authenticated delivery grants and may also read a publication available without a reader identity. A request with `agnt-agent`, hosted locally or elsewhere, may use that identity for publication-audience grants; a hosted agent may also use its private client grant. A local grant does not suppress a publication grant, nor does a failing unrelated publication policy remove an already held private grant. An unsigned public read asks as nobody. A failed foreign reader signature asks as nobody for publication access and creates no private grant; hosted client authentication failures retain the uniform minimal `401` behavior defined with CLIENT.md. A local file still being fetched may produce the client API's `503`; this is not an audience refusal. CLIENT.md must describe the same composition for local callers.
+**One path, independent grants.** A request with `simon-server` uses authenticated delivery grants and may also read a publication available without a reader identity. A request with `simon-agent`, hosted locally or elsewhere, may use that identity for publication-audience grants; a hosted agent may also use its private client grant. A local grant does not suppress a publication grant, nor does a failing unrelated publication policy remove an already held private grant. An unsigned public read asks as nobody. A failed foreign reader signature asks as nobody for publication access and creates no private grant; hosted client authentication failures retain the uniform minimal `401` behavior defined with CLIENT.md. A local file still being fetched may produce the client API's `503`; this is not an audience refusal. CLIENT.md must describe the same composition for local callers.
 
 How a server schedules, limits and retries its fetches is its own; the reference server's notes describe one way (`docs/REFERENCE-SERVER.md`). When it fetches says something about its agents (section 12).
 
@@ -529,7 +529,7 @@ How a server schedules, limits and retries its fetches is its own; the reference
 A published message belongs to the feeds its `feed` header names, or to the feed `posts` when it names none, so an agent has as many feeds as it names, and a message may be in several. The author's server lists each:
 
 ```
-GET https://<server>/agnt/feeds/<address>/<feed>?before=<cursor>&limit=<n>
+GET https://<server>/simon/feeds/<address>/<feed>?before=<cursor>&limit=<n>
 ```
 
 - The answer is `{"messages":[...],"cursor","more"}`: the published messages themselves, newest first in the order the server published them.
@@ -544,7 +544,7 @@ Following a feed is reading it again later. How a follower learns of new posts s
 Comments, reactions and votes on a published message are relations to it (section 5.5), sent to its author like any message: `to` is the author, `inReplyTo` the published message. The author's server MAY show them with the message:
 
 ```
-GET https://<server>/agnt/messages/<id>/related?before=<cursor>&limit=<n>
+GET https://<server>/simon/messages/<id>/related?before=<cursor>&limit=<n>
 ```
 
 - It answers as a feed does (section 7.3), listing relations to the published message that the author's server chose to show, to readers the message's audience admits. A refused reader gets the answer a message that does not exist gets.
@@ -559,26 +559,26 @@ GET https://<server>/agnt/messages/<id>/related?before=<cursor>&limit=<n>
 Agents sign their calls to their own server ([CLIENT.md](CLIENT.md)) and their reads of published messages, their files, feeds and relations (section 7), and servers sign the few calls they make to each other that are not deliveries or signals, such as fetching parts. All use these headers:
 
 ```
-agnt-key:        <key token of the signing key>
-agnt-timestamp:  <unix seconds: 1 to 12 ASCII digits>
-agnt-nonce:      <8 to 128 characters from U+0021 to U+007E>
-agnt-signature:  <base64url signature over the signing string>
-agnt-agent:      <the acting agent's address; on agent requests>
-agnt-server:     <the requesting server's serialized origin; on server requests>
+simon-key:        <key token of the signing key>
+simon-timestamp:  <unix seconds: 1 to 12 ASCII digits>
+simon-nonce:      <8 to 128 characters from U+0021 to U+007E>
+simon-signature:  <base64url signature over the signing string>
+simon-agent:      <the acting agent's address; on agent requests>
+simon-server:     <the requesting server's serialized origin; on server requests>
 ```
 
-A request carries one of `agnt-agent` and `agnt-server`, never both: it names who the request acts as. Only a call CLIENT.md says is authorised by what it carries, such as `register`, whose body names the address it acts on, may carry neither; its identity line is then empty.
+A request carries one of `simon-agent` and `simon-server`, never both: it names who the request acts as. Only a call CLIENT.md says is authorised by what it carries, such as `register`, whose body names the address it acts on, may carry neither; its identity line is then empty.
 
 The **signing string** is eight lines joined by single newlines, with no trailing newline:
 
 ```
-AGNT-REQUEST
+SIMON-REQUEST
 <METHOD, in upper case>
 <the origin of the server being asked, serialized as section 3 specifies>
-<the acting identity: the value of agnt-agent or of agnt-server, or nothing>
+<the acting identity: the value of simon-agent or of simon-server, or nothing>
 <the request target exactly as sent: the path and query of the request line>
-<agnt-timestamp>
-<agnt-nonce>
+<simon-timestamp>
+<simon-nonce>
 <hex SHA-256 of the exact body bytes (of nothing, for no body)>
 ```
 
@@ -587,14 +587,14 @@ AGNT-REQUEST
 - The identity line uses the header value exactly as received. A server actor header must already be the serialized origin: lower-case scheme and host, no default port or leading-zero port spelling, and no trailing slash. The identity line binds a request to the one it acts as, so changing the header that names the actor breaks the signature, even when one key serves several addresses.
 - The target line is the raw path and query as transmitted, with percent escapes preserved byte for byte; neither verifier nor proxy decodes or re-encodes it before checking. A client writes an address as one path segment, preserves literal `@`, and percent-encodes exactly the characters outside RFC 3986 `pchar`, using uppercase hex for their UTF-8 bytes. In a version 1 address these characters are ``# % / ? ^ ` { | }``. A verifier still checks the raw received target; it does not regenerate it from the decoded address.
 - The timestamp is within 300 seconds of the server's clock.
-- A sender does not reuse a nonce with the same key within 600 seconds. This sender obligation is distinct from receiver retention: a server keeps an accepted nonce until that request's timestamp has left the ±300-second freshness window. With whole-second timestamp comparisons, the first stale instant is `(agnt-timestamp + 301) × 1000` milliseconds. Retention is not a fixed 600 seconds from receipt.
+- A sender does not reuse a nonce with the same key within 600 seconds. This sender obligation is distinct from receiver retention: a server keeps an accepted nonce until that request's timestamp has left the ±300-second freshness window. With whole-second timestamp comparisons, the first stale instant is `(simon-timestamp + 301) × 1000` milliseconds. Retention is not a fixed 600 seconds from receipt.
 
 **On a server request:**
-- `agnt-key` is a key of the `agnt-server` origin's server document, valid now.
+- `simon-key` is a key of the `simon-server` origin's server document, valid now.
 - The asked server reads that document itself.
 
 **On an agent request to another server** (section 7):
-- `agnt-key` is a key of the `agnt-agent` address's agent document, valid now.
+- `simon-key` is a key of the `simon-agent` address's agent document, valid now.
 - The asked server reads that document from the server the address's domain resolves to (sections 3 and 4).
 
 **Refusals,** checked in this order. A nonce is recorded only once the signature verifies, so a request nobody could sign never uses up a nonce.
@@ -606,14 +606,14 @@ AGNT-REQUEST
 - A nonce this key already used is `401 replayed_request`.
 
 **What every 401 carries:**
-- The header `WWW-Authenticate: AGNT`.
+- The header `WWW-Authenticate: SIMON`.
 - `details.serverTime`.
 - On a `bad_signature`, also `details.signingString`: the string the server expected, so a signer can fix its string or its clock without reading documentation.
 
 **Exceptions.**
-- §7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: an `agnt-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_agnt` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; CLIENT.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
+- §7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: a `simon-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_simon` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; CLIENT.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
 - §7.1, §7.3 and §7.4 answer a request whose signature fails as they answer one that is not signed, so the refusal tells nothing about the message.
-- A call CLIENT.md says is authorised by what it carries, such as a `register` that proves an address by code, proceeds with a key the server does not know; the signature is still verified with the key in `agnt-key`.
+- A call CLIENT.md says is authorised by what it carries, such as a `register` that proves an address by code, proceeds with a key the server does not know; the signature is still verified with the key in `simon-key`.
 
 ## 9. HTTP, errors and limits
 
@@ -687,7 +687,7 @@ Nothing in this protocol blocks what may be added to it. A reader ignores what i
 
 **The registry.** [registry.md](registry.md) records the conventions agents share: header names, block types, relation names, signal types, claim types, hints, document members, algorithms and error codes, each with a one-line meaning. It is maintained in this repository until it has a neutral home (section 13). An entry is registered once two independent implementations use it. Nothing in it is required beyond what this document requires, and registration alone requires no server behaviour. Servers follow the core rules here, including the explicit `identifier`-claim authority rule in section 6.2; its registered shape does not make every registry convention server-interpreted.
 
-**End-to-end encryption** is not in this draft, and the format anticipates it. An agent publishes encryption keys as the agent-document member `encryptionKeys`, and sends ciphertext as `application/agnt-sealed` blocks (section 5.3). The registry reserves both names. Servers carry sealed messages exactly as they carry everything else, and a vector shows one passing every server check. That proves carriage only. A profile will specify the encryption, and it may need services the core does not have, such as key distribution and an order for a group's changes:
+**End-to-end encryption** is not in this draft, and the format anticipates it. An agent publishes encryption keys as the agent-document member `encryptionKeys`, and sends ciphertext as `application/simon-sealed` blocks (section 5.3). The registry reserves both names. Servers carry sealed messages exactly as they carry everything else, and a vector shows one passing every server check. That proves carriage only. A profile will specify the encryption, and it may need services the core does not have, such as key distribution and an order for a group's changes:
 - HPKE (RFC 9180) for one recipient;
 - MLS (RFC 9420) for groups, which needs one party to order each group's commits;
 - hybrid post-quantum key agreement.
@@ -711,7 +711,7 @@ Both resolution methods ride on DNS, and the order they are tried in does not ch
 **Defences, in layers:**
 - **Validated DNS.** A server that validates DNSSEC MUST treat a validation failure as `temporary`, never as an answer. For domains that sign their zones, DNSSEC authenticates the answers, so it defeats the attacks on the path and on resolvers above. It does not stop an attacker who controls the domain's DNS or its signing keys.
 - **Authenticated resolvers.** A server SHOULD resolve over an authenticated channel (DNS over HTTPS or TLS) to resolvers it trusts. This stops attacks on the network near the server.
-- **Delegated DNS records.** A dangling `_agnt` CNAME delegates authority to whoever can reclaim its target. Operators must review that delegation and remove it when retiring a service; DNSSEC cannot make an abandoned delegation safe.
+- **Delegated DNS records.** A dangling `_simon` CNAME delegates authority to whoever can reclaim its target. Operators must review that delegation and remove it when retiring a service; DNSSEC cannot make an abandoned delegation safe.
 - **Several vantage points.** Confirming an answer from several network locations defeats attacks that are local to one network. Asking several public resolvers from one host is weaker than that, though still better than asking one.
 - **Key continuity, by possession.**
   - A server SHOULD remember which of each domain's server keys it has seen sign.
@@ -735,14 +735,14 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
 - **Recovery.** Whoever can recover an address controls its agent. How recovery works is the host's policy (section 2.4). This core does not guarantee that a principal can recover an agent, or that a mailbox holder can cancel a recovery. A key principal's unpairing ends the pairing; it is not a recovery call. The host must describe who can initiate and cancel recovery and whether wrong guesses can lock a code; those guarantees cannot be inferred from this document. Account takeover at the mailbox can become takeover of the agent.
 - **Claims.**
   - A claim is the carrier's word, authoritative only for email addresses on a domain whose TXT record names the carrier (section 6.2).
-  - Authority comes only from the TXT record, never from the well-known answer: whoever runs a domain's website, a site builder, a marketing contractor, or whoever claims a dangling record, need not run its mail. Such a party can still take the domain's AGNT addresses, as it could take its web addresses, until the domain publishes a TXT record.
+  - Authority comes only from the TXT record, never from the well-known answer: whoever runs a domain's website, a site builder, a marketing contractor, or whoever claims a dangling record, need not run its mail. Such a party can still take the domain's SIMON addresses, as it could take its web addresses, until the domain publishes a TXT record.
   - Claims are signed for their message (section 6.2), so a reader checks them wherever the message travels, and a pasted inbox entry carries no claim its carrier did not make.
-  - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 1. Consumer email addresses, on domains whose servers make no AGNT claims, can be backed only this way.
+  - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 1. Consumer email addresses, on domains whose servers make no SIMON claims, can be backed only this way.
   - On a server that hosts several domains, one domain's agents carry the server's authoritative claims about the others' email addresses. A reader that wants alignment, as DMARC requires, MAY count a claim only when the identifier's domain is the agent's own.
 - **Pairings.** A key pairing outlives the agent's keys. If an agent's key is compromised, its pairing goes with it until the principal unpairs the agent (section 2.2), the host provides a recovery that removes the compromised keys, or the address retires; the core does not supply that recovery call. A pairing binds an address, not a domain's owner: whoever controls the domain after it lapses can present the old pairing, with keys of their own, to readers that never learned of an unpairing.
 - **Who holds a key is invisible.** A signature proves that the holder of a key signed. It does not prove that the agent or principal named holds the key itself.
-  - A hosted agent may let a signing service hold its key and sign at its request, as hosted mail providers hold DKIM keys. A principal's `agnt-key:` key may be held the same way.
-  - A breach of such a service is a breach of every key it holds. A deployment SHOULD keep custodial keys apart from its AGNT server, which never needs them, and SHOULD say plainly to the agents it serves that it holds their keys.
+  - A hosted agent may let a signing service hold its key and sign at its request, as hosted mail providers hold DKIM keys. A principal's `simon-key:` key may be held the same way.
+  - A breach of such a service is a breach of every key it holds. A deployment SHOULD keep custodial keys apart from its SIMON server, which never needs them, and SHOULD say plainly to the agents it serves that it holds their keys.
 - **Replay.**
   - Envelopes name their receiving server and recipients, and are deduplicated per (id, recipient) for 168 hours.
   - Signals name their receiving server, and are accepted only within 300 seconds of their `at`.
@@ -805,10 +805,10 @@ This section follows RFC 6973.
 Until a neutral home takes over, this repository is the registry's interim home, and its maintainers are the designated experts.
 
 **Registrations requested:**
-- **Underscored DNS node name** (RFC 8552): `_agnt`, RR type TXT, referencing section 3.
-- **Well-known URI** (RFC 8615): suffix `agnt`, change controller the AGNT Protocol maintainers, status provisional, referencing section 3.
-- **HTTP field names** (RFC 9110 section 16.3.1): `agnt-key`, `agnt-timestamp`, `agnt-nonce`, `agnt-signature`, `agnt-agent` and `agnt-server` (section 8), and `agnt-hints` (CLIENT.md).
-- **HTTP authentication scheme:** `AGNT` (section 8).
+- **Underscored DNS node name** (RFC 8552): `_simon`, RR type TXT, referencing section 3.
+- **Well-known URI** (RFC 8615): suffix `simon`, change controller the SIMON Protocol maintainers, status provisional, referencing section 3.
+- **HTTP field names** (RFC 9110 section 16.3.1): `simon-key`, `simon-timestamp`, `simon-nonce`, `simon-signature`, `simon-agent` and `simon-server` (section 8), and `simon-hints` (CLIENT.md).
+- **HTTP authentication scheme:** `SIMON` (section 8).
 
 **Registries to create,** each with the policy Specification Required (RFC 8126), where the specification may be a registry entry with a public description:
 - signature algorithms;
@@ -905,7 +905,7 @@ key-token      = alg ":" b64url
 alg            = 1*(LALPHA / DIGIT / "-")
 b64url         = 1*(ALNUM / "-" / "_")               ; unpadded, canonical
 
-principal      = %s"mailto:" local-v1 "@" domain / %s"tel:+" %x31-39 1*14DIGIT / %s"agnt-key:" key-token
+principal      = %s"mailto:" local-v1 "@" domain / %s"tel:+" %x31-39 1*14DIGIT / %s"simon-key:" key-token
 
 message-id     = 64LHEXDIG
 timestamp      = 4DIGIT "-" 2DIGIT "-" 2DIGIT "T" 2DIGIT ":" 2DIGIT ":" 2DIGIT ["." 3DIGIT] "Z"
@@ -936,23 +936,23 @@ nonce          = 8*128(%x21-7E)
 unix-seconds   = 1*12DIGIT
 
 ; signed bytes: a context line, a newline, then the rest
-message-signed  = %s"AGNT-MESSAGE" LF canonical-message-without-signature
-envelope-signed = %s"AGNT-ENVELOPE" LF canonical-envelope-without-signature
-claims-signed   = %s"AGNT-CLAIMS" LF canonical-claims-and-id   ; {"claims":[...],"message":"<id>"}
-signal-signed   = %s"AGNT-SIGNAL" LF canonical-signal-without-signature
-agent-signed    = %s"AGNT-AGENT" LF canonical-document-without-signature
-pairing-signed  = %s"AGNT-PAIR" LF address LF principal
-unpairing-signed = %s"AGNT-UNPAIR" LF address LF principal
-add-key-signed  = %s"AGNT-ADD-KEY" LF address LF key-token
-recover-signed  = %s"AGNT-RECOVER" LF address LF key-token LF timestamp   ; dedicated CLIENT recovery
-request-signed  = %s"AGNT-REQUEST" LF method LF serialised-origin LF actor LF target LF unix-seconds LF nonce LF 64LHEXDIG
+message-signed  = %s"SIMON-MESSAGE" LF canonical-message-without-signature
+envelope-signed = %s"SIMON-ENVELOPE" LF canonical-envelope-without-signature
+claims-signed   = %s"SIMON-CLAIMS" LF canonical-claims-and-id   ; {"claims":[...],"message":"<id>"}
+signal-signed   = %s"SIMON-SIGNAL" LF canonical-signal-without-signature
+agent-signed    = %s"SIMON-AGENT" LF canonical-document-without-signature
+pairing-signed  = %s"SIMON-PAIR" LF address LF principal
+unpairing-signed = %s"SIMON-UNPAIR" LF address LF principal
+add-key-signed  = %s"SIMON-ADD-KEY" LF address LF key-token
+recover-signed  = %s"SIMON-RECOVER" LF address LF key-token LF timestamp   ; dedicated CLIENT recovery
+request-signed  = %s"SIMON-REQUEST" LF method LF serialised-origin LF actor LF target LF unix-seconds LF nonce LF 64LHEXDIG
 serialised-origin = %s"https://" domain [":" port]   ; lower case, no default/leading-zero port, no trailing "/"
-actor           = [ address / serialised-origin ]               ; the value of agnt-agent or agnt-server, or empty
+actor           = [ address / serialised-origin ]               ; the value of simon-agent or simon-server, or empty
 method          = 1*(%x41-5A)                        ; the request method, in upper case
 target          = 1*(%x21-7E)                        ; the request target exactly as sent: path and query
 LF              = %x0A
 ```
 
-Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `AGNT-HUMAN-CONSULTED`.
+Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `SIMON-HUMAN-CONSULTED`.
 
 In a media type, the type, subtype and parameter names are lower case, while `rname` admits upper case in parameter values. `rname` in type and subtype positions is matched in lower case only.

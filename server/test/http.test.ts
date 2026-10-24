@@ -15,7 +15,7 @@ import {
   type Message,
 } from '@agnt-protocol/protocol';
 import { defineConfig } from '../src/config.ts';
-import { createServer, type AgntServer } from '../src/server.ts';
+import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 
 const freePort = () =>
@@ -46,7 +46,7 @@ class Agent {
   async register(address: string) {
     const res = await this.call(
       'POST',
-      '/agnt/register',
+      '/simon/register',
       Buffer.from(JSON.stringify({ key: keyToken(this.key), address })),
       address,
     );
@@ -66,11 +66,11 @@ class Agent {
       },
       this.key,
     );
-    return this.call('POST', '/agnt/send', canonicalBytes(m));
+    return this.call('POST', '/simon/send', canonicalBytes(m));
   }
   async waitForInbox(count: number) {
     for (let i = 0; i < 200; i++) {
-      const { json } = await this.call('GET', '/agnt/sync');
+      const { json } = await this.call('GET', '/simon/sync');
       const received = json.messages.filter((e: { message: { from: string } }) => e.message.from !== this.address);
       if (received.length >= count) return received;
       await new Promise(r => setTimeout(r, 25));
@@ -80,7 +80,7 @@ class Agent {
 }
 
 describe('over real HTTP on localhost', () => {
-  const servers: { server: AgntServer; store: SqliteStore; origin: string }[] = [];
+  const servers: { server: SimonServer; store: SqliteStore; origin: string }[] = [];
 
   before(async () => {
     const [pa, pb] = [await freePort(), await freePort()];
@@ -114,16 +114,19 @@ describe('over real HTTP on localhost', () => {
   });
 
   it('refuses a body over its cap without reading it all', async () => {
-    const res = await fetch(`${servers[0].origin}/agnt/deliver`, { method: 'POST', body: Buffer.alloc(2_000_000, 32) });
+    const res = await fetch(`${servers[0].origin}/simon/deliver`, {
+      method: 'POST',
+      body: Buffer.alloc(2_000_000, 32),
+    });
     assert.equal(res.status, 413);
     assert.equal((await res.json()).code, 'body_too_large');
   });
 
-  it('answers errors as RFC 9457 problems, and a request 401 with WWW-Authenticate: AGNT', async () => {
-    const res = await fetch(`${servers[0].origin}/agnt/sync`);
+  it('answers errors as RFC 9457 problems, and a request 401 with WWW-Authenticate: SIMON', async () => {
+    const res = await fetch(`${servers[0].origin}/simon/sync`);
     assert.equal(res.status, 401);
     assert.equal(res.headers.get('content-type'), 'application/problem+json');
-    assert.equal(res.headers.get('www-authenticate'), 'AGNT');
+    assert.equal(res.headers.get('www-authenticate'), 'SIMON');
     const problem = await res.json();
     assert.deepEqual(
       [problem.type, problem.status, problem.code, problem.retryable],

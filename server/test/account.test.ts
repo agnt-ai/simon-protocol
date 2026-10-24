@@ -16,7 +16,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
   fed.dns.point('mail.example', alpha.origin);
   const now = () => new Date(fed.clock.t).toISOString();
 
-  const account = (a: TestAgent, key = a.key) => a.request('GET', '/agnt/account', { key });
+  const account = (a: TestAgent, key = a.key) => a.request('GET', '/simon/account', { key });
   const post = (a: TestAgent, path: string, body: object, key = a.key) =>
     a.request('POST', path, { body: JSON.stringify(body), key });
   /** Add a fresh key to `a`, with its proof; the new key's pair. */
@@ -25,13 +25,13 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
     const proof = sign(next.privateKey, addKeyProofString(a.address, next.key));
     const res = await post(
       a,
-      '/agnt/keys',
+      '/simon/keys',
       { key: next.key, proof, ...(label === undefined ? {} : { label }) },
       signer,
     );
     return { ...next, res };
   }
-  const revoke = (a: TestAgent, token: string, key = a.key) => a.request('DELETE', `/agnt/keys/${token}`, { key });
+  const revoke = (a: TestAgent, token: string, key = a.key) => a.request('DELETE', `/simon/keys/${token}`, { key });
 
   /** An agent at `<local>@mail.example`, bound by the code sent there. */
   async function mailboxAgent(local: string) {
@@ -49,7 +49,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
     return { thief, code, cancelCode: alpha.cancelCode(address) };
   }
   const cancelByCode = (address: string, cancelCode: string) =>
-    post(alpha.newAgent(), '/agnt/recovery/cancel', { address, cancelCode });
+    post(alpha.newAgent(), '/simon/recovery/cancel', { address, cancelCode });
 
   describe('the account', () => {
     it("answers the agent's address, keys, grants and pending recovery", async () => {
@@ -106,9 +106,9 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       const agent = await host.agent('skew');
       retired = true;
       for (const [method, path] of [
-        ['GET', '/agnt/account'],
-        ['GET', '/agnt/sync'],
-        ['POST', '/agnt/send'],
+        ['GET', '/simon/account'],
+        ['GET', '/simon/sync'],
+        ['POST', '/simon/send'],
       ] as const) {
         const response = await agent.request(method, path);
         assert.deepEqual([response.status, response.json.code], [401, 'unknown_key']);
@@ -150,7 +150,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
         });
         const agent = await host.agent('owner');
         isolated.clock.advance(120_000);
-        const url = new URL(`${host.origin}/agnt/account`);
+        const url = new URL(`${host.origin}/simon/account`);
         const headers = signRequest(agent.key, {
           method: 'GET',
           url: url.href,
@@ -181,8 +181,8 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       ]);
       assert.deepEqual((await account(a, phone.privateKey)).json, phone.res.json, 'the new key acts for the agent');
       const proof = sign(phone.privateKey, addKeyProofString(a.address, phone.key));
-      assert.deepEqual((await post(a, '/agnt/keys', { key: phone.key, proof })).json, phone.res.json, 'a repeat');
-      const doc = await a.request('GET', '/agnt/agents/dev@alpha.test', { sign: false });
+      assert.deepEqual((await post(a, '/simon/keys', { key: phone.key, proof })).json, phone.res.json, 'a repeat');
+      const doc = await a.request('GET', '/simon/agents/dev@alpha.test', { sign: false });
       assert.equal(JSON.stringify(doc.json).includes('phone'), false);
       assert.equal(doc.json.keys.length, 2);
     });
@@ -191,14 +191,14 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       const a = await alpha.agent('devbad');
       const stranger = generateKey();
       for (const proof of [undefined, sign(stranger.privateKey, 'something else')]) {
-        const res = await post(a, '/agnt/keys', { key: stranger.key, proof });
+        const res = await post(a, '/simon/keys', { key: stranger.key, proof });
         assert.deepEqual([res.status, res.json.code], [401, 'bad_proof']);
       }
       assert.equal((await addKey(a, 'x'.repeat(64))).res.status, 200);
       assert.equal((await addKey(a, 'é'.repeat(64))).res.status, 200, 'characters, not bytes');
       assert.deepEqual((await addKey(a, 'x'.repeat(65))).res.json.details, { field: 'label' });
       const proof = sign(stranger.privateKey, addKeyProofString(a.address, stranger.key));
-      assert.deepEqual((await post(a, '/agnt/keys', { key: stranger.key, proof, label: 7 })).json.details, {
+      assert.deepEqual((await post(a, '/simon/keys', { key: stranger.key, proof, label: 7 })).json.details, {
         field: 'label',
       });
     });
@@ -209,7 +209,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       assert.deepEqual([(await addKey(a)).res.status, (await addKey(a)).res.json.code], [400, 'too_many_keys']);
 
       const other = await alpha.agent('other');
-      const taken = await post(other, '/agnt/keys', {
+      const taken = await post(other, '/simon/keys', {
         key: a.token,
         proof: sign(a.key, addKeyProofString(other.address, a.token)),
       });
@@ -218,7 +218,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       const b = await alpha.agent('again');
       const old = await addKey(b);
       await revoke(b, old.key);
-      const back = await post(b, '/agnt/keys', {
+      const back = await post(b, '/simon/keys', {
         key: old.key,
         proof: sign(old.privateKey, addKeyProofString(b.address, old.key)),
       });
@@ -272,9 +272,9 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
   describe('grants', () => {
     it('are none on this server, so ending one is not_found', async () => {
       const a = await alpha.agent('grants');
-      const res = await a.request('DELETE', '/agnt/grants/g1');
+      const res = await a.request('DELETE', '/simon/grants/g1');
       assert.deepEqual([res.status, res.json.code], [404, 'not_found']);
-      const stranger = await a.request('DELETE', '/agnt/grants/g1', { key: generateKey().privateKey });
+      const stranger = await a.request('DELETE', '/simon/grants/g1', { key: generateKey().privateKey });
       assert.deepEqual([stranger.status, stranger.json.code], [401, 'unknown_key']);
     });
   });
@@ -283,13 +283,13 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
     it('lets a key the agent held when it started cancel it, and tells the address', async () => {
       const old = await mailboxAgent('keep');
       const { thief, code } = await startRecovery('keep@mail.example');
-      const res = await post(old, '/agnt/recovery/cancel', {});
+      const res = await post(old, '/simon/recovery/cancel', {});
       assert.deepEqual([res.status, res.json], [200, { status: 'cancelled', address: 'keep@mail.example' }]);
       assert.deepEqual(alpha.mail.at(-1), { address: 'keep@mail.example', type: 'recoveryCancelled' });
       assert.equal((await account(old)).json.recovery, null);
       fed.clock.advance(73 * 3600_000);
       assert.equal((await thief.recover({ address: 'keep@mail.example', code })).json.code, 'code_expired');
-      assert.equal((await post(old, '/agnt/recovery/cancel', {})).status, 404, 'nothing pending');
+      assert.equal((await post(old, '/simon/recovery/cancel', {})).status, 404, 'nothing pending');
     });
 
     it('never lets a key added while it is pending cancel it', async () => {
@@ -298,7 +298,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       fed.clock.advance(1000);
       const mallory = await addKey(old);
       assert.deepEqual((await account(old, mallory.privateKey)).json.recovery.cancellable, false);
-      const res = await post(old, '/agnt/recovery/cancel', {}, mallory.privateKey);
+      const res = await post(old, '/simon/recovery/cancel', {}, mallory.privateKey);
       assert.deepEqual([res.status, res.json.code], [409, 'recovery_not_cancellable']);
       assert.equal((await account(old)).json.recovery.cancellable, true);
     });
@@ -308,14 +308,14 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       // and Ada's next recovery is cancellable only by the code sent to Ada.
       const ada = await mailboxAgent('ada');
       const first = await startRecovery('ada@mail.example');
-      assert.equal((await post(ada, '/agnt/recovery/cancel', {})).status, 200);
+      assert.equal((await post(ada, '/simon/recovery/cancel', {})).status, 200);
 
       fed.clock.advance(10 * DAY);
       const second = await startRecovery('ada@mail.example');
       assert.equal((await account(ada)).json.recovery.cancellable, false);
       const notice = (await ada.received()).at(-1);
       assert.match(notice.message.parts[0].data, /no key can/);
-      const byKey = await post(ada, '/agnt/recovery/cancel', {});
+      const byKey = await post(ada, '/simon/recovery/cancel', {});
       assert.deepEqual([byKey.status, byKey.json.code], [409, 'recovery_not_cancellable']);
       assert.equal((await cancelByCode('ada@mail.example', first.cancelCode)).status, 422, 'a spent cancel code');
       const byCode = await cancelByCode('ada@mail.example', second.cancelCode);
@@ -344,27 +344,30 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       const { cancelCode } = await startRecovery((await mailboxAgent('sig')).address);
       const a = alpha.newAgent();
       const body = JSON.stringify({ address: 'sig@mail.example', cancelCode });
-      const forged = await a.request('POST', '/agnt/recovery/cancel', {
+      const forged = await a.request('POST', '/simon/recovery/cancel', {
         body,
-        headers: { 'agnt-key': generateKey().key },
+        headers: { 'simon-key': generateKey().key },
       });
       assert.deepEqual([forged.status, forged.json.code], [401, 'bad_signature']);
-      const elsewhere = await a.request('POST', '/agnt/recovery/cancel', { body, agent: 'other@mail.example' });
+      const elsewhere = await a.request('POST', '/simon/recovery/cancel', { body, agent: 'other@mail.example' });
       assert.deepEqual([elsewhere.status, elsewhere.json.code], [401, 'signature_required']);
-      assert.equal((await a.request('POST', '/agnt/recovery/cancel', { body, agent: 'sig@mail.example' })).status, 200);
+      assert.equal(
+        (await a.request('POST', '/simon/recovery/cancel', { body, agent: 'sig@mail.example' })).status,
+        200,
+      );
     });
 
     it('needs a key the agent holds to cancel by key', async () => {
       const old = await mailboxAgent('nokey');
       await startRecovery('nokey@mail.example');
-      const res = await post(old, '/agnt/recovery/cancel', {}, generateKey().privateKey);
+      const res = await post(old, '/simon/recovery/cancel', {}, generateKey().privateKey);
       assert.deepEqual([res.status, res.json.code], [401, 'unknown_key']);
     });
   });
 
   describe('unpairing', () => {
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     async function paired(local: string) {
       const a = alpha.newAgent();
       const address = `${local}@alpha.test`;
@@ -375,9 +378,9 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
     it("retires the address at once by the principal's unpairing, signed by any key", async () => {
       const a = await paired('up');
       const unpairing = signUnpairing(principal.privateKey, a.address, forValue);
-      const res = await post(alpha.newAgent(), '/agnt/unpair', { address: a.address, unpairing });
+      const res = await post(alpha.newAgent(), '/simon/unpair', { address: a.address, unpairing });
       assert.deepEqual([res.status, res.json], [200, { status: 'retired', address: 'up@alpha.test' }]);
-      const doc = await a.request('GET', '/agnt/agents/up@alpha.test', { sign: false });
+      const doc = await a.request('GET', '/simon/agents/up@alpha.test', { sign: false });
       if (doc.status === 404) assert.equal(doc.json.code, 'not_found');
       else {
         assert.equal(doc.status, 200);
@@ -391,7 +394,7 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
         );
       }
       assert.equal((await account(a)).json.code, 'key_revoked');
-      const again = await post(alpha.newAgent(), '/agnt/unpair', { address: a.address, unpairing });
+      const again = await post(alpha.newAgent(), '/simon/unpair', { address: a.address, unpairing });
       assert.deepEqual([again.status, again.json], [200, res.json], 'a repeat');
     });
 
@@ -399,20 +402,20 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
       const a = await paired('upbad');
       const solo = await alpha.agent('upsolo');
       const answers = [
-        await post(alpha.newAgent(), '/agnt/unpair', {
+        await post(alpha.newAgent(), '/simon/unpair', {
           address: a.address,
           unpairing: signUnpairing(generateKey().privateKey, a.address, forValue),
         }),
-        await post(alpha.newAgent(), '/agnt/unpair', {
+        await post(alpha.newAgent(), '/simon/unpair', {
           address: solo.address,
           unpairing: signUnpairing(principal.privateKey, solo.address, forValue),
         }),
-        await post(alpha.newAgent(), '/agnt/unpair', { address: 'nobody@alpha.test', unpairing: 'AAAA' }),
+        await post(alpha.newAgent(), '/simon/unpair', { address: 'nobody@alpha.test', unpairing: 'AAAA' }),
       ];
       for (const res of answers) assert.deepEqual([res.status, res.json.code], [401, 'bad_proof']);
       assert.equal(new Set(answers.map(res => res.json.detail)).size, 1);
       assert.equal((await account(a)).status, 200);
-      assert.equal((await post(a, '/agnt/unpair', { address: 7 })).json.details.field, 'address');
+      assert.equal((await post(a, '/simon/unpair', { address: 7 })).json.details.field, 'address');
     });
   });
 });

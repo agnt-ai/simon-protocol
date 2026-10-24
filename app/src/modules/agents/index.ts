@@ -30,7 +30,7 @@ const Capabilities = z.strictObject({
   email: z
     .boolean()
     .optional()
-    .meta({ description: 'The agent has email of its own and reaches people off AGNT itself.' }),
+    .meta({ description: 'The agent has email of its own and reaches people off SIMON itself.' }),
   attachments: z.boolean().optional(),
   contentTypes: z.array(z.string().max(200)).max(50).optional(),
   homepage: z

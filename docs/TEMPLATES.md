@@ -1,17 +1,17 @@
 # Template servers
 
-A template server is a plain, no-frills AGNT server in one language, written to be read: the shortest path from the spec to a server someone can run, fork and trust. It is a starting point, not a product. Every template lives in `templates/<language>/`. The first is the basic server in Node, now in [`server/`](../server), which moves to `templates/node/` when the repository splits for its public release. Python is next, and any language is welcome.
+A template server is a plain, no-frills SIMON server in one language, written to be read: the shortest path from the spec to a server someone can run, fork and trust. It is a starting point, not a product. Every template lives in `templates/<language>/`. The first is the basic server in Node, now in [`server/`](../server), which moves to `templates/node/` when the repository splits for its public release. Python is next, and any language is welcome.
 
-Templates beyond the basic server, such as client apps or social shapes (followers, forums, mutual connections), are not designed in advance. They are extracted from real apps built on AGNT once those apps work, the way Rails was extracted from Basecamp.
+Templates beyond the basic server, such as client apps or social shapes (followers, forums, mutual connections), are not designed in advance. They are extracted from real apps built on SIMON once those apps work, the way Rails was extracted from Basecamp.
 
 ## What every template is
 
-- **Complete for its profile.** It passes the conformance suite for *AGNT Core Server*, and, when it keeps people's history (CLIENT.md, "Which servers keep a history"), for *AGNT Hosting Server*. The profiles are still to be written ([CORE.md](CORE.md#conformance-and-profiles)). Its README carries the suite's latest report.
+- **Complete for its profile.** It passes the conformance suite for *SIMON Core Server*, and, when it keeps people's history (CLIENT.md, "Which servers keep a history"), for *SIMON Hosting Server*. The profiles are still to be written ([CORE.md](CORE.md#conformance-and-profiles)). Its README carries the suite's latest report.
 - **Nothing else.** No people, directory, graph, policy, bridges or billing. Those are modules ([MODULES.md](MODULES.md)) or products, built on the template's extension seam, never inside it.
 - **Small dependencies.** The language's standard library, an embedded database (sqlite), and the protocol library for that language when one exists. Anything more is justified in the README.
 - **The same shape in every language,** so a reader who knows one knows them all (below).
 - **Safe by default.** Every MUST of PROTOCOL.md section 11 is on unless a development flag says otherwise, and that flag refuses to start on a public address.
-- **Configured by environment variables** with the same names in every language (`AGNT_ORIGIN`, `AGNT_HOSTED_DOMAINS`, `AGNT_DB`, ...), as `server/README.md` lists them.
+- **Configured by environment variables** with the same names in every language (`SIMON_ORIGIN`, `SIMON_HOSTED_DOMAINS`, `SIMON_DB`, ...), as `server/README.md` lists them.
 
 ## The shape
 
@@ -51,10 +51,10 @@ A template in another language keeps these concerns and these boundaries. It nam
 
 1. **Read** PROTOCOL.md, CLIENT.md and the registry. Not the Node code: a template that copies another inherits its bugs (see [SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)).
 2. **Reproduce every vector** in `spec/vectors/` first, with a protocol library for the language. That library is half the work, and is useful alone.
-3. **Build the concerns in the order above,** each with its tests, and run the conformance suite against the result from the first day it answers `/agnt/server`.
+3. **Build the concerns in the order above,** each with its tests, and run the conformance suite against the result from the first day it answers `/simon/server`.
 4. **Federate** with the Node template: two servers, one message each way, as the README's quickstart does.
 5. **Open a pull request** adding the template under `templates/<language>/`, with its conformance report. It is reviewed against this page.
 
 ## Python, next
 
-The Python template follows the shape above on the standard library (`asyncio`, `sqlite3`, `ssl`), with the protocol rules of `clients/python/agnt/` moved into a `protocol` package the template and the client share. The client verifies in pure Python, but a server signs, and must sign in constant time: the template signs Ed25519 with `cryptography`, and ML-DSA-65 with `cryptography` where the pinned version supports it, or else with one vetted ML-DSA library. Its README names the versions it pins, and verifying ML-DSA-65 in pure Python, which takes seconds, is never on its request path.
+The Python template follows the shape above on the standard library (`asyncio`, `sqlite3`, `ssl`), with the protocol rules of `clients/python/simon/` moved into a `protocol` package the template and the client share. The client verifies in pure Python, but a server signs, and must sign in constant time: the template signs Ed25519 with `cryptography`, and ML-DSA-65 with `cryptography` where the pinned version supports it, or else with one vetted ML-DSA library. Its README names the versions it pins, and verifying ML-DSA-65 in pure Python, which takes seconds, is never on its request path.

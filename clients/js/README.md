@@ -1,6 +1,6 @@
 # @agnt-protocol/client
 
-The JavaScript client for the AGNT Protocol: an agent's signed calls to its own server
+The JavaScript client for the SIMON Protocol: an agent's signed calls to its own server
 ([spec/CLIENT.md](../../spec/CLIENT.md)), each request signed with the agent's key, and verification of
 what other agents send. Node 26, or Node 24.6 packed (below); no dependencies beyond [`@agnt-protocol/protocol`](../../protocol),
 which holds the protocol itself (canonical JSON, keys, messages). This package re-exports only the types
@@ -10,7 +10,7 @@ its API uses.
 import { generateKey } from '@agnt-protocol/protocol';
 import { Agent, verifyAuthor } from '@agnt-protocol/client';
 
-const ada = new Agent({ server: 'https://agnt.example.com', key: generateKey().privateKeyPem });
+const ada = new Agent({ server: 'https://simon.example.com', key: generateKey().privateKeyPem });
 await ada.register();                                   // a leased address: ada.address
 const { id } = await ada.send({ to: ['bob@example.net'], text: 'Does 3pm work?' });
 const { messages, token } = await ada.sync(); // save token, pass as since next time
@@ -36,19 +36,19 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 
 | Method | Call | Answers |
 | --- | --- | --- |
-| `register(options?)` | `POST /agnt/register` | Account `{address,keys,grants,recovery}` (no status), or `code_sent` / `pairing_required` |
+| `register(options?)` | `POST /simon/register` | Account `{address,keys,grants,recovery}` (no status), or `code_sent` / `pairing_required` |
 | `compose(draft)` | none | A signed `Message`, written now |
-| `send(draftOrMessage, {hints?})` | `POST /agnt/send` | `{id, receivedAt}` |
-| `sync({since?, limit?, wait?})` | `GET /agnt/sync` | `{messages,signals,marks,removed,token,more}` |
-| `account()` | `GET /agnt/account` | Private account state |
-| `addKey(privateKey, label?)`, `revokeKey(token)` | `/agnt/keys` | Account state; adding proves possession |
-| `recover({address,code?,at?,recover?})` | `POST /agnt/recovery` | Account on completion, otherwise `code_sent` or `recovery_pending` |
-| `recoveryStatus()`, `cancelRecovery({address,cancelCode}?)` | `/agnt/recovery`, `/agnt/recovery/cancel` | Authorized state, or cancellation |
-| `sendSignal(type,about,to)` | `POST /agnt/send-signal` | Explicit opt-in signal |
-| `createWebhook(url)`, `verifyWebhook(id,code)`, `deleteWebhook(id)` | `/agnt/webhooks` | Verification before wake notifications |
-| `sent(id)` | `GET /agnt/sent/<id>` | `{id, servers:[{server, recipients, status, reason?}]}` |
-| `uploadPart(bytes, type, name?)` | `PUT /agnt/parts/<sha256>` | The part, `{type, sha256, size, name?}`, for a draft's `parts` |
-| `fetchPart({sha256, size?})` | `GET /agnt/parts/<sha256>` | The bytes, checked against the hash and size |
+| `send(draftOrMessage, {hints?})` | `POST /simon/send` | `{id, receivedAt}` |
+| `sync({since?, limit?, wait?})` | `GET /simon/sync` | `{messages,signals,marks,removed,token,more}` |
+| `account()` | `GET /simon/account` | Private account state |
+| `addKey(privateKey, label?)`, `revokeKey(token)` | `/simon/keys` | Account state; adding proves possession |
+| `recover({address,code?,at?,recover?})` | `POST /simon/recovery` | Account on completion, otherwise `code_sent` or `recovery_pending` |
+| `recoveryStatus()`, `cancelRecovery({address,cancelCode}?)` | `/simon/recovery`, `/simon/recovery/cancel` | Authorized state, or cancellation |
+| `sendSignal(type,about,to)` | `POST /simon/send-signal` | Explicit opt-in signal |
+| `createWebhook(url)`, `verifyWebhook(id,code)`, `deleteWebhook(id)` | `/simon/webhooks` | Verification before wake notifications |
+| `sent(id)` | `GET /simon/sent/<id>` | `{id, servers:[{server, recipients, status, reason?}]}` |
+| `uploadPart(bytes, type, name?)` | `PUT /simon/parts/<sha256>` | The part, `{type, sha256, size, name?}`, for a draft's `parts` |
+| `fetchPart({sha256, size?})` | `GET /simon/parts/<sha256>` | The bytes, checked against the hash and size |
 | `call(method, path, body?, {headers?})` | any | The answer's JSON, for calls a server adds |
 
 **`register` options**, one call each:
@@ -58,8 +58,8 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 | `{}` | Lease an address on a domain the server controls. |
 | `{address}` | An address on a hosted domain binds at once; any other is sent a code. |
 | `{address, code}` | The creation code that was sent. Existing-address recovery uses `recover`, never `register`. |
-| `{for}` | Pair with a key principal (`agnt-key:<token>`). A leased address answers `pairing_required`. |
-| `{for, pairing}` | The principal's signature over `AGNT-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-protocol/protocol`). |
+| `{for}` | Pair with a key principal (`simon-key:<token>`). A leased address answers `pairing_required`. |
+| `{for, pairing}` | The principal's signature over `SIMON-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-protocol/protocol`). |
 
 An account answer binds `address`, and `for`/`pairing` when given. `recover` is separate from
 creation and pairing: request a code, then repeat `recover` with the address and code. A waiting
@@ -107,7 +107,7 @@ resolves to, read by `verifyAuthor` itself. An entry's `claims` never count: any
 
 or `{verified: false, id, reason}`, where `reason` is `invalid_message`, `no_server`, `no_agent`,
 `bad_document`, `bad_signature`, `unsupported_algorithm` or `bad_pairing`. A lookup or fetch that may
-pass is never an answer: it throws a retryable `AgntError` (`unavailable`, `timeout` or `network_error`).
+pass is never an answer: it throws a retryable `SimonError` (`unavailable`, `timeout` or `network_error`).
 
 `understood` is false for a message of a version this client does not implement, or whose `critical`
 header lists one it does not understand (it understands the protocol's six): whose key signed it is all
@@ -118,14 +118,14 @@ whether `signedClaims` were given and verified; unverified claims are ignored.
 | `basis` | What it proves |
 | --- | --- |
 | `agent-asserted` | Nothing: the `for` header is the agent's word. |
-| `key-pairing` | The `agnt-key:` holder consented to this address speaking for it, with no server trusted for that. Not identity, not humanity; the agent's keys are still its server's word. |
-| `server-claim` | An `acts-for` claim the author's server (`claimant`) signed, matching `from` and `for`. `authoritative` is the reader's own judgement: true only for a `mailto:` whose domain names the claimant in its `_agnt` TXT record, so as strong as the domain's DNS. Otherwise it is that server's word about someone else's identifier. |
+| `key-pairing` | The `simon-key:` holder consented to this address speaking for it, with no server trusted for that. Not identity, not humanity; the agent's keys are still its server's word. |
+| `server-claim` | An `acts-for` claim the author's server (`claimant`) signed, matching `from` and `for`. `authoritative` is the reader's own judgement: true only for a `mailto:` whose domain names the claimant in its `_simon` TXT record, so as strong as the domain's DNS. Otherwise it is that server's word about someone else's identifier. |
 
 `proves` says the same in words. `scope` keeps only registry-shaped names.
 
 ## Errors
 
-Every failure is an `AgntError` (`name` is `'AgntError'`) with `code`, `message`, `status`, `retryable`,
+Every failure is a `SimonError` (`name` is `'SimonError'`) with `code`, `message`, `status`, `retryable`,
 `details` and `retryAfter` (seconds, from `Retry-After`). A server's refusal keeps its own code, message
 and details. Failures with no answer behind them have `status: null`:
 
@@ -140,7 +140,7 @@ and details. Failures with no answer behind them have `status: null`:
 | `unavailable` | yes | A resolution or document fetch that failed for now |
 | `no_server` | no | The domain resolves to no server; `details.outcome` says why |
 | `bad_document` | no | A document that is not readable as the protocol says |
-| `path_refused` | no | A file outside the workspace or under `AGNT_HOME` (the `workspace` module) |
+| `path_refused` | no | A file outside the workspace or under `SIMON_HOME` (the `workspace` module) |
 
 A server's error is RFC 9457 problem details; the client reads it with the protocol's `parseProblem`,
 keeping `code`, `detail` (as `message`) and `details`, with `status` and `retryable` from the HTTP status.
@@ -151,14 +151,14 @@ A body without a `code` is `bad_response`. `toJSON()` gives `{error:{code,messag
 The key and address on disk, shared by the CLI and the MCP server:
 
 ```
-<home>              mode 700: AGNT_HOME, or ~/.config/agnt
+<home>              mode 700: SIMON_HOME, or ~/.config/simon
   key.pem           the private key, PKCS #8 PEM, mode 600, made once and never overwritten
   address.json      {"server","address","for"?,"pairing"?} once registered, mode 600
 ```
 
 | Function | |
 | --- | --- |
-| `defaultHome(env?)` | `AGNT_HOME`, or `~/.config/agnt` |
+| `defaultHome(env?)` | `SIMON_HOME`, or `~/.config/simon` |
 | `keyFile(home)`, `addressFile(home)` | The two paths |
 | `ensureKeyFile(file, alg?)` | The key in `file`, made if missing. Written to a fresh file opened `wx` with mode 600, then linked into place; on EEXIST the key that won is read back, so racing processes all get one key. |
 | `replaceKeyFile(home, now?)` | A new key for recovery; the old file is kept as `key.pem.replaced-<time>` |
@@ -173,8 +173,8 @@ Three modules the CLI and the MCP server share, so neither hands a model more th
 | Module | |
 | --- | --- |
 | `@agnt-protocol/client/provenance` | `presentEntry(entry)` keeps the server's facts outside and puts the message, each claim and the signed claims inside `{untrusted:{from, basis, content, invisible?}}`; `invisibleIn(value)` lists tag characters, bidirectional controls and zero-width characters by path; `presentDelivery` labels a failure reason the protocol does not define; `unwrapEntry` gives back `{message, signedClaims?}` from any of these forms; `RULE` is the sentence every answer carries. |
-| `@agnt-protocol/client/workspace` | `workspace(home, env?)` is `AGNT_WORKSPACE` or the working directory; `readFile`, `writablePath` and `writeFile` resolve every link and refuse anything outside it, or under `AGNT_HOME`, or a hard link to a file there; writes never follow a link. |
-| `@agnt-protocol/client/wait` | `waitForMessage(agent, home, {from?, timeoutMs, intervalMs})`: the next message not yet shown, oldest first, or null at the deadline. What was shown is kept in `$AGNT_HOME/wait.json` (`{token,pending,seen}`: an opaque token, unmatched queued entries, recent ids), so a message delivered twice, or passed over by a wait for one correspondent, is shown exactly once. |
+| `@agnt-protocol/client/workspace` | `workspace(home, env?)` is `SIMON_WORKSPACE` or the working directory; `readFile`, `writablePath` and `writeFile` resolve every link and refuse anything outside it, or under `SIMON_HOME`, or a hard link to a file there; writes never follow a link. |
+| `@agnt-protocol/client/wait` | `waitForMessage(agent, home, {from?, timeoutMs, intervalMs})`: the next message not yet shown, oldest first, or null at the deadline. What was shown is kept in `$SIMON_HOME/wait.json` (`{token,pending,seen}`: an opaque token, unmatched queued entries, recent ids), so a message delivered twice, or passed over by a wait for one correspondent, is shown exactly once. |
 
 ## Packed for Node 24
 
@@ -206,7 +206,7 @@ checked and saved locally and are never added to the recovery request body. Prin
 without saved or supplied principal state is rejected. For mailbox recovery of an email/tel pair,
 supply its existing principal explicitly; the account response does not infer it.
 
-Concurrent waits in the same `AGNT_HOME` fail with `concurrent_wait`. JS and Python hold the same
+Concurrent waits in the same `SIMON_HOME` fail with `concurrent_wait`. JS and Python hold the same
 `wait.lock` directory for the whole operation and release it on normal completion/error. No owner is
 stolen by age. After a crash, confirm the recorded PID is no longer running, then remove only the stale
 `wait.lock` directory and keep `wait.json`. Queued messages are already private local data and can be

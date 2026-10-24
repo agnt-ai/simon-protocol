@@ -36,7 +36,7 @@ describe('send (CLIENT.md)', async () => {
 
   it('refuses a message not in canonical form, with the canonical form', async () => {
     const m = ada.message([bob.address], 'x');
-    const res = await ada.request('POST', '/agnt/send', { body: JSON.stringify(m, null, 1) });
+    const res = await ada.request('POST', '/simon/send', { body: JSON.stringify(m, null, 1) });
     assert.equal(res.status, 400);
     assert.equal(res.json.details.canonical, JSON.stringify(JSON.parse(res.json.details.canonical)));
   });
@@ -57,7 +57,7 @@ describe('send (CLIENT.md)', async () => {
     assert.deepEqual(await code(ada.send(solo)), [400, 'invalid', 'headers']);
 
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const p = alpha.newAgent();
     await p.register({
       address: 'p@alpha.test',
@@ -105,7 +105,7 @@ describe('send (CLIENT.md)', async () => {
 
   it('refuses to carry whole a message with an audience, at any depth (spec section 7.1)', async () => {
     const carry = (m: object) => ({
-      type: 'application/agnt-message',
+      type: 'application/simon-message',
       data: Buffer.from(canonicalize(m as never)).toString('base64'),
     });
     const post = bob.message([], 'for followers', { headers: { audience: 'followers' } });
@@ -131,7 +131,7 @@ describe('send (CLIENT.md)', async () => {
     assert.deepEqual((await ada.send(m)).json, first.json);
   });
 
-  it('checks agnt-hints as part of the envelope it will travel in', async () => {
+  it('checks simon-hints as part of the envelope it will travel in', async () => {
     const m = ada.message([bob.address], 'x');
     assert.deepEqual(await code(ada.send(m, { 'eve@beta.test': { invite: 'x' } })), [400, 'invalid', 'hints']);
     assert.deepEqual(await code(ada.send(m, { [bob.address]: { invite: 'x'.repeat(17000) } })), [
@@ -141,7 +141,7 @@ describe('send (CLIENT.md)', async () => {
     ]);
     assert.equal((await ada.send(m, { [bob.address]: { invite: 'x' } })).status, 200);
     const raw = await ada.send(m, { [bob.address]: { note: 'café' } });
-    assert.deepEqual([raw.status, raw.json.details.field], [400, 'agnt-hints'], 'ASCII only, never read as Latin-1');
+    assert.deepEqual([raw.status, raw.json.details.field], [400, 'simon-hints'], 'ASCII only, never read as Latin-1');
   });
 
   it('checks hints on a repeat against the claims that travel, as the first send did', async () => {
@@ -194,7 +194,7 @@ describe('send (CLIENT.md)', async () => {
     assert.equal(entry.claims.length, 1);
     assert.ok(entry.signedClaims, 'signedClaims beside claims');
     const doc = readServerDocument(
-      (await dan.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await dan.request('GET', '/simon/server', { sign: false })).bytes,
       delta.origin,
       fed.clock.now(),
     )!;
@@ -243,16 +243,16 @@ describe('signed requests (spec section 8)', async () => {
   after(() => fed.close());
   const alpha = await fed.server('alpha');
   const ada: TestAgent = await alpha.agent('ada');
-  const inbox = (headers: Record<string, string>) => ada.request('GET', '/agnt/sync', { sign: false, headers });
+  const inbox = (headers: Record<string, string>) => ada.request('GET', '/simon/sync', { sign: false, headers });
   const signed = (nonce: string, now = fed.clock.t) =>
-    ada.request('GET', '/agnt/sync', { sign: false, headers: sig(ada, '/agnt/sync', nonce, now) });
+    ada.request('GET', '/simon/sync', { sign: false, headers: sig(ada, '/simon/sync', nonce, now) });
 
   it('refuses a missing or malformed header with signature_required and the server time', async () => {
     const res = await inbox({});
     assert.deepEqual([res.status, res.json.code], [401, 'signature_required']);
     assert.equal(res.json.details.serverTime, Math.floor(fed.clock.t / 1000));
     assert.equal(
-      (await inbox({ ...sig(ada, '/agnt/sync', 'short'), 'agnt-nonce': 'short' })).json.code,
+      (await inbox({ ...sig(ada, '/simon/sync', 'short'), 'simon-nonce': 'short' })).json.code,
       'signature_required',
     );
   });
@@ -264,23 +264,23 @@ describe('signed requests (spec section 8)', async () => {
 
   it('refuses an unknown key, and a bad signature with the signing string expected', async () => {
     const stranger = generateKey();
-    const res = await ada.request('GET', '/agnt/sync', { key: stranger.privateKey });
+    const res = await ada.request('GET', '/simon/sync', { key: stranger.privateKey });
     assert.equal(res.json.code, 'unknown_key');
     const bad = await inbox({
-      ...sig(ada, '/agnt/sync', 'nonce-bad-1'),
-      'agnt-signature': sig(ada, '/agnt/other', 'nonce-bad-1')['agnt-signature'],
+      ...sig(ada, '/simon/sync', 'nonce-bad-1'),
+      'simon-signature': sig(ada, '/simon/other', 'nonce-bad-1')['simon-signature'],
     });
     assert.equal(bad.json.code, 'bad_signature');
     assert.match(
       bad.json.details.signingString,
-      /^AGNT-REQUEST\nGET\nhttps:\/\/agnt\.alpha\.test\nada@alpha\.test\n\/agnt\/sync\n/,
+      /^SIMON-REQUEST\nGET\nhttps:\/\/simon\.alpha\.test\nada@alpha\.test\n\/simon\/sync\n/,
     );
   });
 
   it('records a nonce only once a signature verified, and refuses its reuse', async () => {
     const forged = {
-      ...sig(ada, '/agnt/sync', 'nonce-once'),
-      'agnt-signature': sig(ada, '/x', 'nonce-once')['agnt-signature'],
+      ...sig(ada, '/simon/sync', 'nonce-once'),
+      'simon-signature': sig(ada, '/x', 'nonce-once')['simon-signature'],
     };
     assert.equal((await inbox(forged)).json.code, 'bad_signature');
     assert.equal((await signed('nonce-once')).status, 200, 'the forged request did not use the nonce up');

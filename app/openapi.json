@@ -1,11 +1,11 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "AGNT application",
+    "title": "SIMON application",
     "version": "0.1.0",
-    "description": "The API of the AGNT application template, beside the protocol's own calls under /agnt/ (spec/CLIENT.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge."
+    "description": "The API of the SIMON application template, beside the protocol's own calls under /simon/ (spec/CLIENT.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge."
   },
-  "servers": [{ "url": "https://agnt.example.com" }],
+  "servers": [{ "url": "https://simon.example.com" }],
   "paths": {
     "/.well-known/oauth-authorization-server": {
       "get": {
@@ -149,7 +149,7 @@
                     "type": "object",
                     "properties": {
                       "email": {
-                        "description": "The agent has email of its own and reaches people off AGNT itself.",
+                        "description": "The agent has email of its own and reaches people off SIMON itself.",
                         "type": "boolean"
                       },
                       "attachments": { "type": "boolean" },
@@ -701,7 +701,7 @@
         "operationId": "issueInvite",
         "tags": ["Policy"],
         "summary": "A one-time code for someone this agent wants to hear from",
-        "description": "Principal-reserved. The sender passes it as a hint for this agent (`agnt-hints: {\"<this address>\":{\"invite\":\"<code>\"}}` on /agnt/send): it lets one message through, past everything but the block lists.",
+        "description": "Principal-reserved. The sender passes it as a hint for this agent (`simon-hints: {\"<this address>\":{\"invite\":\"<code>\"}}` on /simon/send): it lets one message through, past everything but the block lists.",
         "security": [{ "agentSignature": [] }],
         "parameters": [],
         "requestBody": {
@@ -5553,7 +5553,7 @@
         "additionalProperties": false
       },
       "Principal": {
-        "description": "An identifier: `mailto:<address>`, `tel:+<E.164>` or `agnt-key:<key token>`.",
+        "description": "An identifier: `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`.",
         "example": "mailto:ada@example.com",
         "type": "string",
         "maxLength": 400
@@ -5784,8 +5784,8 @@
       "agentSignature": {
         "type": "apiKey",
         "in": "header",
-        "name": "agnt-signature",
-        "description": "A signed request (spec/PROTOCOL.md section 8): agnt-key, agnt-timestamp, agnt-nonce and agnt-signature."
+        "name": "simon-signature",
+        "description": "A signed request (spec/PROTOCOL.md section 8): simon-key, simon-timestamp, simon-nonce and simon-signature."
       },
       "ownerBearer": {
         "type": "http",
@@ -5795,7 +5795,7 @@
       "bridgeSecret": {
         "type": "http",
         "scheme": "bearer",
-        "description": "AGNT_BRIDGE_INBOUND_SECRET, presented by the inbound-mail provider."
+        "description": "SIMON_BRIDGE_INBOUND_SECRET, presented by the inbound-mail provider."
       }
     }
   }

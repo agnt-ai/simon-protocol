@@ -1,11 +1,11 @@
 /**
- * `POST /agnt/register` (CLIENT.md): creation/pairing for a key; recovery uses its own resource. The call is signed by the key it
+ * `POST /simon/register` (CLIENT.md): creation/pairing for a key; recovery uses its own resource. The call is signed by the key it
  * registers, which it carries as `key`.
  *
  *   with no address                        an address leased on the lease domain
  *   with an address on a hosted domain     that name, at once
  *   with an address resolving here         a code sent to it; the same call with `code` binds the key
- *   POST /agnt/recovery for a held address  the code exchange recovers it: the new key replaces all,
+ *   POST /simon/recovery for a held address  the code exchange recovers it: the new key replaces all,
  *                                          after a wait while the agent still holds a valid key, which
  *                                          the agent is told of and the address may cancel (account.ts)
  *   recovery with `recover` and `at`       a key principal recovers its agent at once, whatever the
@@ -87,7 +87,7 @@ async function lifecycle(ctx: Context, req: Request, recovering: boolean): Promi
   const now = ctx.now();
   const headers = readSignedHeaders(req.headers, now, { agent: true, optionalAgent: true });
   const body = readBody(req.body, MEMBERS);
-  const key = headers['agnt-key'];
+  const key = headers['simon-key'];
   if (body.key !== key) throw invalid('key is the key signing this call.', { field: 'key' });
   if (!isPublicKey(key)) throw invalid('key is not a supported public key.', { field: 'key' });
   // Prove possession before any lookup-dependent diagnostic or actor comparison.
@@ -99,7 +99,7 @@ async function lifecycle(ctx: Context, req: Request, recovering: boolean): Promi
     if (!named) throw invalid('address names the account to recover.', { field: 'address' });
     if (body.recover !== undefined) return principalRecovery(ctx, key, body);
   } else if (body.recover !== undefined || body.at !== undefined) {
-    throw invalid('Recovery uses POST /agnt/recovery.', { field: 'recover' });
+    throw invalid('Recovery uses POST /simon/recovery.', { field: 'recover' });
   }
   if (holder) {
     const held = holder.keys.find(k => k.key === key)!;
@@ -141,7 +141,7 @@ function repeat(ctx: Context, agent: Agent, key: string, body: RegisterBody): Pr
 }
 
 /**
- * A key principal recovers its paired agent: its signature over AGNT-RECOVER gives the address `key` at
+ * A key principal recovers its paired agent: its signature over SIMON-RECOVER gives the address `key` at
  * once, ending every old key and any pending recovery. `at` has the window `send` gives `sentAt`, so a
  * signed recovery never used is never a standing key to the agent.
  */
@@ -161,7 +161,7 @@ async function principalRecovery(ctx: Context, key: string, body: RegisterBody):
   ) {
     throw unauthorized(
       'bad_proof',
-      "recover is the key principal's signature over AGNT-RECOVER, the address, the new key and at.",
+      "recover is the key principal's signature over SIMON-RECOVER, the address, the new key and at.",
       now,
     );
   }
@@ -205,7 +205,7 @@ function lease(ctx: Context, key: string, body: RegisterBody): Promise<Reply> {
 async function pairing(ctx: Context, address: string, key: string, body: RegisterBody): Promise<string | null | Reply> {
   const principal = body.for;
   if (principal === undefined) return null;
-  if (!isPrincipal(principal)) throw invalid('for is a mailto:, tel: or agnt-key: identifier.', { field: 'for' });
+  if (!isPrincipal(principal)) throw invalid('for is a mailto:, tel: or simon-key: identifier.', { field: 'for' });
   if (principalKey(principal) !== null) {
     if (body.pairing === undefined) return json({ status: 'pairing_required', address }, 202);
     if (!verifyPairing(address, principal, body.pairing)) {
@@ -372,7 +372,7 @@ async function startRecovery(
   if (!wait) return recoverByCode(ctx, address, key, pending);
   ctx.log('info', 'recovery by code waiting', { address, completesAt: recovery.completesAt });
   const cancel = recovery.byKey
-    ? 'by POST /agnt/recovery/cancel signed by a key this agent holds now, or by the cancel code sent to the address'
+    ? 'by POST /simon/recovery/cancel signed by a key this agent holds now, or by the cancel code sent to the address'
     : 'by the cancel code sent to the address: a key cancelled a recovery of it within 30 days, so no key can';
   let stage = 'notice';
   try {

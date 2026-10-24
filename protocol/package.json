@@ -8,7 +8,7 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "The AGNT Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
+  "description": "The SIMON Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

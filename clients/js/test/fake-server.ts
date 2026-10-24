@@ -81,7 +81,7 @@ export interface FakeOptions {
 }
 
 export function fakeServer(opts: FakeOptions = {}) {
-  const origin = opts.origin ?? 'https://agnt.test';
+  const origin = opts.origin ?? 'https://simon.test';
   const domain = opts.domain ?? 'agents.test';
   const now = opts.now ?? (() => new Date());
   const serverKey = generateKey();
@@ -119,7 +119,7 @@ export function fakeServer(opts: FakeOptions = {}) {
   async function authenticate(req: Request, body: Uint8Array, fresh?: string): Promise<string> {
     const raw = Object.fromEntries(req.headers);
     const headers = readSignedHeaders(raw, now());
-    const key = headers['agnt-key'];
+    const key = headers['simon-key'];
     const entry =
       holderOf(key)?.keys.find(k => k.key === key) ??
       (key === fresh ? { key, added: timestamp(now()), revoked: null } : null);
@@ -129,7 +129,7 @@ export function fakeServer(opts: FakeOptions = {}) {
       entry,
       nonceSeen: (k, n) => nonces.seen(k, n, now()),
     });
-    nonces.record(key, headers['agnt-nonce'], headers['agnt-timestamp'], now());
+    nonces.record(key, headers['simon-nonce'], headers['simon-timestamp'], now());
     return key;
   }
 
@@ -241,7 +241,7 @@ export function fakeServer(opts: FakeOptions = {}) {
     requests.push({ method: req.method, path: splitUrl(req.url).target, headers: req.headers, body: raw });
     const url = new URL(req.url);
     const [, base, call, arg] = url.pathname.split('/');
-    if (base !== 'agnt') throw refuse(404, 'not_found', 'No such call.');
+    if (base !== 'simon') throw refuse(404, 'not_found', 'No such call.');
     const name = `${req.method} ${call}`;
     if (name === 'GET server') return { json: serverDocument(origin, serverKeys) };
     if (name === 'GET agents') {
@@ -266,7 +266,7 @@ export function fakeServer(opts: FakeOptions = {}) {
     if (name === 'POST recovery' && arg === 'cancel') {
       const body = parseJson(raw) as { address?: string; cancelCode?: string };
       if (body.cancelCode !== undefined) {
-        const signer = readSignedHeaders(Object.fromEntries(req.headers), now())['agnt-key'];
+        const signer = readSignedHeaders(Object.fromEntries(req.headers), now())['simon-key'];
         await authenticate(req, raw, signer);
         if (body.cancelCode !== CANCEL_CODE || !body.address || !recoveries.delete(body.address))
           throw refuse(422, 'wrong_code', 'Wrong cancel code.');

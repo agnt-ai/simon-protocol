@@ -14,7 +14,7 @@ from typing import Any
 
 PROBLEM_CONTENT_TYPE = "application/problem+json"
 #: The scheme every request-signature ``401`` names in ``WWW-Authenticate`` (section 8).
-AUTH_SCHEME = "AGNT"
+AUTH_SCHEME = "SIMON"
 
 
 def is_retryable(status: int) -> bool:
@@ -27,7 +27,7 @@ def title_of(code: str) -> str:
     return (code[:1].upper() + code[1:]).replace("_", " ")
 
 
-class AgntError(Exception):
+class SimonError(Exception):
     """An error as the protocol writes it: a stable ``code``, a ``message`` that may change (a problem's
     ``detail``), ``status``, ``retryable`` and ``details``.
 
@@ -83,7 +83,7 @@ class AgntError(Exception):
 
     def __repr__(self) -> str:
         fields = (self.code, self.message, self.status, self.retryable, self.details)
-        return f"AgntError{fields!r}"
+        return f"SimonError{fields!r}"
 
     def to_json(self) -> dict[str, Any]:
         """The error as this client prints it: ``{"error": {"code", "message", "status", "retryable",
@@ -124,7 +124,7 @@ class AgntError(Exception):
         return headers
 
 
-def parse_problem(status: int, body: bytes, *, retry_after: int | None = None) -> AgntError | None:
+def parse_problem(status: int, body: bytes, *, retry_after: int | None = None) -> SimonError | None:
     """The error an answer that is not a success carries: its problem detail's ``code``, ``detail`` (or
     ``title``) and ``details`` when they are the right types, with ``status`` and ``retryable`` taken from
     the HTTP status, which is what a client acts on. None when the body is no problem detail (no string
@@ -133,7 +133,7 @@ def parse_problem(status: int, body: bytes, *, retry_after: int | None = None) -
 
     try:
         value = parse(body)
-    except AgntError:
+    except SimonError:
         return None
     if not isinstance(value, dict) or not isinstance(value.get("code"), str):
         return None
@@ -141,7 +141,7 @@ def parse_problem(status: int, body: bytes, *, retry_after: int | None = None) -
     detail, title = value.get("detail"), value.get("title")
     message = detail if isinstance(detail, str) and detail else title if isinstance(title, str) else ""
     details = value.get("details")
-    return AgntError(
+    return SimonError(
         code,
         message or title_of(code),
         status,
@@ -151,6 +151,6 @@ def parse_problem(status: int, body: bytes, *, retry_after: int | None = None) -
     )
 
 
-def invalid(message: str, **details: Any) -> AgntError:
+def invalid(message: str, **details: Any) -> SimonError:
     """``400 invalid``, with ``details.field`` or ``details.canonical`` when given."""
-    return AgntError("invalid", message, 400, False, details)
+    return SimonError("invalid", message, 400, False, details)

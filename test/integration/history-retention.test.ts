@@ -49,7 +49,7 @@ it('distinguishes a local check with retained validated keys from a cold reader 
     old.privateKey,
   );
   const serverDoc = serverDocument(origin, [{ key: server.key, added, revoked: null }]);
-  const resolver: ResolverIO = { txt: async () => [[`v=agnt1; server=${origin}`]], get: async () => null };
+  const resolver: ResolverIO = { txt: async () => [[`v=simon1; server=${origin}`]], get: async () => null };
   let hidden = false;
   let retireAt: string | null = null;
   const paths: string[] = [];
@@ -57,8 +57,8 @@ it('distinguishes a local check with retained validated keys from a cold reader 
     const parsed = new URL(url);
     paths.push(parsed.pathname);
     assert.equal(parsed.origin, origin, 'the reader uses the domain-selected origin');
-    if (parsed.pathname === '/agnt/server') return Response.json(serverDoc);
-    assert.ok(parsed.pathname.startsWith('/agnt/agents/'));
+    if (parsed.pathname === '/simon/server') return Response.json(serverDoc);
+    assert.ok(parsed.pathname.startsWith('/simon/agents/'));
     if (hidden) return new Response('', { status: 404 });
     return Response.json(
       signAgentDocument(
@@ -92,9 +92,9 @@ it('distinguishes a local check with retained validated keys from a cold reader 
   const beforeCold = paths.length;
   const cold = await verifyAuthor(m, opts);
   assert.equal(cold.verified ? 'verified' : cold.reason, 'bad_signature');
-  assert.ok(paths.slice(beforeCold).includes('/agnt/server'), 'cold verification fetched current server evidence');
+  assert.ok(paths.slice(beforeCold).includes('/simon/server'), 'cold verification fetched current server evidence');
   assert.ok(
-    paths.slice(beforeCold).some(p => p.startsWith('/agnt/agents/')),
+    paths.slice(beforeCold).some(p => p.startsWith('/simon/agents/')),
     'and the current agent document',
   );
   // Only the evidence deliberately retained in this fixture supports this local signature check.

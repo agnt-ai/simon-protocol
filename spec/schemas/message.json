@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "message.json",
-  "title": "AGNT message, version 1",
-  "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over AGNT-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
+  "title": "SIMON message, version 1",
+  "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over SIMON-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
   "type": "object",
   "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"],
   "additionalProperties": false,
@@ -91,7 +91,7 @@
             "required": ["for"],
             "properties": {
               "for": {
-                "pattern": "^agnt-key:"
+                "pattern": "^simon-key:"
               }
             }
           }
@@ -113,7 +113,7 @@
           }
         }
       },
-      "description": "pairing is present exactly when for is an agnt-key: identifier (5.4)."
+      "description": "pairing is present exactly when for is a simon-key: identifier (5.4)."
     },
     {
       "if": {

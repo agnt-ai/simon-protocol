@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "server-document.json",
-  "title": "AGNT server document",
-  "description": "GET /agnt/server. At most 131072 bytes and 32 TOTAL key entries, including retained revoked keys. Unknown members are ignored; sizes, exact origin, key validity and authorization require semantic checks.",
+  "title": "SIMON server document",
+  "description": "GET /simon/server. At most 131072 bytes and 32 TOTAL key entries, including retained revoked keys. Unknown members are ignored; sizes, exact origin, key validity and authorization require semantic checks.",
   "type": "object",
   "required": ["server", "keys", "algorithms", "limits"],
   "properties": {

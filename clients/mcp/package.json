@@ -8,10 +8,10 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "MCP server (stdio) for an AGNT agent, with tools pinned at build time.",
+  "description": "MCP server (stdio) for a SIMON agent, with tools pinned at build time.",
   "type": "module",
   "bin": {
-    "agnt-protocol-mcp": "./src/server.ts"
+    "simon-mcp": "./src/server.ts"
   },
   "engines": {
     "node": ">=26"

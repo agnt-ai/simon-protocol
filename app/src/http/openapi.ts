@@ -21,9 +21,9 @@ const SCHEMES = {
   agentSignature: {
     type: 'apiKey',
     in: 'header',
-    name: 'agnt-signature',
+    name: 'simon-signature',
     description:
-      'A signed request (spec/PROTOCOL.md section 8): agnt-key, agnt-timestamp, agnt-nonce and agnt-signature.',
+      'A signed request (spec/PROTOCOL.md section 8): simon-key, simon-timestamp, simon-nonce and simon-signature.',
   },
   ownerBearer: {
     type: 'http',
@@ -33,7 +33,7 @@ const SCHEMES = {
   bridgeSecret: {
     type: 'http',
     scheme: 'bearer',
-    description: 'AGNT_BRIDGE_INBOUND_SECRET, presented by the inbound-mail provider.',
+    description: 'SIMON_BRIDGE_INBOUND_SECRET, presented by the inbound-mail provider.',
   },
 };
 
@@ -129,10 +129,10 @@ export function openApiDocument(routes: ApiRoute[], origin: string) {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'AGNT application',
+      title: 'SIMON application',
       version: '0.1.0',
       description:
-        "The API of the AGNT application template, beside the protocol's own calls under /agnt/ (spec/CLIENT.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge.",
+        "The API of the SIMON application template, beside the protocol's own calls under /simon/ (spec/CLIENT.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge.",
     },
     servers: [{ url: origin }],
     paths: Object.fromEntries(Object.entries(paths).sort(([a], [b]) => a.localeCompare(b))),

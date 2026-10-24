@@ -1,5 +1,5 @@
 /**
- * The AGNT Protocol, version 1, as code: everything two implementations must agree on, and nothing else.
+ * The SIMON Protocol, version 1, as code: everything two implementations must agree on, and nothing else.
  * No dependencies beyond Node's standard library. The normative text is spec/PROTOCOL.md.
  */
 export * from './address.ts';

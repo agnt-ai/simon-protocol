@@ -26,7 +26,7 @@ async function migration() {
   const calls: URL[] = [];
   const fetch: Fetch = async (url, init) => {
     const requested = new URL(url);
-    if (requested.pathname === '/agnt/sync') {
+    if (requested.pathname === '/simon/sync') {
       calls.push(requested);
       if (!requested.searchParams.has('since'))
         return new Response(
@@ -51,7 +51,7 @@ async function migration() {
 describe('explicit migration-gap handoff', () => {
   it('keeps migration details in actual MCP JSON-RPC errors and requires explicit sync arguments', async t => {
     const { agent, key, details, calls, fetch, entry } = await migration();
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-gap-mcp-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-gap-mcp-'));
     t.mock.method(globalThis, 'fetch', fetch);
     try {
       fs.writeFileSync(path.join(home, 'key.pem'), key.privateKeyPem, { mode: 0o600 });

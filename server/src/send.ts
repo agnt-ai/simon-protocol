@@ -1,5 +1,5 @@
 /**
- * `POST /agnt/send` (CLIENT.md): an agent here hands over a message for delivery. Checked in the order the
+ * `POST /simon/send` (CLIENT.md): an agent here hands over a message for delivery. Checked in the order the
  * client API gives: the message as a delivery would check it (spec section 6.3, steps 1, 3 and 4); a
  * version this server implements; `from` the agent's own address, on a domain that still names this
  * server; the author's signature; the paired or solo rule; the 24-hour window; no message with an audience
@@ -50,7 +50,7 @@ const DAY_MS = 86_400_000;
 export async function send(ctx: Context, req: Request): Promise<Reply> {
   const agent = await authenticateAgent(ctx, req);
   const m = parseMessage(req.body, ctx.config.limits);
-  return json(await write(ctx, agent, m, readHintsHeader(req.headers['agnt-hints'])));
+  return json(await write(ctx, agent, m, readHintsHeader(req.headers['simon-hints'])));
 }
 
 /** `send` for an extension's own agent, with the message as an object: checked from step 4 on. */
@@ -189,13 +189,13 @@ export function contentParts(m: AnyMessage): { sha256: string; size: number }[] 
 }
 
 /**
- * The `agnt-hints` header: one JSON object, in ASCII (CLIENT.md send), or `{}` when absent. A byte outside
+ * The `simon-hints` header: one JSON object, in ASCII (CLIENT.md send), or `{}` when absent. A byte outside
  * printable ASCII is refused rather than read as Latin-1 and passed on changed.
  */
 function readHintsHeader(header: string | string[] | undefined): Json {
   if (header === undefined) return {};
   if (typeof header === 'string' && /[^\x20-\x7e]/.test(header)) {
-    throw invalid('agnt-hints is ASCII: escape every other character as \\uXXXX.', { field: 'agnt-hints' });
+    throw invalid('simon-hints is ASCII: escape every other character as \\uXXXX.', { field: 'simon-hints' });
   }
   try {
     const hints = typeof header === 'string' ? parseStrict(header) : null;
@@ -203,7 +203,7 @@ function readHintsHeader(header: string | string[] | undefined): Json {
   } catch {
     // Refused below, as any other value that is not a JSON object.
   }
-  throw invalid('agnt-hints is one JSON object keyed by recipient address.', { field: 'agnt-hints' });
+  throw invalid('simon-hints is one JSON object keyed by recipient address.', { field: 'simon-hints' });
 }
 
 /**
@@ -213,7 +213,8 @@ function readHintsHeader(header: string | string[] | undefined): Json {
  */
 function checkHints(ctx: Context, hints: Json, m: AnyMessage, claims: Claim[]): void {
   if (isJsonObject(hints) && Object.keys(hints).length === 0) return;
-  if (m.to.length === 0) throw invalid('A public message has no recipients to give hints to.', { field: 'agnt-hints' });
+  if (m.to.length === 0)
+    throw invalid('A public message has no recipients to give hints to.', { field: 'simon-hints' });
   const envelope = {
     message: m,
     server: ctx.config.origin,

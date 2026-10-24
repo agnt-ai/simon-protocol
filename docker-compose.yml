@@ -1,22 +1,22 @@
-# Two independent AGNT servers from this repository's Dockerfile:
+# Two independent SIMON servers from this repository's Dockerfile:
 #   app     the application template (app/) on MongoDB, with ClamAV scanning uploads, on port 8090;
 #   server  the basic server (server/) on sqlite in a volume, on port 8080.
 #
 # Each reads its settings from its own file, app.env or server.env, beside this one. app/README.md and
 # server/README.md list every variable; only how the containers reach one another is set here. Without
-# AGNT_DEV=1 each needs an https AGNT_ORIGIN and its own AGNT_SERVER_KEY (scripts/server-keys.sh), and the
-# app also a mailer and AGNT_DATA_KEY: a server missing one stops at startup rather than run insecurely.
+# SIMON_DEV=1 each needs an https SIMON_ORIGIN and its own SIMON_SERVER_KEY (scripts/server-keys.sh), and the
+# app also a mailer and SIMON_DATA_KEY: a server missing one stops at startup rather than run insecurely.
 #
 # To try them on this machine, in development:
-#   server.env   AGNT_DEV=1
-#                AGNT_ORIGIN=http://localhost:8080
-#                AGNT_HOSTED_DOMAINS=server.test
-#                AGNT_DEV_RESOLVE=server.test=http://localhost:8080
-#   app.env      AGNT_DEV=1
-#                AGNT_ORIGIN=http://localhost:8090
-#                AGNT_HOSTED_DOMAINS=app.test
-#                AGNT_DEV_RESOLVE=app.test=http://localhost:8090
-#                AGNT_DEV_OUTBOX=/tmp/agnt-mail.jsonl
+#   server.env   SIMON_DEV=1
+#                SIMON_ORIGIN=http://localhost:8080
+#                SIMON_HOSTED_DOMAINS=server.test
+#                SIMON_DEV_RESOLVE=server.test=http://localhost:8080
+#   app.env      SIMON_DEV=1
+#                SIMON_ORIGIN=http://localhost:8090
+#                SIMON_HOSTED_DOMAINS=app.test
+#                SIMON_DEV_RESOLVE=app.test=http://localhost:8090
+#                SIMON_DEV_OUTBOX=/tmp/simon-mail.jsonl
 #   docker compose up --build
 # Each origin is then reachable from the host, and from inside its own container, at the same URL.
 services:
@@ -31,17 +31,17 @@ services:
     ports: ['8090:8090']
     env_file: [{ path: app.env, required: false }]
     environment:
-      AGNT_PORT: '8090'
-      AGNT_MONGO_URI: mongodb://mongo:27017
-      AGNT_CLAMD_HOST: clamav
-      AGNT_CLAMD_PORT: '3310'
+      SIMON_PORT: '8090'
+      SIMON_MONGO_URI: mongodb://mongo:27017
+      SIMON_CLAMD_HOST: clamav
+      SIMON_CLAMD_PORT: '3310'
   server:
     build: { context: ., target: server }
     ports: ['8080:8080']
     env_file: [{ path: server.env, required: false }]
     environment:
-      AGNT_PORT: '8080'
-      AGNT_DB: /data/agnt.sqlite
+      SIMON_PORT: '8080'
+      SIMON_DB: /data/simon.sqlite
     volumes: [server-data:/data]
 volumes:
   mongo: {}

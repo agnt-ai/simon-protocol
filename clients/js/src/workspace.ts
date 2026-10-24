@@ -1,35 +1,35 @@
 /**
  * The one directory the CLI and the MCP server read and write files in, for a model that runs them on
  * the word of whatever it last read. A path names a file in the workspace, after every symbolic link is
- * resolved, and never one under AGNT_HOME, where the keys live, even when AGNT_HOME is inside the
+ * resolved, and never one under SIMON_HOME, where the keys live, even when SIMON_HOME is inside the
  * workspace.
  *
- *   AGNT_WORKSPACE      the workspace; default the current working directory
+ *   SIMON_WORKSPACE      the workspace; default the current working directory
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { AgntError } from './errors.ts';
+import { SimonError } from './errors.ts';
 
 export interface Workspace {
   /** The workspace, its links resolved. */
   root: string;
-  /** AGNT_HOME, its links resolved as far as it exists. */
+  /** SIMON_HOME, its links resolved as far as it exists. */
   home: string;
 }
 
 /** The workspace for an environment and a key directory. */
 export function workspace(home: string, env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): Workspace {
-  const root = path.resolve(cwd, env.AGNT_WORKSPACE || '.');
+  const root = path.resolve(cwd, env.SIMON_WORKSPACE || '.');
   let real: string;
   try {
     real = fs.realpathSync(root);
   } catch {
-    throw refused('AGNT_WORKSPACE', `The workspace ${root} does not exist.`);
+    throw refused('SIMON_WORKSPACE', `The workspace ${root} does not exist.`);
   }
   return { root: real, home: realAsFarAsExists(path.resolve(cwd, home)) };
 }
 
-/** A file to read: it exists, and it and every link to it lie in the workspace and outside AGNT_HOME. */
+/** A file to read: it exists, and it and every link to it lie in the workspace and outside SIMON_HOME. */
 export function readablePath(ws: Workspace, file: string, field = 'path'): string {
   const wanted = path.resolve(ws.root, file);
   let real: string;
@@ -43,7 +43,7 @@ export function readablePath(ws: Workspace, file: string, field = 'path'): strin
   return real;
 }
 
-/** Whether a file is one of AGNT_HOME's own under another name, through a hard link. */
+/** Whether a file is one of SIMON_HOME's own under another name, through a hard link. */
 function isHomeFile(ws: Workspace, file: string): boolean {
   const st = fs.statSync(file);
   if (st.nlink < 2) return false;
@@ -131,4 +131,4 @@ function realAsFarAsExists(p: string): string {
   }
 }
 
-const refused = (field: string, message: string) => new AgntError('path_refused', message, { details: { field } });
+const refused = (field: string, message: string) => new SimonError('path_refused', message, { details: { field } });

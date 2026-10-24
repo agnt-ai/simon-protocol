@@ -200,7 +200,7 @@ export class Outbox {
     try {
       const res = await ctx.http.request({
         method: 'POST',
-        url: `${server}/agnt/deliver`,
+        url: `${server}/simon/deliver`,
         headers: { 'content-type': 'application/json' },
         body: canonicalBytes(envelope),
         maxBytes: ANSWER_BYTES,
@@ -308,7 +308,7 @@ export class Outbox {
     });
   }
 
-  /** Whether an extension took recipients whose domain names no AGNT server (a bridge to email, say). */
+  /** Whether an extension took recipients whose domain names no SIMON server (a bridge to email, say). */
   async #bridged(row: Delivery): Promise<boolean> {
     const record = await this.#ctx.store.message(row.id);
     return (

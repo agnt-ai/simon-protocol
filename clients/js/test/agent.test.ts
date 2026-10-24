@@ -14,7 +14,7 @@ import {
   signRecovery,
   timestamp,
 } from '@agnt-protocol/protocol';
-import { Agent, AgntError, type AgentOptions, type Fetch } from '../src/index.ts';
+import { Agent, SimonError, type AgentOptions, type Fetch } from '../src/index.ts';
 import { fetchServerDocument } from '../src/read.ts';
 import { exchange } from '../src/http.ts';
 import { CANCEL_CODE, CODE, RECOVERY_WAIT_MS, fakeServer } from './fake-server.ts';
@@ -34,12 +34,12 @@ async function registered(make: () => Agent) {
   return a;
 }
 
-/** The AgntError a promise rejects with. */
-async function failure(p: Promise<unknown> | (() => unknown)): Promise<AgntError> {
+/** The SimonError a promise rejects with. */
+async function failure(p: Promise<unknown> | (() => unknown)): Promise<SimonError> {
   try {
     await (typeof p === 'function' ? p() : p);
   } catch (e) {
-    assert.ok(e instanceof AgntError, String(e));
+    assert.ok(e instanceof SimonError, String(e));
     return e;
   }
   assert.fail('expected a failure');
@@ -81,7 +81,7 @@ describe('register', () => {
   it('pairs a leased address with a key principal: pairing_required, then the signature', async () => {
     const { agent, fake } = setup();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const a = agent();
     const first = await a.register({ for: id });
     assert.equal(first.status, 'pairing_required');
@@ -160,7 +160,7 @@ describe('register', () => {
   it("recovers a paired agent at once with its key principal's signature", async () => {
     const { agent, fake } = setup();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const old = agent();
     const { address } = await old.register({ for: id });
     await old.register({ for: id, pairing: signPairing(principal.privateKey, address, id) });
@@ -180,7 +180,7 @@ describe('register', () => {
     assert.equal(fresh.address, address);
     assert.equal(fresh.compose({ to: [], text: 'recovered' }).headers.for, id);
     await fresh.send({ to: [], text: 'recovered' });
-    const wire = fake.requests.findLast(r => r.path === '/agnt/recovery');
+    const wire = fake.requests.findLast(r => r.path === '/simon/recovery');
     assert.ok(
       wire &&
         !('for' in JSON.parse(Buffer.from(wire.body).toString())) &&
@@ -202,7 +202,7 @@ describe('register', () => {
     const { agent, fake } = setup();
     const first = generateKey();
     const other = generateKey();
-    const id = `agnt-key:${first.key}`;
+    const id = `simon-key:${first.key}`;
     const oldAddress = 'old@agents.test';
     const target = 'target@agents.test';
     const retained = agent({ address: oldAddress, for: id, pairing: signPairing(first.privateKey, oldAddress, id) });
@@ -246,12 +246,12 @@ describe('register', () => {
   it('persists local pairing after fresh-home recovery, reloads, and sends with it', async () => {
     const { agent, fake } = setup();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const original = agent();
     const { address } = await original.register({ for: id });
     const pairing = signPairing(principal.privateKey, address, id);
     await original.register({ for: id, pairing });
-    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-recovery-'));
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-recovery-'));
     try {
       const fresh = openAgent(home, { server: fake.origin, fetch: fake.fetch });
       const at = timestamp(new Date());
@@ -287,10 +287,10 @@ describe('send and inbox', () => {
     const ada = await registered(agent);
     const bob = await registered(agent);
     const answer = await ada.send({ to: [bob.address!.toUpperCase()], text: 'Does 3pm work?' });
-    const request = fake.requests.find(r => r.path === '/agnt/send')!;
+    const request = fake.requests.find(r => r.path === '/simon/send')!;
     const message = JSON.parse(Buffer.from(request.body).toString());
     assert.equal(Buffer.from(request.body).toString(), canonicalize(message));
-    assert.equal(request.headers.get('agnt-timestamp'), String(T0.getTime() / 1000));
+    assert.equal(request.headers.get('simon-timestamp'), String(T0.getTime() / 1000));
     assert.equal(message.sentAt, '2026-10-15T12:00:00.000Z');
     assert.deepEqual(message.to, [bob.address]);
     assert.equal(answer.id, messageId(message));
@@ -319,7 +319,7 @@ describe('send and inbox', () => {
   it("writes a paired agent's for and pairing into every message, and refuses them in a draft", async () => {
     const { agent } = setup();
     const principal = generateKey();
-    const id = `agnt-key:${principal.key}`;
+    const id = `simon-key:${principal.key}`;
     const a = agent();
     const { address } = await a.register({ for: id });
     await a.register({ for: id, pairing: signPairing(principal.privateKey, address, id) });
@@ -341,7 +341,7 @@ describe('send and inbox', () => {
     const { agent, fake } = setup();
     const ada = await registered(agent);
     await ada.send({ to: ['bob@agents.test'], text: 'hi' }, { hints: { 'Bob@Agents.Test': { invite: '7KQ2' } } });
-    assert.equal(fake.requests.at(-1)!.headers.get('agnt-hints'), '{"bob@agents.test":{"invite":"7KQ2"}}');
+    assert.equal(fake.requests.at(-1)!.headers.get('simon-hints'), '{"bob@agents.test":{"invite":"7KQ2"}}');
     const e = await failure(
       ada.send({ to: ['bob@agents.test'], text: 'hi' }, { hints: { 'eve@agents.test': { invite: 'x' } } }),
     );
@@ -353,7 +353,7 @@ describe('send and inbox', () => {
     const ada = await registered(agent);
     const note = 'price €5 \u{1F600}\u007f';
     await ada.send({ to: ['bob@agents.test'], text: 'hi' }, { hints: { 'bob@agents.test': { note } } });
-    const sent = fake.requests.at(-1)!.headers.get('agnt-hints')!;
+    const sent = fake.requests.at(-1)!.headers.get('simon-hints')!;
     assert.equal(sent, '{"bob@agents.test":{"note":"price \\u20ac5 \\ud83d\\ude00\\u007f"}}');
     assert.deepEqual(JSON.parse(sent), { 'bob@agents.test': { note } });
   });
@@ -369,8 +369,8 @@ describe('send and inbox', () => {
       [() => ada.sync({ limit: 201 }), 'limit'],
       [() => ada.sent('abc'), 'id'],
       [() => ada.fetchPart({ sha256: 'ABC' }), 'sha256'],
-      [() => ada.call('GET', 'https://elsewhere.example/agnt/sync'), 'path'],
-      [() => ada.call('GET', '//elsewhere.example/agnt/sync'), 'path'],
+      [() => ada.call('GET', 'https://elsewhere.example/simon/sync'), 'path'],
+      [() => ada.call('GET', '//elsewhere.example/simon/sync'), 'path'],
     ];
     for (const [call, field] of cases) {
       const e = await failure(call());
@@ -390,7 +390,7 @@ describe('send and inbox', () => {
     for (const text of ['1', '2', '3']) await ada.send({ to: [bob.address!], text });
     const first = await bob.sync({ limit: 2 });
     assert.deepEqual([first.messages.length, typeof first.token, first.more], [2, 'string', true]);
-    assert.equal(fake.requests.at(-1)!.path, '/agnt/sync?limit=2');
+    assert.equal(fake.requests.at(-1)!.path, '/simon/sync?limit=2');
     const rest = await bob.sync({ since: first.token, limit: 2 });
     assert.deepEqual([rest.messages.length, typeof rest.token, rest.more], [1, 'string', false]);
   });
@@ -408,7 +408,7 @@ describe('lifecycle endpoint boundaries and sync extensions', () => {
     assert.equal(pending.status, 'recovery_pending');
     assert.equal(fresh.address, null);
     await old.recoveryStatus();
-    assert.ok(fake.requests.some(r => r.method === 'GET' && r.path === '/agnt/recovery'));
+    assert.ok(fake.requests.some(r => r.method === 'GET' && r.path === '/simon/recovery'));
     await old.cancelRecovery();
     assert.equal((await old.recoveryStatus()).recovery, null);
   });
@@ -417,7 +417,7 @@ describe('lifecycle endpoint boundaries and sync extensions', () => {
     const { agent, fake } = setup();
     const saved = await registered(agent);
     await saved.register();
-    assert.equal(fake.requests.at(-1)!.headers.get('agnt-agent'), null);
+    assert.equal(fake.requests.at(-1)!.headers.get('simon-agent'), null);
   });
 
   it('keeps sync tokens opaque and surfaces a rejected token without silently replaying', async () => {
@@ -426,7 +426,7 @@ describe('lifecycle endpoint boundaries and sync extensions', () => {
     const before = fake.requests.length;
     await assert.rejects(own.sync({ since: 'not-a-known-token' }), { code: 'token_expired', status: 410 });
     assert.equal(fake.requests.length, before + 1);
-    assert.equal(fake.requests.at(-1)!.path, '/agnt/sync?since=not-a-known-token');
+    assert.equal(fake.requests.at(-1)!.path, '/simon/sync?since=not-a-known-token');
   });
 
   it('retries an identical signed message without adding another sync entry', async () => {
@@ -604,9 +604,9 @@ describe('call and errors', () => {
   it('signs any request to the server', async () => {
     const { agent, fake } = setup();
     const ada = await registered(agent);
-    const inbox = await ada.call<{ messages: unknown[] }>('get', '/agnt/sync');
+    const inbox = await ada.call<{ messages: unknown[] }>('get', '/simon/sync');
     assert.deepEqual(inbox.messages, []);
-    const e = await failure(ada.call('POST', '/agnt/nothing', { a: 1 }));
+    const e = await failure(ada.call('POST', '/simon/nothing', { a: 1 }));
     assert.deepEqual([e.status, e.code], [404, 'not_found']);
     assert.equal(fake.requests.at(-1)!.headers.get('content-type'), 'application/json');
   });
@@ -615,7 +615,7 @@ describe('call and errors', () => {
     const { agent } = setup();
     const ada = await registered(agent);
     const e = await failure(ada.send({ to: ['bob@agents.test'], text: 'hi', inReplyTo: 'nope' }));
-    assert.equal(e.name, 'AgntError');
+    assert.equal(e.name, 'SimonError');
     assert.deepEqual([e.status, e.code, e.retryable, e.details], [400, 'invalid', false, { field: 'inReplyTo' }]);
     assert.ok(!e.message.includes('invalid'), e.message);
     assert.deepEqual(Object.keys(e.toJSON().error), [
@@ -646,25 +646,30 @@ describe('call and errors', () => {
       throw new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } });
     };
     const e = await failure(
-      new Agent({ server: 'https://agnt.test', key: generateKey().privateKeyPem, fetch: down }).sync(),
+      new Agent({ server: 'https://simon.test', key: generateKey().privateKeyPem, fetch: down }).sync(),
     );
     assert.deepEqual([e.code, e.status, e.retryable], ['network_error', null, true]);
-    assert.equal(e.message, 'GET https://agnt.test/agnt/sync failed: ECONNREFUSED.');
-    assert.deepEqual(e.details, { url: 'https://agnt.test/agnt/sync', cause: 'ECONNREFUSED' });
+    assert.equal(e.message, 'GET https://simon.test/simon/sync failed: ECONNREFUSED.');
+    assert.deepEqual(e.details, { url: 'https://simon.test/simon/sync', cause: 'ECONNREFUSED' });
   });
 
   it('times out a server that never answers', async () => {
     const never: Fetch = (_url, init) =>
       new Promise((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(init.signal!.reason)));
-    const a = new Agent({ server: 'https://agnt.test', key: generateKey().privateKeyPem, fetch: never, timeoutMs: 20 });
+    const a = new Agent({
+      server: 'https://simon.test',
+      key: generateKey().privateKeyPem,
+      fetch: never,
+      timeoutMs: 20,
+    });
     const e = await failure(a.sync());
-    assert.deepEqual([e.code, e.retryable, e.details?.url], ['timeout', true, 'https://agnt.test/agnt/sync']);
+    assert.deepEqual([e.code, e.retryable, e.details?.url], ['timeout', true, 'https://simon.test/simon/sync']);
   });
 
   it('describes an answer that is not in the protocol shape', async () => {
     const proxy: Fetch = async () => new Response('<html>Bad gateway</html>', { status: 502 });
     const e = await failure(
-      new Agent({ server: 'https://agnt.test', key: generateKey().privateKeyPem, fetch: proxy }).sync(),
+      new Agent({ server: 'https://simon.test', key: generateKey().privateKeyPem, fetch: proxy }).sync(),
     );
     assert.deepEqual([e.code, e.status, e.retryable], ['bad_response', 502, true]);
   });
@@ -676,7 +681,7 @@ describe('whole-exchange deadlines and caller cancellation', () => {
     const reason = new Error('caller stopped the job');
     const pending = exchange(
       { fetch: async () => new Promise<Response>(() => {}), timeoutMs: 500 },
-      'https://agnt.test',
+      'https://simon.test',
       { signal: controller.signal },
     );
     controller.abort(reason);
@@ -685,14 +690,14 @@ describe('whole-exchange deadlines and caller cancellation', () => {
 
   it('bounds custom fetch and stalled body reads, including unending cancellation cleanup', async () => {
     await assert.rejects(
-      exchange({ fetch: async () => new Promise<Response>(() => {}), timeoutMs: 10 }, 'https://agnt.test'),
+      exchange({ fetch: async () => new Promise<Response>(() => {}), timeoutMs: 10 }, 'https://simon.test'),
       { code: 'timeout' },
     );
     const stream = new ReadableStream<Uint8Array>({
       pull: () => new Promise<void>(() => {}),
       cancel: () => new Promise<void>(() => {}),
     });
-    await assert.rejects(exchange({ fetch: async () => new Response(stream), timeoutMs: 10 }, 'https://agnt.test'), {
+    await assert.rejects(exchange({ fetch: async () => new Response(stream), timeoutMs: 10 }, 'https://simon.test'), {
       code: 'timeout',
     });
   });
@@ -706,7 +711,7 @@ describe('whole-exchange deadlines and caller cancellation', () => {
     });
     const answer = await exchange(
       { fetch: async () => new Response(stream), timeoutMs: 100 },
-      'https://agnt.test',
+      'https://simon.test',
       {},
       8,
     );

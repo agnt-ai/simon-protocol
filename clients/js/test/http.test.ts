@@ -5,14 +5,14 @@ import { generateKey, sha256Hex } from '@agnt-protocol/protocol';
 import { Agent } from '../src/index.ts';
 import { exchange, failure, MAX_PROBLEM_BYTES } from '../src/http.ts';
 
-const URL = 'https://agnt.test/agnt/parts/' + 'a'.repeat(64);
+const URL = 'https://simon.test/simon/parts/' + 'a'.repeat(64);
 const NOW = new Date('2026-10-15T12:00:00.000Z');
 const problem = JSON.stringify({ code: 'not_found', detail: 'No such part.', details: { what: 'part' } });
 
 function partAgent(answer: () => Response) {
   return new Agent({
-    server: 'https://agnt.test',
-    address: 'ada@agnt.test',
+    server: 'https://simon.test',
+    address: 'ada@simon.test',
     key: generateKey().privateKeyPem,
     fetch: async () => answer(),
     now: () => NOW,

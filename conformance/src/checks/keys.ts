@@ -9,7 +9,7 @@ const add = (t: T, a: TargetAgent, key: TargetAgent, label: string) =>
   a.call(
     t,
     'POST',
-    '/agnt/keys',
+    '/simon/keys',
     JSON.stringify({ key: key.token, proof: sign(key.key, addKeyProofString(a.address, key.token)), label }),
   );
 
@@ -49,7 +49,7 @@ def(
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('account');
     t.error(
-      await a.call(t, 'DELETE', `/agnt/keys/${encodeURIComponent(TargetAgent.fresh(ctx.server).token)}`),
+      await a.call(t, 'DELETE', `/simon/keys/${encodeURIComponent(TargetAgent.fresh(ctx.server).token)}`),
       404,
       'not_found',
     );
@@ -70,7 +70,7 @@ def(
     const k = TargetAgent.fresh(ctx.server);
     t.status(await add(t, a, k, 'Revoked device'), 200);
     const before = ctx.now();
-    const target = `/agnt/keys/${encodeURIComponent(k.token)}`;
+    const target = `/simon/keys/${encodeURIComponent(k.token)}`;
     const res = await a.call(t, 'DELETE', target);
     if (res.status === 409) {
       t.assert(
@@ -83,7 +83,7 @@ def(
     const entry = res.json?.keys?.find((e: { key: string }) => e.key === k.token);
     const at = parseTimestamp(entry?.revoked);
     t.assert(at !== null && at >= before - 1000 && at <= ctx.now() + 1000, 'revoked is not the time of the call');
-    t.error(await a.call(t, 'GET', '/agnt/account', undefined, { key: k.key }), 401, 'key_revoked');
+    t.error(await a.call(t, 'GET', '/simon/account', undefined, { key: k.key }), 401, 'key_revoked');
     t.error(await a.call(t, 'DELETE', target), 404, 'not_found');
     t.error(await add(t, a, k, 'Revoked device'), 409, 'key_in_use');
     t.assert(res.json.address === a.address && Array.isArray(res.json.grants), 'revocation did not answer the account');

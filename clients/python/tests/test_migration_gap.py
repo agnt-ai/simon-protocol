@@ -15,15 +15,15 @@ from pathlib import Path
 from unittest import mock
 from urllib.parse import parse_qs, urlsplit
 
-from agnt import cli
-from agnt.client import Agent
-from agnt.errors import AgntError
-from agnt.keys import SigningKey
-from agnt.messages import message_id, sign_message
-from agnt.transport import Response
-from agnt.wait import read_wait_state, save_wait_state, wait_file, wait_for_message
+from simon import cli
+from simon.client import Agent
+from simon.errors import SimonError
+from simon.keys import SigningKey
+from simon.messages import message_id, sign_message
+from simon.transport import Response
+from simon.wait import read_wait_state, save_wait_state, wait_file, wait_for_message
 
-ORIGIN = "https://agnt.migration.test"
+ORIGIN = "https://simon.migration.test"
 ADDRESS = "reader@migration.test"
 RESUME = "opaque:resume/+?=history-migration"
 DETAILS = {"reason": "history_migration", "resumeToken": RESUME}
@@ -37,7 +37,7 @@ class MigrationTransport:
     def fetch(self, method, url, body=None, headers=None, **options):
         requested = urlsplit(url)
         self.calls.append((method, requested.path, parse_qs(requested.query)))
-        if method != "GET" or requested.path != "/agnt/sync":
+        if method != "GET" or requested.path != "/simon/sync":
             raise AssertionError(f"unexpected network request: {method} {url}")
         since = parse_qs(requested.query).get("since")
         response_headers = Message()
@@ -66,22 +66,22 @@ class ExplicitMigrationGap(unittest.TestCase):
                       "claims": [], "receivedAt": "2026-10-15T12:00:00Z"}
         self.transport = MigrationTransport(self.entry)
         self.agent = Agent(ORIGIN, self.key, ADDRESS)
-        self.directory = tempfile.TemporaryDirectory(prefix="agnt-gap-")
+        self.directory = tempfile.TemporaryDirectory(prefix="simon-gap-")
         self.addCleanup(self.directory.cleanup)
         self.home = Path(self.directory.name) / "home"
         self.home.mkdir()
-        self.fetch_patch = mock.patch("agnt.client.fetch", side_effect=self.transport.fetch)
+        self.fetch_patch = mock.patch("simon.client.fetch", side_effect=self.transport.fetch)
         self.fetch_patch.start()
         self.addCleanup(self.fetch_patch.stop)
 
     def assert_gap(self, error):
-        self.assertIsInstance(error, AgntError)
+        self.assertIsInstance(error, SimonError)
         self.assertEqual((error.status, error.code, error.retryable), (410, "token_expired", False))
         self.assertEqual(error.details, DETAILS)
         self.assertEqual(json.loads(json.dumps(error.to_json()))["error"]["details"], DETAILS)
 
     def test_sdk_surfaces_gap_once_then_explicit_since_reads_retained_history(self):
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             self.agent.sync()
         self.assert_gap(caught.exception)
         self.assertEqual(len(self.transport.calls), 1, "the SDK did not automatically accept resumeToken")
@@ -89,7 +89,7 @@ class ExplicitMigrationGap(unittest.TestCase):
         page = self.agent.sync(DETAILS["resumeToken"])
         self.assertEqual([e["id"] for e in page["messages"]], [self.entry["id"]])
         self.assertEqual(self.transport.calls[1][2], {"since": [RESUME]})
-        with self.assertRaises(AgntError) as again:
+        with self.assertRaises(SimonError) as again:
             self.agent.sync()
         self.assert_gap(again.exception)
         self.assertEqual(len(self.transport.calls), 3, "initial requests remain explicit gap reports")
@@ -97,7 +97,7 @@ class ExplicitMigrationGap(unittest.TestCase):
     def test_shared_wait_preserves_bytes_and_unmatched_buffer_on_gap(self):
         save_wait_state(self.home, {"token": None, "pending": [self.entry], "seen": ["e" * 64]})
         before = wait_file(self.home).read_bytes()
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             wait_for_message(self.agent, self.home, sender="wanted@migration.test", timeout=60, interval=1,
                              sleep=lambda _: self.fail("a nonretryable gap must not sleep or retry"))
         self.assert_gap(caught.exception)
@@ -111,9 +111,9 @@ class ExplicitMigrationGap(unittest.TestCase):
 
     def run_cli(self, args):
         out, err = io.StringIO(), io.StringIO()
-        environment = {"AGNT_HOME": str(self.home), "AGNT_WORKSPACE": self.directory.name,
-                       "AGNT_PRIVATE_KEY": self.key.to_pem(), "AGNT_ADDRESS": ADDRESS,
-                       "AGNT_SERVER": ORIGIN, "AGNT_ALLOW_PURE_SIGNING": "1"}
+        environment = {"SIMON_HOME": str(self.home), "SIMON_WORKSPACE": self.directory.name,
+                       "SIMON_PRIVATE_KEY": self.key.to_pem(), "SIMON_ADDRESS": ADDRESS,
+                       "SIMON_SERVER": ORIGIN, "SIMON_ALLOW_PURE_SIGNING": "1"}
         with mock.patch.dict(os.environ, environment, clear=True), redirect_stdout(out), redirect_stderr(err):
             code = cli.main(args)
         return code, json.loads(out.getvalue()) if out.getvalue() else None, json.loads(err.getvalue()) if err.getvalue() else None

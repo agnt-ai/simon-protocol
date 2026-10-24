@@ -1,7 +1,7 @@
 """The two documents a server publishes, fetched without authentication (spec section 4)::
 
-    GET /agnt/server              {server, keys, algorithms, limits}
-    GET /agnt/agents/<address>    {address, kind, keys, signature}   signed by the server over AGNT-AGENT
+    GET /simon/server              {server, keys, algorithms, limits}
+    GET /simon/agents/<address>    {address, kind, keys, signature}   signed by the server over SIMON-AGENT
 
 A reader takes a document's bytes: at most 131072 of them, JSON under the canonical rules (not necessarily
 canonical), with at most 32 total key entries, including retained revoked keys. Members a reader does not know are
@@ -15,7 +15,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from .canonical import parse, signing_bytes
-from .errors import AgntError
+from .errors import SimonError
 from .keys import is_implemented, is_public_key, parse_key_token, signed_by_any
 from .limits import MAX_DOCUMENT_BYTES, MAX_DOCUMENT_KEYS, MINIMUM_LIMITS, REVOCATION_AHEAD_MS
 from .resolution import server_origin
@@ -80,7 +80,7 @@ def read_agent_document(
         return None
     keys = read_keys(doc.get("keys"), now_ms)
     if keys is None or not signed_by_any(
-        server_keys, now_ms, signing_bytes("AGNT-AGENT", doc), doc.get("signature")
+        server_keys, now_ms, signing_bytes("SIMON-AGENT", doc), doc.get("signature")
     ):
         return None
     kind = doc["kind"] if doc["kind"] in ("paired", "solo") else "unknown"
@@ -102,7 +102,7 @@ def _read_object(body: bytes) -> dict[str, Any] | None:
         return None
     try:
         value = parse(body)
-    except AgntError:
+    except SimonError:
         return None
     return value if isinstance(value, dict) else None
 

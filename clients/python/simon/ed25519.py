@@ -5,7 +5,7 @@ verifies when S is below the group order, R is not a point of small order, and [
 exactly the 32 bytes of R, without the cofactor. Every verifier then agrees on every signature.
 
 Verification handles no secret and need not be constant time. ``sign`` and ``public_key`` are not
-constant time either, so ``agnt.keys.SigningKey`` uses them only when the caller opts in.
+constant time either, so ``simon.keys.SigningKey`` uses them only when the caller opts in.
 """
 
 from __future__ import annotations

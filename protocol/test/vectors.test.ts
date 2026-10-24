@@ -129,7 +129,7 @@ describe('the published vectors', () => {
 
   it('messages: signing bytes, ids, transmitted bytes and signatures', () => {
     for (const m of vectors.messages.cases) {
-      assert.equal(signingBytes('AGNT-MESSAGE', m.message).toString('utf8'), m.signingBytes, m.name);
+      assert.equal(signingBytes('SIMON-MESSAGE', m.message).toString('utf8'), m.signingBytes, m.name);
       assert.equal(canonicalize(m.message), m.transmitted, m.name);
       assert.deepEqual(parseMessage(bytes(m.transmitted)), m.message, m.name);
       assert.equal(messageId(m.message), m.id, m.name);
@@ -167,14 +167,14 @@ describe('the published vectors', () => {
     for (const c of s.refused) {
       assert.equal(verifyMessage({ ...target, signature: c.signature }, [s.keyValidAt[0].keys[0]]), false, c.why);
     }
-    const data = signingBytes('AGNT-MESSAGE', target);
+    const data = signingBytes('SIMON-MESSAGE', target);
     for (const c of s.mixedOrder.cases) assert.equal(verify(s.mixedOrder.key, data, c.signature), c.verifies, c.why);
   });
 
   it('requests: signing strings, the checks a server makes in order, and add-key proofs', async () => {
     for (const r of vectors.requests.signed) {
       assert.equal(requestSigningString(r), r.signingString);
-      assert.equal(verify(r.headers['agnt-key'], r.signingString, r.headers['agnt-signature']), true);
+      assert.equal(verify(r.headers['simon-key'], r.signingString, r.headers['simon-signature']), true);
     }
     for (const c of vectors.requests.checks) {
       const now = new Date(c.now);
@@ -205,7 +205,8 @@ describe('the published vectors', () => {
       assert.deepEqual(readServerDocument(bytes(c.body), c.origin, new Date(d.now)), c.read, c.name);
     for (const c of d.agent) {
       assert.deepEqual(readAgentDocument(bytes(c.body), c.address, c.serverKeys, new Date(d.now)), c.read, c.name);
-      if (c.signingBytes) assert.equal(signingBytes('AGNT-AGENT', JSON.parse(c.body)).toString('utf8'), c.signingBytes);
+      if (c.signingBytes)
+        assert.equal(signingBytes('SIMON-AGENT', JSON.parse(c.body)).toString('utf8'), c.signingBytes);
     }
   });
 
@@ -220,7 +221,7 @@ describe('the published vectors', () => {
     };
     for (const c of e.accepted) {
       const envelope = parse(c.bytes);
-      assert.equal(signingBytes('AGNT-ENVELOPE', envelope).toString('utf8'), c.signingBytes, c.name);
+      assert.equal(signingBytes('SIMON-ENVELOPE', envelope).toString('utf8'), c.signingBytes, c.name);
       if (envelope.claims) {
         const claims = claimsBytes(envelope.claims, messageId(envelope.message)).toString('utf8');
         assert.equal(claims, c.claimsSigningBytes, c.name);
@@ -300,7 +301,7 @@ describe('the published vectors', () => {
       return signal;
     };
     for (const c of s.accepted)
-      assert.equal(signingBytes('AGNT-SIGNAL', check(c.bytes)).toString('utf8'), c.signingBytes, c.name);
+      assert.equal(signingBytes('SIMON-SIGNAL', check(c.bytes)).toString('utf8'), c.signingBytes, c.name);
     for (const c of s.refused)
       assert.deepEqual(
         answer(() => check(c.bytes)),

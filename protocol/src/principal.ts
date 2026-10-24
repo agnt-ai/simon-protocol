@@ -5,20 +5,20 @@
  *
  *   mailto:<an address as version 1 writes one>
  *   tel:+<a digit from 1 to 9><1 to 14 more digits>
- *   agnt-key:<key token>
+ *   simon-key:<key token>
  *
- * A key principal approves a pairing by signing `AGNT-PAIR\n<agent address>\n<identifier>`. Every message
+ * A key principal approves a pairing by signing `SIMON-PAIR\n<agent address>\n<identifier>`. Every message
  * the agent sends carries that signature as its `pairing` header, so any recipient can check the pairing
- * without trusting a server. It ends the pairing by signing `AGNT-UNPAIR\n<agent address>\n<identifier>`,
+ * without trusting a server. It ends the pairing by signing `SIMON-UNPAIR\n<agent address>\n<identifier>`,
  * the unpairing, which retires the address whatever the agent's keys say. It recovers the agent at once by
- * signing `AGNT-RECOVER\n<agent address>\n<new key token>\n<timestamp>` (CLIENT.md dedicated recovery).
+ * signing `SIMON-RECOVER\n<agent address>\n<new key token>\n<timestamp>` (CLIENT.md dedicated recovery).
  */
 import type { KeyObject } from 'node:crypto';
 import { isV1Address } from './address.ts';
 import { parseKeyToken, sign, verify } from './keys.ts';
 
 const TEL = /^tel:\+[1-9][0-9]{1,14}$/;
-const KEY_PREFIX = 'agnt-key:';
+const KEY_PREFIX = 'simon-key:';
 
 /** Whether a value is a principal's identifier, and so a well-formed `for` header. Labels are matched exactly. */
 export function isPrincipal(value: unknown): value is string {
@@ -33,7 +33,7 @@ export const principalKey = (principal: string): string | null =>
   principal.startsWith(KEY_PREFIX) && isPrincipal(principal) ? principal.slice(KEY_PREFIX.length) : null;
 
 /** The bytes a key principal signs to pair with an agent. */
-export const pairingBytes = (agent: string, principal: string) => `AGNT-PAIR\n${agent}\n${principal}`;
+export const pairingBytes = (agent: string, principal: string) => `SIMON-PAIR\n${agent}\n${principal}`;
 
 /** The `pairing` header: the principal's signature, with its own private key, pairing it with `agent`. */
 export const signPairing = (principalPrivateKey: string | KeyObject, agent: string, principal: string) =>
@@ -46,7 +46,7 @@ export function verifyPairing(agent: string, principal: string, pairing: unknown
 }
 
 /** The bytes a key principal signs to end its pairing with an agent. */
-export const unpairingBytes = (agent: string, principal: string) => `AGNT-UNPAIR\n${agent}\n${principal}`;
+export const unpairingBytes = (agent: string, principal: string) => `SIMON-UNPAIR\n${agent}\n${principal}`;
 
 export const signUnpairing = (principalPrivateKey: string | KeyObject, agent: string, principal: string) =>
   sign(principalPrivateKey, unpairingBytes(agent, principal));
@@ -63,7 +63,7 @@ export function verifyUnpairing(agent: string, principal: string, unpairing: unk
  * takes it only while it is at most 24 hours old and at most 5 minutes ahead, so a signed recovery never used
  * is never a standing key to the agent.
  */
-export const recoverBytes = (agent: string, newKey: string, at: string) => `AGNT-RECOVER\n${agent}\n${newKey}\n${at}`;
+export const recoverBytes = (agent: string, newKey: string, at: string) => `SIMON-RECOVER\n${agent}\n${newKey}\n${at}`;
 
 /** Compatibility name for the same recovery signing bytes. */
 export const recoveryBytes = recoverBytes;

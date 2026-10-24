@@ -16,7 +16,7 @@ const S = 'PROTOCOL 7.2';
 const OCTETS = { 'content-type': 'application/octet-stream' };
 
 const upload = (t: T, a: TargetAgent, bytes: Buffer, sha = sha256Hex(bytes), label = 'upload') =>
-  a.call(t, 'PUT', `/agnt/parts/${sha}`, bytes, { headers: OCTETS }, label);
+  a.call(t, 'PUT', `/simon/parts/${sha}`, bytes, { headers: OCTETS }, label);
 
 /** A part agent a uploaded and sent to an agent at the simulator, and the delivery that carried it. */
 const sentPart = (ctx: Ctx) =>
@@ -43,7 +43,7 @@ const sentPart = (ctx: Ctx) =>
 
 /** GET the part as the simulator, a server the part was delivered to, with a signed server request. */
 function asServer(t: T, ctx: Ctx, sha256: string, from = ctx.peer, label = 'signed server request') {
-  const target = `/agnt/parts/${sha256}`;
+  const target = `/simon/parts/${sha256}`;
   return t.http(
     () => ({
       method: 'GET',
@@ -62,7 +62,7 @@ def(
     level: 'must',
     title: 'An agent uploads part bytes by their hash',
     expected:
-      '200 {"sha256","size"} for PUT /agnt/parts/<sha256> with those bytes; the agent then fetches them back unchanged',
+      '200 {"sha256","size"} for PUT /simon/parts/<sha256> with those bytes; the agent then fetches them back unchanged',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
@@ -71,7 +71,7 @@ def(
     const res = await upload(t, a, bytes);
     t.status(res, 200, 'upload');
     t.assert(res.json?.sha256 === sha256 && res.json?.size === bytes.length, `answered ${res.text}`);
-    const back = await a.call(t, 'GET', `/agnt/parts/${sha256}`, undefined, {}, 'fetch it back');
+    const back = await a.call(t, 'GET', `/simon/parts/${sha256}`, undefined, {}, 'fetch it back');
     t.status(back, 200, 'fetch it back');
     t.assert(back.bytes.equals(bytes), 'the bytes differ from those uploaded');
   },
@@ -118,7 +118,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const { sha256 } = await sentPart(ctx);
-    t.error(await t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/parts/${sha256}` }), 404, 'not_found');
+    t.error(await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/parts/${sha256}` }), 404, 'not_found');
   },
 );
 
@@ -129,7 +129,7 @@ def(
     level: 'must',
     title: 'A server the part was delivered to fetches it with a signed server request',
     expected:
-      '200 with exactly the bytes, for GET /agnt/parts/<sha256> signed by the simulator (agnt-server its origin) after the server delivered it a message naming the part',
+      '200 with exactly the bytes, for GET /simon/parts/<sha256> signed by the simulator (simon-server its origin) after the server delivered it a message naming the part',
   },
   async (t: T, ctx: Ctx) => {
     const { sha256, bytes } = await sentPart(ctx);
@@ -146,11 +146,11 @@ def(
     level: 'must',
     title: 'A server request not signed by a key of the server it names gets no bytes',
     expected:
-      'the 404 not_found every refusal gets, for a part delivered to the simulator, fetched with agnt-server naming the simulator but signed by a key its document does not list, or by its revoked key',
+      'the 404 not_found every refusal gets, for a part delivered to the simulator, fetched with simon-server naming the simulator but signed by a key its document does not list, or by its revoked key',
   },
   async (t: T, ctx: Ctx) => {
     const { sha256 } = await sentPart(ctx);
-    const target = `/agnt/parts/${sha256}`;
+    const target = `/simon/parts/${sha256}`;
     const keys: [string, crypto.KeyObject][] = [
       ['an unlisted key', crypto.generateKeyPairSync('ed25519').privateKey],
       ['a revoked key', ctx.peer.revokedKey],
@@ -191,7 +191,7 @@ def(
     const inner = buildFrom(ctx.peer.agent('inner'), [a.address], ctx.now(), {
       parts: [{ type: 'application/octet-stream', sha256, size: bytes.length }],
     });
-    const carried = { type: 'application/agnt-message', data: Buffer.from(canonicalize(inner)).toString('base64') };
+    const carried = { type: 'application/simon-message', data: Buffer.from(canonicalize(inner)).toString('base64') };
     const m = a.message({ to: [ctx.peer.address('tenant')], text: 'a forward', parts: [carried] });
     const err = t.error(await a.send(t, m, {}, "a carries a message naming b's bytes"), 400, 'part_not_uploaded');
     t.assert(err.details?.sha256 === sha256, `details.sha256 is ${JSON.stringify(err.details?.sha256)}`);
@@ -217,7 +217,7 @@ def(
       );
     }
     t.error(await asServer(t, ctx, sha256, ctx.peer, "the simulator asks for b's bytes"), 404, 'not_found');
-    const own = await b.call(t, 'GET', `/agnt/parts/${sha256}`, undefined, {}, 'b reads its own upload');
+    const own = await b.call(t, 'GET', `/simon/parts/${sha256}`, undefined, {}, 'b reads its own upload');
     t.status(own, 200, 'b reads its own upload');
     t.assert(own.bytes.equals(bytes), 'b got other bytes than it uploaded');
   },
@@ -234,7 +234,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const { a, sha256 } = await sentPart(ctx);
-    const target = `/agnt/parts/${sha256}`;
+    const target = `/simon/parts/${sha256}`;
     const unsigned = await t.http({ method: 'GET', origin: ctx.origin, target }, { label: 'unsigned' });
     t.error(unsigned, 404, 'not_found', 'unsigned without a public grant');
     const stranger = crypto.generateKeyPairSync('ed25519').privateKey;
@@ -259,7 +259,7 @@ def(
     let first: string | undefined;
     for (const [what, res] of answers) {
       const err = t.error(res, 401, 'bad_signature', what);
-      t.assert(res.headers['www-authenticate'] === 'AGNT', `${what}: missing WWW-Authenticate: AGNT`);
+      t.assert(res.headers['www-authenticate'] === 'SIMON', `${what}: missing WWW-Authenticate: SIMON`);
       t.assert(Number.isInteger(err.details?.serverTime), `${what}: missing integer serverTime`);
       t.assert(err.detail === 'This request is not authorized.', `${what}: nonuniform detail`);
       t.assert(!Object.hasOwn(err.details ?? {}, 'signingString'), `${what}: exposed signingString`);
@@ -294,12 +294,12 @@ def(
     const stranger = await ctx.strangerPeer();
     const b = await ctx.agent('b');
     const unknown = sha256Hex(crypto.randomBytes(16));
-    const target = `/agnt/parts/${sha256}`;
+    const target = `/simon/parts/${sha256}`;
     const forged = crypto.generateKeyPairSync('ed25519').privateKey;
     const answers: [string, Res][] = [
       [
         'unsigned',
-        await t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/parts/${sha256}` }, { label: 'unsigned' }),
+        await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/parts/${sha256}` }, { label: 'unsigned' }),
       ],
       ['a stranger server', await asServer(t, ctx, sha256, stranger, 'signed by a server it was not delivered to')],
       [
@@ -316,11 +316,11 @@ def(
       ],
       [
         'an agent not entitled',
-        await b.call(t, 'GET', `/agnt/parts/${sha256}`, undefined, {}, 'an agent that neither sent nor received it'),
+        await b.call(t, 'GET', `/simon/parts/${sha256}`, undefined, {}, 'an agent that neither sent nor received it'),
       ],
     ];
     const unknownRes = await t.http(
-      { method: 'GET', origin: ctx.origin, target: `/agnt/parts/${unknown}` },
+      { method: 'GET', origin: ctx.origin, target: `/simon/parts/${unknown}` },
       { label: 'a hash nobody named' },
     );
     for (const [what, res] of answers) t.error(res, 404, 'not_found', what);
@@ -357,7 +357,7 @@ def(
       'send a public message',
     );
     const res = await t.http(
-      { method: 'GET', origin: ctx.origin, target: `/agnt/parts/${sha256}` },
+      { method: 'GET', origin: ctx.origin, target: `/simon/parts/${sha256}` },
       { label: 'unsigned' },
     );
     t.status(res, 200, 'unsigned');
@@ -394,7 +394,7 @@ def(
       const res = await a.call(
         t,
         'GET',
-        `/agnt/parts/${sha256}`,
+        `/simon/parts/${sha256}`,
         undefined,
         {},
         `agent a asks for the bytes (${i + 1})`,
@@ -407,7 +407,7 @@ def(
       await sleep(1000);
     }
     t.error(
-      await t.http({ method: 'GET', origin: ctx.origin, target: `/agnt/parts/${sha256}` }, { label: 'unsigned' }),
+      await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/parts/${sha256}` }, { label: 'unsigned' }),
       404,
       'not_found',
       'unsigned',
@@ -457,7 +457,7 @@ async function fetchAsAgent(t: T, a: TargetAgent, sha256: string, ms: number, ev
   const answers: Res[] = [];
   await poll(
     async () => {
-      const res = await a.call(s, 'GET', `/agnt/parts/${sha256}`, undefined, {}, 'the recipient fetches the part');
+      const res = await a.call(s, 'GET', `/simon/parts/${sha256}`, undefined, {}, 'the recipient fetches the part');
       answers.push(res);
       return res.status === 200 ? res : undefined;
     },
@@ -541,7 +541,7 @@ function recordFetches(t: T, ctx: Ctx, sha256: string) {
       request: {
         method: 'GET',
         url: `${ctx.peer.origin}${f.target}`,
-        headers: Object.fromEntries(Object.entries(f.headers).filter(([k]) => k.startsWith('agnt-'))),
+        headers: Object.fromEntries(Object.entries(f.headers).filter(([k]) => k.startsWith('simon-'))),
       },
       response: { status: f.answer, headers: {} },
       error: f.refusal ?? undefined,
@@ -557,7 +557,7 @@ def(
     level: 'must',
     title: "The recipient's server fetches a received message's parts on its own",
     expected:
-      "after the simulator delivers agent a a message naming a part it holds, the server asks the simulator's /agnt/parts/<sha256> for it within the prefetch wait, though no agent asked",
+      "after the simulator delivers agent a a message naming a part it holds, the server asks the simulator's /simon/parts/<sha256> for it within the prefetch wait, though no agent asked",
   },
   async (t: T, ctx: Ctx) => {
     const { prefetch } = await remoteParts(ctx);
@@ -576,7 +576,7 @@ def(
     level: 'must',
     title: 'The parts of every accepted message are fetched, whoever its recipients are',
     expected:
-      "after the simulator delivers a message naming a part it holds to an address no agent holds, the server asks the simulator's /agnt/parts/<sha256> for it within the prefetch wait, as it would for an agent: the fetch tells the carrier nothing about who is there",
+      "after the simulator delivers a message naming a part it holds to an address no agent holds, the server asks the simulator's /simon/parts/<sha256> for it within the prefetch wait, as it would for an agent: the fetch tells the carrier nothing about who is there",
   },
   async (t: T, ctx: Ctx) => {
     const { nobody } = await remoteParts(ctx);
@@ -650,7 +650,7 @@ def(
     level: 'must',
     title: 'The server fetches remote parts with a signed server request',
     expected:
-      "the server's GET at the simulator carries agnt-server (its origin) and a signature by a key its document lists valid now, over the simulator's origin and the path",
+      "the server's GET at the simulator carries simon-server (its origin) and a signature by a key its document lists valid now, over the simulator's origin and the path",
   },
   async (t: T, ctx: Ctx) => {
     const { prefetch, asked } = await remoteParts(ctx);
@@ -660,7 +660,7 @@ def(
     t.assert(!bad, `the simulator refused the server's request: ${bad?.refusal}`);
     t.assert(
       fetches.every(f => f.server === ctx.origin),
-      `agnt-server was ${fetches.map(f => f.server).join(', ')}`,
+      `simon-server was ${fetches.map(f => f.server).join(', ')}`,
     );
   },
 );

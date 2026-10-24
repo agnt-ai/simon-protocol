@@ -20,16 +20,16 @@ from pathlib import Path
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest import mock
 
-from agnt import cli, dnsquery, ed25519, transport as http_transport
-from agnt.canonical import canonical, parse, parse_with_members
-from agnt.dnsquery import LookupFailed
-from agnt.errors import AgntError, parse_problem
-from agnt.keys import SigningKey
-from agnt.provenance import invisible_in, present_entry, untrusted, unwrap_entry
-from agnt.resolution import Resolution, freshness_ms, resolve, well_known_outcome
-from agnt.wait import wait_for_message, save_wait_state, read_wait_state
-from agnt.transport import _read
-from agnt.wire import from_b64url, is_base64, parse_timestamp, timestamp
+from simon import cli, dnsquery, ed25519, transport as http_transport
+from simon.canonical import canonical, parse, parse_with_members
+from simon.dnsquery import LookupFailed
+from simon.errors import SimonError, parse_problem
+from simon.keys import SigningKey
+from simon.provenance import invisible_in, present_entry, untrusted, unwrap_entry
+from simon.resolution import Resolution, freshness_ms, resolve, well_known_outcome
+from simon.wait import wait_for_message, save_wait_state, read_wait_state
+from simon.transport import _read
+from simon.wire import from_b64url, is_base64, parse_timestamp, timestamp
 
 
 class CanonicalValues(unittest.TestCase):
@@ -63,14 +63,14 @@ class CanonicalValues(unittest.TestCase):
 
     def test_an_integer_too_long_to_be_safe_is_refused_by_its_length(self):
         for token in ["9" * 4301, "-" + "1" * 17, "1" * 17]:
-            with self.subTest(len(token)), self.assertRaises(AgntError) as caught:
+            with self.subTest(len(token)), self.assertRaises(SimonError) as caught:
                 parse(f'{{"a":{token}}}')
             self.assertEqual(caught.exception.code, "invalid")
             self.assertIn("safe integer range", caught.exception.message)
         self.assertEqual(parse(f'{{"a":-{2**53 - 1}}}'), {"a": -(2**53 - 1)})
 
     def test_a_refusal_says_where(self):
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             parse(b'{"a":1.5}')
         self.assertEqual((caught.exception.status, caught.exception.code), (400, "invalid"))
         self.assertIn("character 6", caught.exception.message)
@@ -92,7 +92,7 @@ class Wire(unittest.TestCase):
 
 class Errors(unittest.TestCase):
     def test_the_shape(self):
-        e = AgntError("rate_limited", "Slow down.", 429, True, retry_after=3)
+        e = SimonError("rate_limited", "Slow down.", 429, True, retry_after=3)
         self.assertEqual(
             e.to_json(),
             {
@@ -106,9 +106,9 @@ class Errors(unittest.TestCase):
             },
         )
         self.assertEqual(str(e), "429 rate_limited: Slow down.")
-        self.assertEqual(AgntError("timeout", "No answer.").details, {})
-        self.assertTrue(AgntError("unavailable", "Later.", 503).retryable)  # follows the status
-        self.assertFalse(AgntError("invalid", "No.", 400).retryable)
+        self.assertEqual(SimonError("timeout", "No answer.").details, {})
+        self.assertTrue(SimonError("unavailable", "Later.", 503).retryable)  # follows the status
+        self.assertFalse(SimonError("invalid", "No.", 400).retryable)
 
     def test_problem_details(self):
         body = (
@@ -188,18 +188,18 @@ def rr(owner: bytes, rtype: int, data: bytes) -> bytes:
     return owner + struct.pack(">HHIH", rtype, 1, 60, len(data)) + data
 
 
-QUESTION = dnsquery._question("_agnt.example.com")
+QUESTION = dnsquery._question("_simon.example.com")
 POINTER = b"\xc0\x0c"  # the question's name, at offset 12
 
 
 class StubResolver(unittest.TestCase):
     def test_txt_records(self):
-        txt = b"".join(bytes([len(s)]) + s for s in (b"v=agnt1; server=https:", b"//agnt.example.com"))
+        txt = b"".join(bytes([len(s)]) + s for s in (b"v=simon1; server=https:", b"//simon.example.com"))
         records = [rr(POINTER, 16, txt), rr(POINTER, 16, b"\x03abc")]
         answer = dns_answer(7, QUESTION, records)
         self.assertEqual(
             dnsquery._txt_records(answer, QUESTION),
-            [["v=agnt1; server=https:", "//agnt.example.com"], ["abc"]],
+            [["v=simon1; server=https:", "//simon.example.com"], ["abc"]],
         )
 
     def test_a_cname_is_followed_and_strangers_are_not(self):
@@ -233,7 +233,7 @@ class StubResolver(unittest.TestCase):
         self.assertTrue(dnsquery._answers(answer, 7, QUESTION))
         self.assertFalse(dnsquery._answers(answer, 8, QUESTION))
         self.assertFalse(dnsquery._answers(dns_answer(7, QUESTION, [], flags=0x0100), 7, QUESTION))
-        other = dnsquery._question("_agnt.example.org")
+        other = dnsquery._question("_simon.example.org")
         self.assertFalse(dnsquery._answers(dns_answer(7, other, []), 7, QUESTION))
         self.assertFalse(dnsquery._answers(answer[:20], 7, QUESTION))
 
@@ -272,7 +272,7 @@ class Resolve(unittest.TestCase):
         )
 
     def test_ttls_reach_the_resolution(self):
-        records = dnsquery.TxtRecords([["v=agnt1; server=https://agnt.example.com"]], 300_000)
+        records = dnsquery.TxtRecords([["v=simon1; server=https://simon.example.com"]], 300_000)
         self.assertEqual(resolve("example.com", lambda n: records).ttl_ms, 300_000)
         answer = dns_answer(7, QUESTION, [rr(POINTER, 16, b"\x02ok")])
         self.assertEqual(dnsquery._txt_records(answer, QUESTION).ttl_ms, 60_000)
@@ -296,14 +296,14 @@ class Resolve(unittest.TestCase):
         self.assertIsNone(freshness_ms(headers()))
 
     def test_a_well_known_answer_longer_than_a_document_is_none(self):
-        body = b'{"server":"https://agnt.example.com"}' + b" " * 131_072
+        body = b'{"server":"https://simon.example.com"}' + b" " * 131_072
         self.assertEqual(well_known_outcome((200, body)), Resolution("not_found"))
 
 
 class Files(unittest.TestCase):
     def setUp(self):
         self.home = Path(tempfile.mkdtemp())
-        patcher = mock.patch.dict(os.environ, {"AGNT_ALLOW_PURE_SIGNING": "1"})
+        patcher = mock.patch.dict(os.environ, {"SIMON_ALLOW_PURE_SIGNING": "1"})
         patcher.start()
         self.addCleanup(patcher.stop)
 
@@ -325,13 +325,13 @@ class Files(unittest.TestCase):
     def test_pair_and_errors_on_the_command_line(self):
         out, err = io.StringIO(), io.StringIO()
         agent_home = self.home / "agent"
-        with redirect_stdout(out), mock.patch.dict(os.environ, {"AGNT_WORKSPACE": str(self.home)}):
+        with redirect_stdout(out), mock.patch.dict(os.environ, {"SIMON_WORKSPACE": str(self.home)}):
             status = cli.main(
                 ["--home", str(agent_home), "pair", "--address", "Bob@Example.net", "--key", "principal.pem"]
             )
         self.assertEqual(status, 0)
         pairing = json.loads(out.getvalue())
-        self.assertTrue(pairing["for"].startswith("agnt-key:ed25519:"))
+        self.assertTrue(pairing["for"].startswith("simon-key:ed25519:"))
         self.assertTrue((self.home / "principal.pem").exists())
         with redirect_stderr(err):
             status = cli.main(["--home", str(agent_home), "sync"])
@@ -357,7 +357,7 @@ class WaitTransactionAndBudget(unittest.TestCase):
             home = Path(folder)
             (home / "wait.lock").mkdir()
             (home / "wait.lock" / "owner.json").write_text(json.dumps({"pid": os.getpid()}))
-            with self.assertRaises(AgntError) as caught:
+            with self.assertRaises(SimonError) as caught:
                 wait_for_message(mock.Mock(), home, timeout=0, interval=1)
             self.assertEqual(caught.exception.code, "concurrent_wait")
             self.assertTrue((home / "wait.lock" / "owner.json").exists())
@@ -380,7 +380,7 @@ class WaitTransactionAndBudget(unittest.TestCase):
     def test_body_deadline_does_not_reset_on_each_slow_chunk(self):
         response = mock.Mock()
         response.read1.return_value = b"x"
-        with mock.patch("agnt.transport.time.monotonic", side_effect=[0.1, 0.5, 1.1]):
+        with mock.patch("simon.transport.time.monotonic", side_effect=[0.1, 0.5, 1.1]):
             with self.assertRaises(TimeoutError):
                 _read(response, None, 1.0)
         self.assertEqual(response.read1.call_count, 2)
@@ -517,9 +517,9 @@ class RealHTTPWorkerRoundTrips(unittest.TestCase):
             root = Path(folder)
             marker = root / "workspace-code-ran"
             malicious = f"from pathlib import Path\nPath({str(marker)!r}).write_text('executed')\nraise RuntimeError('workspace package imported')\n"
-            (root / "agnt.py").write_text(malicious)
-            (root / "agnt").mkdir()
-            (root / "agnt" / "__init__.py").write_text(malicious)
+            (root / "simon.py").write_text(malicious)
+            (root / "simon").mkdir()
+            (root / "simon" / "__init__.py").write_text(malicious)
             previous = Path.cwd()
             try:
                 os.chdir(root)

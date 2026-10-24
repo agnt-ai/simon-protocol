@@ -2,7 +2,7 @@
 
 Ed25519 signatures are reproduced with every signing path available here: the pure-Python one (opted in)
 always, and ``cryptography`` when it is installed. ML-DSA-65 signatures are hedged, so they are verified,
-not reproduced. Set AGNT_VECTOR_COUNTS=1 to print how many cases of each section passed.
+not reproduced. Set SIMON_VECTOR_COUNTS=1 to print how many cases of each section passed.
 """
 
 from __future__ import annotations
@@ -19,13 +19,13 @@ from email.message import Message
 from pathlib import Path
 from unittest import mock
 
-from agnt import keys as keys_module
-from agnt import mldsa
-from agnt import resolution as resolution_module
-from agnt.canonical import canonical, parse, signing_bytes
-from agnt.dnsquery import LookupFailed
-from agnt.documents import read_agent_document, read_keys, read_server_document
-from agnt.envelope import (
+from simon import keys as keys_module
+from simon import mldsa
+from simon import resolution as resolution_module
+from simon.canonical import canonical, parse, signing_bytes
+from simon.dnsquery import LookupFailed
+from simon.documents import read_agent_document, read_keys, read_server_document
+from simon.envelope import (
     Receiver,
     check_envelope_signature,
     check_served,
@@ -39,10 +39,10 @@ from agnt.envelope import (
     verify_claims,
     verify_envelope,
 )
-from agnt.errors import AgntError, parse_problem
-from agnt.keys import SigningKey, is_public_key, verify
-from agnt.limits import DELIVERY_WINDOW_MS, MINIMUM_LIMITS, REPEAT_WINDOW_MS, SEND_WINDOW_MS
-from agnt.messages import (
+from simon.errors import SimonError, parse_problem
+from simon.keys import SigningKey, is_public_key, verify
+from simon.limits import DELIVERY_WINDOW_MS, MINIMUM_LIMITS, REPEAT_WINDOW_MS, SEND_WINDOW_MS
+from simon.messages import (
     check_author_signature,
     check_principal,
     is_critical_value,
@@ -63,12 +63,12 @@ from agnt.messages import (
     verify_recovery,
     verify_unpairing,
 )
-from agnt.reading import (
+from simon.reading import (
     claimed_principal,
     is_understood,
     reads_as,
 )
-from agnt.request import (
+from simon.request import (
     add_key_proof,
     add_key_string,
     check_request,
@@ -76,11 +76,11 @@ from agnt.request import (
     sign_request,
     signing_string,
 )
-from agnt.resolution import Resolution as Resolved
-from agnt.resolution import fetch_well_known, resolution_cache_ms, resolve, server_origin
-from agnt.signal import check_signal_freshness, parse_signal, verify_signal
-from agnt.transport import HostNotFound, Response
-from agnt.wire import (
+from simon.resolution import Resolution as Resolved
+from simon.resolution import fetch_well_known, resolution_cache_ms, resolve, server_origin
+from simon.signal import check_signal_freshness, parse_signal, verify_signal
+from simon.transport import HostNotFound, Response
+from simon.wire import (
     address_segment,
     b64url,
     is_address,
@@ -90,7 +90,7 @@ from agnt.wire import (
     timestamp,
 )
 
-VECTORS = Path(os.environ.get("AGNT_VECTORS") or Path(__file__).resolve().parents[3] / "spec/vectors/v1.json")
+VECTORS = Path(os.environ.get("SIMON_VECTORS") or Path(__file__).resolve().parents[3] / "spec/vectors/v1.json")
 V = json.loads(VECTORS.read_text(encoding="utf-8"))
 KEYS = {name: k for name, k in V["keys"].items() if name != "about"}
 SEEDS = {k["key"]: bytes.fromhex(k["seed"]) for k in KEYS.values()}
@@ -130,7 +130,7 @@ class VectorCase(unittest.TestCase):
             COUNTS[self.section] += 1
 
     def assert_refused(self, call, case: dict) -> None:
-        with self.assertRaises(AgntError) as caught:
+        with self.assertRaises(SimonError) as caught:
             call()
         e = caught.exception
         self.assertEqual((e.status, e.code), (case["status"], case["code"]), e.message)
@@ -166,7 +166,7 @@ class Canonical(VectorCase):
         for c in V["canonical"]["cases"]:
             with self.case(c.get("input", c.get("inputHex"))):
                 if "refused" in c:
-                    with self.assertRaises(AgntError, msg=c["refused"]) as caught:
+                    with self.assertRaises(SimonError, msg=c["refused"]) as caught:
                         parse(raw(c, "input"))
                     self.assertEqual((caught.exception.status, caught.exception.code), (400, "invalid"))
                 else:
@@ -219,7 +219,7 @@ class Messages(VectorCase):
         for c in V["messages"]["cases"]:
             with self.case(c["name"]):
                 m = c["message"]
-                self.assertEqual(signing_bytes("AGNT-MESSAGE", m).decode(), c["signingBytes"])
+                self.assertEqual(signing_bytes("SIMON-MESSAGE", m).decode(), c["signingBytes"])
                 self.assertEqual(message_id(m), c["id"])
                 self.assertEqual(canonical(m), c["transmitted"])
                 self.assertEqual(parse_message(c["transmitted"].encode()), m)
@@ -266,7 +266,7 @@ class Pairings(VectorCase):
             with self.case(c["why"]):
                 self.assertEqual(pairing_bytes(c["agent"], c["principal"]).decode(), c["bytes"])
                 self.assertEqual(verify_pairing(c["agent"], c["principal"], c["pairing"]), c["verifies"])
-                token = c["principal"].removeprefix("agnt-key:")
+                token = c["principal"].removeprefix("simon-key:")
                 if c["verifies"] and token.startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
@@ -293,7 +293,7 @@ class Signatures(VectorCase):
 
     def test_mixed_order(self):
         mixed = V["signatures"]["mixedOrder"]
-        data = signing_bytes("AGNT-MESSAGE", self.message)
+        data = signing_bytes("SIMON-MESSAGE", self.message)
         for c in mixed["cases"]:
             with self.case(c["why"]):
                 self.assertEqual(verify(mixed["key"], data, c["signature"]), c["verifies"])
@@ -322,11 +322,11 @@ class Requests(VectorCase):
         for c in V["requests"]["addressSegments"]:
             with self.case(c["address"]):
                 self.assertEqual(address_segment(c["address"]), c["segment"])
-        with self.case("a signer sends agnt-server serialised"):
+        with self.case("a signer sends simon-server serialised"):
             key = signer(KEYS["ada"]["key"])
-            url = V["keys"]["server"]["origin"] + "/agnt/parts/" + "0" * 64
-            headers = sign_request(key, "GET", url, server="HTTPS://AGNT.Example.net:443/")
-            self.assertEqual(headers["agnt-server"], "https://agnt.example.net")
+            url = V["keys"]["server"]["origin"] + "/simon/parts/" + "0" * 64
+            headers = sign_request(key, "GET", url, server="HTTPS://SIMON.Example.net:443/")
+            self.assertEqual(headers["simon-server"], "https://simon.example.net")
 
     def test_signed(self):
         for c in V["requests"]["signed"]:
@@ -337,19 +337,19 @@ class Requests(VectorCase):
                 )
                 self.assertEqual(text, c["signingString"])
                 headers = c["headers"]
-                self.assertTrue(verify(headers["agnt-key"], text.encode(), headers["agnt-signature"]))
-                if headers["agnt-key"] in SEEDS and headers["agnt-key"].startswith("ed25519:"):
+                self.assertTrue(verify(headers["simon-key"], text.encode(), headers["simon-signature"]))
+                if headers["simon-key"] in SEEDS and headers["simon-key"].startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
                             signed = sign_request(
-                                signer(headers["agnt-key"]),
+                                signer(headers["simon-key"]),
                                 c["method"],
                                 server_origin(c["origin"], allow_local=True) + c["target"],
                                 body,
                                 now=int(c["timestamp"]),
                                 nonce=c["nonce"],
-                                agent=headers.get("agnt-agent"),
-                                server=headers.get("agnt-server"),
+                                agent=headers.get("simon-agent"),
+                                server=headers.get("simon-server"),
                             )
                             self.assertEqual(signed, headers)
 
@@ -410,7 +410,7 @@ class Documents(VectorCase):
                 body = raw(c, "body")
                 self.assertEqual(read_agent_document(body, c["address"], c["serverKeys"], now), c["read"])
                 if "signingBytes" in c:
-                    self.assertEqual(signing_bytes("AGNT-AGENT", parse(body)).decode(), c["signingBytes"])
+                    self.assertEqual(signing_bytes("SIMON-AGENT", parse(body)).decode(), c["signingBytes"])
 
 
 class Envelopes(VectorCase):
@@ -432,7 +432,7 @@ class Envelopes(VectorCase):
         for c in self.e["accepted"]:
             with self.case(c["name"]):
                 envelope = self.receive(c)
-                self.assertEqual(signing_bytes("AGNT-ENVELOPE", envelope).decode(), c["signingBytes"])
+                self.assertEqual(signing_bytes("SIMON-ENVELOPE", envelope).decode(), c["signingBytes"])
                 if "claims" in envelope:
                     claims = claims_bytes(envelope["claims"], message_id(envelope["message"]))
                     self.assertEqual(claims.decode(), c["claimsSigningBytes"])
@@ -599,7 +599,7 @@ class Signals(VectorCase):
         """Steps 1 to 3, then the signature, the served recipients and the freshness (section 6.4)."""
         signal = parse_signal(raw(c, "bytes"), Receiver(self.s["receiver"]["origin"]))
         if not verify_signal(signal, self.s["serverKeys"], self.now):
-            raise AgntError("bad_signature", "The signal does not verify.", 403)
+            raise SimonError("bad_signature", "The signal does not verify.", 403)
         check_served(signal["to"], lambda domain: domain in self.s["receiver"]["serves"], "to")
         check_signal_freshness(signal, self.now)
         return signal
@@ -608,7 +608,7 @@ class Signals(VectorCase):
         for c in self.s["accepted"]:
             with self.case(c["name"]):
                 signal = self.receive(c)
-                data = signing_bytes("AGNT-SIGNAL", signal)
+                data = signing_bytes("SIMON-SIGNAL", signal)
                 self.assertEqual(data.decode(), c["signingBytes"])
                 carrier = self.s["serverKeys"][0]["key"]
                 if not verify(carrier, data, signal["signature"]):
@@ -631,7 +631,7 @@ class Unpairings(VectorCase):
             with self.case(c["why"]):
                 self.assertEqual(unpairing_bytes(c["agent"], c["principal"]).decode(), c["bytes"])
                 self.assertEqual(verify_unpairing(c["agent"], c["principal"], c["unpairing"]), c["verifies"])
-                token = c["principal"].removeprefix("agnt-key:")
+                token = c["principal"].removeprefix("simon-key:")
                 if c["verifies"] and token.startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
@@ -647,7 +647,7 @@ class Recoveries(VectorCase):
                 self.assertEqual(recover_bytes(c["agent"], c["key"], c["at"]).decode(), c["bytes"])
                 verifies = verify_recovery(c["agent"], c["principal"], c["key"], c["at"], c["recover"])
                 self.assertEqual(verifies, c["verifies"])
-                token = c["principal"].removeprefix("agnt-key:")
+                token = c["principal"].removeprefix("simon-key:")
                 if c["verifies"] and token.startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
@@ -711,14 +711,14 @@ class Resolution(VectorCase):
                 fetched = []
 
                 def txt(name, c=c, domain=domain):
-                    self.assertEqual(name, f"_agnt.{domain}")
+                    self.assertEqual(name, f"_simon.{domain}")
                     if c["txt"] in ("servfail", "dnssec_failure"):  # a validating resolver's SERVFAIL
                         raise LookupFailed(c["txt"])
                     return c["txt"]
 
                 def transport(method, url, *args, c=c, domain=domain, fetched=fetched, **kwargs):
                     self.assertIn("wellKnown", c, "the well-known answer must not be fetched")
-                    self.assertEqual((method, url), ("GET", f"https://{domain}/.well-known/agnt"))
+                    self.assertEqual((method, url), ("GET", f"https://{domain}/.well-known/simon"))
                     fetched.append(url)
                     answer = c["wellKnown"]
                     if isinstance(answer, str):
@@ -776,7 +776,7 @@ class Coverage(unittest.TestCase):
 
 
 def tearDownModule():
-    if os.environ.get("AGNT_VECTOR_COUNTS"):
+    if os.environ.get("SIMON_VECTOR_COUNTS"):
         for section in V:
             if section != "about":
                 print(f"{section:18} {COUNTS[section]}", file=sys.stderr)

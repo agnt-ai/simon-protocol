@@ -1,5 +1,5 @@
 /**
- * `POST /agnt/deliver` (spec section 6.3): an envelope from another server, checked in exactly the
+ * `POST /simon/deliver` (spec section 6.3): an envelope from another server, checked in exactly the
  * section's order, answering the first failure:
  *
  *   1-5  body size and parse, envelope shape, canonical message, message rules, and the envelope for this
@@ -74,7 +74,7 @@ export async function deliver(ctx: Context, req: Request): Promise<Reply> {
   let cached = ctx.resolver.isCached(domain);
   let peer = await ctx.resolver.peer(domain, charge);
   const noServer = () =>
-    forbidden('bad_signature', `${domain} names no other AGNT server, so no envelope from it verifies.`);
+    forbidden('bad_signature', `${domain} names no other SIMON server, so no envelope from it verifies.`);
   // Even a cached absence or our own old route can hide a move to the actual carrying server.
   if (cached && (peer.outcome !== 'server' || peer.server === ctx.config.origin)) {
     peer = (await reresolve(ctx, domain, () => ctx.resolver.peer(domain, charge, { fresh: true }))) ?? peer;
@@ -157,7 +157,7 @@ export async function deliver(ctx: Context, req: Request): Promise<Reply> {
  */
 function signer(e: Envelope, document: ServerDocument | null, now: Date) {
   if (!document) return null;
-  const envelopeBytes = signingBytes('AGNT-ENVELOPE', e);
+  const envelopeBytes = signingBytes('SIMON-ENVELOPE', e);
   const claims = e.claims && claimsBytes(e.claims, messageId(e.message));
   const key = document.keys.find(k => signedByAny([k], now, envelopeBytes, e.signature));
   if (!key || (claims && !signedByAny(document.keys, now, claims, e.claimsSignature))) return null;

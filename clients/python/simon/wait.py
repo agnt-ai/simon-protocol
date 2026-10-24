@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .client import Agent
-from .errors import AgntError
+from .errors import SimonError
 from .wire import normalize_address
 
 SEEN_KEPT = 1000
@@ -65,7 +65,7 @@ def read_wait_state(home: Path) -> dict[str, Any]:
         and all(isinstance(x, str) and _HEX64.fullmatch(x) for x in s["seen"])
     )
     if not ok:
-        raise AgntError(
+        raise SimonError(
             "invalid",
             "The wait state is damaged or uses the retired numeric cursor format; delete wait.json to start over explicitly.",
             details={"field": "wait.json"},
@@ -103,7 +103,7 @@ def _locked(home: Path):
         except (ValueError, OSError, AttributeError):
             pass
         detail = f" (PID {pid})" if pid else ""
-        raise AgntError("concurrent_wait", f"Another wait owns AGNT_HOME/wait.lock{detail}. Stop it first. After confirming its owner is no longer running, remove only the stale wait.lock directory; keep wait.json.", details={"field": "wait.lock", **({"ownerPid": pid} if pid else {})}) from None
+        raise SimonError("concurrent_wait", f"Another wait owns SIMON_HOME/wait.lock{detail}. Stop it first. After confirming its owner is no longer running, remove only the stale wait.lock directory; keep wait.json.", details={"field": "wait.lock", **({"ownerPid": pid} if pid else {})}) from None
     try:
         fd = os.open(lock / "owner.json", os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         with os.fdopen(fd, "w") as f:
@@ -121,7 +121,7 @@ def wait_for_message(agent: Agent, home: Path, *, sender: str | None = None, tim
     with the agent's normal transport timeout; buffered entries never need a request.
     """
     if not 0 <= timeout < float("inf") or not 0 < interval < float("inf"):
-        raise AgntError("invalid", "Wait timeout is nonnegative and its interval is positive.")
+        raise SimonError("invalid", "Wait timeout is nonnegative and its interval is positive.")
     with _locked(Path(home)):
         return _wait_unlocked(agent, home, sender=sender, timeout=timeout, interval=interval, clock=clock, sleep=sleep)
 
@@ -143,7 +143,7 @@ def _wait_unlocked(
     if sender is not None:
         wanted_from = normalize_address(sender)
         if wanted_from is None:
-            raise AgntError(
+            raise SimonError(
                 "invalid", f"from is not an address (local@domain): {sender!r}", details={"field": "from"}
             )
     deadline = clock() + timeout
@@ -153,7 +153,7 @@ def _wait_unlocked(
             found = _scan(agent, Path(home), wanted_from, lambda: deadline - clock(), timeout == 0)
             if found:
                 return found
-        except AgntError as e:
+        except SimonError as e:
             if not e.retryable:
                 raise
             if e.retry_after is not None:
@@ -199,15 +199,15 @@ def _scan(agent: Agent, home: Path, sender: str | None, remaining: Callable[[], 
         page = agent.sync(token, 200, request_timeout=agent.timeout if once else max(0.001, left))
         if (not isinstance(page, dict) or not isinstance(page.get("token"), str)
                 or not page["token"] or not isinstance(page.get("messages"), list) or type(page.get("more")) is not bool):
-            raise AgntError("bad_response", "sync did not return messages, token and more.")
+            raise SimonError("bad_response", "sync did not return messages, token and more.")
         if page["more"] and page["token"] == token:
-            raise AgntError("bad_response", "sync returned more without advancing its token.")
+            raise SimonError("bad_response", "sync returned more without advancing its token.")
         for e in page["messages"]:
             if (not isinstance(e, dict) or not isinstance(e.get("id"), str)
                     or not _HEX64.fullmatch(e["id"]) or not isinstance(e.get("message"), dict)
                 or not isinstance(e["message"].get("from"), str) or not isinstance(e["message"].get("to"), list)
                 or not isinstance(e.get("carrier"), str) or not isinstance(e.get("receivedAt"), str) or not isinstance(e.get("claims"), list)):
-                raise AgntError("bad_response", "sync returned a malformed message entry.")
+                raise SimonError("bad_response", "sync returned a malformed message entry.")
             # sync includes sent messages too; wait is for messages addressed to this agent.
             if (agent.address in e["message"].get("to", [])
                     and e["id"] not in seen_set and e["id"] not in pending_ids):

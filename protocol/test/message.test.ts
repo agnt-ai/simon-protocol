@@ -41,11 +41,11 @@ const variant = (patch: Record<string, Json>) => () => checkMessage({ ...m, ...p
 const many = (n: number, f: (i: number) => Json) => Array.from({ length: n }, (_, i) => f(i));
 
 describe('the message', () => {
-  it('the id hashes the canonical message without its signature; the signature is over AGNT-MESSAGE and those bytes', () => {
+  it('the id hashes the canonical message without its signature; the signature is over SIMON-MESSAGE and those bytes', () => {
     assert.equal(unsignedBytes(signedQuestion).toString(), canonicalize(question));
     assert.equal(messageId(signedQuestion), messageId(question));
     assert.match(messageId(question), /^[0-9a-f]{64}$/);
-    assert.equal(signingBytes('AGNT-MESSAGE', signedQuestion).toString(), `AGNT-MESSAGE\n${canonicalize(question)}`);
+    assert.equal(signingBytes('SIMON-MESSAGE', signedQuestion).toString(), `SIMON-MESSAGE\n${canonicalize(question)}`);
   });
 
   it('a signature verifies with a key valid at sentAt, and only then', () => {
@@ -241,7 +241,7 @@ describe('the message', () => {
     const pdf = (c: string) => ({ type: 'application/pdf', sha256: c.repeat(64), size: 1 });
     const original = signMessage<Message>({ ...question, parts: [pdf('a'), pdf('b')] }, ada.privateKey);
     const carry = (m: object) => ({
-      type: 'application/agnt-message',
+      type: 'application/simon-message',
       data: Buffer.from(canonicalize(m)).toString('base64'),
     });
     const forward = { ...signedQuestion, parts: [{ type: 'text/plain', data: 'FYI' }, pdf('c'), carry(original)] };
@@ -255,7 +255,7 @@ describe('the message', () => {
       ['c', 'a', 'b'],
       'a forward of a forward',
     );
-    const broken = { ...signedQuestion, parts: [{ type: 'application/agnt-message', data: 'bm90IGpzb24=' }] };
+    const broken = { ...signedQuestion, parts: [{ type: 'application/simon-message', data: 'bm90IGpzb24=' }] };
     assert.deepEqual(namedFiles(broken), [], 'a carried message that does not parse names nothing');
     assert.deepEqual(
       namedFiles({ ...version7Like, parts: [pdf('a')] } as unknown as AnyMessage),
@@ -292,7 +292,7 @@ describe('the message', () => {
           ...signedQuestion,
           parts: [
             {
-              type: 'application/agnt-message; profile=forward',
+              type: 'application/simon-message; profile=forward',
               data: Buffer.from(canonicalize(inner)).toString('base64'),
             },
           ],
@@ -305,7 +305,7 @@ describe('the message', () => {
     const file = '{"sha256":"' + 'a'.repeat(64) + '","size":1}';
     const carried = (body: Uint8Array | string) => ({
       ...signedQuestion,
-      parts: [{ type: 'application/agnt-message; profile=forward', data: Buffer.from(body).toString('base64') }],
+      parts: [{ type: 'application/simon-message; profile=forward', data: Buffer.from(body).toString('base64') }],
     });
     for (const body of [
       'not JSON',
@@ -341,7 +341,7 @@ describe('the message', () => {
       ...signedQuestion,
       parts: [
         {
-          type: 'application/agnt-message',
+          type: 'application/simon-message',
           data: Buffer.from(typeof inner === 'string' ? inner : canonicalize(inner as Json)).toString('base64'),
         },
       ],

@@ -32,7 +32,7 @@ const MAX_API_KEYS = 10;
 const SIGNATURE_TRIES = 5;
 
 /** What a key principal signs to sign in: this server, and the challenge it was given. */
-export const signInBytes = (origin: string, challenge: string) => `AGNT-APP-SIGN-IN\n${origin}\n${challenge}`;
+export const signInBytes = (origin: string, challenge: string) => `SIMON-APP-SIGN-IN\n${origin}\n${challenge}`;
 
 /** A signed-in person, and the identifiers proven in the session that are still fresh. */
 export interface Session {
@@ -178,9 +178,9 @@ export class OAuth {
       return { step: 'sign', challenge: signInBytes(this.#ctx.config.server.origin, challenge) };
     }
     await this.#codes.send(identifier, 'sign-in', login._id, code => ({
-      subject: `Your AGNT sign-in code: ${code}`,
-      text: `"${app.name}", an app at ${app.host}, asks to show you what your agents do on AGNT.\n\nYour code is ${code}. It expires in 15 minutes. Enter it only if you are signing in to ${app.host}.\n\nIf you did not ask for this, ignore this message.`,
-      sms: `AGNT sign-in code ${code} for "${app.name}" at ${app.host}. Ignore it if you did not ask.`,
+      subject: `Your SIMON sign-in code: ${code}`,
+      text: `"${app.name}", an app at ${app.host}, asks to show you what your agents do on SIMON.\n\nYour code is ${code}. It expires in 15 minutes. Enter it only if you are signing in to ${app.host}.\n\nIf you did not ask for this, ignore this message.`,
+      sms: `SIMON sign-in code ${code} for "${app.name}" at ${app.host}. Ignore it if you did not ask.`,
     }));
     await this.store.updateLogin(login._id, { identifier, challenge: null });
     return { step: 'code', sentTo: masked(identifier) };
@@ -256,8 +256,8 @@ export class OAuth {
 
   async #issue(session: Pick<Token, 'person' | 'session' | 'identifiers'>, client: string) {
     const now = this.#ctx.now();
-    const access = `agnto_${randomToken()}`;
-    const refresh = `agntr_${randomToken()}`;
+    const access = `simono_${randomToken()}`;
+    const refresh = `simonr_${randomToken()}`;
     const { person, identifiers } = session;
     const base = {
       person,
@@ -322,7 +322,7 @@ export class OAuth {
     if ((await this.store.apiKeys(person, session.identifiers)).length >= MAX_API_KEYS) {
       throw conflict('too_many_api_keys', `A person holds at most ${MAX_API_KEYS} API keys; revoke one first.`);
     }
-    const key = `agntk_${randomToken()}`;
+    const key = `simonk_${randomToken()}`;
     const t: Token = {
       _id: newId('token'),
       tokenHash: hashSecret(key),

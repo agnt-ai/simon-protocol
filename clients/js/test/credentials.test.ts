@@ -19,13 +19,13 @@ import {
 import { fakeServer } from './fake-server.ts';
 
 const run = promisify(execFile);
-const tempHome = () => fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-credentials-'));
+const tempHome = () => fs.mkdtempSync(path.join(os.tmpdir(), 'simon-credentials-'));
 const mode = (file: string) => fs.statSync(file).mode & 0o777;
 const CREDENTIALS = path.resolve(import.meta.dirname, '../src/credentials.ts');
 
 describe('the key file', () => {
   it('is made once, mode 600, in a directory of mode 700, and read back after', () => {
-    const home = path.join(tempHome(), 'agnt');
+    const home = path.join(tempHome(), 'simon');
     const pem = ensureKeyFile(keyFile(home));
     assert.equal(ensureKeyFile(keyFile(home)), pem);
     assert.equal(mode(keyFile(home)), 0o600);

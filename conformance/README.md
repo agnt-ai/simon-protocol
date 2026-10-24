@@ -1,6 +1,6 @@
-# AGNT Protocol conformance suite
+# SIMON Protocol conformance suite
 
-A black-box test of any AGNT server, in any language. Point it at a server's origin; it plays a peer
+A black-box test of any SIMON server, in any language. Point it at a server's origin; it plays a peer
 server against it over HTTP and reports, check by check, which rule of the spec held and which did not.
 Every failure names the spec section, the request it sent, the answer that came back, and what a
 conforming server answers instead.
@@ -23,7 +23,7 @@ basic server is in step 1 below.
 
 ## What the suite needs from you
 
-1. **Resolve the simulator's domain to the simulator.** The suite runs its own AGNT server, the peer
+1. **Resolve the simulator's domain to the simulator.** The suite runs its own SIMON server, the peer
    simulator, at `http://127.0.0.1:47100` and delivers from agents at `peer.test`. Configure your
    server to resolve `peer.test` to `http://127.0.0.1:47100`, and to accept `http:` origins on local
    hosts for development, as section 3 allows. Change either with `--peer-domain`, `--peer-host` and
@@ -31,10 +31,10 @@ basic server is in step 1 below.
    basic server in `server/`, with every optional check below turned on:
 
    ```sh
-   AGNT_DEV=1 AGNT_ORIGIN=http://127.0.0.1:8080 AGNT_HOSTED_DOMAINS=sut.test AGNT_LEASE_DOMAIN=lease.sut.test \
-   AGNT_DEV_RESOLVE=sut.test=http://127.0.0.1:8080,lease.sut.test=http://127.0.0.1:8080,mail.sut.test=http://127.0.0.1:8080,peer.test=http://127.0.0.1:47100,peer2.test=http://127.0.0.1:47101 \
-   AGNT_RATES=register=1000/3600,badSignature=100000/3600,code=100/3600,deliver=100000/3600 \
-   AGNT_RECOVERY_WAIT=5 AGNT_DB=conformance.sqlite node server/src/main.ts > server.log 2>&1
+   SIMON_DEV=1 SIMON_ORIGIN=http://127.0.0.1:8080 SIMON_HOSTED_DOMAINS=sut.test SIMON_LEASE_DOMAIN=lease.sut.test \
+   SIMON_DEV_RESOLVE=sut.test=http://127.0.0.1:8080,lease.sut.test=http://127.0.0.1:8080,mail.sut.test=http://127.0.0.1:8080,peer.test=http://127.0.0.1:47100,peer2.test=http://127.0.0.1:47101 \
+   SIMON_RATES=register=1000/3600,badSignature=100000/3600,code=100/3600,deliver=100000/3600 \
+   SIMON_RECOVERY_WAIT=5 SIMON_DB=conformance.sqlite node server/src/main.ts > server.log 2>&1
    ```
 
    and, from another terminal:
@@ -55,7 +55,7 @@ basic server is in step 1 below.
 3. **Room under your rate limits.** One run registers about 40 agents, sends a few dozen bad signatures on
    purpose and delivers about 200 envelopes from one peer. The suite waits out a `429` whose
    `Retry-After` is at most 15 seconds (`--rate-limit-wait`), and skips a check otherwise. For the basic
-   server: `AGNT_RATES=register=1000/3600,badSignature=100000/3600,code=100/3600,deliver=100000/3600`.
+   server: `SIMON_RATES=register=1000/3600,badSignature=100000/3600,code=100/3600,deliver=100000/3600`.
 
 4. **A server that has not seen the simulator in the last ten minutes**, for one check:
    `deliver.server-document-unavailable` makes the simulator's server document answer `503`, which a
@@ -65,16 +65,16 @@ basic server is in step 1 below.
 5. **Optional: the code flow.** To check binding an address by a code, recovery, its wait and its
    cancelling, and `key_revoked`, give `--code-command <command>` and `--code-address <address>`. The
    address is on a domain that resolves to your server and is neither hosted nor leased. The command is
-   run with the address as `$1` and as `AGNT_ADDRESS`, and prints the code your server sent there. The
+   run with the address as `$1` and as `SIMON_ADDRESS`, and prints the code your server sent there. The
    basic server logs codes in development, which the command above reads. A recovery that waits (CLIENT
    Recovery, "By the address's mailbox") is waited out when its `completesAt` is within
    `--recovery-wait` (30 s); run the server with a short wait for that (the basic server:
-   `AGNT_RECOVERY_WAIT=5`). `register.cancel-code` also needs `--cancel-code-command <command>`, which
+   `SIMON_RECOVERY_WAIT=5`). `register.cancel-code` also needs `--cancel-code-command <command>`, which
    prints the cancel code your server sent to the address with the news of a recovery (CLIENT
    "Cancelling a recovery"); the basic server logs it in development as `recovery cancel code`.
 
 6. **Optional: retiring an agent.** `public.retired` needs `--retire-command <command>`, run with an
-   address as `$1` and `AGNT_ADDRESS`, that retires the agent there, as your server's principal-only
+   address as `$1` and `SIMON_ADDRESS`, that retires the agent there, as your server's principal-only
    operations would. For the basic server, run it on a database file and update it with `sqlite3`, as
    above.
 
@@ -86,7 +86,7 @@ basic server is in step 1 below.
 
 9. **A server on another machine,** such as a staging deployment, cannot reach `127.0.0.1` and takes only
    `https:` origins. Put the simulator behind a public tunnel to its port, and give the tunnel's origin as
-   `--peer-origin`. Its name is then the peer domain, and the simulator answers `/.well-known/agnt` for
+   `--peer-origin`. Its name is then the peer domain, and the simulator answers `/.well-known/simon` for
    it, so the server resolves it by the well-known method of section 3, with no DNS record to add. (With
    a `--peer-domain` of your own, that domain needs a TXT record naming the tunnel's origin instead.) Before
    any check, the suite fetches the simulator's server document through the tunnel, for up to a minute,
@@ -100,7 +100,7 @@ basic server is in step 1 below.
    and, from another terminal:
 
    ```sh
-   node conformance/src/cli.ts --server https://agnt.staging.example \
+   node conformance/src/cli.ts --server https://simon.staging.example \
      --peer-origin https://<name>.trycloudflare.com --hosted-domain staging.example
    ```
 
@@ -119,7 +119,7 @@ and for the 144-hour freshness window to close on messages delivered just inside
 
 ```json
 {
-  "suite": "agnt-protocol-conformance 0.2.0",
+  "suite": "simon-conformance 0.2.0",
   "target": { "server": "http://127.0.0.1:8080", "origin": "http://127.0.0.1:8080" },
   "peer": { "domain": "peer.test", "origin": "http://127.0.0.1:47100" },
   "summary": { "total": 181, "pass": 179, "fail": 1, "skip": 1, "mustFailed": 1, "shouldFailed": 0 },
@@ -136,7 +136,7 @@ and for the 144-hour freshness window to close on messages delivered just inside
       "exchanges": [
         {
           "direction": "to-target",
-          "request": { "method": "POST", "url": "http://127.0.0.1:8080/agnt/deliver", "headers": {}, "body": "{...}" },
+          "request": { "method": "POST", "url": "http://127.0.0.1:8080/simon/deliver", "headers": {}, "body": "{...}" },
           "response": { "status": 400, "headers": { "content-type": "application/problem+json" }, "body": "{...}" }
         }
       ]
@@ -153,11 +153,11 @@ hosted domain given, a policy holding mail from the simulator, a prerequisite th
 ## How it works
 
 - **The simulator** (`src/peer.ts`) serves a server document, agent documents for the agents it
-  controls, `/agnt/deliver` and part bytes. Each simulated agent's document can be made to fail in a
+  controls, `/simon/deliver` and part bytes. Each simulated agent's document can be made to fail in a
   chosen way (404, 503, the wrong address, a bad signature, a malformed or unknown key, 33 keys, too
   large) or list chosen keys (one of an algorithm nobody implements, say), and its server document can
   answer 503. Its envelopes name your server and, by default, the recipients on the domains the suite
-  knows your server serves. Its `/agnt/deliver` records every envelope and answers 202, or 503 once for
+  knows your server serves. Its `/simon/deliver` records every envelope and answers 202, or 503 once for
   a recipient named `x503-...`, or 400 for `x400-...`. It serves part bytes only to a server request
   signed by a server it delivered them to, and checks that signature.
 - **Its server keys come from fixed seeds**, so a server that cached its document from an earlier run
@@ -206,9 +206,9 @@ Where the spec leaves a choice, the suite takes the reading most consistent with
   meet a failure that passes. `sent` reporting `expired` cannot be observed without moving your server's
   clock by days, so `sent.expired` always skips.
 
-Recovery uses `POST /agnt/recovery`, `GET /agnt/recovery` and `POST /agnt/recovery/cancel`.
+Recovery uses `POST /simon/recovery`, `GET /simon/recovery` and `POST /simon/recovery/cancel`.
 Registration creates or pairs an address; account and key operations return `{address, keys, grants, recovery}`.
-The client stream uses `GET /agnt/sync` and opaque server-issued tokens; tokens are stored and returned unchanged.
+The client stream uses `GET /simon/sync` and opaque server-issued tokens; tokens are stored and returned unchanged.
 A core reference host may keep retired agent documents private or serve a valid signed retirement record.
 
 ## The checks
@@ -223,16 +223,16 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `documents.server.readable` | must | PROTOCOL 4 | GET /agnt/server without any signature answers 200 with a JSON object under section 5.1's rules, at most 131072 bytes, whose keys are well-formed entries, at most 32 of them not yet revoked |
+| `documents.server.readable` | must | PROTOCOL 4 | GET /simon/server without any signature answers 200 with a JSON object under section 5.1's rules, at most 131072 bytes, whose keys are well-formed entries, at most 32 of them not yet revoked |
 | `documents.server.origin` | must | PROTOCOL 4 | `server` equals the origin of the URL it was fetched from, compared as the URL standard serialises origins |
 | `documents.server.limits` | must | PROTOCOL 4, 9 | limits has messageBytes >= 262144, recipients >= 100, requestBodyBytes >= 1048576 and partBytes >= 26214400, each a safe integer |
 | `documents.server.algorithms` | must | PROTOCOL 2.3, 4 | algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ed25519 and ml-dsa-65 |
 | `documents.server.key-valid-now` | must | PROTOCOL 2.4, 4 | at least one entry of an implemented algorithm is valid at the time of reading, or nothing the server signs can verify |
-| `documents.agent.served` | must | PROTOCOL 4 | GET /agnt/agents/<address> (unsigned, `@` literal) answers 200 with the address asked for, and a signature over AGNT-AGENT that verifies with a server key valid now |
-| `documents.agent.address-segment` | must | PROTOCOL 2.1, 4, 8 | for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { \| }), GET /agnt/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other |
+| `documents.agent.served` | must | PROTOCOL 4 | GET /simon/agents/<address> (unsigned, `@` literal) answers 200 with the address asked for, and a signature over SIMON-AGENT that verifies with a server key valid now |
+| `documents.agent.address-segment` | must | PROTOCOL 2.1, 4, 8 | for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { \| }), GET /simon/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other |
 | `documents.agent.kind` | must | PROTOCOL 2.2, 4 | kind is "solo" for an agent registered without `for` |
 | `documents.agent.lists-key` | must | PROTOCOL 4 | the key the agent registered appears in keys, with added and revoked making it valid now |
-| `documents.agent.unknown` | must | PROTOCOL 4, 9 | GET /agnt/agents/<an address nobody holds> answers 404 not_found in the error shape |
+| `documents.agent.unknown` | must | PROTOCOL 4, 9 | GET /simon/agents/<an address nobody holds> answers 404 not_found in the error shape |
 
 ### Signed requests (PROTOCOL 8)
 
@@ -240,20 +240,20 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | --- | --- | --- | --- |
 | `requests.key-revoked` | must | PROTOCOL 8 | 401 key_revoked (with details.serverTime) for a request signed by a key that recovery replaced |
 | `requests.unsigned` | must | PROTOCOL 8 | 401 signature_required with details.serverTime, for a client API call carrying no signature headers |
-| `requests.missing-header` | must | PROTOCOL 8 | dropping any one of agnt-key, agnt-timestamp, agnt-nonce or agnt-signature gives 401 signature_required |
+| `requests.missing-header` | must | PROTOCOL 8 | dropping any one of simon-key, simon-timestamp, simon-nonce or simon-signature gives 401 signature_required |
 | `requests.malformed-header` | must | PROTOCOL 8, Appendix A | a timestamp that is not 1 to 12 digits, a nonce outside 8 to 128 characters of U+0021 to U+007E, a key that is not a key token, or a signature that is not canonical base64url gives 401 signature_required |
 | `requests.nonce-bounds` | must | PROTOCOL 8, Appendix A | a request whose nonce is exactly 8, or exactly 128, characters from U+0021 to U+007E (including ! and ~) answers 200 |
 | `requests.timestamp-window` | must | PROTOCOL 8 | a timestamp 300 s minus the clock margin from the server clock (either way) answers 200; 300 s plus the margin answers 401 stale_request |
-| `requests.unknown-key` | must | PROTOCOL 8 | 401 unknown_key for a well-formed request naming an agent there in agnt-agent, signed by a key that agent does not hold |
-| `requests.bad-signature` | must | PROTOCOL 8 | 401 bad_signature with details.serverTime and details.signingString exactly the eight lines the server expected: AGNT-REQUEST, the method, its origin, the actor, the request target as sent, the timestamp, the nonce, the body hash |
+| `requests.unknown-key` | must | PROTOCOL 8 | 401 unknown_key for a well-formed request naming an agent there in simon-agent, signed by a key that agent does not hold |
+| `requests.bad-signature` | must | PROTOCOL 8 | 401 bad_signature with details.serverTime and details.signingString exactly the eight lines the server expected: SIMON-REQUEST, the method, its origin, the actor, the request target as sent, the timestamp, the nonce, the body hash |
 | `requests.binds-origin` | must | PROTOCOL 8 | 401 bad_signature, the signing string naming this server's own origin |
 | `requests.binds-target` | must | PROTOCOL 8 | 401 bad_signature for a request signed over another query, the signing string naming the target exactly as sent |
-| `requests.binds-actor` | must | PROTOCOL 8 | 401 bad_signature for a request signed as one address and sent naming another in agnt-agent, the signing string naming the address sent |
+| `requests.binds-actor` | must | PROTOCOL 8 | 401 bad_signature for a request signed as one address and sent naming another in simon-agent, the signing string naming the address sent |
 | `requests.binds-method` | must | PROTOCOL 8 | 401 bad_signature for a GET signed as a POST, the signing string naming GET |
 | `requests.binds-body` | must | PROTOCOL 8 | 401 bad_signature for a POST whose body differs from the one signed, the signing string ending in the hash of the body as sent |
 | `requests.replayed` | must | PROTOCOL 8 | the same signed request twice: 200, then 401 replayed_request |
 | `requests.nonce-after-bad-signature` | must | PROTOCOL 8 | nonce N with a signature that does not verify: 401 bad_signature; then a good request with N: 200; then N again: 401 replayed_request |
-| `requests.nonce-after-unsigned` | must | PROTOCOL 8 | nonce N with no agnt-signature: 401 signature_required; then a good request with N: 200 |
+| `requests.nonce-after-unsigned` | must | PROTOCOL 8 | nonce N with no simon-signature: 401 signature_required; then a good request with N: 200 |
 | `requests.nonce-after-stale` | must | PROTOCOL 8 | nonce N with a timestamp outside the window: 401 stale_request; then a good request with N: 200 |
 | `requests.refusal-order` | must | PROTOCOL 8 | malformed header before stale timestamp; stale timestamp before unknown key; unknown key before bad signature; bad signature before replayed nonce |
 | `requests.nonce-per-key` | should | PROTOCOL 8 | two agents using the same nonce, each once, both answer 200 |
@@ -285,13 +285,13 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `deliver.order-canonical-before-message` | must | PROTOCOL 6.3 steps 3-4 | 400 invalid with details.canonical for a non-canonical message that also has a field version 1 does not define |
 | `deliver.order-canonical-before-signature` | must | PROTOCOL 6.3 steps 3, 7 | 400 invalid with details.canonical (not 403) for a non-canonical message in an envelope signed by a key the sender's server does not list |
 | `deliver.invariants` | must | PROTOCOL 6.3 step 4, PROTOCOL 1 | 400 invalid with details.field naming v, from, to, sentAt or signature when it is missing or malformed: v absent, 0 or "1"; from in upper case or without @; to in upper case, not an array, or holding a non-address; sentAt with an offset or naming 30 February; signature missing or padded |
-| `deliver.version-1-rules` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.2-5.4 | 400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without an agnt-key for, an agnt-key for without pairing, and critical with spaces |
+| `deliver.version-1-rules` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.2-5.4 | 400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without a simon-key for, a simon-key for without pairing, and critical with spaces |
 | `deliver.any-parts` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.3 | 202 for a message with no parts, one with only a file, one whose only text is HTML, one whose text is content-addressed, a sealed message, and one of 32 parts; 400 invalid with details.field "parts" for one of 33 parts |
 | `deliver.part-labels` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.3 | 202 for a part with a name and an alt, and for one with a member the server does not know; 400 invalid with details.field "parts" for a name with a slash, a name that is .., a name with a right-to-left override, a name of 256 bytes, an alt of two lines, an alt with a right-to-left override, and an empty alt |
 | `deliver.part-size` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.3, 7.2 | 400 invalid with details.field "parts" for a message naming a part one byte over partBytes, so no part is ever fetched only on demand |
 | `deliver.carried-files` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.3, 7.2 | 400 invalid with details.field "parts" for a message carrying inline a message that names a file one byte over partBytes, and for one naming more than 1024 files in all, counting those of the messages it carries inline: so no carrier can make a recipient fetch unbounded bytes |
 | `deliver.header-placement` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.4 | 202 for a message with inReplyTo and a rel the registry does not list, and for a relation marked listed: yes; 400 invalid with details.field "headers" for rel without inReplyTo, rel in upper case, feed on a message with recipients, audience on a message with recipients, listed on a plain reply, and listed: Yes |
-| `deliver.pairing-signature-not-checked-by-servers` | should | PROTOCOL 2.2, 5.4 | 202 for a message with an agnt-key: for and a well-formed pairing, valid or not: verifying it is for readers who rely on it |
+| `deliver.pairing-signature-not-checked-by-servers` | should | PROTOCOL 2.2, 5.4 | 202 for a message with a simon-key: for and a well-formed pairing, valid or not: verifying it is for readers who rely on it |
 | `deliver.recipients-limit` | must | PROTOCOL 6.3 step 4, PROTOCOL 9 | 202 for exactly `recipients` recipients; 400 invalid with details.field "to" for one more |
 | `deliver.message-size` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.5 | 202 for a message of exactly the published messageBytes; 400 invalid with details.field "message" for one byte more |
 | `deliver.unknown-version` | must | PROTOCOL 1, 6.3 step 4 | 202 for a version 7 message with fields version 1 does not define (and a headers member version 1 would refuse), signed by its author; and for one whose to also names a non-ASCII local part, which only version 1 forbids |
@@ -302,7 +302,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `deliver.destination-recipients` | must | PROTOCOL 6.3 step 5, PROTOCOL 6.1 | 400 invalid with details.field "recipients" for a recipient that is not in to |
 | `deliver.served-recipients` | must | PROTOCOL 6.3 step 8, PROTOCOL 6.1 | 400 invalid with details.field "recipients" for a recipient in to on a domain the server does not serve |
 | `deliver.order-signature-before-served` | must | PROTOCOL 6.3 steps 7-8, PROTOCOL 11.2 | 403 bad_signature, not 400 on recipients, for an envelope signed by an unlisted key naming a recipient on a domain the server does not serve: no recipient is looked up for an unauthenticated caller |
-| `deliver.no-lookup-before-signature` | must | PROTOCOL 6.3 steps 5-8, PROTOCOL 11.2 | no request to the second simulator's /.well-known/agnt while the server refuses a forged envelope naming a recipient on the second simulator's domain (needs a second simulator reached by its well-known answer, as behind a tunnel) |
+| `deliver.no-lookup-before-signature` | must | PROTOCOL 6.3 steps 5-8, PROTOCOL 11.2 | no request to the second simulator's /.well-known/simon while the server refuses a forged envelope naming a recipient on the second simulator's domain (needs a second simulator reached by its well-known answer, as behind a tunnel) |
 | `deliver.order-message-before-destination` | must | PROTOCOL 6.3 steps 4-5 | 400 invalid naming the undefined field (not server) for a message with a field version 1 does not define, in an envelope for another server |
 | `deliver.order-destination-before-resolution` | must | PROTOCOL 6.3 steps 5-6 | 400 invalid on server, not 403 or 503, for an envelope for another server carrying a message from a domain that names no server |
 | `deliver.from-unresolvable` | must | PROTOCOL 6.3 step 6, PROTOCOL 3 | 403 bad_signature for a message from a domain whose resolution is not_found (the default, example.invalid, has no DNS at all) |
@@ -343,25 +343,25 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `register.not-recoverable-without-mailbox` | must | CLIENT register | registering a new key with an address another agent holds, where the address has no mailbox, is refused (409 address_taken is the natural answer), and the holder's document does not list the new key |
 | `register.address-taken-code` | should | CLIENT register | 409 address_taken for a new key registering an address another agent holds |
 | `register.homed-elsewhere` | must | CLIENT register | 409 address_homed_elsewhere with details.server the simulator's origin, for an address on the simulator's domain |
-| `register.no-server` | must | CLIENT register | 409 address_homed_elsewhere with details.server null, for an address on a domain that resolves to no AGNT server |
+| `register.no-server` | must | CLIENT register | 409 address_homed_elsewhere with details.server null, for an address on a domain that resolves to no SIMON server |
 | `register.ml-dsa` | must | CLIENT register, PROTOCOL 2.3 | registering with an ml-dsa-65 key succeeds, its document lists the key, and requests it signs answer 200 |
-| `register.pairing-required` | must | CLIENT register | register {"key","for"} with an agnt-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", the principal's signature over AGNT-PAIR\n<address>\n<for>, answers 200 account at that address |
+| `register.pairing-required` | must | CLIENT register | register {"key","for"} with a simon-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", the principal's signature over SIMON-PAIR\n<address>\n<for>, answers 200 account at that address |
 | `register.paired-document` | must | CLIENT register, PROTOCOL 4 | kind is "paired", and nothing in the document names the principal's key |
 | `register.pairing-bad-proof` | must | CLIENT register, CLIENT errors | 401 bad_proof for register with for and a pairing signed for another address |
 | `register.pairing-hosted` | must | CLIENT register | register {"key","address","for","pairing"} on a hosted domain answers 200 account, and the document says paired |
 | `register.code` | must | CLIENT register | register {"key","address"} answers 202 {"status":"code_sent","address"}; the same call with a wrong code answers 422 wrong_code; with the code the operator's command printed, 200 account |
-| `register.recovery-pending` | should | CLIENT Recovery | 202 {"status":"recovery_pending","address","completesAt"} for POST /agnt/recovery with a new key handing back the code while the agent holds a valid key; its document is unchanged meanwhile, and its inbox gets a message from the server itself |
-| `register.recovery-status` | must | CLIENT Recovery | GET /agnt/recovery signed by the key the agent holds answers 200 {"recovery":{"completesAt","cancellable"}}, completesAt a timestamp and cancellable a boolean; signed by a key the server does not know, 401 unknown_key |
-| `register.recovery-cancellable` | should | CLIENT Recovery, CLIENT recommended host practice | GET /agnt/recovery signed by the key the agent held before the recovery started says cancellable true, as the recommended practice lets such a key cancel (who may cancel is host policy) |
-| `register.recovery-hidden` | must | CLIENT Recovery | while a recovery waits, POST /agnt/recovery from a new key asking for a code answers 202 code_sent and a wrong code then 422 wrong_code, as when none waits; a wrong cancel code for the address answers 422 wrong_code with the same body as one for an address with no recovery waiting |
-| `register.cancel-recovery` | must | CLIENT Cancelling a recovery | POST /agnt/recovery/cancel {} signed by a key the account permits answers 200 {"status":"cancelled","address"}; the waiting key then cannot complete the recovery with its code, and the document lists only the old key |
-| `register.recovery` | must | CLIENT Recovery | POST /agnt/recovery with the new key and code gets 200 account {address,keys,grants,recovery} without a status member, or 202 recovery_pending and then 200 account when it repeats the recovery call after completesAt (waited for when within the recovery wait); the old key is then marked revoked in the document |
-| `register.cancel-once` | should | CLIENT Cancelling a recovery, CLIENT recommended host practice | a recovery started after register.cancel-recovery cancelled one by key answers 409 recovery_not_cancellable to a cancel by the key now holding the agent, and GET /agnt/recovery says cancellable false |
-| `register.cancel-code` | must | CLIENT Cancelling a recovery | POST /agnt/recovery/cancel {"address","cancelCode"} with the cancel code the operator's command printed, signed by a key the server never saw, answers 200 {"status":"cancelled","address"}; the same call again answers 422 wrong_code; the waiting key cannot complete the recovery after it |
-| `register.principal-recovery` | must | CLIENT Recovery | POST /agnt/recovery {"address","key","at","recover"} signed by the new key, recover the principal's signature over AGNT-RECOVER\n<address>\n<key>\n<at>, answers 200 account {address,keys,grants,recovery} without a status member, listing the new key, the old key revoked; the old key is then 401 key_revoked, and the same call again answers alike |
+| `register.recovery-pending` | should | CLIENT Recovery | 202 {"status":"recovery_pending","address","completesAt"} for POST /simon/recovery with a new key handing back the code while the agent holds a valid key; its document is unchanged meanwhile, and its inbox gets a message from the server itself |
+| `register.recovery-status` | must | CLIENT Recovery | GET /simon/recovery signed by the key the agent holds answers 200 {"recovery":{"completesAt","cancellable"}}, completesAt a timestamp and cancellable a boolean; signed by a key the server does not know, 401 unknown_key |
+| `register.recovery-cancellable` | should | CLIENT Recovery, CLIENT recommended host practice | GET /simon/recovery signed by the key the agent held before the recovery started says cancellable true, as the recommended practice lets such a key cancel (who may cancel is host policy) |
+| `register.recovery-hidden` | must | CLIENT Recovery | while a recovery waits, POST /simon/recovery from a new key asking for a code answers 202 code_sent and a wrong code then 422 wrong_code, as when none waits; a wrong cancel code for the address answers 422 wrong_code with the same body as one for an address with no recovery waiting |
+| `register.cancel-recovery` | must | CLIENT Cancelling a recovery | POST /simon/recovery/cancel {} signed by a key the account permits answers 200 {"status":"cancelled","address"}; the waiting key then cannot complete the recovery with its code, and the document lists only the old key |
+| `register.recovery` | must | CLIENT Recovery | POST /simon/recovery with the new key and code gets 200 account {address,keys,grants,recovery} without a status member, or 202 recovery_pending and then 200 account when it repeats the recovery call after completesAt (waited for when within the recovery wait); the old key is then marked revoked in the document |
+| `register.cancel-once` | should | CLIENT Cancelling a recovery, CLIENT recommended host practice | a recovery started after register.cancel-recovery cancelled one by key answers 409 recovery_not_cancellable to a cancel by the key now holding the agent, and GET /simon/recovery says cancellable false |
+| `register.cancel-code` | must | CLIENT Cancelling a recovery | POST /simon/recovery/cancel {"address","cancelCode"} with the cancel code the operator's command printed, signed by a key the server never saw, answers 200 {"status":"cancelled","address"}; the same call again answers 422 wrong_code; the waiting key cannot complete the recovery after it |
+| `register.principal-recovery` | must | CLIENT Recovery | POST /simon/recovery {"address","key","at","recover"} signed by the new key, recover the principal's signature over SIMON-RECOVER\n<address>\n<key>\n<at>, answers 200 account {address,keys,grants,recovery} without a status member, listing the new key, the old key revoked; the old key is then 401 key_revoked, and the same call again answers alike |
 | `register.principal-recovery-refused` | must | CLIENT Recovery | 400 invalid with details.field "at" for an at 25 hours old and one 10 minutes ahead; 401 bad_proof for a recovery signed by another key; 409 key_in_use for a recovery to a key the agent held and that is now revoked |
-| `register.unpair` | must | PROTOCOL 2.2, CLIENT Unpairing | POST /agnt/unpair {"address","unpairing"} signed by a key the server never saw, unpair the principal's signature over AGNT-UNPAIR\n<address>\n<for>, answers 200 {"status":"retired","address"}; the agent document is then 404 or a valid retired document, a request signed by the agent's key is 401 key_revoked, and the same call again answers 200 retired |
-| `register.unpair-bad-proof` | must | PROTOCOL 2.2, CLIENT Unpairing, CLIENT errors | 401 bad_proof for POST /agnt/unpair with an unpairing signed by another key, and for a pairing signature offered as an unpairing; the agent document is still served |
+| `register.unpair` | must | PROTOCOL 2.2, CLIENT Unpairing | POST /simon/unpair {"address","unpairing"} signed by a key the server never saw, unpair the principal's signature over SIMON-UNPAIR\n<address>\n<for>, answers 200 {"status":"retired","address"}; the agent document is then 404 or a valid retired document, a request signed by the agent's key is 401 key_revoked, and the same call again answers 200 retired |
+| `register.unpair-bad-proof` | must | PROTOCOL 2.2, CLIENT Unpairing, CLIENT errors | 401 bad_proof for POST /simon/unpair with an unpairing signed by another key, and for a pairing signature offered as an unpairing; the agent document is still served |
 
 ### send (CLIENT)
 
@@ -382,7 +382,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `send.bad-signature` | must | CLIENT send | 401 bad_signature for a message altered after signing, and for one signed by a key the agent does not hold |
 | `send.order-version` | must | CLIENT send | 400 invalid with details.canonical for a non-canonical version 7 message; 400 invalid naming to for a version 7 message without to; 400 unsupported_version, not 400 on from, for another agent's version 7 message |
 | `send.order-after-message` | must | CLIENT send | 400 on from (not 401) for another agent's message with a bad signature; 401 bad_signature (not 400 on headers) for a solo agent's message with a for header and a bad signature; 400 on headers (not on sentAt) for a solo agent's message with a for header, 5 minutes ahead plus the margin; 400 on sentAt (not part_not_uploaded) for a message that far ahead naming a part never uploaded; 401 bad_signature (not part_not_uploaded) for a bad signature naming a part never uploaded |
-| `send.hints` | must | CLIENT send "Hints" | 200 with a valid agnt-hints header added after signing; 400 invalid for agnt-hints that is not JSON, an array, or names an address not in to |
+| `send.hints` | must | CLIENT send "Hints" | 200 with a valid simon-hints header added after signing; 400 invalid for simon-hints that is not JSON, an array, or names an address not in to |
 | `send.ml-dsa` | must | CLIENT send, PROTOCOL 2.3 | 200 for a message signed with ml-dsa-65 by an agent registered with that key |
 
 ### Account and recovery (CLIENT)
@@ -398,9 +398,9 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `keys.add-key` | must | CLIENT keys | 200 account listing the new key, for POST /agnt/keys {"key","proof"} signed by an existing key, proof over AGNT-ADD-KEY\n<address>\n<key>; the same call again gives the same result; the new key then signs requests |
+| `keys.add-key` | must | CLIENT keys | 200 account listing the new key, for POST /simon/keys {"key","proof"} signed by an existing key, proof over SIMON-ADD-KEY\n<address>\n<key>; the same call again gives the same result; the new key then signs requests |
 | `keys.add-key-bad-proof` | must | CLIENT keys, CLIENT errors | 401 bad_proof for a proof over another address, and for a proof signed by a different key |
-| `keys.add-key-no-proof` | must | CLIENT keys, CLIENT errors | 401 bad_proof for POST /agnt/keys {"key"} signed by an existing key of an agent, with no proof |
+| `keys.add-key-no-proof` | must | CLIENT keys, CLIENT errors | 401 bad_proof for POST /simon/keys {"key"} signed by an existing key of an agent, with no proof |
 | `keys.too-many-keys` | must | CLIENT keys, PROTOCOL 4 | adding keys one by one is refused with 400 too_many_keys before the agent holds 33 (a document lists at most 32 keys) |
 | `keys.labels` | must | CLIENT adding a key | a 64-character label appears in the account but not the public document; 65 characters is 400 invalid |
 | `keys.unknown` | must | CLIENT revoking a key | 404 not_found for a key the agent never held |
@@ -446,14 +446,14 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `outbound.delivered` | must | PROTOCOL 6 (the server delivering) | a message sent to agents on the simulator's domain arrives at the simulator's /agnt/deliver within the delivery wait |
+| `outbound.delivered` | must | PROTOCOL 6 (the server delivering) | a message sent to agents on the simulator's domain arrives at the simulator's /simon/deliver within the delivery wait |
 | `outbound.envelope` | must | PROTOCOL 6 (the server delivering), 6.2-6.3 | the body parses under section 5.1's rules, has the envelope's shape, carries the message in canonical form, the message keeps version 1's rules, and the envelope is for the simulator and recipients on its domain |
 | `outbound.destination` | must | PROTOCOL 6 (the server delivering).1 | server is the simulator's origin, and recipients are exactly the addresses of to on the simulator's domain, as written (not the recipient on the server itself) |
-| `outbound.envelope-signature` | must | PROTOCOL 6 (the server delivering).1 | the envelope's signature, over AGNT-ENVELOPE\n and the canonical envelope without signature, verifies with a key the server's document lists valid at arrival |
+| `outbound.envelope-signature` | must | PROTOCOL 6 (the server delivering).1 | the envelope's signature, over SIMON-ENVELOPE\n and the canonical envelope without signature, verifies with a key the server's document lists valid at arrival |
 | `outbound.message-intact` | must | PROTOCOL 6 (the server delivering), PROTOCOL 1 | the envelope's message member is the canonical bytes the agent sent, so its id is unchanged |
 | `outbound.author-verifiable` | must | PROTOCOL 6 (the server delivering).1, PROTOCOL 4 | the author's agent document, fetched from the server, lists a key that verifies the delivered message at its sentAt |
 | `outbound.one-envelope` | must | PROTOCOL 6 (the server delivering) | a message to two agents at the simulator arrives in exactly one envelope (the simulator answered 202) |
-| `outbound.hints` | must | PROTOCOL 6 (the server delivering).2, CLIENT send "Hints" | the envelope's hints hold exactly the hints the agnt-hints header gave for recipients at the simulator (a non-ASCII value, escaped in the header, arrives as itself), and none for the recipient on the server itself |
+| `outbound.hints` | must | PROTOCOL 6 (the server delivering).2, CLIENT send "Hints" | the envelope's hints hold exactly the hints the simon-hints header gave for recipients at the simulator (a non-ASCII value, escaped in the header, arrives as itself), and none for the recipient on the server itself |
 | `outbound.per-server` | must | PROTOCOL 6 (the server delivering), 6.1-6.2, CLIENT send "Hints" | for a message to agents at both simulators (given --second-peer-domain) and one local agent: each simulator receives exactly one envelope, naming its own origin, exactly its own recipients, and only their hints |
 | `outbound.claims` | must | PROTOCOL 6 (the server delivering).2 | claims, when present, are at most 16 objects with a non-empty string type; an acts-for claim names the author as agent and the message's for header as for |
 | `outbound.not-before-sent-at` | must | PROTOCOL 6 (the server delivering).3 "Delivery" | a message dated 45 s ahead of the server's clock reaches the simulator no earlier than its sentAt (less the clock margin), and within the retry wait after it |
@@ -467,7 +467,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `sent.shape` | must | CLIENT sent | 200 {"id","servers":[{"server","recipients","status"}]}, each recipient in exactly one entry, the simulator's two agents together under its origin, status pending, delivered or failed |
 | `sent.delivered` | must | CLIENT sent | the entry for the simulator becomes "delivered" after the simulator answered 202 |
 | `sent.local` | should | CLIENT sent | the recipient on the server itself is in an entry under the server's own origin that becomes delivered |
-| `sent.failed-not-found` | must | CLIENT sent | {"server":null,"recipients":[...],"status":"failed","reason":"not_found"} for a recipient on a domain with no AGNT server |
+| `sent.failed-not-found` | must | CLIENT sent | {"server":null,"recipients":[...],"status":"failed","reason":"not_found"} for a recipient on a domain with no SIMON server |
 | `sent.failed-code` | must | CLIENT sent, PROTOCOL 6.3 "Delivery" | status "failed" with reason "invalid" once the simulator answered 400 invalid |
 | `sent.pending-while-retrying` | should | CLIENT sent | between the simulator's 503 and the retry, the entry says "pending" |
 | `sent.after-retry` | must | CLIENT sent | once the retry was answered 202, the entry says "delivered" |
@@ -479,38 +479,38 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `parts.upload` | must | CLIENT parts | 200 {"sha256","size"} for PUT /agnt/parts/<sha256> with those bytes; the agent then fetches them back unchanged |
+| `parts.upload` | must | CLIENT parts | 200 {"sha256","size"} for PUT /simon/parts/<sha256> with those bytes; the agent then fetches them back unchanged |
 | `parts.upload-mismatch` | must | CLIENT parts | 400 invalid for an upload whose body does not hash to the path |
 | `parts.upload-too-large` | should | CLIENT parts | 413 body_too_large for an upload one byte over the published partBytes (skipped above 64 MiB) |
 | `parts.private-unsigned` | must | PROTOCOL 7.2 | 404 not_found for an unsigned GET of a part only named by a message to the simulator's agents |
-| `parts.server-fetch` | must | PROTOCOL 7.2 | 200 with exactly the bytes, for GET /agnt/parts/<sha256> signed by the simulator (agnt-server its origin) after the server delivered it a message naming the part |
-| `parts.server-request-forged` | must | PROTOCOL 7.2, PROTOCOL 8 | the 404 not_found every refusal gets, for a part delivered to the simulator, fetched with agnt-server naming the simulator but signed by a key its document does not list, or by its revoked key |
+| `parts.server-fetch` | must | PROTOCOL 7.2 | 200 with exactly the bytes, for GET /simon/parts/<sha256> signed by the simulator (simon-server its origin) after the server delivered it a message naming the part |
+| `parts.server-request-forged` | must | PROTOCOL 7.2, PROTOCOL 8 | the 404 not_found every refusal gets, for a part delivered to the simulator, fetched with simon-server naming the simulator but signed by a key its document does not list, or by its revoked key |
 | `parts.cross-tenant` | must | PROTOCOL 7.2 rule 2, CLIENT send | agent b uploads a part; agent a's send of a message carrying inline a message that names it answers 400 part_not_uploaded with details.sha256; with a second simulator, b sends it a message naming the part and that server's signed request gets the bytes; the first simulator's signed server request for it, no message delivered to it naming it, is the 404 not_found every refusal gets; b still reads its own upload |
 | `parts.no-hosted-oracle` | must | PROTOCOL 7.2 rule 2, PROTOCOL 8 | Requests routed as hosted client calls receive a uniform minimal 401 bad_signature for an unknown key, an unknown hosted address or an invalid signature, with WWW-Authenticate and serverTime but no signingString; unsigned and failed foreign reads without a public grant remain the same 404 not_found |
 | `parts.refusals-identical` | must | PROTOCOL 7.2 | the same 404 not_found body for one part fetched unsigned, by a server it was never delivered to (a signed server request), by a server request whose signature does not verify, and by an agent there that neither sent nor received it; and, apart from the hash, for a hash nobody named |
 | `parts.public` | must | PROTOCOL 7.2 | 200 with exactly the bytes, for an unsigned GET of a part an agent uploaded, after that agent's public message names it |
 | `parts.never-by-naming` | must | PROTOCOL 7.2, CLIENT parts | for bytes agent b uploaded and never sent, after the simulator delivers agent a a message naming their hash: agent a never gets 200 (503 while its server tries the carrier, or 404), and an unsigned GET and the simulator's signed server request get 404 not_found |
-| `parts.prefetch` | must | PROTOCOL 7.2 | after the simulator delivers agent a a message naming a part it holds, the server asks the simulator's /agnt/parts/<sha256> for it within the prefetch wait, though no agent asked |
-| `parts.prefetch-any-recipient` | must | PROTOCOL 7.2 | after the simulator delivers a message naming a part it holds to an address no agent holds, the server asks the simulator's /agnt/parts/<sha256> for it within the prefetch wait, as it would for an agent: the fetch tells the carrier nothing about who is there |
+| `parts.prefetch` | must | PROTOCOL 7.2 | after the simulator delivers agent a a message naming a part it holds, the server asks the simulator's /simon/parts/<sha256> for it within the prefetch wait, though no agent asked |
+| `parts.prefetch-any-recipient` | must | PROTOCOL 7.2 | after the simulator delivers a message naming a part it holds to an address no agent holds, the server asks the simulator's /simon/parts/<sha256> for it within the prefetch wait, as it would for an agent: the fetch tells the carrier nothing about who is there |
 | `parts.forward-received` | must | CLIENT send, PROTOCOL 7.2 | once agent a holds a part fetched from the simulator, send answers 200 for a's message naming it to another address at the simulator, with no upload, and the simulator then fetches the bytes from the server with a signed server request |
 | `parts.recipient-fetch` | must | CLIENT parts, PROTOCOL 7.2 | the recipient of a message naming a part the simulator holds gets 200 with exactly the bytes within the prefetch wait, and 503 unavailable with Retry-After before then |
-| `parts.server-request` | must | PROTOCOL 7.2, PROTOCOL 8 | the server's GET at the simulator carries agnt-server (its origin) and a signature by a key its document lists valid now, over the simulator's origin and the path |
+| `parts.server-request` | must | PROTOCOL 7.2, PROTOCOL 8 | the server's GET at the simulator carries simon-server (its origin) and a signature by a key its document lists valid now, over the simulator's origin and the path |
 | `parts.hash-checked` | must | PROTOCOL 7.2 | once the server fetched them, the recipient does not get 200 when the simulator serves bytes that do not match the hash, nor when the message declares a size the bytes do not have |
 
 ### Published messages, feeds and relations (PROTOCOL 7)
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `public.served` | must | PROTOCOL 7.1 | 200 {"message","keys"} for an unsigned GET /agnt/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author) |
+| `public.served` | must | PROTOCOL 7.1 | 200 {"message","keys"} for an unsigned GET /simon/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author) |
 | `public.not-found` | must | PROTOCOL 7.1, PROTOCOL 9 | 404 not_found for the id of a message with recipients, and for an id nobody sent |
 | `public.retired` | must | PROTOCOL 7.1, PROTOCOL 2.2, 7.2 | after the operator's --retire-command retires an agent that posted a public message naming a part: 404 not_found for the public message and the part, each of which answered 200 before, and its agent document either 404 or an optional readable retired document (PROTOCOL 4), every key revoked by retirement |
-| `public.audience-refused` | must | PROTOCOL 7.1, PROTOCOL 11.2 | 404 not_found for an unsigned GET /agnt/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent |
-| `public.audience-signed-refused` | must | PROTOCOL 7.1, PROTOCOL 8 | 404 not_found, byte-identical to the answer for an id nobody sent, for a GET /agnt/messages/<id> of a post with an audience signed by the author's key but naming another agent in agnt-agent, and for one signed by another agent's key naming the author |
-| `public.audience-author` | should | PROTOCOL 7.1, PROTOCOL 8 | 200 {"message"} for a GET /agnt/messages/<id> of a post with an audience, signed with the author's key and naming the author in agnt-agent: the reader is identified by its agent key, with no server vouching for it |
-| `public.feed` | must | PROTOCOL 7.3 | GET /agnt/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end |
+| `public.audience-refused` | must | PROTOCOL 7.1, PROTOCOL 11.2 | 404 not_found for an unsigned GET /simon/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent |
+| `public.audience-signed-refused` | must | PROTOCOL 7.1, PROTOCOL 8 | 404 not_found, byte-identical to the answer for an id nobody sent, for a GET /simon/messages/<id> of a post with an audience signed by the author's key but naming another agent in simon-agent, and for one signed by another agent's key naming the author |
+| `public.audience-author` | should | PROTOCOL 7.1, PROTOCOL 8 | 200 {"message"} for a GET /simon/messages/<id> of a post with an audience, signed with the author's key and naming the author in simon-agent: the reader is identified by its agent key, with no server vouching for it |
+| `public.feed` | must | PROTOCOL 7.3 | GET /simon/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end |
 | `public.feed-empty` | must | PROTOCOL 7.3 | byte-identical 200 {"messages":[],"cursor":null,"more":false} for a feed name nobody used and for an address nobody holds; 400 invalid for limit=0 and limit=201 |
-| `public.related-only-listed` | must | PROTOCOL 7.4, 5.4 | once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /agnt/messages/<id>/related holds neither; a server that lists no relations (404) skips |
-| `public.related` | should | PROTOCOL 7.4 | once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /agnt/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does |
+| `public.related-only-listed` | must | PROTOCOL 7.4, 5.4 | once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /simon/messages/<id>/related holds neither; a server that lists no relations (404) skips |
+| `public.related` | should | PROTOCOL 7.4 | once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /simon/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does |
 
 ### Errors (PROTOCOL 9, CLIENT errors)
 
@@ -521,7 +521,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `errors.retryable` | must | PROTOCOL 6.3 "Delivery", 9 | retryable: true on every 429 and 5xx answer; retryable: false on every other 4xx, which is permanent |
 | `errors.status` | must | PROTOCOL 9, CLIENT errors | every code the spec defines comes with the status its table gives (invalid 400, address_required 400, too_many_keys 400, part_not_uploaded 400, unsupported_version 400, signature_required 401, stale_request 401, replayed_request 401, unknown_key 401, key_revoked 401, bad_signature 401 or 403, bad_proof 401, unsupported_algorithm 403, not_found 404, address_taken 409, address_homed_elsewhere 409, key_in_use 409, address_not_served 409, code_expired 410, code_locked 410, body_too_large 413, wrong_code 422, rate_limited 429, unavailable 503) |
 | `errors.server-time` | must | PROTOCOL 8 | every 401 answer of the run with a request-signature code (signature_required, stale_request, unknown_key, key_revoked, bad_signature, replayed_request) has details.serverTime, an integer number of unix seconds |
-| `errors.www-authenticate` | must | PROTOCOL 8, 13 | every 401 answer of the run with a request-signature code (signature_required, stale_request, unknown_key, key_revoked, bad_signature, replayed_request) carries the header WWW-Authenticate: AGNT |
+| `errors.www-authenticate` | must | PROTOCOL 8, 13 | every 401 answer of the run with a request-signature code (signature_required, stale_request, unknown_key, key_revoked, bad_signature, replayed_request) carries the header WWW-Authenticate: SIMON |
 | `errors.rate-limited` | must | PROTOCOL 6.3, 9 | every 429 answer of the run is rate_limited, retryable, with a Retry-After header (passes when the server never rate-limited the suite) |
 
 <!-- checks:end -->

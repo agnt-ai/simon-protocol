@@ -1,6 +1,6 @@
 # The core, and what stays out of it
 
-A design note of 2026-10-21. It records how the core of the AGNT Protocol, the server-to-server specification in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md), reached a historical design milestone, what went into it and what went into the registry, and where each idea comes from. The client layer ([`spec/CLIENT.md`](../spec/CLIENT.md)), servers and applications build on it and are designed separately.
+A design note of 2026-10-21. It records how the core of the SIMON Protocol, the server-to-server specification in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md), reached a historical design milestone, what went into it and what went into the registry, and where each idea comes from. The client layer ([`spec/CLIENT.md`](../spec/CLIENT.md)), servers and applications build on it and are designed separately.
 
 ## The protocol in seven sentences
 
@@ -37,7 +37,7 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 | Relation names (reaction, edit, retract, thread, comment, vote, response, forward, quote, pin, add, leave, remove, rename) | registry | Relations | Reader conventions, except explicitly core-required same-author public-listing suppression; the list grows. |
 | Conversations: root id, signed membership, rosters rebuilt by readers | core (the definition) | 5.6 | One paragraph that says what a conversation is and that servers keep no state, so nobody builds Matrix-style replicated rooms on top. |
 | `conversation`, `members`, `subject` headers; the roster rule | registry | Message headers, Relations | Readers only. |
-| Signals and `POST /agnt/signal` | core | 6.4 | A new server-to-server call: every server must implement it to receive signals, and none exists to reuse, since signals must never be stored. |
+| Signals and `POST /simon/signal` | core | 6.4 | A new server-to-server call: every server must implement it to receive signals, and none exists to reuse, since signals must never be stored. |
 | `typing`, `collected`, `read` | registry | Signal types | The signals the path exists for, decades old. Servers pass on types without reading them. |
 | Published messages, `feed`, `audience` and `listed` headers, feed listings, relations listings | core | 5.4, 7 | The author's server has to read `feed` to list feeds, `audience` to refuse readers, and `listed` to know which relations their writers let it list. |
 | What an audience label means | registry (or the author's app) | Audience labels | Opaque to the protocol by design. |
@@ -45,7 +45,7 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 | Interactive UI is data, never code | core (security rule) | 11.2 | A safety rule every reader must obey. The UI block format itself is reserved in the registry. |
 | Identity modes | core (statement) | 2.2, 12 | No new mechanism: `for` already says which mode a message is in. |
 | Files: content-addressed parts, `name`, forwarding received parts | core | 5.3, 7.2, CLIENT.md | Servers store, serve and check them. |
-| Big, live or revocable files | registry | `application/agnt-reference+json` | A link with a hash; readers only. |
+| Big, live or revocable files | registry | `application/simon-reference+json` | A link with a hash; readers only. |
 | Chunked or resumable upload | neither | 14 | Not added. Big things travel by reference. |
 | Carrier-signed claims | core | 6.2 | Part of the envelope that servers check. |
 | Unpairing | core | 2.2 | A signing context every reader and server must understand. |
@@ -60,13 +60,13 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 
 **Precedent.** MIME's `multipart/alternative` (RFC 2046, 1996) put a plain-text version first so every mail reader could show something. The IETF MIMI content format (below) requires receivers to accept `text/plain` and `text/markdown;variant=GFM-MIMI`, a GitHub Flavored Markdown profile with a mandatory "No HTML" extension. Remote images in HTML mail are the tracking pixel: loading an image on display tells its server the message was read, which is why mail clients block them by default.
 
-**As MIMI.** MIMI has no general rule that a message carries text, and neither does AGNT now.
+**As MIMI.** MIMI has no general rule that a message carries text, and neither does SIMON now.
 
 ### Blocks
 
 Parts are an ordered, open-ended list of blocks typed by media type. A structured block names its schema in the `schema` parameter. Two optional members: `name`, a suggested file name, and `alt`, a one-line text version. A reader shows a block it does not understand by its `alt`, or skips it. General-purpose containers are left to a later type; inline whole-message carriage already has the bounded file traversal in section 5.3.
 
-**Precedent.** MIME `multipart/mixed` (1992) is an ordered list of typed parts; `Content-Disposition`'s `filename` (RFC 2183, 1997) is `name`; HTML's `alt` (1995) is `alt`. The AT Protocol's lexicons name a record's schema by an identifier inside the record, which `schema` does for a block. MIMI nests parts with three semantics (choose one, single unit, process all); AGNT keeps a flat, process-all list, because a flat list with a text block and per-block `alt` covers what "choose one" was for, and nesting can come later as one block type without touching servers.
+**Precedent.** MIME `multipart/mixed` (1992) is an ordered list of typed parts; `Content-Disposition`'s `filename` (RFC 2183, 1997) is `name`; HTML's `alt` (1995) is `alt`. The AT Protocol's lexicons name a record's schema by an identifier inside the record, which `schema` does for a block. MIMI nests parts with three semantics (choose one, single unit, process all); SIMON keeps a flat, process-all list, because a flat list with a text block and per-block `alt` covers what "choose one" was for, and nesting can come later as one block type without touching servers.
 
 ### Relations
 
@@ -78,21 +78,21 @@ The registry's `supersedes` and `retracts` headers are folded into `rel: edit` a
 
 **Precedent.** Email's `In-Reply-To` and `References` (RFC 822, 1982) are the pointer. Usenet had cancel messages for retraction (RFC 1036, 1987) and later `Supersedes:` for edits (son-of-RFC-1036, 1994; RFC 5536), and forged cancels are the classic proof that withdrawal must be bound to the author. Matrix puts every relation in one `m.relates_to` object with a `rel_type` (`m.annotation` for reactions, `m.replace` for edits, `m.thread`, `m.reference`) and requires an edit to come from the original sender. Nostr's NIP-09 honours a deletion request only from the same key.
 
-**Aligned with MIMI.** The IETF MIMI content format (draft-ietf-mimi-content-09, July 2026; a working-group draft, not yet an RFC, intended as Informational) defines the same semantics, and AGNT follows it where it fits:
+**Aligned with MIMI.** The IETF MIMI content format (draft-ietf-mimi-content-09, July 2026; a working-group draft, not yet an RFC, intended as Informational) defines the same semantics, and SIMON follows it where it fits:
 
-| AGNT | MIMI content | Same meaning |
+| SIMON | MIMI content | Same meaning |
 | --- | --- | --- |
 | `inReplyTo` | `inReplyTo` | yes |
 | `rel: edit`, naming the original | `replaces`, naming the first instance | yes |
 | `rel: retract` | `replaces` with a null part | yes |
 | `rel: reaction`, text is the reaction | `reaction` disposition with `inReplyTo` | yes |
-| `rel: thread` | `topicId` | close: MIMI groups by a topic value, AGNT by the message the thread hangs from |
+| `rel: thread` | `topicId` | close: MIMI groups by a topic value, SIMON by the message the thread hangs from |
 | author-only relations | "MUST NOT let anyone other than the original sender edit or delete" | yes |
 | latest edit by `sentAt`, ties to the lowest id | sort by timestamp, ties to the lowest message id | yes |
 | `name`, `alt` | `filename`, `description` (on external parts) | yes |
-| `application/agnt-reference+json` | external part: `url`, `contentType`, `size`, `contentHash`, `expires` | yes, without MIMI's encryption members, which belong to the encryption profile |
-| no expiry | `expires` | AGNT leaves expiry to a later registry header |
-| flat block list | nested parts | AGNT defers nesting |
+| `application/simon-reference+json` | external part: `url`, `contentType`, `size`, `contentHash`, `expires` | yes, without MIMI's encryption members, which belong to the encryption profile |
+| no expiry | `expires` | SIMON leaves expiry to a later registry header |
+| flat block list | nested parts | SIMON defers nesting |
 
 A bridge between the two maps each row directly.
 
@@ -106,7 +106,7 @@ A conversation is its root message and everything whose `inReplyTo` chain leads 
 
 ### Signals
 
-`POST /agnt/signal` carries `typing`, `collected` and `read` between servers. A signal is signed by the sender's server, as an envelope is, and is never stored or put in any history. *Revised:* any receiving server may drop any signal, `read` is sent only when reading is shared by choice, and the rule that signals pass only between parties who have both written to each other is gone. Each is sent only by the one it is about, and only when that agent asks for it, never as a side effect of fetching. Whom a server passes signals to is its own policy (docs/REFERENCE-SERVER.md).
+`POST /simon/signal` carries `typing`, `collected` and `read` between servers. A signal is signed by the sender's server, as an envelope is, and is never stored or put in any history. *Revised:* any receiving server may drop any signal, `read` is sent only when reading is shared by choice, and the rule that signals pass only between parties who have both written to each other is gone. Each is sent only by the one it is about, and only when that agent asks for it, never as a side effect of fetching. Whom a server passes signals to is its own policy (docs/REFERENCE-SERVER.md).
 
 **Precedent.** BSD `talk` (1983) showed the other party typing, keystroke by keystroke. X.400 (1984) had receipt notifications; mail has had Message Disposition Notifications since RFC 2298 (1998, now RFC 8098), sent only with the user's consent. RFC 3994 (2005) defined the "is composing" indication that RCS uses, and RFC 5438 (2009) the delivery and display notifications. XMPP has chat states (XEP-0085) and receipts (XEP-0184, XEP-0333). Matrix sends typing and receipts as ephemeral events that are never persisted in the room, and has a private read receipt for those who do not want to share. Signals need a path of their own because deliver stores what it carries and remembers repeats for a week.
 
@@ -117,13 +117,13 @@ A message with an empty `to` is published. Beyond what version 1 already had:
 - **Audience.** An `audience` header, signed into the post, opaque to the protocol. The author's server decides what it means. Readers sign their requests with their own agent key, naming themselves (the reader's own server no longer vouches for it); a refused reader gets the same `404` as a post that does not exist. A leaked copy still carries its audience, and software never republishes a post to a wider audience than it carries.
 - **Comments,** reactions and votes are relations sent to the author's server, which may list them under the post for the post's audience. Which relations it lists is its own choice (no server behaviour depends on the registry), among those whose writer marked them `listed` (a relation is written to the author alone, so listing it needs its writer's consent).
 
-**Precedent.** Usenet newsgroups (1980) and its `Distribution:` header (RFC 1036), an audience label that servers honoured by agreement. RSS (1999) and Atom (RFC 4287, 2005) feeds, read newest first. ActivityPub's outbox and audience addressing; Diaspora's aspects and Mastodon's visibility levels as audience labels that mean what the author's server says. Answering `404` for something the reader may not see is how GitHub answers for private repositories. Signed fetches follow ActivityPub's authorised fetch, without its deadlock, because AGNT's key documents stay unauthenticated.
+**Precedent.** Usenet newsgroups (1980) and its `Distribution:` header (RFC 1036), an audience label that servers honoured by agreement. RSS (1999) and Atom (RFC 4287, 2005) feeds, read newest first. ActivityPub's outbox and audience addressing; Diaspora's aspects and Mastodon's visibility levels as audience labels that mean what the author's server says. Answering `404` for something the reader may not see is how GitHub answers for private repositories. Signed fetches follow ActivityPub's authorised fetch, without its deadlock, because SIMON's key documents stay unauthenticated.
 
 ### Interactive blocks are data, never code
 
 A UI block is a declarative description the reader draws with its own components. Choosing never calls a URL: it makes a new signed message with `rel: response`. Links open only when tapped, with their destination shown. HTML-style UI is at most a later opt-in profile, sandboxed with no network.
 
-**Precedent.** Slack's Block Kit and Microsoft's Adaptive Cards describe UI as data drawn by the host. RCS rich cards and suggested replies are the closest model: tapping a suggested reply sends a message carrying its postback data. Thirty years of HTML mail show why code in messages is the attack surface, and every serious mail client strips scripts and forms. AGNT goes one step further than Block Kit, whose buttons post to the app's URL: here the choice is itself a signed, attributable message, which an agent can audit like any other.
+**Precedent.** Slack's Block Kit and Microsoft's Adaptive Cards describe UI as data drawn by the host. RCS rich cards and suggested replies are the closest model: tapping a suggested reply sends a message carrying its postback data. Thirty years of HTML mail show why code in messages is the attack surface, and every serious mail client strips scripts and forms. SIMON goes one step further than Block Kit, whose buttons post to the app's URL: here the choice is itself a signed, attributable message, which an agent can audit like any other.
 
 ### Identity modes
 
@@ -139,7 +139,7 @@ Content-addressed parts stay for small files; parts gain `name`; an agent can fo
 
 ### Leaving slots
 
-- **Encryption:** already reserved (`application/agnt-sealed`, `encryptionKeys`), for HPKE and MLS.
+- **Encryption:** already reserved (`application/simon-sealed`, `encryptionKeys`), for HPKE and MLS.
 - **Live sessions:** a later signal type can offer one; the session runs elsewhere.
 - **Algorithms:** new key token names beside the old.
 - **Versions:** a later version adds further signatures in members of its own, so every server still checks the one `signature` (this replaces the promise that `signature` could become an array, which no deployed server could have honoured).
@@ -156,8 +156,8 @@ Sentence 6 leaves the slot. JMAP (RFC 8620, 8621) shows how a mailbox API can be
 
 The core-level findings of an external security review, and how the core answers them:
 
-- **Claims.** Claims are signed for their message (`claimsSignature`, context `AGNT-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a solo agent.
-- **Email authority.** Email authority comes only from the `_agnt` TXT record; the well-known answer still routes.
+- **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a solo agent.
+- **Email authority.** Email authority comes only from the `_simon` TXT record; the well-known answer still routes.
 - **Key management and recovery** are host policy: other servers see only the keys and revocations in the agent document. CLIENT.md defines dedicated account/recovery calls; host practice remains separate from core interoperability.
 - **Fetching and signals.** When a server fetches parts is its own choice; it SHOULD fetch on arrival, never on read, and section 12 states what each choice reveals. The reference server fetches for every accepted message. Signals are explicit and opt-in.
 - **Sender protection.** The historical ordering requirement stays: no recipient lookups before carrier authentication. The subsequent review also requires bounded unauthenticated lookup work, with mechanisms and values chosen by the host. Fair fetching, counting repeats, an envelope size bound and separate lookup budgets are the reference server's notes (`docs/REFERENCE-SERVER.md`).

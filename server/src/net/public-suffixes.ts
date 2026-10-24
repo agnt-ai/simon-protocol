@@ -1,7 +1,7 @@
 /**
  * The ICANN section of the Public Suffix List (https://publicsuffix.org/list/public_suffix_list.dat), one rule a line,
  * internationalised labels written as A-labels: the list of 2024-01-07 (SHA-256 of the whole list 8a99ee709c83a545413c0ad81033681696fddd3ed2b7296d9a88a11235fe5c6f).
- * Written by server/scripts/write-public-suffixes.ts; do not edit by hand. AGNT_PUBLIC_SUFFIX_LIST names a newer
+ * Written by server/scripts/write-public-suffixes.ts; do not edit by hand. SIMON_PUBLIC_SUFFIX_LIST names a newer
  * copy of the list to read instead.
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was

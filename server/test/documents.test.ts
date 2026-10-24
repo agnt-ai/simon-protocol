@@ -30,7 +30,7 @@ describe('documents (spec section 4)', async () => {
   const ada = await alpha.agent('ada');
 
   it('serves a server document naming its own origin, both keys, its algorithms and its limits', async () => {
-    const res = await ada.request('GET', '/agnt/server', { sign: false });
+    const res = await ada.request('GET', '/simon/server', { sign: false });
     const doc = readServerDocument(res.bytes, alpha.origin, fed.clock.now());
     assert.ok(doc, 'readable');
     assert.deepEqual(doc.algorithms, ['ed25519', 'ml-dsa-65']);
@@ -43,7 +43,7 @@ describe('documents (spec section 4)', async () => {
       partBytes: 26214400,
     });
     fed.clock.advance(3_600_000);
-    const again = await ada.request('GET', '/agnt/server', { sign: false });
+    const again = await ada.request('GET', '/simon/server', { sign: false });
     assert.deepEqual(again.json.keys, res.json.keys, "a key's added never moves");
   });
 
@@ -53,34 +53,34 @@ describe('documents (spec section 4)', async () => {
     assert.equal((await odd.register({ address })).status, 200);
     const segment = addressSegment(address);
     assert.equal(segment, 'a%23b%25c%2Fd%3Fe%5Ef%60g%7Bh%7Ci%7Dj@alpha.test');
-    const doc = await ada.request('GET', `/agnt/agents/${segment}`, { sign: false });
+    const doc = await ada.request('GET', `/simon/agents/${segment}`, { sign: false });
     assert.deepEqual([doc.status, doc.json.address], [200, address]);
-    // The odd agent's own signed call, with its address in agnt-agent and in the target.
-    const feed = await odd.request('GET', `/agnt/feeds/${segment}/posts`);
+    // The odd agent's own signed call, with its address in simon-agent and in the target.
+    const feed = await odd.request('GET', `/simon/feeds/${segment}/posts`);
     assert.equal(feed.status, 200);
     // A target rewritten after signing, to bytes that decode the same (%31 is 1), no longer verifies: the
     // target is checked as sent, before any decoding (spec section 8).
-    const inbox = new URL(`${alpha.origin}/agnt/sync?limit=1`);
+    const inbox = new URL(`${alpha.origin}/simon/sync?limit=1`);
     const signedInbox = signRequest(odd.key, { method: 'GET', url: inbox.href, now: fed.clock.t, agent: address });
     assert.equal(
       (await alpha.server.handle(toRequest('GET', inbox, signedInbox, Buffer.alloc(0), '192.0.2.50'))).status,
       200,
     );
-    const moved = new URL(`${alpha.origin}/agnt/sync?limit=%31`);
+    const moved = new URL(`${alpha.origin}/simon/sync?limit=%31`);
     const replayed = await alpha.server.handle(toRequest('GET', moved, signedInbox, Buffer.alloc(0), '192.0.2.50'));
     assert.equal((replayed.json as { code: string }).code, 'bad_signature');
   });
 
   it('serves an agent document signed by the server, and 404 for an unknown address', async () => {
     const server = readServerDocument(
-      (await ada.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await ada.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
-    const res = await ada.request('GET', `/agnt/agents/${ada.address}`, { sign: false });
+    const res = await ada.request('GET', `/simon/agents/${ada.address}`, { sign: false });
     const doc = readAgentDocument(res.bytes, ada.address, server.keys, fed.clock.now());
     assert.deepEqual(doc && { kind: doc.kind, keys: doc.keys.map(k => k.key) }, { kind: 'solo', keys: [ada.token] });
-    const unknown = await ada.request('GET', '/agnt/agents/nobody@alpha.test', { sign: false });
+    const unknown = await ada.request('GET', '/simon/agents/nobody@alpha.test', { sign: false });
     assert.equal(unknown.status, 404);
     assert.equal(unknown.json.code, 'not_found');
   });
@@ -88,10 +88,10 @@ describe('documents (spec section 4)', async () => {
   it('serves a retired address its retired document, and never registers it again', async () => {
     const cat = await alpha.agent('cat');
     await alpha.server.api.retire(cat.address);
-    const res = await cat.request('GET', `/agnt/agents/${cat.address}`, { sign: false });
+    const res = await cat.request('GET', `/simon/agents/${cat.address}`, { sign: false });
     assert.equal(res.status, 200);
     const server = readServerDocument(
-      (await cat.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await cat.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
@@ -124,9 +124,9 @@ describe('documents (spec section 4)', async () => {
       createdAt: '2026-10-01T00:00:00.000Z',
       retiredAt: '2026-10-02T00:00:00.000Z',
     });
-    const res = await ada.request('GET', '/agnt/agents/skew@alpha.test', { sign: false });
+    const res = await ada.request('GET', '/simon/agents/skew@alpha.test', { sign: false });
     const server = readServerDocument(
-      (await ada.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await ada.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
@@ -149,13 +149,13 @@ describe('documents (spec section 4)', async () => {
       createdAt: '2026-10-01T00:00:00.000Z',
       retiredAt: null,
     });
-    const res = await ada.request('GET', '/agnt/agents/many@alpha.test', { sign: false });
+    const res = await ada.request('GET', '/simon/agents/many@alpha.test', { sign: false });
     assert.deepEqual(
       res.json.keys.map((k: { key: string }) => k.key),
       keys.slice(-32).map(k => k.key),
     );
     const server = readServerDocument(
-      (await ada.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await ada.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
@@ -181,7 +181,7 @@ describe('documents (spec section 4)', async () => {
       retiredAt: null,
     };
     assert.equal(await alpha.store.createAgent(account), 'created');
-    const res = await ada.request('GET', '/agnt/agents/future@alpha.test', { sign: false });
+    const res = await ada.request('GET', '/simon/agents/future@alpha.test', { sign: false });
     assert.equal(res.status, 200);
     assert.equal(res.json.keys.length, 32);
     assert.equal(res.json.keys[0].key, keys[0].key, 'the oldest entry is still valid now');
@@ -197,7 +197,7 @@ describe('documents (spec section 4)', async () => {
       }),
       'created',
     );
-    const full = await ada.request('GET', '/agnt/agents/future-full@alpha.test', { sign: false });
+    const full = await ada.request('GET', '/simon/agents/future-full@alpha.test', { sign: false });
     assert.equal(full.status, 503, 'publication cannot silently drop a still-valid key');
   });
 
@@ -213,7 +213,7 @@ describe('documents (spec section 4)', async () => {
       createdAt: added,
       retiredAt: null,
     });
-    const res = await ada.request('GET', '/agnt/agents/future-bytes@alpha.test', { sign: false });
+    const res = await ada.request('GET', '/simon/agents/future-bytes@alpha.test', { sign: false });
     assert.equal(res.status, 503, 'all still-valid keys must fit together or publication fails closed');
   });
 
@@ -233,7 +233,7 @@ describe('documents (spec section 4)', async () => {
       createdAt: '2026-10-01T00:00:00.000Z',
       retiredAt: null,
     });
-    const res = await ada.request('GET', '/agnt/agents/pq@alpha.test', { sign: false });
+    const res = await ada.request('GET', '/simon/agents/pq@alpha.test', { sign: false });
     assert.ok(res.bytes.length <= 131072, `${res.bytes.length} bytes`);
     const listed = res.json.keys.map((k: { key: string }) => k.key);
     assert.equal(listed.length, 32);
@@ -243,7 +243,7 @@ describe('documents (spec section 4)', async () => {
       'the newest kept, the active key among them',
     );
     const server = readServerDocument(
-      (await ada.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await ada.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
@@ -265,7 +265,7 @@ describe('public messages (spec section 7.1)', async () => {
     await bob.send(bob.message([ada.address], 'A private reply.', { inReplyTo: sent.id }));
     await fed.work();
 
-    const res = await ada.request('GET', `/agnt/messages/${sent.id}`, { sign: false });
+    const res = await ada.request('GET', `/simon/messages/${sent.id}`, { sign: false });
     assert.equal(res.status, 200);
     assert.deepEqual(res.json, {
       message: post,
@@ -282,8 +282,8 @@ describe('public messages (spec section 7.1)', async () => {
       pat.message([], 'look', { parts: [TEXT, { type: 'image/png', sha256, size: bytes.length }] }),
     );
     const read = async () => [
-      (await ada.request('GET', `/agnt/messages/${json.id}`, { sign: false })).status,
-      (await ada.request('GET', `/agnt/parts/${sha256}`, { sign: false })).status,
+      (await ada.request('GET', `/simon/messages/${json.id}`, { sign: false })).status,
+      (await ada.request('GET', `/simon/parts/${sha256}`, { sign: false })).status,
     ];
     assert.deepEqual(await read(), [200, 200]);
     await alpha.server.api.retire(pat.address);
@@ -300,7 +300,7 @@ describe('public messages (spec section 7.1)', async () => {
     for (const m of [listed, unmarked, reply]) assert.equal((await bob.send(m)).status, 200);
     await fed.work();
     const related = async () =>
-      (await ada.request('GET', `/agnt/messages/${sent.id}/related`, { sign: false })).json.messages.map(
+      (await ada.request('GET', `/simon/messages/${sent.id}/related`, { sign: false })).json.messages.map(
         (m: AnyMessage) => messageId(m),
       );
     assert.deepEqual(await related(), [messageId(listed)]);
@@ -315,7 +315,7 @@ describe('public messages (spec section 7.1)', async () => {
 
   it('answers 404 for a message that is not public', async () => {
     const { json } = await ada.send(ada.message([bob.address], 'private'));
-    const res = await ada.request('GET', `/agnt/messages/${json.id}`, { sign: false });
+    const res = await ada.request('GET', `/simon/messages/${json.id}`, { sign: false });
     assert.equal(res.status, 404);
   });
 });
@@ -335,9 +335,9 @@ describe('readers of a published message with an audience (spec sections 7.1 and
   const bob = await beta.agent('bob');
   const eve = await beta.agent('eve');
   const { json: sent } = await ada.send(ada.message([], 'for friends', { headers: { audience: 'friends' } }));
-  const target = `/agnt/messages/${sent.id}`;
+  const target = `/simon/messages/${sent.id}`;
 
-  /** A read of the post at ada's server, signed with `signer`'s key and naming `as` in agnt-agent. */
+  /** A read of the post at ada's server, signed with `signer`'s key and naming `as` in simon-agent. */
   const read = (signer: TestAgent, as = signer.address, at = alpha) => {
     const url = new URL(at.origin + target);
     const headers = signRequest(signer.key, { method: 'GET', url: url.href, now: fed.clock.t, agent: as });
@@ -356,7 +356,7 @@ describe('readers of a published message with an audience (spec sections 7.1 and
 
   it('answers a reader its audience refuses as it answers a message that does not exist', async () => {
     const refused = await read(eve);
-    const missing = await ada.request('GET', `/agnt/messages/${'0'.repeat(64)}`, { sign: false });
+    const missing = await ada.request('GET', `/simon/messages/${'0'.repeat(64)}`, { sign: false });
     assert.equal(refused.status, 404);
     assert.deepEqual(replyBody(refused), missing.bytes);
   });
@@ -365,10 +365,10 @@ describe('readers of a published message with an audience (spec sections 7.1 and
     assert.equal((await read(eve, bob.address)).status, 404, "eve's key is not in bob's document");
     const url = new URL(alpha.origin + target);
     const signed = signRequest(bob.key, { method: 'GET', url: url.href, now: fed.clock.t, agent: bob.address });
-    const renamed = { ...signed, 'agnt-agent': eve.address };
+    const renamed = { ...signed, 'simon-agent': eve.address };
     const res = await alpha.server.handle(toRequest('GET', url, renamed, Buffer.alloc(0), '192.0.2.9'));
     assert.equal(res.status, 404, 'the actor line is signed, so renaming the reader breaks the signature');
-    const asServer = { ...signed, 'agnt-agent': undefined as never, 'agnt-server': beta.origin };
+    const asServer = { ...signed, 'simon-agent': undefined as never, 'simon-server': beta.origin };
     const vouched = await alpha.server.handle(toRequest('GET', url, asServer, Buffer.alloc(0), '192.0.2.9'));
     assert.equal(vouched.status, 404, 'no server vouches for a reader');
   });
@@ -397,16 +397,16 @@ describe('readers of a published message with an audience (spec sections 7.1 and
       });
       const before = fed.net.sent.length;
       const res = await alpha.server.handle(toRequest('GET', url, { ...headers }, Buffer.alloc(0), '192.0.2.9'));
-      const fetches = fed.net.sent.slice(before).filter(r => r.url.startsWith(`${beta.origin}/agnt/agents/`));
+      const fetches = fed.net.sent.slice(before).filter(r => r.url.startsWith(`${beta.origin}/simon/agents/`));
       return `${res.status} ${fetches.length}`;
     };
-    assert.equal(await probe(`/agnt/messages/${'0'.repeat(64)}`), '404 1', 'an unknown id');
+    assert.equal(await probe(`/simon/messages/${'0'.repeat(64)}`), '404 1', 'an unknown id');
     assert.equal(await probe(target), '404 1', 'an audience-limited id');
-    assert.equal(await probe(`/agnt/messages/${pub.id}`), '200 1', 'a public post');
-    assert.equal(await probe(`/agnt/feeds/${ada.address}/nothing`), '200 1', 'an empty feed');
-    assert.equal(await probe(`/agnt/feeds/nobody@alpha.test/posts`), '200 1', "an unknown agent's feed");
-    assert.equal(await probe(`/agnt/parts/${'0'.repeat(64)}`), '404 1', 'an unknown part');
-    assert.equal(await probe(`/agnt/parts/${limited}`), '404 1', "an audience-limited post's part");
+    assert.equal(await probe(`/simon/messages/${pub.id}`), '200 1', 'a public post');
+    assert.equal(await probe(`/simon/feeds/${ada.address}/nothing`), '200 1', 'an empty feed');
+    assert.equal(await probe(`/simon/feeds/nobody@alpha.test/posts`), '200 1', "an unknown agent's feed");
+    assert.equal(await probe(`/simon/parts/${'0'.repeat(64)}`), '404 1', 'an unknown part');
+    assert.equal(await probe(`/simon/parts/${limited}`), '404 1', "an audience-limited post's part");
   });
 
   it('serves the files of a post to the readers it admits, and to no one else', async () => {
@@ -419,7 +419,7 @@ describe('readers of a published message with an audience (spec sections 7.1 and
         parts: [TEXT, { type: 'image/png', sha256, size: bytes.length }],
       }),
     );
-    const url = new URL(`${alpha.origin}/agnt/parts/${sha256}`);
+    const url = new URL(`${alpha.origin}/simon/parts/${sha256}`);
     const fetchAs = (signer: TestAgent) =>
       alpha.server.handle(
         toRequest(

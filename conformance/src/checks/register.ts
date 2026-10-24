@@ -224,7 +224,7 @@ def(
     level: 'must',
     title: 'An address whose domain names no server cannot be registered',
     expected:
-      '409 address_homed_elsewhere with details.server null, for an address on a domain that resolves to no AGNT server',
+      '409 address_homed_elsewhere with details.server null, for an address on a domain that resolves to no SIMON server',
   },
   async (t: T, ctx: Ctx) => {
     const res = await TargetAgent.fresh(ctx.server).register(t, { address: `x@${ctx.opts.unresolvableDomain}` });
@@ -237,7 +237,7 @@ def(
 function addKey(t: T, signer: TargetAgent, newKey: crypto.KeyObject, proof: string | undefined, label: string) {
   const body: Record<string, unknown> = { key: keyToken(newKey) };
   if (proof !== undefined) body.proof = proof;
-  return signer.call(t, 'POST', '/agnt/keys', JSON.stringify(body), {}, label);
+  return signer.call(t, 'POST', '/simon/keys', JSON.stringify(body), {}, label);
 }
 
 def(
@@ -247,7 +247,7 @@ def(
     level: 'must',
     title: "An agent adds a key with the new key's proof",
     expected:
-      '200 account listing the new key, for POST /agnt/keys {"key","proof"} signed by an existing key, proof over AGNT-ADD-KEY\\n<address>\\n<key>; the same call again gives the same result; the new key then signs requests',
+      '200 account listing the new key, for POST /simon/keys {"key","proof"} signed by an existing key, proof over SIMON-ADD-KEY\\n<address>\\n<key>; the same call again gives the same result; the new key then signs requests',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('keys');
@@ -255,7 +255,7 @@ def(
     const proof = sign(k2, addKeyProofString(a.address, keyToken(k2)));
     accountAnswer(t, await addKey(t, a, k2, proof, 'add a key'), keyToken(k2), a.address, 'add a key');
     accountAnswer(t, await addKey(t, a, k2, proof, 'again'), keyToken(k2), a.address, 'the same call again');
-    const res = await a.call(t, 'GET', '/agnt/sync?limit=1', undefined, { key: k2 }, 'signed by the new key');
+    const res = await a.call(t, 'GET', '/simon/sync?limit=1', undefined, { key: k2 }, 'signed by the new key');
     t.status(res, 200, 'a request signed by the new key');
   },
 );
@@ -286,7 +286,7 @@ def(
     section: 'CLIENT keys, CLIENT errors',
     level: 'must',
     title: 'Adding a key without a proof is 401 bad_proof',
-    expected: '401 bad_proof for POST /agnt/keys {"key"} signed by an existing key of an agent, with no proof',
+    expected: '401 bad_proof for POST /simon/keys {"key"} signed by an existing key of an agent, with no proof',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('keys');
@@ -350,7 +350,7 @@ export interface Paired {
 async function pairByLease(t: T, ctx: Ctx): Promise<{ first: Res; second?: Res; paired?: Paired }> {
   const agent = TargetAgent.fresh(ctx.server);
   const principal = crypto.generateKeyPairSync('ed25519').privateKey;
-  const forValue = `agnt-key:${keyToken(principal)}`;
+  const forValue = `simon-key:${keyToken(principal)}`;
   const first = await agent.register(t, { for: forValue }, {}, 'register with for, no pairing');
   if (first.status !== 202 || typeof first.json?.address !== 'string') return { first };
   const pairing = signPairing(principal, first.json.address, forValue);
@@ -369,7 +369,7 @@ async function registerPaired(t: T, ctx: Ctx, name: string): Promise<Paired> {
   const domain = requireHosted(ctx);
   const agent = TargetAgent.fresh(ctx.server);
   const principal = crypto.generateKeyPairSync('ed25519').privateKey;
-  const forValue = `agnt-key:${keyToken(principal)}`;
+  const forValue = `simon-key:${keyToken(principal)}`;
   const address = `${ctx.runId}-${name}@${domain}`;
   const res = await agent.register(t, { address, for: forValue, pairing: signPairing(principal, address, forValue) });
   if (res.status !== 200) throw new Prerequisite(`registering a paired agent answered ${res.status}`);
@@ -387,7 +387,7 @@ def(
     level: 'must',
     title: 'Pairing a leased address goes through pairing_required',
     expected:
-      'register {"key","for"} with an agnt-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", the principal\'s signature over AGNT-PAIR\\n<address>\\n<for>, answers 200 account at that address',
+      'register {"key","for"} with a simon-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", the principal\'s signature over SIMON-PAIR\\n<address>\\n<for>, answers 200 account at that address',
   },
   async (t: T, ctx: Ctx) => {
     await requireLeasing(ctx);
@@ -417,7 +417,7 @@ def(
     const { res, read } = await agentDocument(t, ctx, p.agent.address);
     t.status(res, 200);
     t.assert(read?.kind === 'paired', `kind is ${JSON.stringify(res.json?.kind)}`);
-    const principalToken = p.for.slice('agnt-key:'.length);
+    const principalToken = p.for.slice('simon-key:'.length);
     t.assert(!res.text.includes(principalToken), "the document contains the principal's key");
   },
 );
@@ -433,7 +433,7 @@ def(
   async (t: T, ctx: Ctx) => {
     const agent = TargetAgent.fresh(ctx.server);
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
-    const forValue = `agnt-key:${keyToken(principal)}`;
+    const forValue = `simon-key:${keyToken(principal)}`;
     const body: Record<string, unknown> = {
       for: forValue,
       pairing: signPairing(principal, 'someone@else.example', forValue),
@@ -457,7 +457,7 @@ def(
     const domain = requireHosted(ctx);
     const agent = TargetAgent.fresh(ctx.server);
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
-    const forValue = `agnt-key:${keyToken(principal)}`;
+    const forValue = `simon-key:${keyToken(principal)}`;
     const address = `${ctx.runId}-pairedhosted@${domain}`;
     accountAnswer(
       t,
@@ -558,7 +558,7 @@ def(
     level: 'should',
     title: 'Recovery by code waits while the agent still holds a valid key, and the agent is told',
     expected:
-      '202 {"status":"recovery_pending","address","completesAt"} for POST /agnt/recovery with a new key handing back the code while the agent holds a valid key; its document is unchanged meanwhile, and its inbox gets a message from the server itself',
+      '202 {"status":"recovery_pending","address","completesAt"} for POST /simon/recovery with a new key handing back the code while the agent holds a valid key; its document is unchanged meanwhile, and its inbox gets a message from the server itself',
   },
   async (t: T, ctx: Ctx) => {
     const holder = bindFirst(ctx, t);
@@ -571,7 +571,7 @@ def(
       `expected 202 recovery_pending with completesAt, got ${answer.status} ${answer.text.slice(0, 200)}`,
     );
     t.assert(await unchanged(t, ctx, holder, fresh), 'the document changed while the recovery waits');
-    const state = await holder.call(t, 'GET', '/agnt/account');
+    const state = await holder.call(t, 'GET', '/simon/account');
     t.status(state, 200);
     t.assert(
       state.json?.recovery?.completesAt === answer.json.completesAt &&
@@ -602,11 +602,11 @@ def(
     level: 'must',
     title: "An agent's key reads a waiting recovery; no other key can",
     expected:
-      'GET /agnt/recovery signed by the key the agent holds answers 200 {"recovery":{"completesAt","cancellable"}}, completesAt a timestamp and cancellable a boolean; signed by a key the server does not know, 401 unknown_key',
+      'GET /simon/recovery signed by the key the agent holds answers 200 {"recovery":{"completesAt","cancellable"}}, completesAt a timestamp and cancellable a boolean; signed by a key the server does not know, 401 unknown_key',
   },
   async (t: T, ctx: Ctx) => {
     const { holder } = requirePending(ctx, t);
-    const res = await holder.call(t, 'GET', '/agnt/recovery', undefined, {}, 'read the recovery');
+    const res = await holder.call(t, 'GET', '/simon/recovery', undefined, {}, 'read the recovery');
     t.status(res, 200, 'read the recovery');
     const r = res.json?.recovery;
     t.assert('recovery' in (res.json ?? {}), `answered ${res.text.slice(0, 200)}`);
@@ -616,7 +616,7 @@ def(
     const asked = await stranger.call(
       t,
       'GET',
-      '/agnt/recovery',
+      '/simon/recovery',
       undefined,
       { agent: holder.address },
       'a stranger asks',
@@ -632,11 +632,11 @@ def(
     level: 'should',
     title: 'A key the agent held before a recovery started is told it may cancel it',
     expected:
-      'GET /agnt/recovery signed by the key the agent held before the recovery started says cancellable true, as the recommended practice lets such a key cancel (who may cancel is host policy)',
+      'GET /simon/recovery signed by the key the agent held before the recovery started says cancellable true, as the recommended practice lets such a key cancel (who may cancel is host policy)',
   },
   async (t: T, ctx: Ctx) => {
     const { holder } = requirePending(ctx, t);
-    const res = await holder.call(t, 'GET', '/agnt/recovery', undefined, {}, 'read the recovery');
+    const res = await holder.call(t, 'GET', '/simon/recovery', undefined, {}, 'read the recovery');
     t.status(res, 200, 'read the recovery');
     t.assert(
       res.json?.recovery?.cancellable === true,
@@ -652,7 +652,7 @@ def(
     level: 'must',
     title: 'No answer tells a stranger whether an address is being recovered',
     expected:
-      'while a recovery waits, POST /agnt/recovery from a new key asking for a code answers 202 code_sent and a wrong code then 422 wrong_code, as when none waits; a wrong cancel code for the address answers 422 wrong_code with the same body as one for an address with no recovery waiting',
+      'while a recovery waits, POST /simon/recovery from a new key asking for a code answers 202 code_sent and a wrong code then 422 wrong_code, as when none waits; a wrong cancel code for the address answers 422 wrong_code with the same body as one for an address with no recovery waiting',
   },
   async (t: T, ctx: Ctx) => {
     const { holder } = requirePending(ctx, t);
@@ -687,13 +687,13 @@ def(
     level: 'must',
     title: 'An authorised agent key cancels a waiting recovery',
     expected:
-      'POST /agnt/recovery/cancel {} signed by a key the account permits answers 200 {"status":"cancelled","address"}; the waiting key then cannot complete the recovery with its code, and the document lists only the old key',
+      'POST /simon/recovery/cancel {} signed by a key the account permits answers 200 {"status":"cancelled","address"}; the waiting key then cannot complete the recovery with its code, and the document lists only the old key',
   },
   async (t: T, ctx: Ctx) => {
     const holder = bindFirst(ctx, t);
     const fresh = pendingClaim.get(ctx);
     if (!fresh) t.skip('no recovery was waiting (see register.recovery-pending)');
-    const res = await holder.call(t, 'POST', '/agnt/recovery/cancel', '{}', {}, 'cancel the recovery');
+    const res = await holder.call(t, 'POST', '/simon/recovery/cancel', '{}', {}, 'cancel the recovery');
     if (res.status === 409) {
       t.error(res, 409, 'recovery_not_cancellable');
       t.skip('host policy refuses cancellation by this key');
@@ -703,7 +703,7 @@ def(
       res.json?.status === 'cancelled' && res.json.address === holder.address,
       `cancel answered ${res.text.slice(0, 200)}`,
     );
-    t.error(await holder.call(t, 'POST', '/agnt/recovery/cancel', '{}'), 404, 'not_found', 'cancel again');
+    t.error(await holder.call(t, 'POST', '/simon/recovery/cancel', '{}'), 404, 'not_found', 'cancel again');
     const again = await fresh.recover(
       t,
       { address: holder.address, code: await ctx.code(holder.address) },
@@ -725,7 +725,7 @@ def(
     level: 'must',
     title: 'Recovery by code replaces every old key',
     expected:
-      'POST /agnt/recovery with the new key and code gets 200 account {address,keys,grants,recovery} without a status member, or 202 recovery_pending and then 200 account when it repeats the recovery call after completesAt (waited for when within the recovery wait); the old key is then marked revoked in the document',
+      'POST /simon/recovery with the new key and code gets 200 account {address,keys,grants,recovery} without a status member, or 202 recovery_pending and then 200 account when it repeats the recovery call after completesAt (waited for when within the recovery wait); the old key is then marked revoked in the document',
   },
   async (t: T, ctx: Ctx) => {
     const old = bindFirst(ctx, t);
@@ -738,7 +738,7 @@ def(
       const wait = Date.parse(answer.json.completesAt) - ctx.now() + 1000;
       if (wait > ctx.opts.recoveryWaitMs) {
         t.skip(
-          `the recovery completes at ${answer.json.completesAt}, beyond the recovery wait (${ctx.opts.recoveryWaitMs / 1000} s); run the server with a shorter wait (the basic server: AGNT_RECOVERY_WAIT=5)`,
+          `the recovery completes at ${answer.json.completesAt}, beyond the recovery wait (${ctx.opts.recoveryWaitMs / 1000} s); run the server with a shorter wait (the basic server: SIMON_RECOVERY_WAIT=5)`,
         );
       }
       await sleep(Math.max(0, wait));
@@ -771,19 +771,19 @@ def(
     level: 'should',
     title: 'A key cancels a recovery once in 30 days',
     expected:
-      'a recovery started after register.cancel-recovery cancelled one by key answers 409 recovery_not_cancellable to a cancel by the key now holding the agent, and GET /agnt/recovery says cancellable false',
+      'a recovery started after register.cancel-recovery cancelled one by key answers 409 recovery_not_cancellable to a cancel by the key now holding the agent, and GET /simon/recovery says cancellable false',
   },
   async (t: T, ctx: Ctx) => {
     const holder = holding.get(ctx);
     if (!holder || !ctx.opts.codeCommand) t.skip('needs register.cancel-recovery and register.recovery to have run');
     const { fresh, code, answer } = await claimByCode(t, ctx, holder.address, 'a fourth key');
     if (answer.status !== 202) t.skip(`the recovery did not wait: ${answer.status}`);
-    const res = await holder.call(t, 'POST', '/agnt/recovery/cancel', '{}', {}, 'cancel by key');
+    const res = await holder.call(t, 'POST', '/simon/recovery/cancel', '{}', {}, 'cancel by key');
     // Only a recovery the key could not cancel is still waiting for register.cancel-code; a host whose policy
     // let the key cancel it leaves none, and that check then skips rather than fails.
     if (res.status === 409) uncancelled.set(ctx, { address: holder.address, claim: fresh, code });
     t.error(res, 409, 'recovery_not_cancellable', 'a second cancel by key within 30 days');
-    const status = await holder.call(t, 'GET', '/agnt/recovery', undefined, {}, 'read it');
+    const status = await holder.call(t, 'GET', '/simon/recovery', undefined, {}, 'read it');
     t.assert(status.json?.recovery?.cancellable === false, `recovery is ${JSON.stringify(status.json?.recovery)}`);
   },
 );
@@ -795,7 +795,7 @@ def(
     level: 'must',
     title: 'The cancel code sent with the news of a recovery cancels it, whoever signs; once',
     expected:
-      'POST /agnt/recovery/cancel {"address","cancelCode"} with the cancel code the operator\'s command printed, signed by a key the server never saw, answers 200 {"status":"cancelled","address"}; the same call again answers 422 wrong_code; the waiting key cannot complete the recovery after it',
+      'POST /simon/recovery/cancel {"address","cancelCode"} with the cancel code the operator\'s command printed, signed by a key the server never saw, answers 200 {"status":"cancelled","address"}; the same call again answers 422 wrong_code; the waiting key cannot complete the recovery after it',
   },
   async (t: T, ctx: Ctx) => {
     const waiting = uncancelled.get(ctx);
@@ -830,7 +830,7 @@ def(
     level: 'must',
     title: "A key principal recovers its agent at once, to a key of the principal's choosing",
     expected:
-      'POST /agnt/recovery {"address","key","at","recover"} signed by the new key, recover the principal\'s signature over AGNT-RECOVER\\n<address>\\n<key>\\n<at>, answers 200 account {address,keys,grants,recovery} without a status member, listing the new key, the old key revoked; the old key is then 401 key_revoked, and the same call again answers alike',
+      'POST /simon/recovery {"address","key","at","recover"} signed by the new key, recover the principal\'s signature over SIMON-RECOVER\\n<address>\\n<key>\\n<at>, answers 200 account {address,keys,grants,recovery} without a status member, listing the new key, the old key revoked; the old key is then 401 key_revoked, and the same call again answers alike',
   },
   async (t: T, ctx: Ctx) => {
     const p = await registerPaired(t, ctx, 'rescued');
@@ -921,7 +921,7 @@ def(
     level: 'must',
     title: "A key principal's unpairing retires its agent's address, whatever the agent's keys say",
     expected:
-      'POST /agnt/unpair {"address","unpairing"} signed by a key the server never saw, unpair the principal\'s signature over AGNT-UNPAIR\\n<address>\\n<for>, answers 200 {"status":"retired","address"}; the agent document is then 404 or a valid retired document, a request signed by the agent\'s key is 401 key_revoked, and the same call again answers 200 retired',
+      'POST /simon/unpair {"address","unpairing"} signed by a key the server never saw, unpair the principal\'s signature over SIMON-UNPAIR\\n<address>\\n<for>, answers 200 {"status":"retired","address"}; the agent document is then 404 or a valid retired document, a request signed by the agent\'s key is 401 key_revoked, and the same call again answers 200 retired',
   },
   async (t: T, ctx: Ctx) => {
     const p = await registerPaired(t, ctx, 'unpaired');
@@ -931,7 +931,7 @@ def(
       const res = await stranger.call(
         t,
         'POST',
-        '/agnt/unpair',
+        '/simon/unpair',
         JSON.stringify({ address: p.agent.address, unpairing: unpair }),
         {},
         when,
@@ -967,7 +967,7 @@ def(
     level: 'must',
     title: 'An unpairing that does not verify is 401 bad_proof, and retires nothing',
     expected:
-      '401 bad_proof for POST /agnt/unpair with an unpairing signed by another key, and for a pairing signature offered as an unpairing; the agent document is still served',
+      '401 bad_proof for POST /simon/unpair with an unpairing signed by another key, and for a pairing signature offered as an unpairing; the agent document is still served',
   },
   async (t: T, ctx: Ctx) => {
     const p = await registerPaired(t, ctx, 'not-unpaired');
@@ -981,7 +981,7 @@ def(
         await stranger.call(
           t,
           'POST',
-          '/agnt/unpair',
+          '/simon/unpair',
           JSON.stringify({ address: p.agent.address, unpairing: unpair }),
           {},
           what,

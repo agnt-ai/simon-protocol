@@ -22,7 +22,7 @@ const lines = [...rules, ...[...exceptions].map(e => `!${e}`)];
 const out = `/**
  * The ICANN section of the Public Suffix List (https://publicsuffix.org/list/public_suffix_list.dat), one rule a line,
  * internationalised labels written as A-labels: the list of ${date} (SHA-256 of the whole list ${sha}).
- * Written by server/scripts/write-public-suffixes.ts; do not edit by hand. AGNT_PUBLIC_SUFFIX_LIST names a newer
+ * Written by server/scripts/write-public-suffixes.ts; do not edit by hand. SIMON_PUBLIC_SUFFIX_LIST names a newer
  * copy of the list to read instead.
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was

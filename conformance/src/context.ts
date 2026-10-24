@@ -39,15 +39,15 @@ export interface Options {
   peerOrigin?: string;
   /** A domain whose names agents take at once on the server, when it has one. */
   hostedDomain?: string;
-  /** A domain that names no AGNT server at all. */
+  /** A domain that names no SIMON server at all. */
   unresolvableDomain: string;
-  /** A shell command that prints the code the server sent to an address (given as $1 and AGNT_ADDRESS). */
+  /** A shell command that prints the code the server sent to an address (given as $1 and SIMON_ADDRESS). */
   codeCommand?: string;
   /** An address on a domain that resolves to the server, for the code flow. */
   codeAddress?: string;
   /** A shell command that prints the cancel code sent to an address with the news of a recovery. */
   cancelCodeCommand?: string;
-  /** A shell command that retires the agent at an address (given as $1 and AGNT_ADDRESS). */
+  /** A shell command that retires the agent at an address (given as $1 and SIMON_ADDRESS). */
   retireCommand?: string;
   /**
    * A second domain the server resolves to a second simulator, on `secondPeerPort`: for the checks that a
@@ -160,7 +160,7 @@ export class Ctx {
     await this.once('clock', async t => {
       const sent = Date.now();
       const res = await t.http(
-        { method: 'GET', origin: this.origin, target: '/agnt/sync' },
+        { method: 'GET', origin: this.origin, target: '/simon/sync' },
         { label: 'read the server clock' },
       );
       const serverTime = problem(res)?.details?.serverTime;
@@ -184,7 +184,7 @@ export class Ctx {
   serverDoc(): Promise<{ res: Res; doc: ServerDocument }> {
     return this.once('server document', async t => {
       const res = await t.http(
-        { method: 'GET', origin: this.origin, target: '/agnt/server' },
+        { method: 'GET', origin: this.origin, target: '/simon/server' },
         { label: 'server document' },
       );
       let value: Json = null;
@@ -203,7 +203,7 @@ export class Ctx {
           : [];
       if (res.status !== 200 || !isJsonObject(value) || !keys) {
         throw new Prerequisite(
-          `GET /agnt/server did not give a server document naming ${this.origin} with readable keys (${res.status})`,
+          `GET /simon/server did not give a server document naming ${this.origin} with readable keys (${res.status})`,
         );
       }
       const published = isJsonObject(value.limits) ? value.limits : {};
@@ -261,10 +261,10 @@ export class Ctx {
     return domainOf((await this.agent('a')).address);
   }
 
-  /** POST an envelope (or raw text) to the server's /agnt/deliver. */
+  /** POST an envelope (or raw text) to the server's /simon/deliver. */
   deliver(t: T, envelope: Envelope | Record<string, unknown> | string | Buffer, label?: string) {
     const body = typeof envelope === 'string' || Buffer.isBuffer(envelope) ? envelope : canonicalize(envelope);
-    return t.http({ method: 'POST', origin: this.origin, target: '/agnt/deliver', body }, { label });
+    return t.http({ method: 'POST', origin: this.origin, target: '/simon/deliver', body }, { label });
   }
 
   /**
@@ -345,13 +345,13 @@ export class Ctx {
   }
 }
 
-/** Run an operator hook with the address as $1 and AGNT_ADDRESS; its stdout. */
+/** Run an operator hook with the address as $1 and SIMON_ADDRESS; its stdout. */
 function operator(cmd: string, name: string, address: string): Promise<string> {
   return new Promise((resolve, reject) => {
     execFile(
       '/bin/sh',
-      ['-c', cmd, `agnt-${name}`, address],
-      { env: { ...process.env, AGNT_ADDRESS: address }, timeout: 60_000 },
+      ['-c', cmd, `simon-${name}`, address],
+      { env: { ...process.env, SIMON_ADDRESS: address }, timeout: 60_000 },
       (err, stdout) => (err ? reject(new Prerequisite(`--${name}-command failed: ${err.message}`)) : resolve(stdout)),
     );
   });

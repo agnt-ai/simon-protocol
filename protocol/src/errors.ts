@@ -12,7 +12,7 @@ import { isJsonObject, parseStrict } from './canonical.ts';
 export const PROBLEM_CONTENT_TYPE = 'application/problem+json';
 
 /** The scheme every request-signature 401 names in `WWW-Authenticate` (spec section 8). */
-export const AUTH_SCHEME = 'AGNT';
+export const AUTH_SCHEME = 'SIMON';
 
 export interface Problem {
   type: string;

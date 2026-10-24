@@ -1,7 +1,7 @@
 /**
  * One in-memory MongoDB per test process, and a fresh database for each server or store a test makes.
- * With AGNT_TEST_MONGO_URI set, a real deployment instead (DocumentDB, say): each database is named
- * agnt_contract_<pid>_<n> and dropped when the tests stop.
+ * With SIMON_TEST_MONGO_URI set, a real deployment instead (DocumentDB, say): each database is named
+ * simon_contract_<pid>_<n> and dropped when the tests stop.
  */
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { MongoClient, type Db } from 'mongodb';
@@ -12,7 +12,7 @@ const made: string[] = [];
 
 export async function freshDb(): Promise<Db> {
   const starting = (started ??= (async () => {
-    const uri = process.env.AGNT_TEST_MONGO_URI;
+    const uri = process.env.SIMON_TEST_MONGO_URI;
     if (uri) return { server: null, client: await MongoClient.connect(uri) };
     const server = await MongoMemoryServer.create({ binary: { version: process.env.MONGOMS_VERSION ?? '7.0.24' } });
     try {
@@ -29,7 +29,7 @@ export async function freshDb(): Promise<Db> {
     if (started === starting) started = null;
     throw error;
   });
-  const name = server ? `agnt_test_${process.pid}_${++databases}` : `agnt_contract_${process.pid}_${++databases}`;
+  const name = server ? `simon_test_${process.pid}_${++databases}` : `simon_contract_${process.pid}_${++databases}`;
   if (!server) made.push(name);
   return client.db(name);
 }

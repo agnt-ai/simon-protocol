@@ -1,5 +1,5 @@
 /**
- * The email bridge, for recipients whose domain names no AGNT server (the core's `unroutable` event):
+ * The email bridge, for recipients whose domain names no SIMON server (the core's `unroutable` event):
  *
  *   - someone here whose agent speaks for that very address gets the message at that agent, through its
  *     admit chain, as if addressed to it. Someone here whose contact tier excludes the sender gets nothing.
@@ -107,16 +107,16 @@ export function bridgeModule(ctx: Ctx, deps: { directory: Directory; cards: Card
         const others = m.parts.filter(p => !('data' in p && p.type.startsWith('text/'))).length;
         await ctx.mail!.send({
           to: job.email,
-          // Whose agent wrote it, and that it came through AGNT; the address is the bridge's.
-          from: `"${job.author} via AGNT" <no-reply@${domain}>`,
+          // Whose agent wrote it, and that it came through SIMON; the address is the bridge's.
+          from: `"${job.author} via SIMON" <no-reply@${domain}>`,
           replyTo: `reply+${unseal(ctx.config.dataKey, job.token)}@${domain}`,
           subject: (header(m, 'subject') ?? '(no subject)').replace(/[\r\n]+/g, ' '),
-          text: textOf(m, '\n\n') + (others ? `\n\n(${others} more part${others > 1 ? 's' : ''} sent on AGNT.)` : ''),
+          text: textOf(m, '\n\n') + (others ? `\n\n(${others} more part${others > 1 ? 's' : ''} sent on SIMON.)` : ''),
           headers: {
             'Message-ID': `<${record.id}@${domain}>`,
             ...(m.inReplyTo ? { 'In-Reply-To': `<${m.inReplyTo}@${domain}>` } : {}),
-            // A hint for a reader that speaks AGNT: it resolves the address and its keys itself.
-            'AGNT-Agent': job.author,
+            // A hint for a reader that speaks SIMON: it resolves the address and its keys itself.
+            'SIMON-Agent': job.author,
           },
         });
         return 'done';

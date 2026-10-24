@@ -1,18 +1,18 @@
 /**
  * What anyone may read, unsigned:
  *
- *   GET /agnt/server             this server's document (spec section 4)
- *   GET /agnt/agents/<address>   an agent's document, signed by this server: for a retired address its
+ *   GET /simon/server             this server's document (spec section 4)
+ *   GET /simon/agents/<address>   an agent's document, signed by this server: for a retired address its
  *                                retired document (spec section 4), its keys all revoked, `retired`, and
  *                                the `unpairing` that retired it when one did; 404 for an unknown address,
  *                                and 429 for any address once a client has asked for too many of those
- *   GET /agnt/messages/...       published messages, feeds and relations: published.ts
- *   GET /.well-known/agnt        {"server": <origin>}, served only when the origin's host is itself a domain
+ *   GET /simon/messages/...       published messages, feeds and relations: published.ts
+ *   GET /.well-known/simon        {"server": <origin>}, served only when the origin's host is itself a domain
  *                                this server hosts or leases on, so that domain resolves here by the
  *                                well-known method (section 3) with no TXT record
  *   GET /health                  {"status":"ok"} while this server and its store answer, 503 when the store
  *                                does not: for a load balancer's checks. No part of the protocol, so outside
- *                                /agnt/, and it says nothing else
+ *                                /simon/, and it says nothing else
  */
 import {
   canonicalize,
@@ -109,7 +109,7 @@ export function answersWellKnown(config: Context['config']): boolean {
 
 export function publicRoutes(ctx: Context, retiredAgentDocuments: 'public' | 'private'): Route[] {
   const wellKnown: Route[] = answersWellKnown(ctx.config)
-    ? [{ method: 'GET', path: '/.well-known/agnt', handle: async () => json({ server: ctx.config.origin }) }]
+    ? [{ method: 'GET', path: '/.well-known/simon', handle: async () => json({ server: ctx.config.origin }) }]
     : [];
   return [
     ...wellKnown,
@@ -128,12 +128,12 @@ export function publicRoutes(ctx: Context, retiredAgentDocuments: 'public' | 'pr
     },
     {
       method: 'GET',
-      path: '/agnt/server',
+      path: '/simon/server',
       handle: async () => json(await ownDocument(ctx)),
     },
     {
       method: 'GET',
-      path: '/agnt/agents/:address',
+      path: '/simon/agents/:address',
       async handle(req) {
         // Counted and refused before the lookup, so a client past its budget learns nothing of any address,
         // and lookups in flight together cannot exceed it; an agent served is not a miss, and is given back.

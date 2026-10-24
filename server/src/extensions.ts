@@ -37,7 +37,7 @@ export interface ServerApi {
   offer(address: string, id: string): Promise<boolean>;
   /**
    * Send a message written by an agent here (an application's own agents: notices, a bridge), checked and
-   * delivered exactly as `POST /agnt/send` would; `hints` as its `agnt-hints` header carries them.
+   * delivered exactly as `POST /simon/send` would; `hints` as its `simon-hints` header carries them.
    */
   send(message: AnyMessage, hints?: Hints): Promise<{ id: string; receivedAt: string }>;
   /** Retire an address (spec section 2.2): its keys revoked, its document gone, never registered again. */
@@ -56,7 +56,7 @@ export interface Arrival {
    * carrier this server trusts. Each acts-for and identifier claim carries `authoritative`.
    */
   claims: Claim[];
-  /** This recipient's hints from the envelope or from `agnt-hints`. */
+  /** This recipient's hints from the envelope or from `simon-hints`. */
   hints: Record<string, string>;
 }
 
@@ -140,7 +140,7 @@ export interface Events {
   /** Delivery to these recipients ended without a 202; `reason` is a resolution outcome or an error code. */
   deliveryFailed: { id: string; server: string | null; recipients: string[]; reason: string };
   /**
-   * These recipients' domain names no AGNT server (`not_found`). A bridge may reach them another way: a
+   * These recipients' domain names no SIMON server (`not_found`). A bridge may reach them another way: a
    * listener that answers `true` took them, and their delivery counts as delivered rather than failed.
    */
   unroutable: { id: string; domain: string; recipients: string[]; message: AnyMessage };

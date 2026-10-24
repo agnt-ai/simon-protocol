@@ -42,8 +42,8 @@ interface FutureMessage extends AnyMessage {
 }
 
 function fixture() {
-  const directory = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'agnt-v2-synthetic-'));
-  const source = path.join(directory, 'agnt.sqlite');
+  const directory = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'simon-v2-synthetic-'));
+  const source = path.join(directory, 'simon.sqlite');
   const outbox = path.join(directory, 'app-arrivals.sqlite');
   const core = new DatabaseSync(source);
   core.exec(LEGACY_SQL);
@@ -335,7 +335,7 @@ it('keeps schema2 refused by the normal Store and gives every legacy device an e
       application = server!,
       origin = config.origin,
     ) => {
-      const url = new URL('/agnt/sync', origin);
+      const url = new URL('/simon/sync', origin);
       if (since !== undefined) url.searchParams.set('since', since);
       const headers = signRequest(key.privateKey, {
         method: 'GET',
@@ -724,7 +724,7 @@ it('refuses an old flat index that omitted a genuinely signed carried file witho
   const f = fixture();
   try {
     const carried = f.message([f.part]);
-    const outer = f.message([{ type: 'application/agnt-message', data: canonicalBytes(carried).toString('base64') }]);
+    const outer = f.message([{ type: 'application/simon-message', data: canonicalBytes(carried).toString('base64') }]);
     const id = f.keep(outer, 77);
     assert.equal(f.core.prepare('SELECT count(*) n FROM message_parts WHERE id=?').get(id)!.n, 0);
     await assert.rejects(createSqliteV2Candidate(f.options), refused('message_part_projection'));
@@ -967,7 +967,7 @@ for (const faultAt of ['copy-row', 'bootstrap', 'verify'] as const)
       assert.equal(f.core.prepare('PRAGMA user_version').get()!.user_version, 2);
       assert.equal(f.app.prepare('SELECT count(*) n FROM arrivals').get()!.n, 2);
       if (faultAt === 'copy-row') {
-        const partial = new DatabaseSync(path.join(f.options.directory, 'candidate', 'agnt.sqlite'));
+        const partial = new DatabaseSync(path.join(f.options.directory, 'candidate', 'simon.sqlite'));
         try {
           assert.equal(
             partial.prepare('SELECT count(*) n FROM agents').get()!.n,

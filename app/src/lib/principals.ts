@@ -1,6 +1,6 @@
 /**
  * Principals as this application reads them: the protocol's identifiers (spec section 2.2), written
- * `mailto:<address>`, `tel:+<E.164>` or `agnt-key:<key token>`. People in the directory are found by
+ * `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`. People in the directory are found by
  * them, and the API takes and gives them in that form.
  */
 import { invalid, isPrincipal, normalizeAddress } from '@agnt-protocol/protocol';
@@ -23,7 +23,7 @@ export function normalizePrincipal(input: string): string | null {
 
 export function principalArg(field: string, value: string): string {
   const principal = normalizePrincipal(value);
-  if (!principal) throw invalid(`${field} is a mailto:, tel: or agnt-key: identifier.`, { field });
+  if (!principal) throw invalid(`${field} is a mailto:, tel: or simon-key: identifier.`, { field });
   return principal;
 }
 

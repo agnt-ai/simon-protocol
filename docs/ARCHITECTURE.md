@@ -6,7 +6,7 @@ the reasons behind the division are in [DECISIONS.md](DECISIONS.md), "Three proj
 
 ## Requirements
 
-1. Two independently operated servers exchange messages with no AGNT account and no AGNT-operated
+1. Two independently operated servers exchange messages with no SIMON account and no SIMON-operated
    service in the path.
 2. A minimal implementation communicates fully without any optional feature.
 3. Resolving an address to its server is protocol. Finding a person worth writing to is a feature.
@@ -54,10 +54,10 @@ vector without reading this code.
 
 `createServer({config, store, extensions, dns, http, now, log, mailbox, worker})` assembles the core
 from its parts. Everything outside the process is passed in: DNS, outbound HTTP, the clock and what sends
-codes, and the news of a recovery, to an address's mailbox. The defaults are c-ares DNS (`net/dns.ts`: the system's DNS servers or `AGNT_DNS_SERVERS`,
-confirmed by DNS-over-HTTPS resolvers when `AGNT_DOH_RESOLVERS` names them), an SSRF-guarded HTTP client
+codes, and the news of a recovery, to an address's mailbox. The defaults are c-ares DNS (`net/dns.ts`: the system's DNS servers or `SIMON_DNS_SERVERS`,
+confirmed by DNS-over-HTTPS resolvers when `SIMON_DOH_RESOLVERS` names them), an SSRF-guarded HTTP client
 (`net/fetch.ts`: outside development, https with TLS 1.3 or later and public addresses only, unless
-`AGNT_TRUSTED_NETWORKS` names private ones; no redirects), the system clock, and codes logged in
+`SIMON_TRUSTED_NETWORKS` names private ones; no redirects), the system clock, and codes logged in
 development only. `server/README.md` lists the files and every setting.
 
 **Work after the answer.** `send` and `deliver` answer once a message is stored, together with the rows
@@ -79,10 +79,10 @@ loop (`worker.ts`), so no answer and no timing depends on a recipient's decision
   five days after acceptance and 143 hours after `sentAt`, and no attempt starts before `sentAt`.
 
 **Behind a proxy.** Rate limits count clients by address, so behind a tunnel or a load balancer the server
-reads the client's address from the header the proxy sets (`AGNT_CLIENT_IP_HEADER`). It believes that
-header only from this machine and from the networks in `AGNT_TRUSTED_PROXIES`, and reads it from the
+reads the client's address from the header the proxy sets (`SIMON_CLIENT_IP_HEADER`). It believes that
+header only from this machine and from the networks in `SIMON_TRUSTED_PROXIES`, and reads it from the
 right, past every trusted hop: a client may write anything at the left of `X-Forwarded-For`, but never
-past the proxy that heard from it. A hosting service's own networks (`AGNT_RATE_EXEMPT_NETWORKS`) skip
+past the proxy that heard from it. A hosting service's own networks (`SIMON_RATE_EXEMPT_NETWORKS`) skip
 the per-client rates by that same address, and its agents' rates still apply. `GET /health` answers
 while the server and its store do, for the balancer's checks, and says nothing else. `server/README.md`
 describes a deployment on one.
@@ -100,13 +100,13 @@ in the order given; none is a single slot.
 | `claimsFor(message, agent, api)` | On `send` | Claims for the envelope, such as `acts-for`. |
 | `allowAddress(request, api)` | `register` for a new name on a hosted domain, or a lease: an address no agent holds or ever held, with no mailbox to prove | `allow` or `refuse` ends the chain; `undefined` passes it on. With no decision, the key takes the address. A refusal is `409 address_taken`. |
 | `verifyPrincipal(request, api)` | `register` with a `mailto:` or `tel:` principal, for an address no agent holds or ever held | `verified`, `pending` with a 202 body, or `undefined` for a kind it does not verify. A refusal throws. |
-| `upload(upload, api)` | `PUT /agnt/parts/<sha256>`, before the bytes are kept | Nothing, or a thrown error that refuses the upload. |
+| `upload(upload, api)` | `PUT /simon/parts/<sha256>`, before the bytes are kept | Nothing, or a thrown error that refuses the upload. |
 | `on.stored`, `on.inbox`, `on.delivered`, `on.deliveryFailed`, `on.recovered` | After the event; `inbox` at least once, so a listener dedupes by (address, message id) if it must | Nothing; a failing listener is logged and never fails the core. |
-| `on.unroutable` | Recipients whose domain names no AGNT server | `true` when it took them: their delivery then counts as delivered, and later listeners are not told. |
+| `on.unroutable` | Recipients whose domain names no SIMON server | `true` when it took them: their delivery then counts as delivered, and later listeners are not told. |
 
 An `arrival` is one message offered to one recipient here: the message and its id, the recipient, the
 carrier's origin, that recipient's hints, and the claims agents here are shown. Those are the
-authoritative claims always and the others only from carriers in `AGNT_TRUSTED_CLAIM_SERVERS`; each
+authoritative claims always and the others only from carriers in `SIMON_TRUSTED_CLAIM_SERVERS`; each
 `acts-for` and `identifier` claim carries `authoritative` (spec section 6.2, the registry). Only a claim
 about an email address on the carrier's own domain is authoritative, so with the default settings
 another server's `operator` claims, and its claims about addresses elsewhere, reach no agent here: the
@@ -114,7 +114,7 @@ operator decides whose word to pass on.
 
 Hooks receive `api` (`ServerApi`): the configuration, the store, the clock and the log, and five
 operations: `authenticate` a signed request, `admit` a message an extension held, `offer` a stored
-message to an agent through the admit chain, `send` as an agent here (checked as `POST /agnt/send`
+message to an agent through the admit chain, `send` as an agent here (checked as `POST /simon/send`
 checks it), and `retire` an address.
 
 ### The storage seam
@@ -161,7 +161,7 @@ policy is in [`app/docs/POLICY.md`](../app/docs/POLICY.md). Each module keeps it
 collections behind a small store interface of its own.
 
 The application's own API is under `/api/` and described by `app/openapi.json`. The protocol's paths
-are under `/agnt/`, served by the basic server unchanged.
+are under `/simon/`, served by the basic server unchanged.
 
 ## What may import what
 

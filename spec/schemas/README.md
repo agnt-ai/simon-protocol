@@ -1,6 +1,6 @@
 # JSON Schemas
 
-Draft 2020-12 shapes for AGNT wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLIENT.md](../CLIENT.md) and [registry.md](../registry.md) govern; a disagreeing schema is wrong. Select a client body with `client.json#/$defs/<name>`; `client.json` itself is a definitions catalog, not a union of endpoints.
+Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLIENT.md](../CLIENT.md) and [registry.md](../registry.md) govern; a disagreeing schema is wrong. Select a client body with `client.json#/$defs/<name>`; `client.json` itself is a definitions catalog, not a union of endpoints.
 
 | File | Object |
 | --- | --- |
@@ -8,7 +8,7 @@ Draft 2020-12 shapes for AGNT wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLIE
 | `envelope.json`, `signal.json` | Server-to-server delivery and transient signal |
 | `server-document.json`, `agent-document.json` | Documents, including optional sync/history advertisement and retirement evidence |
 | `published.json`, `listing.json` | Published message and feed/related listing |
-| `problem.json` | AGNT problem detail, including explicit sync migration gap details |
+| `problem.json` | SIMON problem detail, including explicit sync migration gap details |
 | `client.json` | Dedicated lifecycle, account, sync, signal, webhook and selected optional history/delegation bodies |
 | `common.json` | Shared grammar and public key/claim shapes |
 

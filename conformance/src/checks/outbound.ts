@@ -33,7 +33,7 @@ export function shown(r: Received, label: string): Exchange {
     label,
     direction: 'from-target',
     at: r.at.toISOString(),
-    request: { method: 'POST', url: '/agnt/deliver (at the simulator)', headers: {}, body: show(r.raw) },
+    request: { method: 'POST', url: '/simon/deliver (at the simulator)', headers: {}, body: show(r.raw) },
     response: { status: r.answer, headers: {} },
   };
 }
@@ -60,7 +60,7 @@ function outbound(
     const res = await a.send(
       t,
       m,
-      hints ? { headers: { 'agnt-hints': hintsHeader(hints(a, b)) } } : {},
+      hints ? { headers: { 'simon-hints': hintsHeader(hints(a, b)) } } : {},
       `send ${name}`,
     );
     if (res.status !== 200)
@@ -72,7 +72,7 @@ function outbound(
 /** The hints the plain message carries for its first simulated recipient; one value is not ASCII. */
 const PLAIN_HINTS = { invite: 'one', note: '\u00e9t\u00e9 \u2713' };
 
-/** An agnt-hints header value: ASCII, every other character escaped as \uXXXX (CLIENT send, "Hints"). */
+/** A simon-hints header value: ASCII, every other character escaped as \uXXXX (CLIENT send, "Hints"). */
 const hintsHeader = (h: object) =>
   JSON.stringify(h).replace(/[\u0080-\uffff]/g, c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`);
 
@@ -139,7 +139,7 @@ export const retried = (ctx: Ctx) =>
       const res = await o.a.call(
         t,
         'GET',
-        `/agnt/sent/${messageId(o.m)}`,
+        `/simon/sent/${messageId(o.m)}`,
         undefined,
         {},
         'sent, between the 503 and a retry',
@@ -165,7 +165,7 @@ def(
     section: S,
     level: 'must',
     title: "The server delivers to the server a recipient's domain resolves to",
-    expected: `a message sent to agents on ${"the simulator's domain"} arrives at the simulator's /agnt/deliver within the delivery wait`,
+    expected: `a message sent to agents on ${"the simulator's domain"} arrives at the simulator's /simon/deliver within the delivery wait`,
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await plain(ctx);
@@ -236,7 +236,7 @@ def(
     level: 'must',
     title: 'The envelope is signed by a key of the server valid when it arrives',
     expected:
-      "the envelope's signature, over AGNT-ENVELOPE\\n and the canonical envelope without signature, verifies with a key the server's document lists valid at arrival",
+      "the envelope's signature, over SIMON-ENVELOPE\\n and the canonical envelope without signature, verifies with a key the server's document lists valid at arrival",
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await plain(ctx);
@@ -281,7 +281,7 @@ def(
     await arrival(t, ctx, m);
     const { doc } = await ctx.serverDoc();
     const res = await t.http(
-      { method: 'GET', origin: ctx.origin, target: `/agnt/agents/${a.address}` },
+      { method: 'GET', origin: ctx.origin, target: `/simon/agents/${a.address}` },
       { label: "the author's document" },
     );
     const read = readAgentDocument(res.bytes, a.address, doc.keys, new Date(ctx.now()));
@@ -314,7 +314,7 @@ def(
     level: 'must',
     title: "Each recipient's hints go to that recipient's server, and only there",
     expected:
-      "the envelope's hints hold exactly the hints the agnt-hints header gave for recipients at the simulator (a non-ASCII value, escaped in the header, arrives as itself), and none for the recipient on the server itself",
+      "the envelope's hints hold exactly the hints the simon-hints header gave for recipients at the simulator (a non-ASCII value, escaped in the header, arrives as itself), and none for the recipient on the server itself",
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await plain(ctx);
@@ -461,7 +461,7 @@ async function sentReport(t: T, a: TargetAgent, m: AnyMessage, ms: number, done:
   try {
     await poll(
       async () => {
-        const res = await a.call(s, 'GET', `/agnt/sent/${messageId(m)}`, undefined, {}, 'sent');
+        const res = await a.call(s, 'GET', `/simon/sent/${messageId(m)}`, undefined, {}, 'sent');
         last = res;
         return res.status === 200 && done(res.json) ? true : undefined;
       },
@@ -488,7 +488,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const { a, m } = await plain(ctx);
-    const res = await a.call(t, 'GET', `/agnt/sent/${messageId(m)}`);
+    const res = await a.call(t, 'GET', `/simon/sent/${messageId(m)}`);
     t.status(res, 200);
     const b = res.json;
     t.assert(b?.id === messageId(m), `id is ${JSON.stringify(b?.id)}`);
@@ -568,7 +568,7 @@ def(
     level: 'must',
     title: 'A domain that names no server fails with the resolution outcome',
     expected:
-      '{"server":null,"recipients":[...],"status":"failed","reason":"not_found"} for a recipient on a domain with no AGNT server',
+      '{"server":null,"recipients":[...],"status":"failed","reason":"not_found"} for a recipient on a domain with no SIMON server',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
@@ -676,7 +676,7 @@ def(
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
-    t.error(await a.call(t, 'GET', `/agnt/sent/${'0'.repeat(64)}`), 404, 'not_found');
+    t.error(await a.call(t, 'GET', `/simon/sent/${'0'.repeat(64)}`), 404, 'not_found');
   },
 );
 
@@ -691,6 +691,6 @@ def(
   async (t: T, ctx: Ctx) => {
     const { m } = await plain(ctx);
     const b = await ctx.agent('b');
-    t.error(await b.call(t, 'GET', `/agnt/sent/${messageId(m)}`), 404, 'not_found');
+    t.error(await b.call(t, 'GET', `/simon/sent/${messageId(m)}`), 404, 'not_found');
   },
 );

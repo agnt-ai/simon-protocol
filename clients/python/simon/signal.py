@@ -1,11 +1,11 @@
 """Signals: small, short-lived notes from one server to another about a message (spec section 6.4),
-``POST /agnt/signal``::
+``POST /simon/signal``::
 
     {type, from, to, about, at, server, signature}
 
 A signal's ``type`` is a registry name, such as ``typing``, ``collected`` or ``read``; a server never reads
 it and passes on one it does not know. A signal is signed by the server of ``from``'s domain, over
-``AGNT-SIGNAL`` and the canonical signal without ``signature``, as an envelope is. It is never stored, so
+``SIMON-SIGNAL`` and the canonical signal without ``signature``, as an envelope is. It is never stored, so
 unlike a delivery it has no repeat window, and any server may drop any signal it receives. Members a
 receiver does not know are ignored, and signed.
 """
@@ -18,7 +18,7 @@ from typing import Any
 
 from .canonical import canonical_bytes, parse, signing_bytes
 from .envelope import Receiver
-from .errors import AgntError, invalid
+from .errors import SimonError, invalid
 from .keys import signed_by_any
 from .limits import MAX_SIGNAL_BODY_BYTES, MAX_SIGNAL_BYTES, MINIMUM_LIMITS, SIGNAL_SKEW_MS
 from .messages import is_header_name
@@ -31,7 +31,7 @@ _HEX64 = re.compile(r"[0-9a-f]{64}")
 def verify_signal(signal: Mapping[str, Any], server_keys: Iterable[Mapping[str, Any]], at_ms: int) -> bool:
     """Whether one of the sending server's keys valid at ``at_ms`` (when the signal arrives) signed it."""
     return signed_by_any(
-        server_keys, at_ms, signing_bytes("AGNT-SIGNAL", dict(signal)), signal.get("signature")
+        server_keys, at_ms, signing_bytes("SIMON-SIGNAL", dict(signal)), signal.get("signature")
     )
 
 
@@ -42,7 +42,7 @@ def parse_signal(
     signature at most 4096 canonical bytes; the signal's shape; and, given the receiver, that ``server``
     names it. Steps 4 on need the network."""
     if len(body) > MAX_SIGNAL_BODY_BYTES:
-        raise AgntError("body_too_large", f"The body is larger than {MAX_SIGNAL_BODY_BYTES} bytes.", 413)
+        raise SimonError("body_too_large", f"The body is larger than {MAX_SIGNAL_BODY_BYTES} bytes.", 413)
     signal = parse(body)
     if not isinstance(signal, dict):
         raise invalid("A signal is a JSON object.", field="signal")

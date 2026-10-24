@@ -1,7 +1,7 @@
 import { normalizeAddress, serverOrigin } from '@agnt-protocol/protocol';
 
 /**
- * Every failure this client reports is an AgntError. A server's refusal keeps the server's code, message,
+ * Every failure this client reports is a SimonError. A server's refusal keeps the server's code, message,
  * status, retryable flag and details exactly as sent. Failures with no server answer behind them have
  * `status: null` and one of these codes:
  *
@@ -15,8 +15,8 @@ import { normalizeAddress, serverOrigin } from '@agnt-protocol/protocol';
  *   no_server       the author's domain resolves to no server (`details.outcome`)
  *   bad_document    a document that is not readable as the protocol says (`details.url`)
  */
-export class AgntError extends Error {
-  override readonly name = 'AgntError';
+export class SimonError extends Error {
+  override readonly name = 'SimonError';
   readonly code: string;
   /** The HTTP status of the server's answer, or null when there was none. */
   readonly status: number | null;
@@ -46,12 +46,12 @@ export class AgntError extends Error {
 }
 
 /** A refused argument, named by its field. */
-export const invalid = (field: string, message: string) => new AgntError('invalid', message, { details: { field } });
+export const invalid = (field: string, message: string) => new SimonError('invalid', message, { details: { field } });
 
 /** A server origin as the URL standard writes it, or `invalid`. `http:` is accepted, for local development. */
 export function originArg(field: string, value: string): string {
   const origin = serverOrigin(value, true);
-  if (!origin) throw invalid(field, `${field} is an origin such as https://agnt.example.com, not ${value}.`);
+  if (!origin) throw invalid(field, `${field} is an origin such as https://simon.example.com, not ${value}.`);
   return origin;
 }
 

@@ -4,7 +4,7 @@
  * and text messages kept for the test to read. Agents and people use the real clients.
  *
  *   const world = new World();
- *   const alpha = await world.app('alpha');            // https://agnt.alpha.test, hosting alpha.test
+ *   const alpha = await world.app('alpha');            // https://simon.alpha.test, hosting alpha.test
  *   const ada = await alpha.paired('ada@mail.test');   // an agent paired with mailto:ada@mail.test by a code
  *   await ada.agent.send({ to: ['bob@beta.test'], text: 'hi' });
  *   await ada.approved.updateListing({ listed: true }); // a principal-reserved call, which ada's person approves
@@ -12,8 +12,8 @@
  */
 import type { KeyObject } from 'node:crypto';
 import { generateKey, keyToken, sign, signPairing } from '@agnt-protocol/protocol';
-import { Agent, type Delivered, AgntError, type Fetch } from '@agnt-protocol/client';
-import { createServer, defineConfig, SqliteStore, type AgntServer, type ConfigInput } from '@agnt-protocol/server';
+import { Agent, type Delivered, SimonError, type Fetch } from '@agnt-protocol/client';
+import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from '@agnt-protocol/server';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '@agnt-protocol/server/testing';
 import type { Db } from 'mongodb';
 import type { Email, Mailer } from '../src/adapters/mail.ts';
@@ -59,7 +59,7 @@ export class World {
   readonly net = new FakeNet();
   readonly outbox = new Outbox();
   readonly apps: TestApp[] = [];
-  readonly basics: { name: string; server: AgntServer; store: SqliteStore }[] = [];
+  readonly basics: { name: string; server: SimonServer; store: SqliteStore }[] = [];
 
   /** fetch, answered by the servers on the fake network. */
   readonly fetch: Fetch = async (url, init = {}) => {
@@ -76,12 +76,12 @@ export class World {
     });
   };
 
-  /** An application server at https://agnt.<name>.test, hosting <name>.test. */
+  /** An application server at https://simon.<name>.test, hosting <name>.test. */
   async app(
     name: string,
     opts: { env?: Record<string, string>; config?: Partial<ConfigInput>; scanner?: Scanner | null } = {},
   ): Promise<TestApp> {
-    const origin = `https://agnt.${name}.test`;
+    const origin = `https://simon.${name}.test`;
     const server = defineConfig({
       origin,
       dev: true,
@@ -102,7 +102,7 @@ export class World {
     const rates =
       'discovery=1000000/3600,directoryWrites=1000000/3600,requests=1000000/3600,intros=1000000/3600,codes=1000000/3600,bridgeEmails=1000000/3600,owner=1000000/3600,pages=1000000/3600';
     const config = loadAppConfig(
-      { AGNT_APP_RATES: rates, AGNT_BRIDGE_INBOUND_SECRET: 'bridge-secret', ...opts.env },
+      { SIMON_APP_RATES: rates, SIMON_BRIDGE_INBOUND_SECRET: 'bridge-secret', ...opts.env },
       server,
     );
     const db = await freshDb();
@@ -114,7 +114,7 @@ export class World {
       dns: this.dns,
       http: this.net,
       now: this.clock.now,
-      log: process.env.AGNT_TEST_LOG ? (l, m, f) => console.error(l, m, f ?? '') : () => {},
+      log: process.env.SIMON_TEST_LOG ? (l, m, f) => console.error(l, m, f ?? '') : () => {},
       scanner: opts.scanner === undefined ? testScanner : opts.scanner,
       worker: false,
     });
@@ -126,9 +126,9 @@ export class World {
     return t;
   }
 
-  /** A plain basic server at https://agnt.<name>.test, hosting <name>.test: no application on it. */
+  /** A plain basic server at https://simon.<name>.test, hosting <name>.test: no application on it. */
   async basic(name: string, config: Partial<ConfigInput> = {}) {
-    const origin = `https://agnt.${name}.test`;
+    const origin = `https://simon.${name}.test`;
     const store = new SqliteStore(':memory:');
     const server = createServer({
       config: defineConfig({ origin, hostedDomains: [`${name}.test`], serverKey: generateKey().privateKey, ...config }),
@@ -225,7 +225,7 @@ export class TestApp {
           const answer = await (call as (...a: unknown[]) => Promise<unknown>)(...args);
           if (!isAwaiting(answer)) return answer;
           const decided = await (await this.ownerOf(principal!)).decide(answer.request.id, 'approve');
-          if (decided.error) throw new AgntError(decided.error.code, decided.error.detail);
+          if (decided.error) throw new SimonError(decided.error.code, decided.error.detail);
           return decided.answer;
         };
       },
@@ -275,7 +275,7 @@ export class TestApp {
   /** An agent paired with a key principal by the principal's signature, which can sign in to the owner window. */
   async keyed(local = `keyed${++this.#n}`): Promise<Member & { principal: string; principalKey: KeyObject }> {
     const principalKey = generateKey().privateKey;
-    const principal = `agnt-key:${keyToken(principalKey)}`;
+    const principal = `simon-key:${keyToken(principalKey)}`;
     this.#keys.set(principal, principalKey);
     const key = generateKey().privateKey;
     const address = `${local}@${this.domain}`;
@@ -315,7 +315,7 @@ export class TestApp {
    */
   async signIn(identifier: string): Promise<{ access_token: string; refresh_token: string; client_id: string }> {
     const principal = identifier.includes(':') ? identifier : `mailto:${identifier}`;
-    const typed = principal.startsWith('agnt-key:') ? principal : principal.slice(principal.indexOf(':') + 1);
+    const typed = principal.startsWith('simon-key:') ? principal : principal.slice(principal.indexOf(':') + 1);
     const { fetch } = this.world;
     const post = (path: string, body: Record<string, string>, type = 'application/x-www-form-urlencoded') =>
       fetch(`${this.origin}${path}`, {

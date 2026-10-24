@@ -25,7 +25,7 @@ import {
 } from '@agnt-protocol/protocol';
 import { defineConfig } from '../src/config.ts';
 import type { Request } from '../src/http.ts';
-import { createServer, type AgntServer } from '../src/server.ts';
+import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import { StoreCapacityError } from '../src/store/store.ts';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '../src/testing.ts';
@@ -35,7 +35,7 @@ const DAY = 86_400_000;
 
 /** Real router calls, also usable after the original server and database connection are closed. */
 async function call(
-  server: AgntServer,
+  server: SimonServer,
   key: KeyObject,
   address: string,
   method: string,
@@ -76,7 +76,7 @@ describe('lifecycle router handoffs', () => {
         captured.push({ ...req, headers: { ...req.headers }, body: Buffer.from(req.body) });
         return { status: 204 };
       });
-      const created = await owner.request('POST', '/agnt/webhooks', {
+      const created = await owner.request('POST', '/simon/webhooks', {
         body: JSON.stringify({ url: `${origin}/events?channel=one` }),
       });
       assert.equal(created.status, 201);
@@ -89,20 +89,20 @@ describe('lifecycle router handoffs', () => {
       assert.equal(typeof verify.code, 'string');
 
       const document = readServerDocument(
-        (await owner.request('GET', '/agnt/server', { sign: false })).bytes,
+        (await owner.request('GET', '/simon/server', { sign: false })).bytes,
         alpha.origin,
         fed.clock.now(),
       )!;
       assert.ok(document, 'the webhook signing authority is a readable server document');
       async function verifies(req: Request, body = req.body) {
         const headers = readSignedHeaders(req.headers, fed.clock.now(), { server: true });
-        assert.equal(headers['agnt-server'], alpha.origin);
+        assert.equal(headers['simon-server'], alpha.origin);
         await checkSignedRequest(
-          { method: req.method, origin, actor: headers['agnt-server']!, target: req.target, body },
+          { method: req.method, origin, actor: headers['simon-server']!, target: req.target, body },
           headers,
           {
             now: fed.clock.now(),
-            entry: document.keys.find(k => k.key === headers['agnt-key']) ?? null,
+            entry: document.keys.find(k => k.key === headers['simon-key']) ?? null,
             nonceSeen: () => false,
           },
         );
@@ -112,7 +112,7 @@ describe('lifecycle router handoffs', () => {
       await other.send(other.message([owner.address], 'before webhook verification'));
       await fed.work();
       assert.equal(captured.length, 1, 'an unverified endpoint receives no changed notification');
-      const hook = `/agnt/webhooks/${encodeURIComponent(created.json.id)}`;
+      const hook = `/simon/webhooks/${encodeURIComponent(created.json.id)}`;
       const confirm = (who: typeof owner, code: string) =>
         who.request('POST', `${hook}/verify`, {
           body: JSON.stringify({ code }),
@@ -166,7 +166,7 @@ describe('lifecycle router handoffs', () => {
       await fed.work();
       fed.dns.point(alpha.domain, beta.origin);
       fed.clock.advance(11 * 60_000);
-      const response = await author.request('POST', '/agnt/send-signal', {
+      const response = await author.request('POST', '/simon/send-signal', {
         body: JSON.stringify({ type: 'typing', about: sent.json.id, to: [recipient.address] }),
       });
       assert.deepEqual([response.status, response.json.code], [409, 'address_not_served']);
@@ -197,7 +197,7 @@ describe('lifecycle router handoffs', () => {
         (
           await fed.net.request({
             method: 'POST',
-            url: `${alpha.origin}/agnt/signal`,
+            url: `${alpha.origin}/simon/signal`,
             body: canonicalBytes(signal),
             maxBytes: 1 << 20,
           })
@@ -277,12 +277,12 @@ describe('lifecycle router handoffs', () => {
   });
 
   it('rejects tampered, cross-account and cross-origin tokens and accepts a checkpoint after a database reopen', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-checkpoint-'));
-    const file = path.join(dir, 'agnt.sqlite');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-checkpoint-'));
+    const file = path.join(dir, 'simon.sqlite');
     const clock = new Clock(),
       dns = new FakeDns(),
       net = new FakeNet();
-    const origin = 'https://agnt.checkpoints.test';
+    const origin = 'https://simon.checkpoints.test';
     const config = defineConfig({ origin, hostedDomains: ['checkpoints.test'], serverKey: generateKey().privateKey });
     dns.point('checkpoints.test', origin);
     let store = new SqliteStore(file);
@@ -294,30 +294,30 @@ describe('lifecycle router handoffs', () => {
       const address = 'a@checkpoints.test',
         other = 'b@checkpoints.test';
       assert.equal(
-        (await call(server, a.privateKey, address, 'POST', '/agnt/register', { key: a.key, address })).status,
+        (await call(server, a.privateKey, address, 'POST', '/simon/register', { key: a.key, address })).status,
         200,
       );
       assert.equal(
-        (await call(server, b.privateKey, other, 'POST', '/agnt/register', { key: b.key, address: other })).status,
+        (await call(server, b.privateKey, other, 'POST', '/simon/register', { key: b.key, address: other })).status,
         200,
       );
-      const first = await call(server, a.privateKey, address, 'GET', '/agnt/sync');
+      const first = await call(server, a.privateKey, address, 'GET', '/simon/sync');
       assert.equal(first.status, 200);
       const token = first.json.token;
       assert.equal(typeof token, 'string');
-      const sync = `/agnt/sync?since=${encodeURIComponent(token)}`;
+      const sync = `/simon/sync?since=${encodeURIComponent(token)}`;
       const damaged = Buffer.from(token, 'base64url');
       damaged[13] ^= 1;
       assert.deepEqual(
         [
-          (await call(server, a.privateKey, address, 'GET', `/agnt/sync?since=${damaged.toString('base64url')}`))
+          (await call(server, a.privateKey, address, 'GET', `/simon/sync?since=${damaged.toString('base64url')}`))
             .status,
           (await call(server, b.privateKey, other, 'GET', sync)).status,
         ],
         [410, 410],
       );
 
-      const foreignOrigin = 'https://agnt.foreign.test';
+      const foreignOrigin = 'https://simon.foreign.test';
       const shared = await store.value('sync-secret', origin, clock.now().toISOString());
       assert.ok(shared, 'the first checkpoint persisted its secret');
       await store.setValue('sync-secret', foreignOrigin, shared, null);
@@ -360,7 +360,7 @@ describe('lifecycle router handoffs', () => {
         },
         b.privateKey,
       );
-      assert.equal((await call(server, b.privateKey, other, 'POST', '/agnt/send', message)).status, 200);
+      assert.equal((await call(server, b.privateKey, other, 'POST', '/simon/send', message)).status, 200);
       await server.work();
       const resumed = await call(server, a.privateKey, address, 'GET', sync);
       assert.equal(resumed.status, 200);
@@ -445,7 +445,7 @@ describe('lifecycle router handoffs', () => {
       const another = generateKey();
       assert.equal(
         (
-          await owner.request('POST', '/agnt/keys', {
+          await owner.request('POST', '/simon/keys', {
             body: JSON.stringify({
               key: another.key,
               proof: sign(another.privateKey, addKeyProofString(owner.address, another.key)),
@@ -455,7 +455,7 @@ describe('lifecycle router handoffs', () => {
         200,
       );
       assert.equal(
-        (await owner.request('GET', '/agnt/sync', { key: another.privateKey })).status,
+        (await owner.request('GET', '/simon/sync', { key: another.privateKey })).status,
         410,
         'one device never accepts the gap for another',
       );
@@ -492,7 +492,7 @@ describe('lifecycle router handoffs', () => {
           old = host.newAgent(),
           fresh = host.newAgent();
         const principal = generateKey(),
-          forValue = `agnt-key:${principal.key}`;
+          forValue = `simon-key:${principal.key}`;
         const at = fed.clock.now().toISOString(),
           future = new Date(fed.clock.t + 60_000).toISOString();
         await host.store.createAgent({
@@ -512,7 +512,7 @@ describe('lifecycle router handoffs', () => {
             ? { headers: { for: forValue, pairing: signPairing(principal.privateKey, address, forValue) } }
             : {},
         );
-        assert.equal((await old.request('GET', '/agnt/account')).status, 200);
+        assert.equal((await old.request('GET', '/simon/account')).status, 200);
         if (by === 'principal') {
           assert.equal(
             (
@@ -528,16 +528,16 @@ describe('lifecycle router handoffs', () => {
           await fresh.recover({ address });
           assert.equal((await fresh.recover({ address, code: host.code(address) })).status, 200);
         }
-        for (const route of ['/agnt/account', '/agnt/sync']) {
+        for (const route of ['/simon/account', '/simon/sync']) {
           assert.deepEqual(
             [(await old.request('GET', route)).status, (await old.request('GET', route)).json.code],
             [401, 'unknown_key'],
           );
           assert.equal((await fresh.request('GET', route)).status, 200);
         }
-        const state = (await fresh.request('GET', '/agnt/account')).json;
+        const state = (await fresh.request('GET', '/simon/account')).json;
         assert.equal(state.authorizedKeys, undefined);
-        const document = (await fresh.request('GET', `/agnt/agents/${address}`, { sign: false })).json;
+        const document = (await fresh.request('GET', `/simon/agents/${address}`, { sign: false })).json;
         assert.equal(document.authorizedKeys, undefined);
         assert.equal(document.keys.find((key: { key: string }) => key.key === old.token).revoked, future);
         assert.equal(verifyMessage(historic, document.keys), true, 'historical cryptographic validity is preserved');
@@ -581,7 +581,7 @@ describe('lifecycle router handoffs', () => {
         const device = generateKey();
         assert.equal(
           (
-            await owner.request('POST', '/agnt/keys', {
+            await owner.request('POST', '/simon/keys', {
               body: JSON.stringify({
                 key: device.key,
                 proof: sign(device.privateKey, addKeyProofString(owner.address, device.key)),
@@ -594,7 +594,7 @@ describe('lifecycle router handoffs', () => {
         observe = true;
         let finished = false;
         const poll = owner
-          .request('GET', `/agnt/sync?since=${encodeURIComponent(token)}&wait=60`, { key: device.privateKey })
+          .request('GET', `/simon/sync?since=${encodeURIComponent(token)}&wait=60`, { key: device.privateKey })
           .then(result => {
             finished = true;
             waiting();
@@ -602,12 +602,12 @@ describe('lifecycle router handoffs', () => {
           });
         await observed;
         assert.equal(finished, false, 'the signed request reached an empty sync page and actually waited');
-        assert.equal((await owner.request('DELETE', `/agnt/keys/${encodeURIComponent(device.key)}`)).status, 200);
+        assert.equal((await owner.request('DELETE', `/simon/keys/${encodeURIComponent(device.key)}`)).status, 200);
         await sender.send(sender.message([owner.address], 'must not reach the revoked device'));
         await fed.work();
         const res = await poll;
         assert.deepEqual([res.status, res.json.code], [401, 'bad_signature']);
-        assert.equal(res.headers['www-authenticate'], 'AGNT');
+        assert.equal(res.headers['www-authenticate'], 'SIMON');
         assert.equal(res.json.messages, undefined);
       } finally {
         await fed.close();

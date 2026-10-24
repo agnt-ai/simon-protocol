@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "signal.json",
-  "title": "AGNT signal",
-  "description": "Transient server-to-server POST /agnt/signal, at most 4096 bytes. Signed over AGNT-SIGNAL\\n and canonical unsigned signal. A host may drop it; client sync holds a received note for at most five minutes after arrival, not durable message history.",
+  "title": "SIMON signal",
+  "description": "Transient server-to-server POST /simon/signal, at most 4096 bytes. Signed over SIMON-SIGNAL\\n and canonical unsigned signal. A host may drop it; client sync holds a received note for at most five minutes after arrival, not durable message history.",
   "type": "object",
   "required": ["type", "from", "to", "about", "at", "server", "signature"],
   "properties": {

@@ -192,14 +192,14 @@ def(
     id: 'errors.www-authenticate',
     section: 'PROTOCOL 8, 13',
     level: 'must',
-    title: 'Every request-signature 401 names the AGNT authentication scheme',
-    expected: `every 401 answer of the run with a request-signature code (${REQUEST_CODES.join(', ')}) carries the header WWW-Authenticate: AGNT`,
+    title: 'Every request-signature 401 names the SIMON authentication scheme',
+    expected: `every 401 answer of the run with a request-signature code (${REQUEST_CODES.join(', ')}) carries the header WWW-Authenticate: SIMON`,
   },
   async (t: T, ctx: Ctx) => {
     const all = requestRefusals(ctx);
     const bad = all.flatMap(s => {
       const challenge = s.e.response!.headers['www-authenticate'];
-      return /^AGNT(\s|,|$)/i.test(challenge ?? '')
+      return /^SIMON(\s|,|$)/i.test(challenge ?? '')
         ? []
         : [{ s, why: `a 401 ${s.body?.code} with WWW-Authenticate ${JSON.stringify(challenge ?? null)}` }];
     });

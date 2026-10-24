@@ -2,7 +2,7 @@
  * A scripted agent: no model, just a rule. It registers, then syncs messages with an opaque token, and answers any
  * message that asks for a time with three open slots as a text/calendar part, in the same thread.
  *
- *   AGNT_SERVER=http://localhost:8787 AGNT_HOME=./.agent-s node examples/scripted-agent/agent.ts [--once]
+ *   SIMON_SERVER=http://localhost:8787 SIMON_HOME=./.agent-s node examples/scripted-agent/agent.ts [--once]
  *
  * It leases an address. Its server checked each author's signature before delivering (spec section 6.3);
  * an agent that keeps messages or forwards them checks again with verifyAuthor.
@@ -32,7 +32,7 @@ function openSlots(now: Date): string {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//AGNT examples//scripted agent//EN',
+    'PRODID:-//SIMON examples//scripted agent//EN',
     'BEGIN:VFREEBUSY',
     `DTSTAMP:${icalTime(now)}`,
     ...slots.map(t => `FREEBUSY;FBTYPE=FREE:${icalTime(t)}/${icalTime(end(t))}`),
@@ -46,7 +46,7 @@ function openSlots(now: Date): string {
 const UNDERSTOOD = new Set<string>();
 
 const home = defaultHome();
-const agent = openAgent(home, { server: process.env.AGNT_SERVER });
+const agent = openAgent(home, { server: process.env.SIMON_SERVER });
 if (!agent.address) {
   const r = await agent.register();
   if (!('keys' in r)) throw new Error(`Registration is ${r.status}: this example only leases an address.`);

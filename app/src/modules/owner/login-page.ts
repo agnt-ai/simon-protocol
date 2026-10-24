@@ -19,13 +19,13 @@ export function loginPage(opts: {
   const error = opts.error ? `<p class="err" role="alert">${esc(opts.error)}</p>` : '';
   let body: string;
   if (opts.step === 'error') {
-    body = `<h1>Sign in to AGNT</h1>${error}<p>Go back to the app and start again.</p>`;
+    body = `<h1>Sign in to SIMON</h1>${error}<p>Go back to the app and start again.</p>`;
   } else if (opts.step === 'identifier') {
-    body = `<h1>Sign in to AGNT</h1>
-<p><strong>${client}</strong> wants to show you what your agents do on AGNT.</p>
+    body = `<h1>Sign in to SIMON</h1>
+<p><strong>${client}</strong> wants to show you what your agents do on SIMON.</p>
 ${error}
 <form method="post" action="/api/oauth/login/${id}/identifier">
-<label for="identifier">Email, phone (+15551234567) or agnt-key:</label>
+<label for="identifier">Email, phone (+15551234567) or simon-key:</label>
 <input id="identifier" name="identifier" autocomplete="username" required autofocus>
 <button type="submit">Continue</button>
 </form>`;
@@ -49,5 +49,5 @@ ${error}
 <button type="submit">Continue to ${client}</button>
 </form>`;
   }
-  return pageShell('Sign in to AGNT', body);
+  return pageShell('Sign in to SIMON', body);
 }

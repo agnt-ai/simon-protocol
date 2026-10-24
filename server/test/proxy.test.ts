@@ -10,13 +10,13 @@ import { defineConfig, DEFAULT_RATES, loadConfig } from '../src/config.ts';
 import { clientIp } from '../src/http.ts';
 import { parseNetwork, type Network } from '../src/net/ip.ts';
 import { RateLimiter } from '../src/rate.ts';
-import { createServer, type AgntServer } from '../src/server.ts';
+import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import { toRequest } from '../src/testing.ts';
 
 const base = {
-  AGNT_ORIGIN: 'https://agnt.example.com',
-  AGNT_SERVER_KEY: `ed25519:${Buffer.alloc(32, 7).toString('base64url')}`,
+  SIMON_ORIGIN: 'https://simon.example.com',
+  SIMON_SERVER_KEY: `ed25519:${Buffer.alloc(32, 7).toString('base64url')}`,
 };
 const request = (remoteAddress: string, headers: Record<string, string> = {}) =>
   ({ socket: { remoteAddress }, headers }) as unknown as IncomingMessage;
@@ -43,12 +43,12 @@ describe('behind a tunnel', () => {
   });
 
   it('takes a listen address and a header name, and refuses anything else', () => {
-    const config = loadConfig({ ...base, AGNT_LISTEN_HOST: '127.0.0.1', AGNT_CLIENT_IP_HEADER: 'CF-Connecting-IP' });
+    const config = loadConfig({ ...base, SIMON_LISTEN_HOST: '127.0.0.1', SIMON_CLIENT_IP_HEADER: 'CF-Connecting-IP' });
     assert.equal(config.listenHost, '127.0.0.1');
     assert.equal(config.clientIpHeader, 'cf-connecting-ip');
     assert.equal(loadConfig(base).listenHost, null);
-    assert.throws(() => loadConfig({ ...base, AGNT_LISTEN_HOST: 'localhost.example' }), /listenHost/);
-    assert.throws(() => loadConfig({ ...base, AGNT_CLIENT_IP_HEADER: 'x y' }), /clientIpHeader/);
+    assert.throws(() => loadConfig({ ...base, SIMON_LISTEN_HOST: 'localhost.example' }), /listenHost/);
+    assert.throws(() => loadConfig({ ...base, SIMON_CLIENT_IP_HEADER: 'x y' }), /clientIpHeader/);
   });
 });
 
@@ -86,9 +86,9 @@ describe('behind a load balancer', () => {
   it('reads the proxy networks and the keep-alive timeout, and refuses anything else', () => {
     const c = loadConfig({
       ...base,
-      AGNT_CLIENT_IP_HEADER: 'X-Forwarded-For',
-      AGNT_TRUSTED_PROXIES: '10.0.0.0/16, fd00:ec2::/32',
-      AGNT_KEEP_ALIVE_TIMEOUT: '65',
+      SIMON_CLIENT_IP_HEADER: 'X-Forwarded-For',
+      SIMON_TRUSTED_PROXIES: '10.0.0.0/16, fd00:ec2::/32',
+      SIMON_KEEP_ALIVE_TIMEOUT: '65',
     });
     assert.deepEqual(
       c.trustedProxies.map(n => n.cidr),
@@ -96,12 +96,12 @@ describe('behind a load balancer', () => {
     );
     assert.equal(c.keepAliveSeconds, 65);
     assert.deepEqual([loadConfig(base).trustedProxies, loadConfig(base).keepAliveSeconds], [[], 5]);
-    const header = { ...base, AGNT_CLIENT_IP_HEADER: 'x-forwarded-for' };
-    assert.throws(() => loadConfig({ ...base, AGNT_TRUSTED_PROXIES: '10.0.0.0/16' }), /clientIpHeader/);
-    assert.throws(() => loadConfig({ ...header, AGNT_TRUSTED_PROXIES: '0.0.0.0/0' }), /trustedProxies/);
-    assert.throws(() => loadConfig({ ...header, AGNT_TRUSTED_PROXIES: '10.0.0.1' }), /trustedProxies/);
-    assert.throws(() => loadConfig({ ...header, AGNT_TRUSTED_PROXIES: '::ffff:10.0.0.0/104' }), /as IPv4/);
-    assert.throws(() => loadConfig({ ...base, AGNT_KEEP_ALIVE_TIMEOUT: '0' }), /keepAliveSeconds/);
+    const header = { ...base, SIMON_CLIENT_IP_HEADER: 'x-forwarded-for' };
+    assert.throws(() => loadConfig({ ...base, SIMON_TRUSTED_PROXIES: '10.0.0.0/16' }), /clientIpHeader/);
+    assert.throws(() => loadConfig({ ...header, SIMON_TRUSTED_PROXIES: '0.0.0.0/0' }), /trustedProxies/);
+    assert.throws(() => loadConfig({ ...header, SIMON_TRUSTED_PROXIES: '10.0.0.1' }), /trustedProxies/);
+    assert.throws(() => loadConfig({ ...header, SIMON_TRUSTED_PROXIES: '::ffff:10.0.0.0/104' }), /as IPv4/);
+    assert.throws(() => loadConfig({ ...base, SIMON_KEEP_ALIVE_TIMEOUT: '0' }), /keepAliveSeconds/);
   });
 
   it('limits each client by the address the balancer saw, over real HTTP', async () => {
@@ -163,19 +163,19 @@ describe("a hosting service's own networks", () => {
   });
 
   it('are read from the environment, each /8 or narrower', () => {
-    const c = loadConfig({ ...base, AGNT_RATE_EXEMPT_NETWORKS: '192.0.2.0/24, 2001:db8::/32' });
+    const c = loadConfig({ ...base, SIMON_RATE_EXEMPT_NETWORKS: '192.0.2.0/24, 2001:db8::/32' });
     assert.deepEqual(
       c.rateExemptNetworks.map(n => n.cidr),
       ['192.0.2.0/24', '2001:db8:0:0:0:0:0:0/32'],
     );
     assert.deepEqual(loadConfig(base).rateExemptNetworks, []);
-    assert.throws(() => loadConfig({ ...base, AGNT_RATE_EXEMPT_NETWORKS: '0.0.0.0/0' }), /rateExemptNetworks/);
+    assert.throws(() => loadConfig({ ...base, SIMON_RATE_EXEMPT_NETWORKS: '0.0.0.0/0' }), /rateExemptNetworks/);
   });
 });
 
 describe('the health check', () => {
-  const config = defineConfig({ origin: 'https://agnt.example.com', dev: true, database: ':memory:' });
-  const check = (server: AgntServer) =>
+  const config = defineConfig({ origin: 'https://simon.example.com', dev: true, database: ':memory:' });
+  const check = (server: SimonServer) =>
     server.handle(toRequest('GET', new URL('/health', config.origin), {}, Buffer.alloc(0), '203.0.113.9'));
 
   it('answers ok, and nothing else, while the store answers', async () => {

@@ -1,11 +1,11 @@
 /**
  * Signals: small, short-lived notes from one server to another about a message (spec section 6.4),
- * `POST /agnt/signal`:
+ * `POST /simon/signal`:
  *
  *   { type, from, to, about, at, server, signature }
  *
  * A signal's `type` is a registry name, such as `typing`, `collected` or `read`; a server never reads it, and
- * passes on a type it does not know. A signal is signed by the server of `from`'s domain, over `AGNT-SIGNAL`
+ * passes on a type it does not know. A signal is signed by the server of `from`'s domain, over `SIMON-SIGNAL`
  * and the canonical signal without `signature`, as an envelope is. It is never stored, so unlike a delivery
  * it has no repeat window: a replay inside its 300 seconds says again what was true. Any server may drop any
  * signal it receives. Members a receiver does not know are ignored, and signed.
@@ -46,12 +46,12 @@ const HEX64 = /^[0-9a-f]{64}$/;
 
 export const signSignal = (s: UnsignedSignal, serverKey: string | KeyObject): Signal => ({
   ...s,
-  signature: sign(serverKey, signingBytes('AGNT-SIGNAL', s)),
+  signature: sign(serverKey, signingBytes('SIMON-SIGNAL', s)),
 });
 
 /** Whether one of the sending server's keys valid at `at` (when the signal arrives) signed it. */
 export const verifySignal = (s: Signal, serverKeys: readonly KeyEntry[], at: Date) =>
-  signedByAny(serverKeys, at, signingBytes('AGNT-SIGNAL', s), s.signature);
+  signedByAny(serverKeys, at, signingBytes('SIMON-SIGNAL', s), s.signature);
 
 /**
  * Steps 1 to 3 of spec section 6.4: the body at most 16384 bytes (413), parsed, and the signal without its

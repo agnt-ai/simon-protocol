@@ -49,7 +49,7 @@ const post = (t: T, ctx: Ctx, body: object | string, label?: string) =>
     {
       method: 'POST',
       origin: ctx.origin,
-      target: '/agnt/signal',
+      target: '/simon/signal',
       body: typeof body === 'string' ? body : canonicalize(body),
     },
     { label },

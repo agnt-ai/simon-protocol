@@ -8,7 +8,7 @@
   },
   "version": "0.1.0",
   "private": true,
-  "description": "Client for the AGNT Protocol: an agent's six calls to its own server, signed, and verification of what other agents send.",
+  "description": "Client for the SIMON Protocol: an agent's six calls to its own server, signed, and verification of what other agents send.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

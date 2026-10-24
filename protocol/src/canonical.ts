@@ -269,7 +269,7 @@ export function unsignedBytes(signed: object): Buffer {
 }
 
 /** The line that starts the bytes of each kind of signed object, so no signature can be read as another kind. */
-export type SigningContext = 'AGNT-MESSAGE' | 'AGNT-ENVELOPE' | 'AGNT-CLAIMS' | 'AGNT-SIGNAL' | 'AGNT-AGENT';
+export type SigningContext = 'SIMON-MESSAGE' | 'SIMON-ENVELOPE' | 'SIMON-CLAIMS' | 'SIMON-SIGNAL' | 'SIMON-AGENT';
 
 /** What is signed: the context line, a newline, and the canonical bytes without `signature`. */
 export const signingBytes = (context: SigningContext, signed: object): Buffer =>

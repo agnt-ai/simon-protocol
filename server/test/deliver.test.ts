@@ -24,7 +24,7 @@ const HOUR = 3_600_000;
 describe('deliver (spec section 6.3)', async () => {
   const fed = new Federation();
   after(() => fed.close());
-  const alpha = await fed.server('alpha', { config: { trustedClaimServers: ['https://agnt.trusted.test'] } });
+  const alpha = await fed.server('alpha', { config: { trustedClaimServers: ['https://simon.trusted.test'] } });
   const bob = await alpha.agent('bob');
   const peer = new Peer(fed, 'peer');
   const zed = peer.agent('zed');
@@ -74,7 +74,7 @@ describe('deliver (spec section 6.3)', async () => {
 
   it('5. refuses an envelope for another server, or for recipients not in to or not served here', async () => {
     const m = peer.message(zed, [bob.address], 'x');
-    assert.deepEqual(await answer(peer.envelope(m, { server: 'https://agnt.beta.test' })), [400, 'invalid', 'server']);
+    assert.deepEqual(await answer(peer.envelope(m, { server: 'https://simon.beta.test' })), [400, 'invalid', 'server']);
     assert.deepEqual(await answer(peer.envelope(m, { recipients: ['cat@alpha.test'] })), [
       400,
       'invalid',
@@ -90,15 +90,15 @@ describe('deliver (spec section 6.3)', async () => {
 
   it('6. answers 503 when the from domain cannot be resolved now, 403 when it names no server or this one', async () => {
     const m = peer.message(zed, [bob.address], 'x');
-    fed.dns.failing.add('_agnt.peer.test');
+    fed.dns.failing.add('_simon.peer.test');
     fed.clock.advance(11 * 60_000); // past the resolution cache
     assert.deepEqual(await answer(peer.envelope(m)), [503, 'unavailable', undefined]);
-    fed.dns.failing.delete('_agnt.peer.test');
+    fed.dns.failing.delete('_simon.peer.test');
     fed.clock.advance(61_000); // past the one minute a temporary outcome is remembered
 
     const lost = new Peer(fed, 'lost');
     const l = lost.agent('l');
-    fed.dns.records.delete('_agnt.lost.test');
+    fed.dns.records.delete('_simon.lost.test');
     assert.deepEqual(await answer(lost.envelope(lost.message(l, [bob.address], 'x'))), [
       403,
       'bad_signature',
@@ -294,7 +294,7 @@ describe('deliver (spec section 6.3)', async () => {
     // An agent whose principal is a key: the principal's current email, on the carrier's domain or not.
     const kai = peer.agent('kai', 'paired');
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const known = identifier(kai, 'principal', `mailto:kim@${peer.domain}`);
     const pairing = signPairing(principal.privateKey, kai, forValue);
     await post(
@@ -378,7 +378,7 @@ describe("the server's bound beside the message", () => {
 });
 
 describe("a domain's move loses no mail (spec section 6.3)", async () => {
-  /** A count of TXT lookups of `_agnt.<domain>`. */
+  /** A count of TXT lookups of `_simon.<domain>`. */
   const counting = (fed: Federation) => {
     const counts = new Map<string, number>();
     const txt = fed.dns.txt.bind(fed.dns);
@@ -386,7 +386,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
       counts.set(name, (counts.get(name) ?? 0) + 1);
       return txt(name);
     };
-    return (domain: string) => counts.get(`_agnt.${domain}`) ?? 0;
+    return (domain: string) => counts.get(`_simon.${domain}`) ?? 0;
   };
 
   it('refreshes cached self-routes and absences before refusing a carrier that moved', async () => {
@@ -398,7 +398,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
         const peer = new Peer(fed, 'moving');
         const x = peer.agent('x');
         if (prior === 'self') fed.dns.point('moving.test', alpha.origin);
-        else fed.dns.records.delete('_agnt.moving.test');
+        else fed.dns.records.delete('_simon.moving.test');
         const first = await peer.post(alpha, peer.envelope(peer.message(x, [bob.address], 'cache old route')));
         assert.equal(first.status, 403);
         fed.dns.point('moving.test', peer.origin);
@@ -442,7 +442,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     assert.equal((await forged()).json.code, 'bad_signature');
     assert.equal(lookups('mover.test'), settled + 1, 'a minute later, once more');
     fed.clock.advance(61_000);
-    fed.dns.failing.add('_agnt.mover.test');
+    fed.dns.failing.add('_simon.mover.test');
     const failing = await forged();
     assert.deepEqual([failing.status, failing.json.code], [503, 'unavailable'], 'a re-resolution that fails for now');
     await fed.close();
@@ -459,7 +459,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     const deliver = async (p: Peer, m: Message, ip: string) => {
       const body = canonicalBytes(p.envelope(m));
       const res = await alpha.server.handle(
-        toRequest('POST', new URL(`${alpha.origin}/agnt/deliver`), { 'content-type': 'application/json' }, body, ip),
+        toRequest('POST', new URL(`${alpha.origin}/simon/deliver`), { 'content-type': 'application/json' }, body, ip),
       );
       return { status: res.status, code: (res.json as { code?: string })?.code };
     };
@@ -489,7 +489,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     const honest = new Peer(fed, 'honest');
     const [s, h] = [spent.agent('s'), honest.agent('h')];
     const to = (p: Peer, m: Message) => signEnvelope({ message: m, server: alpha.origin, recipients: m.to }, p.key);
-    fed.dns.point('moving.test', 'https://agnt.elsewhere.test');
+    fed.dns.point('moving.test', 'https://simon.elsewhere.test');
     // The spent carrier's one lookup caches moving.test as elsewhere.
     assert.equal((await spent.post(alpha, to(spent, spent.message(s, ['bob@moving.test'], '1')))).status, 400);
     fed.dns.point('moving.test', alpha.origin);
@@ -506,7 +506,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     const alpha = await fed.server('alpha');
     const peer = new Peer(fed, 'peer');
     const zed = peer.agent('zed');
-    fed.dns.point('moving.test', 'https://agnt.elsewhere.test');
+    fed.dns.point('moving.test', 'https://simon.elsewhere.test');
     const first = peer.message(zed, ['bob@moving.test'], 'first');
     const to = (m: Message) => signEnvelope({ message: m, server: alpha.origin, recipients: m.to }, peer.key);
     const refused = await peer.post(alpha, to(first));
@@ -528,7 +528,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
       fed.net.hosts.set(`https://${d}`, async () => {
         asked.set(d, (asked.get(d) ?? 0) + 1);
         if (asked.get(d)! > 1) fed.clock.advance(21_000);
-        return { status: 200, json: { server: 'https://agnt.elsewhere.test' } };
+        return { status: 200, json: { server: 'https://simon.elsewhere.test' } };
       });
     }
     const to = (m: Message) => signEnvelope({ message: m, server: alpha.origin, recipients: m.to }, peer.key);
@@ -566,7 +566,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     fed.dns.point('dest.test', old.origin);
     const { json } = await ada.send(ada.message(['bob@dest.test'], 'to a domain about to move'));
     await fed.work();
-    const status = async () => (await ada.request('GET', `/agnt/sent/${json.id}`)).json.servers[0];
+    const status = async () => (await ada.request('GET', `/simon/sent/${json.id}`)).json.servers[0];
     assert.equal((await status()).status, 'pending', 'retried, not failed');
     const next = new Peer(fed, 'newdest');
     fed.dns.point('dest.test', next.origin);
@@ -583,13 +583,13 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     const sent = await ada.send(ada.message([stuck.agent('bo')], 'refused for good'));
     for (
       let i = 0;
-      i < 12 && (await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0].status === 'pending';
+      i < 12 && (await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0].status === 'pending';
       i++
     ) {
       await fed.work();
       fed.clock.advance(10 * 60_000);
     }
-    const last = (await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0];
+    const last = (await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0];
     assert.deepEqual([last.status, last.reason], ['failed', 'invalid']);
     assert.ok(stuck.delivered > 2, `${stuck.delivered} attempts`);
     // Any other 400 is final at once.
@@ -597,7 +597,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     other.refuse = problem(400, 'invalid', { field: 'message' });
     const plain = await ada.send(ada.message([other.agent('oz')], 'refused at once'));
     await fed.work();
-    assert.equal((await ada.request('GET', `/agnt/sent/${plain.json.id}`)).json.servers[0].status, 'failed');
+    assert.equal((await ada.request('GET', `/simon/sent/${plain.json.id}`)).json.servers[0].status, 'failed');
     await fed.close();
   });
 
@@ -607,7 +607,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     const ada = await alpha.agent('ada');
     const strict = new Peer(fed, 'strict');
     strict.refuse = problem(403, 'bad_signature');
-    const status = async (id: string) => (await ada.request('GET', `/agnt/sent/${id}`)).json.servers[0];
+    const status = async (id: string) => (await ada.request('GET', `/simon/sent/${id}`)).json.servers[0];
     const early = await ada.send(ada.message([strict.agent('sam')], 'just after a move'));
     await fed.work();
     assert.equal((await status(early.json.id)).status, 'pending', 'serving the domain for less than an hour');
@@ -624,7 +624,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     await fed.work();
     assert.equal((await status(early.json.id)).status, 'failed', 'the early one stops once the hour is over');
     // The domain moves away and back with no send in between: this server begins serving it again.
-    fed.dns.point('alpha.test', 'https://agnt.elsewhere.test');
+    fed.dns.point('alpha.test', 'https://simon.elsewhere.test');
     fed.clock.advance(2 * 3600_000);
     fed.dns.point('alpha.test', alpha.origin);
     fed.clock.advance(11 * 60_000); // past the cached answer naming elsewhere
@@ -642,11 +642,11 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
       peer.refuse = problem(500, 'invalid');
       const sent = await ada.send(ada.message([peer.agent('bob')], 'transient code is not migration state'));
       await fed.work();
-      assert.equal((await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0].status, 'pending');
+      assert.equal((await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0].status, 'pending');
       peer.refuse = null;
       fed.clock.advance(2 * 60_000);
       await fed.work();
-      assert.equal((await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0].status, 'delivered');
+      assert.equal((await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0].status, 'delivered');
     } finally {
       await fed.close();
     }
@@ -671,7 +671,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
         fed.clock.advance(5 * 60_000);
         await fed.work();
       }
-      assert.equal((await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0].status, 'delivered');
+      assert.equal((await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0].status, 'delivered');
       assert.ok(next.delivered > 0);
       const cutoff = await alpha.store.value<{ until: string }>(
         'delivery-move-cutoff',
@@ -696,7 +696,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
       const attempts = peer.delivered;
       fed.clock.advance(3 * 3600_000);
       await fed.work();
-      const row = (await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0];
+      const row = (await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0];
       assert.deepEqual([row.status, row.reason, peer.delivered], ['failed', 'invalid', attempts]);
     } finally {
       await fed.close();
@@ -738,7 +738,7 @@ describe("a domain's move loses no mail (spec section 6.3)", async () => {
     await alpha.store.setValue('serving-since', 'alpha.test', new Date(fed.clock.t - 86_400_000).toISOString(), null);
     const sent = await ada.send(ada.message([strict.agent('sam')], 'after the upgrade'));
     await fed.work();
-    const row = (await ada.request('GET', `/agnt/sent/${sent.json.id}`)).json.servers[0];
+    const row = (await ada.request('GET', `/simon/sent/${sent.json.id}`)).json.servers[0];
     assert.equal(row.status, 'pending', 'retried: the note began with this send');
     await fed.close();
   });

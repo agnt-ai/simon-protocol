@@ -100,7 +100,7 @@ describe('extensions', async () => {
   const alpha = await fed.server('alpha', { extensions: [email, actsFor, whoami] });
   const beta = await fed.server('beta', {
     extensions: [policy, allowAll, failing, recorder],
-    config: { trustedClaimServers: ['https://agnt.alpha.test'] },
+    config: { trustedClaimServers: ['https://simon.alpha.test'] },
   });
   const ann = alpha.newAgent();
   const bob = await beta.agent('bob');
@@ -131,7 +131,7 @@ describe('extensions', async () => {
   it('publishes the claims it makes about a published message beside it, signed for the message', async () => {
     const post = ann.message([], 'a public post', { headers: { for: 'mailto:ann@example.org' } });
     const { json: sent } = await ann.send(post);
-    const res = await ann.request('GET', `/agnt/messages/${sent.id}`, { sign: false });
+    const res = await ann.request('GET', `/simon/messages/${sent.id}`, { sign: false });
     assert.equal(res.status, 200);
     assert.deepEqual(res.json.claims, [
       {
@@ -143,7 +143,7 @@ describe('extensions', async () => {
       },
     ]);
     const doc = readServerDocument(
-      (await ann.request('GET', '/agnt/server', { sign: false })).bytes,
+      (await ann.request('GET', '/simon/server', { sign: false })).bytes,
       alpha.origin,
       fed.clock.now(),
     )!;
@@ -181,10 +181,10 @@ describe('extensions', async () => {
   });
 
   it('refuses an extension route that would replace a core one', () => {
-    const config = defineConfig({ origin: 'https://agnt.x.test', serverKey: generateKey().privateKey });
+    const config = defineConfig({ origin: 'https://simon.x.test', serverKey: generateKey().privateKey });
     const shadow: Extension = {
       name: 'shadow',
-      routes: [{ method: 'POST', path: '/agnt/send', handle: () => json({}) }],
+      routes: [{ method: 'POST', path: '/simon/send', handle: () => json({}) }],
     };
     assert.throws(
       () => createServer({ config, store: new SqliteStore(), extensions: [shadow], worker: false }),
@@ -292,7 +292,7 @@ describe('extensions acting for an application', async () => {
 
   it('tells listeners when a key principal recovered its agent', async () => {
     const principal = generateKey();
-    const forValue = `agnt-key:${principal.key}`;
+    const forValue = `simon-key:${principal.key}`;
     const old = gamma.newAgent();
     await old.register({
       address: 'kp@gamma.test',
@@ -377,7 +377,7 @@ describe('a host deciding who takes names', async () => {
   it('asks on each call of a pairing, so the proof goes on each', async () => {
     const principal = generateKey();
     const ann = delta.newAgent();
-    const body = { address: 'ann@delta.test', for: `agnt-key:${principal.key}` };
+    const body = { address: 'ann@delta.test', for: `simon-key:${principal.key}` };
     const before = asked.length;
     const first = await ann.register({ ...body, 'delta.test:proof': proof('ann@delta.test', ann.token) });
     assert.deepEqual([first.status, first.json.status], [202, 'pairing_required']);

@@ -262,7 +262,7 @@ export class Resolver {
         : await this.#once(`server ${origin}`, opts.charge, new URL(origin).hostname, async () => {
             let fetched: ServerDocument | null | typeof TEMPORARY;
             try {
-              const res = await this.#getDocument(`${origin}/agnt/server`);
+              const res = await this.#getDocument(`${origin}/simon/server`);
               fetched = res && readServerDocument(res.body, origin, this.#d.now());
             } catch {
               fetched = TEMPORARY;
@@ -290,7 +290,7 @@ export class Resolver {
     const hit = this.#agents.get(key, now.getTime());
     if (hit && (!refresh || (hit.value === null && typeof charge === 'function'))) return hit.value;
     const res = await this.#once(`agent ${key}`, charge, new URL(server).hostname, () =>
-      this.#getDocument(`${server}/agnt/agents/${addressSegment(address)}`),
+      this.#getDocument(`${server}/simon/agents/${addressSegment(address)}`),
     );
     let agent: AgentKeys | null = null;
     if (res) {

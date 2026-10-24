@@ -35,7 +35,7 @@ export interface Reply {
 
 export interface Route<Api = unknown> {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  /** A path whose `:name` segments match any one segment, e.g. `/agnt/agents/:address`. */
+  /** A path whose `:name` segments match any one segment, e.g. `/simon/agents/:address`. */
   path: string;
   /** The largest body accepted; the server's `requestBodyBytes` when absent. */
   maxBody?: number;

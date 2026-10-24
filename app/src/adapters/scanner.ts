@@ -1,6 +1,6 @@
 /**
  * Malware scanning through ClamAV's daemon (clamd) over TCP, with its INSTREAM command. Run clamd beside
- * the server and point AGNT_CLAMD_HOST and AGNT_CLAMD_PORT at it.
+ * the server and point SIMON_CLAMD_HOST and SIMON_CLAMD_PORT at it.
  */
 import net from 'node:net';
 

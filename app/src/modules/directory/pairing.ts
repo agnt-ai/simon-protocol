@@ -118,7 +118,7 @@ export class Pairings {
     if (!this.#codes.canReach(pairing.principal)) return;
     const link = `${this.#ctx.config.server.origin}/api/recovery/${token}`;
     const to = pairing.principal.slice(pairing.principal.indexOf(':') + 1);
-    const text = `The agent ${address}, which speaks for you on AGNT, replaced its keys by proving control of its own address (new key ${fingerprint(key)}). Until you confirm, it may only converse for you. Confirm or end it: ${link}`;
+    const text = `The agent ${address}, which speaks for you on SIMON, replaced its keys by proving control of its own address (new key ${fingerprint(key)}). Until you confirm, it may only converse for you. Confirm or end it: ${link}`;
     if (kindOf(pairing.principal) === 'email')
       await this.#ctx.mail!.send({ to, subject: 'An agent speaking for you replaced its keys', text });
     else await this.#ctx.sms!.send({ to, text });
@@ -149,9 +149,9 @@ export class Pairings {
 function codeMessage(address: string, key: string, scope: ScopeAction[], code: string) {
   const asks = scope.join(', ');
   return {
-    subject: `Your AGNT code: ${code}`,
+    subject: `Your SIMON code: ${code}`,
     text: [
-      'An agent asked to speak for you on AGNT.',
+      'An agent asked to speak for you on SIMON.',
       '',
       `Agent: ${address}`,
       `Key fingerprint: ${fingerprint(key)}`,
@@ -161,6 +161,6 @@ function codeMessage(address: string, key: string, scope: ScopeAction[], code: s
       '',
       'Give it only to the agent you are setting up. If you did not ask for this, ignore this message: nothing happens without the code.',
     ].join('\n'),
-    sms: `AGNT code ${code} for agent ${address} (${fingerprint(key).slice(0, 9)}), to ${asks}. Ignore it if you did not ask.`,
+    sms: `SIMON code ${code} for agent ${address} (${fingerprint(key).slice(0, 9)}), to ${asks}. Ignore it if you did not ask.`,
   };
 }

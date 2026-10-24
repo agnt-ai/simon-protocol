@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * The server as a process: `node server/src/main.ts`. Configuration comes from the environment (see
- * config.ts or README.md); storage is the sqlite file AGNT_DB.
+ * config.ts or README.md); storage is the sqlite file SIMON_DB.
  */
 import { loadConfig } from './config.ts';
 import { createServer } from './server.ts';

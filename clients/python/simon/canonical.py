@@ -287,8 +287,8 @@ def _utf16(key: str) -> bytes:
 
 
 def signing_bytes(context: str, signed: dict[str, Any]) -> bytes:
-    """What is signed: the context line (``AGNT-MESSAGE``, ``AGNT-ENVELOPE``, ``AGNT-CLAIMS``,
-    ``AGNT-SIGNAL`` or ``AGNT-AGENT``), a newline, and the canonical bytes of the object without its
+    """What is signed: the context line (``SIMON-MESSAGE``, ``SIMON-ENVELOPE``, ``SIMON-CLAIMS``,
+    ``SIMON-SIGNAL`` or ``SIMON-AGENT``), a newline, and the canonical bytes of the object without its
     ``signature``."""
     return context.encode("ascii") + b"\n" + unsigned_bytes(signed)
 

@@ -5,15 +5,33 @@
 The draft came in two halves. The first rebuilt the protocol and the repository; the second followed an
 external review and the first run between two laptops.
 
+### The protocol's name on the wire (2026-10-24)
+
+The protocol is SIMON; AGNT is a platform built on it. Before any production use, every wire identifier
+moved to the protocol's name. Nothing reads the old names; there is no compatibility window.
+
+- **Headers:** `agnt-agent`, `agnt-server`, `agnt-key`, `agnt-timestamp`, `agnt-nonce`, `agnt-signature`,
+  `agnt-hints` and the rest are `simon-*`. The authentication scheme is `SIMON`.
+- **Discovery:** the DNS record is `_simon.<domain>` with `v=simon1`, the well-known answer is at
+  `/.well-known/simon`, and every path under `/agnt/` is under `/simon/`.
+- **Media types and identifiers:** `application/simon-*` (the reserved `application/simon-sealed` among
+  them), `simon-key:` principals, and the `simon:` OAuth scopes and `simon_address` token member.
+- **Signing contexts:** `AGNT-MESSAGE`, `AGNT-ENVELOPE`, `AGNT-RECOVER` and every other domain-separation
+  string are `SIMON-*`. The vectors are regenerated.
+- **Software:** environment variables are `SIMON_*`; the CLI is `simon`, the MCP server `simon` (binary
+  `simon-mcp`), the Python package `simon` (distribution `simon-protocol`), the skill `simon`.
+- Members under a host's own domain, such as the application template's `agnt.ai:scope` and
+  `agnt.ai:pairingCode`, are that host's extensions and keep their names.
+
 ### Core review reconciliation (2026-10-22)
 
 The spec reconciles review findings and the core-versus-host boundary. `docs/DECISIONS.md` distinguishes current choices from earlier proposals.
 
 - **Files** are served only from the bytes held for the author of the message naming them, and `send`
-  checks the files of carried messages. `GET /agnt/parts` has one set of rules for each kind of
+  checks the files of carried messages. `GET /simon/parts` has one set of rules for each kind of
   caller.
 - **Recovery** is in CLIENT.md: cancel by code, a key cancels once in 30 days as recommended practice, a key
-  principal's `AGNT-RECOVER`, a status read, and codes bound to the key that asked for them, so wrong guesses
+  principal's `SIMON-RECOVER`, a status read, and codes bound to the key that asked for them, so wrong guesses
   lock only the guesser's own request; cancel codes are never locked.
 - **Retirement evidence** is optional host publication policy with shared interpretation; the reference server keeps retired identity/unpairing records private.
 - **Lookups before any signature verifies** are bounded; accounting mechanisms and values are host policy.
@@ -41,7 +59,7 @@ went into the registry, and where each idea comes from.
   registry's `supersedes` and `retracts` became `rel: edit` and `rel: retract`.
 - **Conversations** are a root and the messages that lead back to it, with membership as signed
   relations and rosters rebuilt by readers. Servers keep no conversation state.
-- **Signals.** `POST /agnt/signal` carries `typing`, `collected` and `read`, never stored, sent only when
+- **Signals.** `POST /simon/signal` carries `typing`, `collected` and `read`, never stored, sent only when
   an agent asks, `read` only when reading is shared by choice. Any server may drop any signal, and types
   are registry names that servers pass on without reading.
 - **Publishing.** `feed` and `audience` headers, feed listings, listings under a post of the relations
@@ -49,10 +67,10 @@ went into the registry, and where each idea comes from.
   beside published messages, and the same `404` for a refused reader as for nothing.
 - **Interactive blocks are data, never code;** a choice is a signed `response` relation.
 - **Identity modes** (identified, pseudonymous, unattributed) are stated, with what the protocol promises.
-- **Claims** are signed by their carrier for their message (`claimsSignature`, `AGNT-CLAIMS`) and travel
-  into inbox entries, and are authoritative only by the `_agnt` TXT record. A principal never counts for
+- **Claims** are signed by their carrier for their message (`claimsSignature`, `SIMON-CLAIMS`) and travel
+  into inbox entries, and are authoritative only by the `_simon` TXT record. A principal never counts for
   a solo agent.
-- **Unpairing** (`AGNT-UNPAIR`) lets a key principal end its pairing; a principal outranks its agent's keys.
+- **Unpairing** (`SIMON-UNPAIR`) lets a key principal end its pairing; a principal outranks its agent's keys.
 - **Files** follow four rules: the author's server serves a file only to those who received, or may
   read, a message naming it, from the bytes held for that message's author; a recipient's server SHOULD
   copy files on arrival, never on read; anything bigger or revocable is a link. A file over `partBytes` is
@@ -84,11 +102,11 @@ headers are ignored unless the message lists them in `critical`.
 - Keys are written as key tokens, `<alg>:<base64url>`. Version 1 defines `ed25519`, verified without the
   cofactor so every verifier agrees on every signature, and `ml-dsa-65` (FIPS 204). A reader skips a key
   whose algorithm it does not implement.
-- Every signature is domain-separated by a context line: `AGNT-MESSAGE`, `AGNT-ENVELOPE`, `AGNT-AGENT`,
-  `AGNT-REQUEST` (formerly `AGNT-REQUEST-v1`), `AGNT-ADD-KEY` and `AGNT-PAIR`. Message ids still hash the
+- Every signature is domain-separated by a context line: `SIMON-MESSAGE`, `SIMON-ENVELOPE`, `SIMON-AGENT`,
+  `SIMON-REQUEST` (formerly `SIMON-REQUEST-v1`), `SIMON-ADD-KEY` and `SIMON-PAIR`. Message ids still hash the
   bare canonical bytes.
 
-**Paired and solo agents.** An agent speaks for exactly one principal (`mailto:`, `tel:` or `agnt-key:`),
+**Paired and solo agents.** An agent speaks for exactly one principal (`mailto:`, `tel:` or `simon-key:`),
 named in the `for` header of every message, or for no one. One agent and one identifier make one address
 for life; a retired address is never reused. A key principal approves its agent with a `pairing` signature
 any reader can check; an email or phone principal is vouched for by its server's `acts-for` claim. The agent
@@ -106,7 +124,7 @@ published. Documents are at most 131072 bytes and 32 keys, and an agent document
   until 168 hours.
 - Envelopes keep and sign members a receiver does not know. Claims and hints are bounded together, and
   hints are keyed by recipient.
-- The bytes of a private part are served only to a server that signs its request (`agnt-server`); only a
+- The bytes of a private part are served only to a server that signs its request (`simon-server`); only a
   public message's parts are open to anyone.
 
 **Resolution and DNS.** The TXT record, then the well-known answer, with named outcomes (`invalid_record`,
@@ -138,7 +156,7 @@ status per recipient server) and part upload and fetch.
   `details`. They replace the earlier error object. A `429`, and a `503` that knows when to retry, carry
   `Retry-After`.
 - **Signature failures are told apart by status.** A request signature that fails is `401`, with
-  `WWW-Authenticate: AGNT` and `details.serverTime`, and on `bad_signature` also `details.signingString`.
+  `WWW-Authenticate: SIMON` and `details.serverTime`, and on `bad_signature` also `details.signingString`.
   An envelope or message signature that fails at deliver is `403 bad_signature`.
 - **Two new codes.** `403 unsupported_algorithm` at deliver, when the author has keys valid at `sentAt`
   but none of an algorithm the receiver implements (no valid key at all stays `bad_signature`).
@@ -192,17 +210,17 @@ status per recipient server) and part upload and fetch.
   per-carrier quota. Connections have header, request and keep-alive timeouts and a cap.
 - **Outbound calls** use TLS 1.3 or later and follow no redirects.
 - **Notices** come from `postmaster@<the agent's domain>`, an ordinary signed message.
-- **New settings:** `AGNT_RECOVERY_WAIT` (259200 seconds), `AGNT_MAX_CONNECTIONS` (1024),
-  `AGNT_DNS_SERVERS` (DNS servers to ask instead of the system's, such as a tailnet's resolver),
-  `AGNT_LISTEN_HOST` (`127.0.0.1` behind a tunnel) and `AGNT_CLIENT_IP_HEADER` (such as
+- **New settings:** `SIMON_RECOVERY_WAIT` (259200 seconds), `SIMON_MAX_CONNECTIONS` (1024),
+  `SIMON_DNS_SERVERS` (DNS servers to ask instead of the system's, such as a tailnet's resolver),
+  `SIMON_LISTEN_HOST` (`127.0.0.1` behind a tunnel) and `SIMON_CLIENT_IP_HEADER` (such as
   `cf-connecting-ip`, read only from connections from this machine, so rate limits see real clients).
-- **Behind a load balancer.** `AGNT_TRUSTED_PROXIES` names the networks a balancer connects from, and
-  `AGNT_CLIENT_IP_HEADER` (`x-forwarded-for` there) is believed from them as from this machine. The header
+- **Behind a load balancer.** `SIMON_TRUSTED_PROXIES` names the networks a balancer connects from, and
+  `SIMON_CLIENT_IP_HEADER` (`x-forwarded-for` there) is believed from them as from this machine. The header
   is read from the right, past every trusted hop, so a client cannot choose the address its limits count.
-  `AGNT_KEEP_ALIVE_TIMEOUT` (5 seconds) lets idle connections outlast the balancer's own timeout.
+  `SIMON_KEEP_ALIVE_TIMEOUT` (5 seconds) lets idle connections outlast the balancer's own timeout.
   `GET /health` answers `{"status":"ok"}` while the server and its store answer, `503` when the store does
   not, and nothing else. CI runs the image as a deployment does (`scripts/image-check.sh`).
-  `AGNT_RATE_EXEMPT_NETWORKS` spares a hosting service's own networks the per-client `request` and
+  `SIMON_RATE_EXEMPT_NETWORKS` spares a hosting service's own networks the per-client `request` and
   `register` rates; its agents' rates still apply.
 - **Changing address on one server** takes a new key, since a key belongs to one address there for good;
   CLIENT.md now says so, and how the old address shows the continuity before it retires.
@@ -242,12 +260,12 @@ status per recipient server) and part upload and fetch.
   `{"untrusted":{"from","basis","content","invisible"?}}`, apart from what the client and the agent's own
   server say; `invisible` lists tag characters, bidirectional controls and zero-width characters by path.
   MCP sends each in a content item of its own, marked untrusted, and has no `call`.
-- **The workspace sandbox.** Every file the CLI and MCP server read or write is in `AGNT_WORKSPACE` (by
-  default the working directory), links resolved, never under `AGNT_HOME`; anything else is
-  `path_refused`. No output names where the key is kept, and `--add-key` names a file in `AGNT_HOME`.
+- **The workspace sandbox.** Every file the CLI and MCP server read or write is in `SIMON_WORKSPACE` (by
+  default the working directory), links resolved, never under `SIMON_HOME`; anything else is
+  `path_refused`. No output names where the key is kept, and `--add-key` names a file in `SIMON_HOME`.
 - **`wait`.** It polls until a message not shown before arrives, prints it and exits 0, or exits 3 at
   `--timeout` (600 s), with `--from` and `--interval`. What it has shown is kept in
-  `$AGNT_HOME/wait.json`, so each message is shown once, across sessions and across the CLI and the MCP
+  `$SIMON_HOME/wait.json`, so each message is shown once, across sessions and across the CLI and the MCP
   server (`wait_for_message`, 1 to 300 s).
 - **The revised wire:** problem details read and passed through, `unsupported_version`,
   `unsupported_algorithm` and `403 bad_signature`, `expired` in `sent`, and `recovery_pending` with
@@ -283,11 +301,11 @@ status per recipient server) and part upload and fetch.
 - The application runs on Amazon DocumentDB (8.0) as well as MongoDB: plain update operators only, no update
   pipelines anywhere, reads from the primary whatever the connection string asks, and duplicate keys
   recognised by the index DocumentDB names. The store contract runs against a real deployment with
-  `AGNT_TEST_MONGO_URI`.
+  `SIMON_TEST_MONGO_URI`.
 
 **Conformance.**
 - 182 checks (167 must, 15 should), up from 158: envelopes' `server` and `recipients` and their order,
-  `403` at deliver, problem details and `WWW-Authenticate: AGNT`, `algorithms`, `authoritative` claims,
+  `403` at deliver, problem details and `WWW-Authenticate: SIMON`, `algorithms`, `authoritative` claims,
   identifier claims judged as acts-for claims are (`inbox.claims-identifier`), parts never served for
   naming a hash and prefetched, delivery timing, and recovery waits.
 - Removed: `public.replies`, `public.replies-to-author-only`, `send.unknown-version` and
@@ -300,8 +318,8 @@ status per recipient server) and part upload and fetch.
 - The toy server under test speaks the new wire, with more planted faults, each caught by its own check.
 
 **Examples.**
-- **`examples/two-laptops`** puts two people's laptops on AGNT across two public Cloudflare quick
-  tunnels, with no shared network, account or name: `start.sh`, which the person runs; `JOIN-AGNT.md`,
+- **`examples/two-laptops`** puts two people's laptops on SIMON across two public Cloudflare quick
+  tunnels, with no shared network, account or name: `start.sh`, which the person runs; `JOIN-SIMON.md`,
   which a coding agent follows to prepare the laptop and hand a fresh session the conversation; and a
   read-only live viewer. It replaced an earlier version over Tailscale.
 - The demo and the model-driven agent follow the revised clients.

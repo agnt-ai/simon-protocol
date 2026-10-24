@@ -65,17 +65,17 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
 
   async function auth(req: http.IncomingMessage, body: Buffer, now: Date, registering?: string) {
     const h = readSignedHeaders(req.headers, now);
-    const agent = [...agents.values()].find(a => a.entry.key === h['agnt-key']);
+    const agent = [...agents.values()].find(a => a.entry.key === h['simon-key']);
     const entry =
       agent?.entry ??
-      (registering === h['agnt-key'] ? { key: registering, added: timestamp(now), revoked: null } : null);
+      (registering === h['simon-key'] ? { key: registering, added: timestamp(now), revoked: null } : null);
     const r = { method: req.method!, origin, actor: actorOf(req.headers), target: req.url!, body };
     try {
       await checkSignedRequest(r, h, { now, entry, nonceSeen: (k, n) => nonces.seen(k, n, now) });
     } finally {
-      nonces.record(h['agnt-key'], h['agnt-nonce'], h['agnt-timestamp'], now); // fault 2: whatever the outcome
+      nonces.record(h['simon-key'], h['simon-nonce'], h['simon-timestamp'], now); // fault 2: whatever the outcome
     }
-    return { agent, key: h['agnt-key'] };
+    return { agent, key: h['simon-key'] };
   }
 
   async function deliver(body: Buffer, now: Date) {
@@ -91,7 +91,7 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
     const server = resolve[domainOf(m.from)];
     if (!server || server === origin) throw forbidden('bad_signature', "The sender's domain names no server.");
     checkFreshness(m, now); // fault 3: step 10 before steps 7 and 9
-    const doc = await get(`${server}/agnt/server`);
+    const doc = await get(`${server}/simon/server`);
     const parsed = doc && JSON.parse(doc.toString());
     const keys = parsed && readKeys(parsed.keys, now);
     if (!keys) throw new WireError(503, 'unavailable', "The sender's server document is unavailable.");
@@ -99,7 +99,7 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
     checkServed(env.recipients, d => d === 'toy.test');
     const id = messageId(m);
     if (seen.has(id) && withinRepeatWindow(m, now)) return; // fault 9: by id alone
-    const agentDoc = await get(`${server}/agnt/agents/${m.from}`);
+    const agentDoc = await get(`${server}/simon/agents/${m.from}`);
     const author = agentDoc && readAgentDocument(agentDoc, m.from, keys, now);
     if (!author || !verifyMessage(m, author.keys)) {
       throw forbidden('bad_signature', 'The message does not verify.'); // fault 10: never unsupported_algorithm
@@ -114,16 +114,16 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
   async function handle(req: http.IncomingMessage, body: Buffer): Promise<[number, unknown]> {
     const now = new Date();
     const path = req.url!.split('?')[0];
-    if (path === '/agnt/server') {
+    if (path === '/simon/server') {
       const keys = [{ key: key.key, added: '2026-01-01T00:00:00Z', revoked: null }];
       return [200, { server: origin, keys, limits }]; // fault 5: no algorithms
     }
-    if (path.startsWith('/agnt/agents/')) {
-      const a = agents.get(decodeURIComponent(path.slice(13)));
+    if (path.startsWith('/simon/agents/')) {
+      const a = agents.get(decodeURIComponent(path.slice('/simon/agents/'.length)));
       if (!a) throw new WireError(404, 'not_found', 'No such agent.');
       return [200, signAgentDocument({ address: a.address, kind: 'solo', keys: [a.entry] }, key.privateKey)];
     }
-    if (path === '/agnt/register') {
+    if (path === '/simon/register') {
       const wanted = JSON.parse(body.toString()).key;
       const { agent } = await auth(req, body, now, wanted);
       if (agent) return [200, account(agent)];
@@ -131,11 +131,11 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
       agents.set(address, { address, entry: { key: wanted, added: timestamp(now), revoked: null }, stream: [] });
       return [200, account(agents.get(address)!)];
     }
-    if (path === '/agnt/account') {
+    if (path === '/simon/account') {
       const { agent } = await auth(req, body, now);
       return [200, account(agent!)];
     }
-    if (path === '/agnt/sync') {
+    if (path === '/simon/sync') {
       const { agent } = await auth(req, body, now);
       const query = new URL(req.url!, origin).searchParams;
       for (const [name, min, max] of [
@@ -168,7 +168,7 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
         },
       ];
     }
-    if (path === '/agnt/send') {
+    if (path === '/simon/send') {
       const { agent } = await auth(req, body, now);
       const m = JSON.parse(body.toString());
       const entry: Entry = { id: messageId(m), message: m, carrier: origin, claims: [], receivedAt: timestamp(now) };
@@ -176,7 +176,7 @@ export async function startToy(resolve: Record<string, string>, faults: ClientFa
       for (const to of m.to) if (to !== agent!.address) agents.get(to)?.stream.push(entry);
       return [200, { id: entry.id, receivedAt: entry.receivedAt }];
     }
-    if (path === '/agnt/deliver') {
+    if (path === '/simon/deliver') {
       await deliver(body, now);
       return [202, { accepted: true }];
     }

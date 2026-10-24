@@ -9,7 +9,7 @@ it('charges cold server-signed part lookups to the caller network and caches mis
   try {
     const home = await fed.server('home', { config: { rates: { lookup: { limit: 1, seconds: 3600 } } } });
     const key = generateKey().privateKey;
-    const url = new URL(`${home.origin}/agnt/parts/${'a'.repeat(64)}`);
+    const url = new URL(`${home.origin}/simon/parts/${'a'.repeat(64)}`);
     const ask = async (server: string) =>
       home.server.handle(
         toRequest(

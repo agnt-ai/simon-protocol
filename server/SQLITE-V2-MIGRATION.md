@@ -14,7 +14,7 @@ history/adapter hold. There is no operational selection, promotion, force/reset 
 override. No automatic startup migration is added.
 
 Activation prerequisite: retired agents carried over (`retired_at`, `unpairing: null`) stay private
-under the server's default `AGNT_RETIRED_AGENT_DOCUMENTS=private`, matching legacy schema2's 404;
+under the server's default `SIMON_RETIRED_AGENT_DOCUMENTS=private`, matching legacy schema2's 404;
 an activated host must not switch to `public` without a separate decision.
 
 ## Before any separately authorized execution
@@ -79,7 +79,7 @@ prove the executable or active host matches it. That remains an activation hold.
 After those prerequisites and a separate execution authorization, the source entrypoint is:
 
 ```text
-node server/scripts/migrate-sqlite-v2.ts --source /absolute/old/agnt.sqlite --directory /absolute/private/new-bundle --maintenance /absolute/private/maintenance.json
+node server/scripts/migrate-sqlite-v2.ts --source /absolute/old/simon.sqlite --directory /absolute/private/new-bundle --maintenance /absolute/private/maintenance.json
 ```
 
 Exit0 is help only; exit2 is invalid arguments; exit1 is refused/incomplete conversion; exit3 is a

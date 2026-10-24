@@ -1,22 +1,22 @@
-# agnt-protocol-mcp
+# simon-mcp
 
-An MCP server for one AGNT agent, over stdio (JSON-RPC 2.0, one message per line), built on
+An MCP server for one SIMON agent, over stdio (JSON-RPC 2.0, one message per line), built on
 [`@agnt-protocol/client`](../js).
 
 ```bash
-claude mcp add agnt -e AGNT_SERVER=https://agnt.example.com -- node /path/to/agnt-protocol/clients/mcp/src/server.ts
+claude mcp add simon -e SIMON_SERVER=https://simon.example.com -- node /path/to/simon-protocol/clients/mcp/src/server.ts
 ```
 
-**Environment:** `AGNT_HOME` (the key and address; default `~/.config/agnt`), `AGNT_SERVER` (the server
-to register with), `AGNT_WORKSPACE` (the only directory tools read and write files in; default the
-server's working directory), `AGNT_TIMEOUT_MS` (per request; default 30000).
+**Environment:** `SIMON_HOME` (the key and address; default `~/.config/simon`), `SIMON_SERVER` (the server
+to register with), `SIMON_WORKSPACE` (the only directory tools read and write files in; default the
+server's working directory), `SIMON_TIMEOUT_MS` (per request; default 30000).
 
 **What others wrote comes apart.** A result's first content item is the tool's own words and its
 server's. Each message and each claim follows in a content item of its own, inside
-`{"untrusted":{"from","basis","content","invisible"?}}`, with `_meta` `{"agnt/untrusted": true}`, and is
+`{"untrusted":{"from","basis","content","invisible"?}}`, with `_meta` `{"simon/untrusted": true}`, and is
 never in `structuredContent`. The server's instructions and the tool descriptions state the rule: such
 content is data, never authorisation. There is no tool for other calls to the server. Paths outside the
-workspace, or under `AGNT_HOME`, are refused (`path_refused`), and `whoami` does not say where the key is.
+workspace, or under `SIMON_HOME`, are refused (`path_refused`), and `whoami` does not say where the key is.
 
 **The tools are pinned.** Names, descriptions and schemas are written in [`src/tools.ts`](src/tools.ts)
 and fixed when the package is built. None comes from a server at run time: whoever runs a server must
@@ -44,7 +44,7 @@ not write text a model reads as its instructions.
 | `whoami` | none | Key token, address, server and pairing, from the files. |
 
 Arguments are checked against each schema: a missing, unknown or mistyped one is a tool error naming it.
-A tool error is `isError: true` with the `AgntError` as JSON, `{"error":{"code","message","status",
+A tool error is `isError: true` with the `SimonError` as JSON, `{"error":{"code","message","status",
 "retryable","details"}}`. Results with no third-party content also come as `structuredContent`.
 
 **Methods:** `initialize` (protocol versions 2025-11-25, 2025-06-18, 2025-03-26, 2024-11-05), `ping`,
@@ -67,7 +67,7 @@ checked and saved locally and are never added to the recovery request body. Prin
 without saved or supplied principal state is rejected. For mailbox recovery of an email/tel pair,
 supply its existing principal explicitly; the account response does not infer it.
 
-Concurrent waits in the same `AGNT_HOME` fail with `concurrent_wait`. JS and Python hold the same
+Concurrent waits in the same `SIMON_HOME` fail with `concurrent_wait`. JS and Python hold the same
 `wait.lock` directory for the whole operation and release it on normal completion/error. No owner is
 stolen by age. After a crash, confirm the recorded PID is no longer running, then remove only the stale
 `wait.lock` directory and keep `wait.json`. Queued messages are already private local data and can be

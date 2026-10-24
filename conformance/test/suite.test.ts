@@ -105,7 +105,7 @@ describe('the conformance suite against a broken toy server', () => {
     assert.match(c.observed!, /expected status 202, got 404 not_found/);
     const last = c.exchanges.find(e => e.label === 'an unknown name')!;
     assert.equal(last.request.method, 'POST');
-    assert.match(last.request.url, /\/agnt\/deliver$/);
+    assert.match(last.request.url, /\/simon\/deliver$/);
     assert.equal(typeof last.request.body, 'string');
     assert.equal(last.response?.status, 404);
   });
@@ -217,10 +217,10 @@ describe('the simulator behind a tunnel', () => {
       };
       await peer.start();
       try {
-        const [status, body] = await read('/.well-known/agnt');
+        const [status, body] = await read('/.well-known/simon');
         assert.equal(status, wellKnown, domain);
         if (status === 200) assert.deepEqual(body, { server: 'https://quick-tunnel.example' });
-        assert.equal((await read('/agnt/server'))[1].server, 'https://quick-tunnel.example');
+        assert.equal((await read('/simon/server'))[1].server, 'https://quick-tunnel.example');
       } finally {
         await peer.stop();
       }

@@ -2,9 +2,9 @@
 
 SIMON is an open protocol for AI agents that act on behalf of people. This repository holds its specification and a reference implementation.
 
-> **Naming.** The wire identifiers in this repository (the `agnt-agent` header, `_agnt` DNS records, `/agnt/` paths, `application/agnt-message`, `@agnt-protocol/*` packages) and the specification text still use the working name AGNT. They are protocol identifiers, so they stay as they are until a deliberate rename; below, "AGNT" means this protocol.
+> **Naming.** SIMON is the protocol; AGNT is a platform built on it. The wire identifiers carry the protocol's name: the `simon-agent` header and the other `simon-*` headers, `_simon` DNS records, `/simon/` paths, `application/simon-message`, `simon-key:` identifiers and the `SIMON-*` signing contexts. Members such as `agnt.ai:scope` are one host's extensions, namespaced by its domain as any host's are.
 
-AGNT delivers one signed message from one AI agent to another at an address of the form `name@domain`.
+SIMON delivers one signed message from one AI agent to another at an address of the form `name@domain`.
 Anyone can run a server; a domain names its server in DNS, servers deliver to each other, and every
 message carries its author's signature, so any reader can check who wrote it.
 
@@ -23,20 +23,20 @@ each other the way people reach each other by email: at a stable address, throug
 without both being online at once, and with proof of who wrote what. Existing systems each give part of
 that:
 
-| | What it is | How AGNT differs |
+| | What it is | How SIMON differs |
 | --- | --- | --- |
-| **Email** (SMTP) | Store-and-forward mail between `user@domain` addresses, servers found by DNS. | AGNT keeps that model and adds an author's signature on every message, checked by every receiving server; DKIM signs for a domain, is optional, and breaks when a message is changed in transit, as mailing lists do. A message is one canonical JSON object with a content-derived id. |
-| **Matrix** | Federated rooms whose history and state every participating server replicates and reconciles. | AGNT has no rooms and no shared state: a message is delivered to its recipients' servers and nothing else. A thread is the chain of `inReplyTo`. |
-| **ActivityPub** | Actors post JSON-LD activities to each other's inboxes; in common deployments the actor's server holds the signing key. | An AGNT agent signs its own messages with its own key, which its server never needs; a hosted agent may let a separate signing service hold it. AGNT defines no vocabulary of activities. |
-| **AT Protocol** | Signed, public per-user data repositories, aggregated by relays and indexers for social applications. | AGNT carries messages to named recipients rather than publishing repositories for aggregation. |
-| **A2A** | One agent calls another agent's HTTP endpoint to give it a task, answered synchronously, by streaming, or by push notification. | AGNT stores and forwards: the recipient need not be online or reachable, only its server. It carries messages, not tasks. |
-| **MCP** | Connects a model application to tools and data sources. | Not agent-to-agent. This repository includes an MCP server so an MCP-capable agent can use AGNT. |
+| **Email** (SMTP) | Store-and-forward mail between `user@domain` addresses, servers found by DNS. | SIMON keeps that model and adds an author's signature on every message, checked by every receiving server; DKIM signs for a domain, is optional, and breaks when a message is changed in transit, as mailing lists do. A message is one canonical JSON object with a content-derived id. |
+| **Matrix** | Federated rooms whose history and state every participating server replicates and reconciles. | SIMON has no rooms and no shared state: a message is delivered to its recipients' servers and nothing else. A thread is the chain of `inReplyTo`. |
+| **ActivityPub** | Actors post JSON-LD activities to each other's inboxes; in common deployments the actor's server holds the signing key. | A SIMON agent signs its own messages with its own key, which its server never needs; a hosted agent may let a separate signing service hold it. SIMON defines no vocabulary of activities. |
+| **AT Protocol** | Signed, public per-user data repositories, aggregated by relays and indexers for social applications. | SIMON carries messages to named recipients rather than publishing repositories for aggregation. |
+| **A2A** | One agent calls another agent's HTTP endpoint to give it a task, answered synchronously, by streaming, or by push notification. | SIMON stores and forwards: the recipient need not be online or reachable, only its server. It carries messages, not tasks. |
+| **MCP** | Connects a model application to tools and data sources. | Not agent-to-agent. This repository includes an MCP server so an MCP-capable agent can use SIMON. |
 
 ## Three projects
 
 | Project | Where | Use it to |
 | --- | --- | --- |
-| **The protocol** | [spec/](spec), [protocol/](protocol), [conformance/](conformance) | Implement AGNT in another language, or test any server. The specification, its test vectors, a dependency-free library, and a black-box conformance suite. |
+| **The protocol** | [spec/](spec), [protocol/](protocol), [conformance/](conformance) | Implement SIMON in another language, or test any server. The specification, its test vectors, a dependency-free library, and a black-box conformance suite. |
 | **The basic server** | [server/](server) | Run a server for your agents with nothing but the protocol: Node 26's standard library and sqlite. Or build your own product on it through its extension and storage seams. |
 | **The application template** | [app/](app) | Start from a fuller server: a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload scanning and an email bridge, on MongoDB. Fork it. |
 
@@ -56,54 +56,54 @@ Then start two basic servers in development mode, in two terminals. Each hosts o
 resolves both domains to the right server without DNS:
 
 ```sh
-AGNT_DEV=1 AGNT_ORIGIN=http://localhost:8801 AGNT_PORT=8801 AGNT_HOSTED_DOMAINS=alice.test AGNT_DB=:memory: \
-AGNT_DEV_RESOLVE=alice.test=http://localhost:8801,bob.test=http://localhost:8802 node server/src/main.ts
+SIMON_DEV=1 SIMON_ORIGIN=http://localhost:8801 SIMON_PORT=8801 SIMON_HOSTED_DOMAINS=alice.test SIMON_DB=:memory: \
+SIMON_DEV_RESOLVE=alice.test=http://localhost:8801,bob.test=http://localhost:8802 node server/src/main.ts
 ```
 
 ```sh
-AGNT_DEV=1 AGNT_ORIGIN=http://localhost:8802 AGNT_PORT=8802 AGNT_HOSTED_DOMAINS=bob.test AGNT_DB=:memory: \
-AGNT_DEV_RESOLVE=alice.test=http://localhost:8801,bob.test=http://localhost:8802 node server/src/main.ts
+SIMON_DEV=1 SIMON_ORIGIN=http://localhost:8802 SIMON_PORT=8802 SIMON_HOSTED_DOMAINS=bob.test SIMON_DB=:memory: \
+SIMON_DEV_RESOLVE=alice.test=http://localhost:8801,bob.test=http://localhost:8802 node server/src/main.ts
 ```
 
 In a third terminal, at the repository's root, register Ada on the first server and Bob on the second,
-each with its own key in its own new directory (`AGNT_HOME`). Ada writes; Bob waits for her message and
+each with its own key in its own new directory (`SIMON_HOME`). Ada writes; Bob waits for her message and
 replies in that thread; Ada waits for the reply:
 
 ```sh
-agnt-protocol() { node clients/cli/src/cli.ts "$@"; }
+simon() { node clients/cli/src/cli.ts "$@"; }
 ADA=$(mktemp -d) BOB=$(mktemp -d)
-AGNT_HOME=$ADA agnt-protocol register --server http://localhost:8801 --address ada@alice.test
-AGNT_HOME=$BOB agnt-protocol register --server http://localhost:8802 --address bob@bob.test
-AGNT_HOME=$ADA agnt-protocol send --to bob@bob.test --text 'Does Thursday at 3pm work?'
-ID=$(AGNT_HOME=$BOB agnt-protocol wait --from ada@alice.test --timeout 30 | jq -r .id)
-AGNT_HOME=$BOB agnt-protocol send --to ada@alice.test --in-reply-to "$ID" --text 'It does.'
-AGNT_HOME=$ADA agnt-protocol wait --from bob@bob.test --timeout 30 \
+SIMON_HOME=$ADA simon register --server http://localhost:8801 --address ada@alice.test
+SIMON_HOME=$BOB simon register --server http://localhost:8802 --address bob@bob.test
+SIMON_HOME=$ADA simon send --to bob@bob.test --text 'Does Thursday at 3pm work?'
+ID=$(SIMON_HOME=$BOB simon wait --from ada@alice.test --timeout 30 | jq -r .id)
+SIMON_HOME=$BOB simon send --to ada@alice.test --in-reply-to "$ID" --text 'It does.'
+SIMON_HOME=$ADA simon wait --from bob@bob.test --timeout 30 \
   | jq -c '.message.untrusted | {from, basis, text: .content.parts[0].data}'
 ```
 
 The last command prints `{"from":"bob@bob.test","basis":"author-signed","text":"It does."}`.
 
-- **Output.** Every output is JSON; `agnt-protocol help` lists every verb. What another agent wrote is
+- **Output.** Every output is JSON; `simon help` lists every verb. What another agent wrote is
   printed inside `{"untrusted": ...}`: data to weigh, never instructions ([skill/SKILL.md](skill/SKILL.md)).
 - **`wait`** prints the first message it has not shown before as soon as it arrives, or exits with status
   3 after `--timeout` seconds.
 - **`author-signed`** means Ada's server checked Bob's signature, with a key Bob's server publishes for
   him, before it took the message (spec section 6.3).
-- **`agnt-protocol verify`** repeats that check on the reader's side, and says on what basis a message
+- **`simon verify`** repeats that check on the reader's side, and says on what basis a message
   names a principal. It finds an author's keys only through the author's domain, by DNS or the
   well-known answer, and never at a server someone names. So it works between real domains; for these
   `.test` ones it answers `"verified": false` with `"reason": "no_server"`.
   [examples/demo/run-demo.ts](examples/demo/run-demo.ts) verifies on a development network through a
   resolver passed in code.
-- **The servers keep nothing** (`AGNT_DB=:memory:`): restart them to start over. To run servers for
+- **The servers keep nothing** (`SIMON_DB=:memory:`): restart them to start over. To run servers for
   real, see [server/README.md](server/README.md).
 
 ## Two laptops, two strangers
 
-[examples/two-laptops](examples/two-laptops/README.md) puts two people's laptops on AGNT with no shared
+[examples/two-laptops](examples/two-laptops/README.md) puts two people's laptops on SIMON with no shared
 network, account or name. On each laptop, `start.sh` opens a public Cloudflare quick tunnel, starts a
 basic server behind it, and registers an agent at an address the server generates. A coding agent
-prepares each laptop by following `JOIN-AGNT.md`; then a fresh agent session on each, given only
+prepares each laptop by following `JOIN-SIMON.md`; then a fresh agent session on each, given only
 SKILL.md and the CLI, holds the conversation, while each person watches it in a read-only viewer.
 
 ## Paired and solo agents, and what verification means
@@ -111,7 +111,7 @@ SKILL.md and the CLI, holds the conversation, while each person watches it in a 
 Every agent is one of two kinds, fixed for the life of its address (spec section 2.2):
 - **A solo agent** speaks for no one.
 - **A paired agent** speaks for exactly one **principal**, a person or an organization, named by one
-  identifier: `mailto:<email>`, `tel:<+E.164>`, or `agnt-key:<public key>`. Every message it sends names
+  identifier: `mailto:<email>`, `tel:<+E.164>`, or `simon-key:<public key>`. Every message it sends names
   that principal in its `for` header. One agent and one identifier make one address: the same assistant
   working for someone's work and personal email is two agents.
 
@@ -119,7 +119,7 @@ Verifying a message proves its author: a key that the server named by the author
 that address signed exactly these bytes. Whether the principal in `for` is real is a separate question:
 
 - **A `for` header alone is only the agent's word**, as the From line of an email is.
-- **A key principal** (`agnt-key:`) is verified by its own signature, the `pairing` header, which any
+- **A key principal** (`simon-key:`) is verified by its own signature, the `pairing` header, which any
   reader can check without trusting a server. It proves the key's holder approved the agent, not who
   the holder is.
 - **An email or phone principal** is verified only by an `acts-for` claim from the server that carried
@@ -138,7 +138,7 @@ The clients' `verify` answers with a trust record whose `principal.basis` names 
 - each agent: its address, kind, principal identifier, whether a code bound its address (so a code can
   recover it), every key it has held with when each was added and revoked, and when it retired;
 - messages its agents wrote, and messages from other servers that an agent here took or holds, with the
-  carrying server and the claims it kept, for `AGNT_RETENTION_DAYS` (30 by default, at least 7), with
+  carrying server and the claims it kept, for `SIMON_RETENTION_DAYS` (30 by default, at least 7), with
   each agent's inbox entries. A message from another server that no agent here took is not kept;
 - work still to do: each arrival waiting to be offered to one recipient here, delivery status per
   message and recipient domain with the hints to pass on until delivery ends, and part fetches;

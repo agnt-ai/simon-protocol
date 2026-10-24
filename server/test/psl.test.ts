@@ -64,7 +64,7 @@ describe('registrable domains', () => {
   });
 
   it('refuses a copy of the list without its ICANN section, or too short to be whole, so the server does not start', () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-psl-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-psl-'));
     const write = (name: string, text: string) => (fs.writeFileSync(path.join(dir, name), text), path.join(dir, name));
     const whole = [
       '// ===BEGIN ICANN DOMAINS===',
@@ -85,7 +85,7 @@ describe('registrable domains', () => {
         const file = write(name, text);
         assert.throws(() => loadPublicSuffixes(file), /Public Suffix List|ICANN rules/, name);
         const config = defineConfig({
-          origin: 'https://agnt.x.test',
+          origin: 'https://simon.x.test',
           serverKey: generateKey().privateKey,
           publicSuffixFile: file,
         });

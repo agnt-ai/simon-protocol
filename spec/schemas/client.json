@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "client.json",
-  "title": "AGNT client API shapes",
+  "title": "SIMON client API shapes",
   "description": "CLIENT.md lifecycle, sync and selected optional history/delegation bodies under $defs. Requests use PROTOCOL.md section 8. These open shapes do not enforce cryptography, authorization, endpoint availability or all semantic rules. Errors use problem.json except OAuth exchange errors.",
   "$defs": {
     "recoveryState": {
@@ -94,7 +94,7 @@
         }
       },
       "required": ["address", "keys", "grants", "recovery"],
-      "description": "GET /agnt/account and successful registration, recovery, key changes, or agent-key grant revocation. No active status field is required."
+      "description": "GET /simon/account and successful registration, recovery, key changes, or agent-key grant revocation. No active status field is required."
     },
     "codeSentAnswer": {
       "type": "object",
@@ -153,7 +153,7 @@
               "$ref": "common.json#/$defs/principal"
             },
             {
-              "pattern": "^agnt-key:"
+              "pattern": "^simon-key:"
             }
           ]
         },
@@ -162,7 +162,7 @@
         }
       },
       "required": ["key"],
-      "description": "POST /agnt/register creates or pairs an address only. key equals the request signing key. Host-defined request members remain open; recovery and unpairing use separate resources."
+      "description": "POST /simon/register creates or pairs an address only. key equals the request signing key. Host-defined request members remain open; recovery and unpairing use separate resources."
     },
     "registerAnswer": {
       "oneOf": [
@@ -197,7 +197,7 @@
         }
       },
       "required": ["address", "key"],
-      "description": "POST /agnt/recovery. Mailbox code exchange or key-principal proof; key equals the request signing key. The principal signature binds address, new key and at. Proof, freshness and current authority are semantic checks."
+      "description": "POST /simon/recovery. Mailbox code exchange or key-principal proof; key equals the request signing key. The principal signature binds address, new key and at. Proof, freshness and current authority are semantic checks."
     },
     "recoveryAnswer": {
       "oneOf": [
@@ -227,7 +227,7 @@
         }
       },
       "required": ["recovery"],
-      "description": "GET /agnt/recovery; cancellable is relative to the authenticated agent key."
+      "description": "GET /simon/recovery; cancellable is relative to the authenticated agent key."
     },
     "addKeyRequest": {
       "type": "object",
@@ -244,7 +244,7 @@
         }
       },
       "required": ["key", "proof"],
-      "description": "POST /agnt/keys. proof is signed by the new key over AGNT-ADD-KEY, address and key."
+      "description": "POST /simon/keys. proof is signed by the new key over SIMON-ADD-KEY, address and key."
     },
     "cancelRecoveryRequest": {
       "oneOf": [
@@ -275,7 +275,7 @@
           "description": "Empty ordinary body, signed by an eligible agent key. Unknown extension members remain open."
         }
       ],
-      "description": "POST /agnt/recovery/cancel: agent-key cancellation or exact address and cancelCode."
+      "description": "POST /simon/recovery/cancel: agent-key cancellation or exact address and cancelCode."
     },
     "cancelRecoveryAnswer": {
       "type": "object",
@@ -300,7 +300,7 @@
         }
       },
       "required": ["address", "unpairing"],
-      "description": "POST /agnt/unpair; a principal proof authorizes retirement, independent of current agent keys."
+      "description": "POST /simon/unpair; a principal proof authorizes retirement, independent of current agent keys."
     },
     "unpairAnswer": {
       "type": "object",
@@ -329,11 +329,11 @@
           "required": ["status"]
         }
       ],
-      "description": "DELETE /agnt/grants/<id>: account for an agent-key caller; ended for that grant's own client key."
+      "description": "DELETE /simon/grants/<id>: account for an agent-key caller; ended for that grant's own client key."
     },
     "sendRequest": {
       "$ref": "message.json",
-      "description": "POST /agnt/send with an agent key: signed canonical version 1 message. Unknown versions and grant signing require semantic handling; see unsignedSendRequest."
+      "description": "POST /simon/send with an agent key: signed canonical version 1 message. Unknown versions and grant signing require semantic handling; see unsignedSendRequest."
     },
     "unsignedSendRequest": {
       "type": "object",
@@ -357,7 +357,7 @@
         }
       },
       "required": ["id", "receivedAt"],
-      "description": "POST /agnt/send; signed message is added when a host signs through a grant."
+      "description": "POST /simon/send; signed message is added when a host signs through a grant."
     },
     "signedClaims": {
       "type": "object",
@@ -486,7 +486,7 @@
         }
       },
       "required": ["messages", "marks", "removed", "signals", "token", "more"],
-      "description": "GET /agnt/sync?since=<opaque token>&limit=1..200&wait=0..60. Includes sent and received messages. History hosts add conversation and marks to entries; non-history hosts return empty marks and removed. A 410 token_expired is a gap, never an empty success."
+      "description": "GET /simon/sync?since=<opaque token>&limit=1..200&wait=0..60. Includes sent and received messages. History hosts add conversation and marks to entries; non-history hosts return empty marks and removed. A 410 token_expired is a gap, never an empty success."
     },
     "sendSignalRequest": {
       "type": "object",
@@ -507,7 +507,7 @@
         }
       },
       "required": ["type", "about", "to"],
-      "description": "POST /agnt/send-signal; agent holds about and recipients must be its message parties. Open registered type grammar; authorization is not a shape check."
+      "description": "POST /simon/send-signal; agent holds about and recipients must be its message parties. Open registered type grammar; authorization is not a shape check."
     },
     "sendSignalAnswer": {
       "type": "object",
@@ -529,7 +529,7 @@
         }
       },
       "required": ["url"],
-      "description": "POST /agnt/webhooks. Full HTTPS URL safety and transport policy require semantic checks; credentials and fragments are refused by the reference host."
+      "description": "POST /simon/webhooks. Full HTTPS URL safety and transport policy require semantic checks; credentials and fragments are refused by the reference host."
     },
     "webhookAnswer": {
       "type": "object",
@@ -550,7 +550,7 @@
         }
       },
       "required": ["code"],
-      "description": "POST /agnt/webhooks/<id>/verify"
+      "description": "POST /simon/webhooks/<id>/verify"
     },
     "webhookVerifiedAnswer": {
       "type": "object",
@@ -607,7 +607,7 @@
     "sentAnswer": {
       "type": "object",
       "required": ["id", "servers"],
-      "description": "GET /agnt/sent/<id>",
+      "description": "GET /simon/sent/<id>",
       "properties": {
         "id": {
           "$ref": "common.json#/$defs/messageId"
@@ -648,7 +648,7 @@
     "partUploadAnswer": {
       "type": "object",
       "required": ["sha256", "size"],
-      "description": "PUT /agnt/parts/<sha256>; the body is the bytes.",
+      "description": "PUT /simon/parts/<sha256>; the body is the bytes.",
       "properties": {
         "sha256": {
           "$ref": "common.json#/$defs/sha256"
@@ -710,7 +710,7 @@
         }
       },
       "required": ["messages", "cursor", "more", "token"],
-      "description": "Optional history host only: GET /agnt/history or /agnt/conversations/<id>; newest first. Listing snapshot token is held across pages. Relay-only host may answer 404."
+      "description": "Optional history host only: GET /simon/history or /simon/conversations/<id>; newest first. Listing snapshot token is held across pages. Relay-only host may answer 404."
     },
     "conversation": {
       "type": "object",
@@ -772,7 +772,7 @@
         }
       },
       "required": ["conversations", "cursor", "more", "token"],
-      "description": "Optional history host only: GET /agnt/conversations. No claim that a relay implements history."
+      "description": "Optional history host only: GET /simon/conversations. No claim that a relay implements history."
     },
     "marksRequest": {
       "type": "object",
@@ -791,7 +791,7 @@
         }
       },
       "required": ["ids", "add", "remove"],
-      "description": "Optional history host: POST /agnt/marks; scopes and per-object limits require semantic checks."
+      "description": "Optional history host: POST /simon/marks; scopes and per-object limits require semantic checks."
     },
     "marksAnswer": {
       "type": "object",
@@ -813,7 +813,7 @@
         "scope": {
           "type": "string"
         },
-        "agnt_address": {
+        "simon_address": {
           "$ref": "common.json#/$defs/address"
         },
         "expires_in": {
@@ -821,7 +821,7 @@
           "minimum": 1
         }
       },
-      "required": ["grant", "scope", "agnt_address"],
+      "required": ["grant", "scope", "simon_address"],
       "description": "Optional delegated-access host: signed OAuth code exchange bound to client key; no bearer access or refresh token. Discovery 404 means grants are unavailable. OAuth failures use OAuth error shape."
     }
   }

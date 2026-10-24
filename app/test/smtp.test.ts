@@ -63,40 +63,40 @@ describe('SMTP mail for codes', () => {
     });
     await mailer.send({
       to: 'ada@example.org',
-      subject: 'Your AGNT code: 123456',
+      subject: 'Your SIMON code: 123456',
       text: 'Code: 123456.',
       replyTo: 'reply+abc@bridge.example.test',
-      headers: { 'AGNT-Agent': 'bot@agents.example.test; server=https://agnt.example.test' },
+      headers: { 'SIMON-Agent': 'bot@agents.example.test; server=https://simon.example.test' },
     });
     assert.equal(smtp.received.length, 1);
     const m = smtp.received[0];
     assert.match(m.from, /codes@agents\.example\.test/);
     assert.match(m.to[0], /ada@example\.org/);
-    assert.match(m.data, /Subject: Your AGNT code: 123456/);
+    assert.match(m.data, /Subject: Your SIMON code: 123456/);
     assert.match(m.data, /Reply-To: reply\+abc@bridge\.example\.test/);
-    assert.match(m.data, /AGNT-Agent: bot@agents\.example\.test/i, 'header names are case-insensitive');
+    assert.match(m.data, /SIMON-Agent: bot@agents\.example\.test/i, 'header names are case-insensitive');
     assert.match(m.data, /Code: 123456\./);
   });
 
   it('reads the mail path from the environment, and holds production to a real, encrypted one', () => {
     const mail = (env: Record<string, string>, dev = false) => readMailConfig(env, dev);
     assert.deepEqual(mail({}, true), { console: true }, 'development falls back to the console');
-    assert.deepEqual(mail({ AGNT_DEV_OUTBOX: '/tmp/out.jsonl' }, true), { outbox: '/tmp/out.jsonl' });
+    assert.deepEqual(mail({ SIMON_DEV_OUTBOX: '/tmp/out.jsonl' }, true), { outbox: '/tmp/out.jsonl' });
     assert.equal(mail({}), null, 'production has no mail path until one is set');
-    assert.throws(() => mail({ AGNT_SMTP_HOST: 'smtp.example.test' }), /AGNT_MAIL_FROM/);
-    const smtp = { AGNT_SMTP_HOST: 'smtp.example.test', AGNT_MAIL_FROM: 'a@b.test' };
-    assert.throws(() => mail({ ...smtp, AGNT_SMTP_TLS: 'none' }), /only for a relay on this host/);
-    assert.throws(() => mail({ ...smtp, AGNT_SMTP_TLS: 'sometimes' }), /starttls, tls, none/);
+    assert.throws(() => mail({ SIMON_SMTP_HOST: 'smtp.example.test' }), /SIMON_MAIL_FROM/);
+    const smtp = { SIMON_SMTP_HOST: 'smtp.example.test', SIMON_MAIL_FROM: 'a@b.test' };
+    assert.throws(() => mail({ ...smtp, SIMON_SMTP_TLS: 'none' }), /only for a relay on this host/);
+    assert.throws(() => mail({ ...smtp, SIMON_SMTP_TLS: 'sometimes' }), /starttls, tls, none/);
     assert.deepEqual(mail(smtp), {
       smtp: { host: 'smtp.example.test', port: 587, tls: 'starttls', user: null, pass: null, from: 'a@b.test' },
     });
     assert.deepEqual(
-      mail({ ...smtp, AGNT_SMTP_TLS: '', AGNT_SMTP_PORT: '' }),
+      mail({ ...smtp, SIMON_SMTP_TLS: '', SIMON_SMTP_PORT: '' }),
       mail(smtp),
       'empty settings count as unset',
     );
     assert.equal(
-      (mail({ ...smtp, AGNT_SMTP_HOST: '127.0.0.1', AGNT_SMTP_TLS: 'none' }) as { smtp: { tls: string } }).smtp.tls,
+      (mail({ ...smtp, SIMON_SMTP_HOST: '127.0.0.1', SIMON_SMTP_TLS: 'none' }) as { smtp: { tls: string } }).smtp.tls,
       'none',
     );
   });

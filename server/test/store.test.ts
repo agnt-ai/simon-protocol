@@ -125,8 +125,8 @@ describe('the sqlite schema', () => {
   for (const version of [3, 4] as const)
     for (const retained of [false, true]) {
       it(`upgrades real schema ${version} with ${retained ? 'a surviving inbox below' : 'no inbox rows below'} its deleted high-water mark, then reopens`, async () => {
-        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-legacy-highwater-'));
-        const file = path.join(dir, 'agnt.sqlite');
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-legacy-highwater-'));
+        const file = path.join(dir, 'simon.sqlite');
         let store: SqliteStore | null = null;
         try {
           historicalFile(file, version, retained);
@@ -186,8 +186,8 @@ describe('the sqlite schema', () => {
     }
 
   it('imports a retained legacy retraction arrival once across upgrade, completion and duplicate replay', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-retraction-upgrade-'));
-    const file = path.join(dir, 'agnt.sqlite');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-retraction-upgrade-'));
+    const file = path.join(dir, 'simon.sqlite');
     try {
       historicalFile(file, 4, false);
       const record = stored('b');
@@ -235,8 +235,8 @@ describe('the sqlite schema', () => {
   });
 
   it('upgrades a file of schema 8, which kept no recovery epoch, in place', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-schema-'));
-    const file = path.join(dir, 'agnt.sqlite');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-schema-'));
+    const file = path.join(dir, 'simon.sqlite');
     try {
       const made = new SqliteStore(file);
       await made.createAgent({
@@ -267,14 +267,14 @@ describe('the sqlite schema', () => {
   });
 
   it('upgrades a file of schema 3, which kept no unpairing, in place', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agnt-schema-'));
-    const file = path.join(dir, 'agnt.sqlite');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-schema-'));
+    const file = path.join(dir, 'simon.sqlite');
     try {
       const made = new SqliteStore(file);
       await made.createAgent({
         address: 'ada@a.test',
         kind: 'paired',
-        principal: 'agnt-key:x',
+        principal: 'simon-key:x',
         keys: [{ key: 'k1', added: '2026-10-15T00:00:00.000Z', revoked: null }],
         mailbox: false,
         createdAt: '2026-10-15T00:00:00.000Z',

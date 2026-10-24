@@ -22,7 +22,7 @@ describe('signals (spec section 6.4)', async () => {
   const post = async (s: Signal) => {
     const res = await fed.net.request({
       method: 'POST',
-      url: `${alpha.origin}/agnt/signal`,
+      url: `${alpha.origin}/simon/signal`,
       body: canonicalBytes(s),
       maxBytes: 1 << 20,
     });

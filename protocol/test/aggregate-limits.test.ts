@@ -11,7 +11,7 @@ const file = (size: number, id: number): Part => ({
 });
 const message = (parts: Part[]): Message => ({ ...signedQuestion, parts });
 const carry = (parts: Part[]): Part => ({
-  type: 'application/agnt-message',
+  type: 'application/simon-message',
   data: canonicalBytes(message(parts)).toString('base64'),
 });
 const invalidParts = (e: unknown) => e instanceof WireError && e.status === 400 && e.details?.field === 'parts';

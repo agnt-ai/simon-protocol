@@ -70,10 +70,10 @@ def fetch(
         env = dict(os.environ)
         for name in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"):
             env.pop(name, None)
-        # Never resolve agnt from the caller's workspace or environment. Isolated Python retains its
+        # Never resolve simon from the caller's workspace or environment. Isolated Python retains its
         # installed standard/site packages, and this already-loaded module pins the trusted source root.
         package_root = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        bootstrap = f"import sys; sys.path.insert(0, {package_root!r}); from agnt.transport import _worker; _worker()"
+        bootstrap = f"import sys; sys.path.insert(0, {package_root!r}); from simon.transport import _worker; _worker()"
         process = _SPAWN([sys.executable, "-I", "-c", bootstrap], cwd=package_root,
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=env)
         remaining = deadline - cleanup - time.monotonic()

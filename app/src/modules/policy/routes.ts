@@ -156,7 +156,7 @@ export function policyRoutes(policy: Policy, reserved: Caller<Agent>): ApiRoute[
       tag,
       summary: 'A one-time code for someone this agent wants to hear from',
       description:
-        'Principal-reserved. The sender passes it as a hint for this agent (`agnt-hints: {"<this address>":{"invite":"<code>"}}` on /agnt/send): it lets one message through, past everything but the block lists.',
+        'Principal-reserved. The sender passes it as a hint for this agent (`simon-hints: {"<this address>":{"invite":"<code>"}}` on /simon/send): it lets one message through, past everything but the block lists.',
       caller: reserved,
       body: z.strictObject({ ttlHours: z.number().int().min(1).max(720).default(168) }),
       status: 201,

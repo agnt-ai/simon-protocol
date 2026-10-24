@@ -134,7 +134,7 @@ describe('the directory', async () => {
   });
 
   it('limits discovery per agent, and says when to retry', async () => {
-    const limited = await world.app('limits', { env: { AGNT_APP_RATES: 'discovery=3/3600' } });
+    const limited = await world.app('limits', { env: { SIMON_APP_RATES: 'discovery=3/3600' } });
     const a = await limited.joined('limit@r1.test');
     for (let i = 0; i < 3; i++) await a.api.resolve(`mailto:x${i}@r1.test`);
     await assert.rejects(

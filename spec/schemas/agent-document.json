@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agent-document.json",
-  "title": "AGNT agent document",
-  "description": "GET /agnt/agents/<address>, signed over AGNT-AGENT\\n and the canonical document without signature. The final signed document is at most 131072 bytes and keys has at most 32 TOTAL entries, retained revoked keys included. Optional public retirement evidence is host policy; a private host answers as for unknown. Pruning keys can prevent fresh verification of older messages.",
+  "title": "SIMON agent document",
+  "description": "GET /simon/agents/<address>, signed over SIMON-AGENT\\n and the canonical document without signature. The final signed document is at most 131072 bytes and keys has at most 32 TOTAL entries, retained revoked keys included. Optional public retirement evidence is host policy; a private host answers as for unknown. Pruning keys can prevent fresh verification of older messages.",
   "type": "object",
   "required": ["address", "kind", "keys", "signature"],
   "properties": {

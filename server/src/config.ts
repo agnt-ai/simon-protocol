@@ -3,40 +3,40 @@
  * table below, mirrored in README.md); `defineConfig(input)` builds the same thing from code. Any invalid
  * value throws at startup, never at the first request that needs it.
  *
- *   AGNT_ORIGIN                  this server's origin, https://host[:port]                     required
- *   AGNT_DEV                     1: development (http and local hosts, codes logged, a throwaway key)
- *   AGNT_HOSTED_DOMAINS          domains whose names agents take at once, comma separated
- *   AGNT_LEASE_DOMAIN            the domain addresses are leased on, for `register` with a key alone
- *   AGNT_SERVER_KEY              the signing key: <alg>:<base64url 32-byte seed>               or ..._FILE
- *   AGNT_SERVER_KEY_FILE         the signing key as a PKCS #8 PEM file
- *   AGNT_NEXT_SERVER_KEY         a key announced for rotation: listed, not yet used           or ..._FILE
- *   AGNT_NEXT_SERVER_KEY_FILE
- *   AGNT_DB                      the sqlite file (default agnt.sqlite; :memory: for none)
- *   AGNT_PORT                    the port to listen on (default 8080)
- *   AGNT_LISTEN_HOST             the address to listen on, 127.0.0.1 behind a tunnel (default every interface)
- *   AGNT_CLIENT_IP_HEADER        a header proxies set to the client's address, x-forwarded-for or cf-connecting-ip:
- *                                read only from this machine (a tunnel) and from AGNT_TRUSTED_PROXIES
- *   AGNT_TRUSTED_PROXIES         networks a load balancer connects from, CIDR, comma separated (/8 or narrower)
- *   AGNT_KEEP_ALIVE_TIMEOUT      seconds an idle connection is kept open (default 5; above a load balancer's own)
- *   AGNT_TRUSTED_CLAIM_SERVERS   origins whose claims agents here are shown, comma separated
- *   AGNT_DOH_RESOLVERS           two or more DNS-over-HTTPS JSON endpoints that must agree on every TXT answer
- *   AGNT_DNS_SERVERS             DNS servers to ask instead of the system's, IP addresses, comma separated
- *   AGNT_RATES                   overrides, name=count/seconds,...  (names: see DEFAULT_RATES)
- *   AGNT_RATE_EXEMPT_NETWORKS    networks the per-client rates (request, register, codeClient, agentMiss) do not
+ *   SIMON_ORIGIN                  this server's origin, https://host[:port]                     required
+ *   SIMON_DEV                     1: development (http and local hosts, codes logged, a throwaway key)
+ *   SIMON_HOSTED_DOMAINS          domains whose names agents take at once, comma separated
+ *   SIMON_LEASE_DOMAIN            the domain addresses are leased on, for `register` with a key alone
+ *   SIMON_SERVER_KEY              the signing key: <alg>:<base64url 32-byte seed>               or ..._FILE
+ *   SIMON_SERVER_KEY_FILE         the signing key as a PKCS #8 PEM file
+ *   SIMON_NEXT_SERVER_KEY         a key announced for rotation: listed, not yet used           or ..._FILE
+ *   SIMON_NEXT_SERVER_KEY_FILE
+ *   SIMON_DB                      the sqlite file (default simon.sqlite; :memory: for none)
+ *   SIMON_PORT                    the port to listen on (default 8080)
+ *   SIMON_LISTEN_HOST             the address to listen on, 127.0.0.1 behind a tunnel (default every interface)
+ *   SIMON_CLIENT_IP_HEADER        a header proxies set to the client's address, x-forwarded-for or cf-connecting-ip:
+ *                                read only from this machine (a tunnel) and from SIMON_TRUSTED_PROXIES
+ *   SIMON_TRUSTED_PROXIES         networks a load balancer connects from, CIDR, comma separated (/8 or narrower)
+ *   SIMON_KEEP_ALIVE_TIMEOUT      seconds an idle connection is kept open (default 5; above a load balancer's own)
+ *   SIMON_TRUSTED_CLAIM_SERVERS   origins whose claims agents here are shown, comma separated
+ *   SIMON_DOH_RESOLVERS           two or more DNS-over-HTTPS JSON endpoints that must agree on every TXT answer
+ *   SIMON_DNS_SERVERS             DNS servers to ask instead of the system's, IP addresses, comma separated
+ *   SIMON_RATES                   overrides, name=count/seconds,...  (names: see DEFAULT_RATES)
+ *   SIMON_RATE_EXEMPT_NETWORKS    networks the per-client rates (request, register, codeClient, agentMiss) do not
  *                                count, CIDR, comma separated (/8 or narrower): a hosting service's own, acting for
  *                                many agents
- *   AGNT_KEY_CHANGE_HOLD         seconds to hold a domain whose server keys changed (default 3600)
- *   AGNT_RECOVERY_WAIT           seconds a code recovery waits while the agent holds a valid key (default 259200)
- *   AGNT_MAX_CONNECTIONS         connections served at once (default 1024)
- *   AGNT_RETENTION_DAYS          how long messages are kept (default 30, at least 7)
- *   AGNT_SYNC_DAYS               how long sync shows what entered an agent's stream (default 7, at most the retention)
- *   AGNT_DEV_RESOLVE             development only: domain=origin,... answered without DNS
- *   AGNT_TRUSTED_NETWORKS        private networks outbound calls may reach, CIDR, comma separated (/8 or narrower)
- *   AGNT_TLS_CERT_FILE           serve https with this PEM certificate chain                   with ..._KEY_FILE
- *   AGNT_TLS_KEY_FILE            and this PEM private key
- *   AGNT_PUBLIC_SUFFIX_LIST      a newer copy of the Public Suffix List to judge registrable domains by
+ *   SIMON_KEY_CHANGE_HOLD         seconds to hold a domain whose server keys changed (default 3600)
+ *   SIMON_RECOVERY_WAIT           seconds a code recovery waits while the agent holds a valid key (default 259200)
+ *   SIMON_MAX_CONNECTIONS         connections served at once (default 1024)
+ *   SIMON_RETENTION_DAYS          how long messages are kept (default 30, at least 7)
+ *   SIMON_SYNC_DAYS               how long sync shows what entered an agent's stream (default 7, at most the retention)
+ *   SIMON_DEV_RESOLVE             development only: domain=origin,... answered without DNS
+ *   SIMON_TRUSTED_NETWORKS        private networks outbound calls may reach, CIDR, comma separated (/8 or narrower)
+ *   SIMON_TLS_CERT_FILE           serve https with this PEM certificate chain                   with ..._KEY_FILE
+ *   SIMON_TLS_KEY_FILE            and this PEM private key
+ *   SIMON_PUBLIC_SUFFIX_LIST      a newer copy of the Public Suffix List to judge registrable domains by
  *                                (default: the snapshot that ships with the server)
- *   AGNT_RETIRED_AGENT_DOCUMENTS private or public: whether a retired address answers its signed retired document
+ *   SIMON_RETIRED_AGENT_DOCUMENTS private or public: whether a retired address answers its signed retired document
  *                                (public) or the same 404 as an unknown address (private, the default)
  */
 import crypto, { type KeyObject } from 'node:crypto';
@@ -249,7 +249,7 @@ export function defineConfig(input: ConfigInput): Config {
     serverKey:
       input.serverKey ?? (dev ? crypto.generateKeyPairSync('ed25519').privateKey : fail('serverKey is required.')),
     nextServerKey: input.nextServerKey ?? null,
-    database: input.database ?? 'agnt.sqlite',
+    database: input.database ?? 'simon.sqlite',
     port: whole(input.port ?? 8080, 'port', 0, 65535),
     trustedClaimServers: origins(input.trustedClaimServers ?? [], 'trustedClaimServers'),
     dohResolvers,
@@ -306,49 +306,49 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       .map(s => s.trim())
       .filter(Boolean);
   const number = (name: string) => (env[name] === undefined ? undefined : Number(env[name]));
-  const dev = env.AGNT_DEV === '1';
-  if (env.AGNT_DEV !== undefined && env.AGNT_DEV !== '0' && !dev) fail('AGNT_DEV is 1 or 0.');
-  if (!env.AGNT_ORIGIN) fail('AGNT_ORIGIN is required.');
+  const dev = env.SIMON_DEV === '1';
+  if (env.SIMON_DEV !== undefined && env.SIMON_DEV !== '0' && !dev) fail('SIMON_DEV is 1 or 0.');
+  if (!env.SIMON_ORIGIN) fail('SIMON_ORIGIN is required.');
   return defineConfig({
-    origin: env.AGNT_ORIGIN!,
+    origin: env.SIMON_ORIGIN!,
     dev,
-    hostedDomains: list('AGNT_HOSTED_DOMAINS'),
-    leaseDomain: env.AGNT_LEASE_DOMAIN || null,
-    serverKey: readKey(env, 'AGNT_SERVER_KEY') ?? undefined,
-    nextServerKey: readKey(env, 'AGNT_NEXT_SERVER_KEY'),
-    database: env.AGNT_DB,
-    port: number('AGNT_PORT'),
-    trustedClaimServers: list('AGNT_TRUSTED_CLAIM_SERVERS'),
-    dohResolvers: list('AGNT_DOH_RESOLVERS'),
-    dnsServers: list('AGNT_DNS_SERVERS'),
-    rates: Object.fromEntries(list('AGNT_RATES').map(parseRate)),
-    rateExemptNetworks: list('AGNT_RATE_EXEMPT_NETWORKS'),
-    keyChangeHoldSeconds: number('AGNT_KEY_CHANGE_HOLD'),
-    recoveryWaitSeconds: number('AGNT_RECOVERY_WAIT'),
-    maxConnections: number('AGNT_MAX_CONNECTIONS'),
-    retentionDays: number('AGNT_RETENTION_DAYS'),
-    syncDays: number('AGNT_SYNC_DAYS'),
-    devResolve: Object.fromEntries(list('AGNT_DEV_RESOLVE').map(pair => pair.split('=', 2))),
-    trustedNetworks: list('AGNT_TRUSTED_NETWORKS'),
+    hostedDomains: list('SIMON_HOSTED_DOMAINS'),
+    leaseDomain: env.SIMON_LEASE_DOMAIN || null,
+    serverKey: readKey(env, 'SIMON_SERVER_KEY') ?? undefined,
+    nextServerKey: readKey(env, 'SIMON_NEXT_SERVER_KEY'),
+    database: env.SIMON_DB,
+    port: number('SIMON_PORT'),
+    trustedClaimServers: list('SIMON_TRUSTED_CLAIM_SERVERS'),
+    dohResolvers: list('SIMON_DOH_RESOLVERS'),
+    dnsServers: list('SIMON_DNS_SERVERS'),
+    rates: Object.fromEntries(list('SIMON_RATES').map(parseRate)),
+    rateExemptNetworks: list('SIMON_RATE_EXEMPT_NETWORKS'),
+    keyChangeHoldSeconds: number('SIMON_KEY_CHANGE_HOLD'),
+    recoveryWaitSeconds: number('SIMON_RECOVERY_WAIT'),
+    maxConnections: number('SIMON_MAX_CONNECTIONS'),
+    retentionDays: number('SIMON_RETENTION_DAYS'),
+    syncDays: number('SIMON_SYNC_DAYS'),
+    devResolve: Object.fromEntries(list('SIMON_DEV_RESOLVE').map(pair => pair.split('=', 2))),
+    trustedNetworks: list('SIMON_TRUSTED_NETWORKS'),
     tls: readTls(env),
-    listenHost: env.AGNT_LISTEN_HOST || null,
-    clientIpHeader: env.AGNT_CLIENT_IP_HEADER || null,
-    trustedProxies: list('AGNT_TRUSTED_PROXIES'),
-    keepAliveSeconds: number('AGNT_KEEP_ALIVE_TIMEOUT'),
-    publicSuffixFile: env.AGNT_PUBLIC_SUFFIX_LIST || null,
+    listenHost: env.SIMON_LISTEN_HOST || null,
+    clientIpHeader: env.SIMON_CLIENT_IP_HEADER || null,
+    trustedProxies: list('SIMON_TRUSTED_PROXIES'),
+    keepAliveSeconds: number('SIMON_KEEP_ALIVE_TIMEOUT'),
+    publicSuffixFile: env.SIMON_PUBLIC_SUFFIX_LIST || null,
     retiredAgentDocuments:
-      env.AGNT_RETIRED_AGENT_DOCUMENTS === undefined
+      env.SIMON_RETIRED_AGENT_DOCUMENTS === undefined
         ? undefined
-        : retiredPolicy(env.AGNT_RETIRED_AGENT_DOCUMENTS, 'AGNT_RETIRED_AGENT_DOCUMENTS'),
+        : retiredPolicy(env.SIMON_RETIRED_AGENT_DOCUMENTS, 'SIMON_RETIRED_AGENT_DOCUMENTS'),
   });
 }
 
-/** The certificate chain and key from AGNT_TLS_CERT_FILE and AGNT_TLS_KEY_FILE: both, or neither. */
+/** The certificate chain and key from SIMON_TLS_CERT_FILE and SIMON_TLS_KEY_FILE: both, or neither. */
 function readTls(env: NodeJS.ProcessEnv): Config['tls'] {
-  const certFile = env.AGNT_TLS_CERT_FILE;
-  const keyFile = env.AGNT_TLS_KEY_FILE;
+  const certFile = env.SIMON_TLS_CERT_FILE;
+  const keyFile = env.SIMON_TLS_KEY_FILE;
   if (!certFile && !keyFile) return null;
-  if (!certFile || !keyFile) fail('set AGNT_TLS_CERT_FILE and AGNT_TLS_KEY_FILE together.');
+  if (!certFile || !keyFile) fail('set SIMON_TLS_CERT_FILE and SIMON_TLS_KEY_FILE together.');
   const read = (file: string, name: string) => {
     try {
       return fs.readFileSync(file, 'utf8');
@@ -356,12 +356,12 @@ function readTls(env: NodeJS.ProcessEnv): Config['tls'] {
       return fail(`${name}: ${(e as Error).message}`);
     }
   };
-  const tls = { cert: read(certFile!, 'AGNT_TLS_CERT_FILE'), key: read(keyFile!, 'AGNT_TLS_KEY_FILE') };
+  const tls = { cert: read(certFile!, 'SIMON_TLS_CERT_FILE'), key: read(keyFile!, 'SIMON_TLS_KEY_FILE') };
   try {
     crypto.createPrivateKey(tls.key);
     new crypto.X509Certificate(tls.cert);
   } catch (e) {
-    fail(`AGNT_TLS_CERT_FILE and AGNT_TLS_KEY_FILE are a PEM certificate and its key: ${(e as Error).message}`);
+    fail(`SIMON_TLS_CERT_FILE and SIMON_TLS_KEY_FILE are a PEM certificate and its key: ${(e as Error).message}`);
   }
   return tls;
 }
@@ -389,7 +389,7 @@ function readKey(env: NodeJS.ProcessEnv, name: string): KeyObject | null {
 
 function parseRate(entry: string): [string, Rate] {
   const m = /^([a-zA-Z]+)=(\d+)\/(\d+)$/.exec(entry);
-  if (!m) fail(`AGNT_RATES: ${entry} is not name=count/seconds.`);
+  if (!m) fail(`SIMON_RATES: ${entry} is not name=count/seconds.`);
   return [m![1], { limit: Number(m![2]), seconds: Number(m![3]) }];
 }
 

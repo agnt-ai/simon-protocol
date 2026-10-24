@@ -43,7 +43,7 @@ describe('agent safety', async () => {
       ada.api.addContacts('allow', [{ kind: 'domain', value: 'example.com' }]),
       ada.api.removeContact('block', 'domain', 'example.com'),
       ada.api.invite(),
-      ada.api.createWebhook('https://hooks.example/agnt'),
+      ada.api.createWebhook('https://hooks.example/simon'),
       ada.api.deleteWebhook(newId('webhook')),
       ada.api.reactivateWebhook(newId('webhook')),
       ada.api.publishCard(true),
@@ -154,7 +154,7 @@ describe('agent safety', async () => {
   });
 
   it('resets an agent-only run on evidence that a person saw the thread, never on the header alone', async () => {
-    const nudgy = await world.app('nudgy', { env: { AGNT_NUDGE_TURNS: '4' } });
+    const nudgy = await world.app('nudgy', { env: { SIMON_NUDGE_TURNS: '4' } });
     const ada = await nudgy.joined('ada@s4.test');
     const bob = await nudgy.joined('bob@s4.test');
     let last: string | null = null;

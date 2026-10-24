@@ -22,11 +22,11 @@ import {
   type Part,
   type SignedClaims,
 } from '@agnt-protocol/protocol';
-import { AgntError, addressArg, invalid, originArg } from './errors.ts';
+import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
 
 export interface AgentOptions extends Transport {
-  /** The agent's own server, as an origin: `https://agnt.example.com`. `http:` is for local development. */
+  /** The agent's own server, as an origin: `https://simon.example.com`. `http:` is for local development. */
   server: string;
   /** The private key: PKCS #8 PEM, or a KeyObject. */
   key: string | KeyObject;
@@ -197,7 +197,7 @@ export class Agent {
     const body = withoutUndefined({ ...opts, key: this.key, address });
     // A lease has an empty identity line, even on an object with a saved address.
     const r = await readJson<Registration>(
-      await this.#request('POST', '/agnt/register', Buffer.from(JSON.stringify(body)), JSON_TYPE, address ?? null),
+      await this.#request('POST', '/simon/register', Buffer.from(JSON.stringify(body)), JSON_TYPE, address ?? null),
       this.#transport.now(),
     );
     if ('keys' in r) {
@@ -217,7 +217,7 @@ export class Agent {
     if (pairing !== undefined && principal === undefined) throw invalid('for', 'Pairing needs its principal.');
     if (
       principal !== undefined &&
-      (!isPrincipal(principal) || (principal.startsWith('agnt-key:') && !verifyPairing(address, principal, pairing)))
+      (!isPrincipal(principal) || (principal.startsWith('simon-key:') && !verifyPairing(address, principal, pairing)))
     )
       throw invalid(
         'pairing',
@@ -226,7 +226,7 @@ export class Agent {
     if (
       opts.recover !== undefined &&
       (principal === undefined ||
-        !principal.startsWith('agnt-key:') ||
+        !principal.startsWith('simon-key:') ||
         typeof opts.at !== 'string' ||
         !verifyRecovery(address, principal, this.key, opts.at, opts.recover))
     )
@@ -236,7 +236,7 @@ export class Agent {
       );
     const body = withoutUndefined({ address, key: this.key, code: opts.code, at: opts.at, recover: opts.recover });
     const result = await readJson<Recovery>(
-      await this.#request('POST', '/agnt/recovery', Buffer.from(JSON.stringify(body)), JSON_TYPE, address),
+      await this.#request('POST', '/simon/recovery', Buffer.from(JSON.stringify(body)), JSON_TYPE, address),
       this.#transport.now(),
     );
     if ('keys' in result) {
@@ -249,11 +249,11 @@ export class Agent {
   /** Read recovery state only as the registered agent, never as an unauthenticated requester. */
   async recoveryStatus(): Promise<{ recovery: Account['recovery'] }> {
     this.#requireAddress();
-    return this.#json('GET', '/agnt/recovery');
+    return this.#json('GET', '/simon/recovery');
   }
 
   async account(): Promise<Account> {
-    return this.#json('GET', '/agnt/account');
+    return this.#json('GET', '/simon/account');
   }
 
   /** Add a device key, proving possession with that new private key. */
@@ -262,7 +262,7 @@ export class Agent {
     const token = keyToken(added);
     if (label !== undefined && (typeof label !== 'string' || [...label].length > 64))
       throw invalid('label', 'label is at most 64 characters.');
-    return this.call('POST', '/agnt/keys', {
+    return this.call('POST', '/simon/keys', {
       key: token,
       proof: sign(added, addKeyProofString(this.#requireAddress(), token)),
       ...(label === undefined ? {} : { label }),
@@ -270,11 +270,11 @@ export class Agent {
   }
 
   async revokeKey(key: string): Promise<Account> {
-    return this.call('DELETE', `/agnt/keys/${encodeURIComponent(key)}`);
+    return this.call('DELETE', `/simon/keys/${encodeURIComponent(key)}`);
   }
 
   async endGrant(id: string): Promise<Account | { status: 'ended' }> {
-    return this.call('DELETE', `/agnt/grants/${encodeURIComponent(id)}`);
+    return this.call('DELETE', `/simon/grants/${encodeURIComponent(id)}`);
   }
 
   /** Cancel by a known agent key, or by the cancel code from the address's mailbox. */
@@ -286,7 +286,7 @@ export class Agent {
     const address = opts ? addressArg('address', opts.address) : this.#address!;
     const body = opts ? { address, cancelCode: opts.cancelCode } : {};
     return readJson(
-      await this.#request('POST', '/agnt/recovery/cancel', Buffer.from(JSON.stringify(body)), JSON_TYPE, address),
+      await this.#request('POST', '/simon/recovery/cancel', Buffer.from(JSON.stringify(body)), JSON_TYPE, address),
       this.#transport.now(),
     );
   }
@@ -296,7 +296,7 @@ export class Agent {
     return readJson(
       await this.#request(
         'POST',
-        '/agnt/unpair',
+        '/simon/unpair',
         Buffer.from(JSON.stringify({ address, unpairing })),
         JSON_TYPE,
         address,
@@ -340,8 +340,8 @@ export class Agent {
   async send(message: Draft | Message, opts: { hints?: Hints } = {}): Promise<{ id: string; receivedAt: string }> {
     const m = 'signature' in message ? message : this.compose(message);
     const headers: Record<string, string> = { ...JSON_TYPE };
-    if (opts.hints) headers['agnt-hints'] = asciiJson(hintsFor(m.to, opts.hints));
-    return this.#json('POST', '/agnt/send', canonicalBytes(m), headers);
+    if (opts.hints) headers['simon-hints'] = asciiJson(hintsFor(m.to, opts.hints));
+    return this.#json('POST', '/simon/send', canonicalBytes(m), headers);
   }
 
   /** Read messages, signals and history changes since an opaque token. */
@@ -359,7 +359,7 @@ export class Agent {
     if (since !== undefined) query.set('since', since);
     if (limit !== undefined) query.set('limit', String(limit));
     if (wait !== undefined) query.set('wait', String(wait));
-    const path = `/agnt/sync${query.size ? `?${query}` : ''}`;
+    const path = `/simon/sync${query.size ? `?${query}` : ''}`;
     // Leave time for the server's requested long poll as well as transport overhead.
     return readJson(
       await this.#request(
@@ -378,25 +378,25 @@ export class Agent {
     if (typeof type !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(type))
       throw invalid('type', 'Signal type is a lower-case registry name.');
     if (!HEX64.test(about)) throw invalid('about', 'A message id is 64 lower-case hex digits.');
-    return this.call('POST', '/agnt/send-signal', { type, about, to: to.map((a, i) => addressArg(`to[${i}]`, a)) });
+    return this.call('POST', '/simon/send-signal', { type, about, to: to.map((a, i) => addressArg(`to[${i}]`, a)) });
   }
 
   async createWebhook(url: string): Promise<{ id: string }> {
-    return this.call('POST', '/agnt/webhooks', { url });
+    return this.call('POST', '/simon/webhooks', { url });
   }
 
   async verifyWebhook(id: string, code: string): Promise<{ id: string; verified: boolean }> {
-    return this.call('POST', `/agnt/webhooks/${encodeURIComponent(id)}/verify`, { code });
+    return this.call('POST', `/simon/webhooks/${encodeURIComponent(id)}/verify`, { code });
   }
 
   async deleteWebhook(id: string): Promise<{ deleted: boolean }> {
-    return this.call('DELETE', `/agnt/webhooks/${encodeURIComponent(id)}`);
+    return this.call('DELETE', `/simon/webhooks/${encodeURIComponent(id)}`);
   }
 
   /** How delivery of this agent's own message is going. */
   async sent(id: string): Promise<Delivery> {
     if (!HEX64.test(id)) throw invalid('id', 'A message id is 64 lower-case hex digits.');
-    return this.#json('GET', `/agnt/sent/${id}`);
+    return this.#json('GET', `/simon/sent/${id}`);
   }
 
   /**
@@ -405,7 +405,7 @@ export class Agent {
    */
   async uploadPart(bytes: Uint8Array, type: string, name?: string): Promise<HashPart> {
     const sha256 = sha256Hex(bytes);
-    await this.#json('PUT', `/agnt/parts/${sha256}`, bytes, BYTES_TYPE);
+    await this.#json('PUT', `/simon/parts/${sha256}`, bytes, BYTES_TYPE);
     return { type, sha256, size: bytes.length, ...(name === undefined ? {} : { name }) };
   }
 
@@ -417,7 +417,7 @@ export class Agent {
     if (!HEX64.test(part.sha256)) throw invalid('sha256', 'A part hash is 64 lower-case hex digits.');
     const a = await this.#request(
       'GET',
-      `/agnt/parts/${part.sha256}`,
+      `/simon/parts/${part.sha256}`,
       undefined,
       {},
       undefined,
@@ -427,7 +427,7 @@ export class Agent {
     if (a.status !== 200) throw failure(a, this.#transport.now());
     const hash = sha256Hex(a.body);
     if (hash !== part.sha256 || (part.size !== undefined && a.body.length !== part.size)) {
-      throw new AgntError('hash_mismatch', `${a.url} sent ${a.body.length} bytes hashing to ${hash}.`, {
+      throw new SimonError('hash_mismatch', `${a.url} sent ${a.body.length} bytes hashing to ${hash}.`, {
         details: { url: a.url, sha256: hash, size: a.body.length },
       });
     }
@@ -475,7 +475,7 @@ export class Agent {
 
   #requireAddress(): string {
     if (this.#address === null) {
-      throw new AgntError('not_registered', 'This agent has no address yet: register first.');
+      throw new SimonError('not_registered', 'This agent has no address yet: register first.');
     }
     return this.#address;
   }

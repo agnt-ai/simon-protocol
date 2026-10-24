@@ -67,7 +67,7 @@ describe('recovery authority and defense races', () => {
           successor = generateKey(),
           principal = generateKey();
         const address = 'owner@key-race.test',
-          forValue = `agnt-key:${principal.key}`;
+          forValue = `simon-key:${principal.key}`;
         const at = fed.clock.now().toISOString(),
           future = new Date(fed.clock.t + 120_000).toISOString();
         // Targeted historical-metadata fixture: the old key is valid for another two minutes. Recovery
@@ -85,11 +85,11 @@ describe('recovery authority and defense races', () => {
           'created',
         );
         old.address = address;
-        assert.equal((await old.request('GET', '/agnt/account')).status, 200);
+        assert.equal((await old.request('GET', '/simon/account')).status, 200);
         armed = true;
         let finished = false;
         adding = old
-          .request('POST', '/agnt/keys', {
+          .request('POST', '/simon/keys', {
             body: JSON.stringify({
               key: successor.key,
               proof: sign(successor.privateKey, addKeyProofString(address, successor.key)),
@@ -118,8 +118,8 @@ describe('recovery authority and defense races', () => {
           false,
         );
         assert.deepEqual(held.authorizedKeys, [fresh.token]);
-        assert.equal((await old.request('GET', '/agnt/account')).status, 401);
-        assert.equal((await fresh.request('GET', '/agnt/account')).status, 200);
+        assert.equal((await old.request('GET', '/simon/account')).status, 401);
+        assert.equal((await fresh.request('GET', '/simon/account')).status, 200);
       } finally {
         await cleanup(fed, [adding], mutation.release);
       }
@@ -161,7 +161,7 @@ describe('recovery authority and defense races', () => {
             old = host.newAgent(),
             fresh = host.newAgent();
           const principal = generateKey(),
-            forValue = `agnt-key:${principal.key}`;
+            forValue = `simon-key:${principal.key}`;
           const at = fed.clock.now().toISOString(),
             future = new Date(fed.clock.t + 120_000).toISOString();
           assert.equal(
@@ -211,7 +211,7 @@ describe('recovery authority and defense races', () => {
           await fed.work();
           const refused = await polling;
           assert.equal(refused.status, 401);
-          assert.equal(refused.headers['www-authenticate'], 'AGNT');
+          assert.equal(refused.headers['www-authenticate'], 'SIMON');
           assert.equal(
             refused.json.messages,
             undefined,
@@ -311,7 +311,7 @@ describe('recovery authority and defense races', () => {
           [],
           'the unavailable notice identity never produced a resident defense message',
         );
-        assert.equal((await old.request('GET', '/agnt/account')).status, 200, 'the original holder retains authority');
+        assert.equal((await old.request('GET', '/simon/account')).status, 200, 'the original holder retains authority');
       } finally {
         await cleanup(fed, []);
       }
@@ -384,7 +384,7 @@ describe('recovery authority and defense races', () => {
         const blocked = await claimant.recover({ address, code: proof });
         assert.deepEqual([blocked.status, blocked.json.code], [503, 'unavailable']);
         assert.equal(
-          (await old.request('GET', '/agnt/account')).status,
+          (await old.request('GET', '/simon/account')).status,
           200,
           'the old holder still controls the account',
         );
@@ -401,7 +401,7 @@ describe('recovery authority and defense races', () => {
           'a valid proof cleans the inert reservation but never resumes an undefended takeover',
         );
         assert.equal(await host.store.value('recovery', address, fed.clock.now().toISOString()), null);
-        assert.equal((await old.request('GET', '/agnt/account')).status, 200);
+        assert.equal((await old.request('GET', '/simon/account')).status, 200);
         const retry = claimant;
         assert.equal((await retry.recover({ address })).status, 202);
         await fed.work();
@@ -419,7 +419,7 @@ describe('recovery authority and defense races', () => {
         const completed = await retry.recover({ address, code });
         assert.equal(completed.status, 200);
         assert.equal((await retry.sync()).status, 200);
-        assert.equal((await old.request('GET', '/agnt/account')).status, 401);
+        assert.equal((await old.request('GET', '/simon/account')).status, 401);
         assert.deepEqual((await host.store.agentByAddress(address))!.authorizedKeys, [retry.token]);
       } finally {
         notifyFails = rollbackFails = false;
