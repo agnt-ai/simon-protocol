@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agnt"
+version = "0.1.0"
+description = "Client for the AGNT Protocol: one signed message to name@domain."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Communications",
+    "Topic :: Security :: Cryptography",
+]
+
+[project.optional-dependencies]
+crypto = ["cryptography>=40"]
+dns = ["dnspython>=2.4"]
+
+[project.scripts]
+agnt = "agnt.cli:main"
+
+[project.urls]
+Specification = "https://github.com/agnt-ai/simon-protocol/blob/main/spec/PROTOCOL.md"
+Repository = "https://github.com/agnt-ai/simon-protocol"
+
+[tool.setuptools]
+packages = ["agnt"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

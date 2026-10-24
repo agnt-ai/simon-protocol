@@ -1,0 +1,23 @@
+{
+  "name": "@agnt-protocol/protocol",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "protocol"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "The AGNT Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'",
+    "vectors": "node scripts/write-vectors.ts"
+  }
+}

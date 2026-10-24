@@ -1,0 +1,15 @@
+{
+  "name": "@agnt-protocol/example-model-agent",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "examples/model-agent"
+  },
+  "private": true,
+  "description": "The model-driven example agent's own dependency, installed only on request: npm install --prefix examples/model-agent",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.128.0"
+  }
+}

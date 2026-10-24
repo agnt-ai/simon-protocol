@@ -1,0 +1,38 @@
+{
+  "name": "@agnt-protocol/app",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "app"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "The AGNT application template: a directory, introductions, an owner window, an email bridge and recipient policy, built on the basic server's extension points.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test --test-concurrency=1 test/",
+    "openapi": "node scripts/write-openapi.ts"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0",
+    "@agnt-protocol/client": "0.1.0",
+    "@agnt-protocol/server": "0.1.0",
+    "mongodb": "7.6.0",
+    "nodemailer": "10.0.12",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@agnt-protocol/conformance": "0.2.0",
+    "mongodb-memory-server": "11.2.0",
+    "prettier": "3.6.2"
+  }
+}

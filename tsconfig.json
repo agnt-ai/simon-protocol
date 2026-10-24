@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "skipLibCheck": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["node"]
+  },
+  "include": [
+    "scripts",
+    "protocol/src",
+    "protocol/test",
+    "protocol/scripts",
+    "conformance/src",
+    "conformance/test",
+    "conformance/scripts",
+    "server/src",
+    "server/test",
+    "server/scripts",
+    "app/src",
+    "app/test",
+    "app/scripts",
+    "clients/*/src",
+    "clients/*/test",
+    "clients/*/scripts",
+    "examples",
+    "test/integration"
+  ],
+  "exclude": ["examples/model-agent"]
+}

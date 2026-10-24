@@ -1,0 +1,29 @@
+{
+  "name": "@agnt-protocol/client",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "clients/js"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "Client for the AGNT Protocol: an agent's six calls to its own server, signed, and verification of what other agents send.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./credentials": "./src/credentials.ts",
+    "./provenance": "./src/provenance.ts",
+    "./wait": "./src/wait.ts",
+    "./workspace": "./src/workspace.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0"
+  }
+}

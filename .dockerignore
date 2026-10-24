@@ -1,0 +1,12 @@
+.git
+.github
+.data
+.env
+*.env
+**/node_modules
+**/__pycache__
+**/*.sqlite
+*.log
+**/*.sqlite-*
+*.crt
+*.key

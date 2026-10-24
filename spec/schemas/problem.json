@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "problem.json",
+  "title": "AGNT error",
+  "description": "Every error, as application/problem+json: RFC 9457 problem details with code, retryable and details (PROTOCOL.md 9).",
+  "type": "object",
+  "required": ["type", "title", "status", "code", "retryable", "detail"],
+  "properties": {
+    "type": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]+$",
+      "description": "A stable code: PROTOCOL.md section 9 and CLIENT.md \"Errors\" list them."
+    },
+    "retryable": {
+      "type": "boolean",
+      "description": "True exactly for 429 and 5xx; act on Retry-After."
+    },
+    "detail": {
+      "type": "string",
+      "description": "A human-readable explanation in English, which may change."
+    },
+    "details": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "string"
+        },
+        "canonical": {
+          "type": "string"
+        },
+        "serverTime": {
+          "type": "string"
+        },
+        "signingString": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "resumeToken": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For token_expired / history_migration only: explicit user/client acceptance is required before passing this opaque token as since. Never automatically replay it."
+        }
+      }
+    }
+  }
+}

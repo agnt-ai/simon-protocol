@@ -1,0 +1,32 @@
+{
+  "name": "@agnt-protocol/server",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "server"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "The basic AGNT server: the whole protocol and client API, hardened, with Node's standard library only.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./store-contract": "./src/store/contract.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "bin": {
+    "agnt-server": "./src/main.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "start": "node src/main.ts",
+    "test": "node --test test/",
+    "smoke": "node scripts/smoke.ts"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0"
+  }
+}

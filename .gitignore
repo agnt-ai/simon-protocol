@@ -1,0 +1,13 @@
+node_modules/
+.env
+*.log
+.data/
+packed/
+dist/
+__pycache__/
+examples/model-agent/package-lock.json
+*.env
+*.sqlite
+*.sqlite-*
+*.crt
+*.key

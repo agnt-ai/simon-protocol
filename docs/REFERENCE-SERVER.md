@@ -1,0 +1,73 @@
+# How the reference server behaves
+
+[`spec/PROTOCOL.md`](../spec/PROTOCOL.md) holds the rules every server follows. This note holds what the reference server in `server/` does where the protocol leaves a choice to each implementation: how it protects itself, and how it protects its own users. Another implementation may choose differently and still interoperate. Values here are defaults chosen for one server, not requirements.
+
+Several processes may share one store. Where a bound must hold for all of them, it is kept in the store; where it bounds one process's own work, it is kept in that process, and this note says which.
+
+## Deliveries and signals from other servers
+
+- **Core requires** checking the carrier's signature before recipient-dependent work and bounding lookups caused by unauthenticated requests (PROTOCOL.md sections 6.3 and 11.2). The pools, limits and keys below are how it meets the second; their values are its own.
+- **Repeats count.** Every delivery and signal counts against its carrier's budget, repeats included, and a repeat never costs more work than a new delivery.
+- **The envelope beside its message** is bounded by default at the most a spec-valid envelope holds at the server's `recipients` limit (`envelopeExtrasBytes` in its configuration; 64059 canonical bytes at 100 recipients), covering the known protocol-defined fields at that recipient limit. The host extras limit also applies to unknown signed extension members; an otherwise valid extended envelope may exceed it. Anything larger is `400 invalid` with `details.field` set to `envelope`. This is the server's own limit, not a protocol rule.
+- **Three lookup pools,** each bounded in the process:
+  - lookups made for unauthenticated callers, before any signature verifies: 24 at once;
+  - lookups a delivery or signal asks for once its carrier's signature verified (its recipients' domains, its claims, its author's document, a held key change's confirmation): 32 at once, at most 8 for one carrier and 16 for the carriers whose deliveries come from one network (an IPv4 `/24` or an IPv6 `/48`), so the tenants of one host behind one address each keep a carrier's share while no one network holds more than half the pool. Carriers made up on two or more networks can still fill it, so an honest carrier's delivery may meet a retryable `503` meanwhile: the shares raise what that costs, and reserve nothing for any one carrier;
+  - the server's own work, an agent's `send` and the outbox: 16 at once, which nothing from outside can fill.
+- **Recipients' domains** at step 8 are resolved side by side, as many at once as the carrier's free share allows, and none is started more than 20 seconds into a delivery (then `503`). A lookup refused for room costs its payer nothing.
+- **Rate limits** are kept per client network as this host chooses: the IPv4 address, or the IPv6 `/64`. They are counted in the process, so a server run as several processes divides them by their number.
+- **Lookups before a signature verifies:** by default 300 lookups an hour per client network (`lookup`, in the process), and 3600 an hour per registrable domain of the name looked up (`lookupDomain`, in the store, so every process shares it). The registrable domain is judged by the ICANN section of the Public Suffix List: the server ships a pinned snapshot, and `AGNT_PUBLIC_SUFFIX_LIST` reads a newer copy. The list's private section is left out on purpose: random names under a host that gives out subdomains all land on that host's DNS, the party the bound protects. Only lookups made count: an answer from a cache, or a lookup another request already has underway, costs nothing. These are the deliver and signal lookups of the carrier and its document, a signed reader's resolution and agent document, a server-signed part fetch's server document, and register's resolution of an address on another domain. Past either bound a delivery or signal is `429` with `Retry-After`, and a signed read asks as nobody in particular.
+- **Lookups after the signature** are counted against the carrier (`carrierLookup`, 3000 an hour, in the process).
+- **Answers that there is none** are cached as long as sections 3 and 4 allow: an agent document's `404` for ten minutes, kept even against an unauthenticated reader's refetch, so naming an agent that does not exist costs one lookup in ten minutes.
+- **A domain that moved** is resolved again without the cache before a `403` at step 7 or a `400` at step 8, at most once a minute for one domain (a mark in the store). Its new server keys are still held by key continuity until confirmed, which answers `503`, retryable.
+- **What it learns about senders** is keyed by carrier origin and by registrable domain (the Public Suffix List's organizational domain), because new subdomains cost an attacker nothing.
+- **Failed signature checks** count against the sender before any more work is done for it.
+- **Connections:** short connect timeouts, and a bound on concurrent outbound connections per destination and in total.
+
+## Delivering
+
+- **Retries** follow PROTOCOL.md section 6.3: `429`, `5xx` and failures that may pass back off from a minute to four hours. A `400 invalid` on `recipients` is retried for an hour from the first such answer, the recipients' domain resolved again without the cache before each attempt. A `403 bad_signature` is retried while the server began serving the author's domain less than an hour ago, the time it first found the domain naming it when an agent there sent (kept in the store, forgotten when the domain stops naming it, and lapsing an hour after the last send that found it naming the server, so a domain that moved away and back unseen begins again).
+
+## Registering and recovering
+
+The reference implementation provides CLIENT's dedicated register/create, account, key-management, recovery, status and cancellation resources. The defaults below are host choices; describing a policy here does not establish persistence, timing or deployment behaviour:
+
+- **A mailbox recovery waits** 72 hours while the agent holds a valid key (`AGNT_RECOVERY_WAIT`). The host writes a signed notice from `postmaster@<the agent's domain>` into the owner's sync stream and sends a long random cancellation secret to the verified mailbox before activating the pending recovery. The account and recovery-status resources expose the pending state only to an authorized agent key.
+- **A key may cancel** a recovery when it was held before the recovery started, once in 30 days; then only the cancel code can.
+- **One recovery waits at a time.** Callers without ownership proof receive the usual outward code-request/guess/expiry behavior without another code being sent. The mechanism must be verified across the whole exchange, not just its first response.
+- **Registration and recovery codes** are 8 digits, valid 15 minutes and bound to the address and requesting key. Every attempt is counted before it is compared, so concurrent guesses share the five: five wrong guesses receive `wrong_code`, and every later attempt, the right code included, receives `code_locked`; only a matching attempt is given back. A code is also bound to the account's recovery epoch, which advances only when a recovery is cancelled, completes or lapses, a key principal recovers the agent, or it retires; adding or revoking keys never voids a code. Code requests count against the address (`code`) and client network (`codeClient`), alongside the general client registration rate (`register`). These numbers are reference-host policy, not protocol constants.
+- **A key principal's recovery** completes at once and ends any waiting recovery.
+- **Stored key history** is bounded: adding a key is refused with `400 too_many_keys` once the agent holds 128 keys in all, revoked ones included (four documents' worth), since a revoked key is kept so it never returns. A recovery is never refused for it. This bounds a MongoDB agent document well below 16 MiB.
+- **Deploying the recovery-epoch binding: no mixed-version window.** Codes issued by a server before it bind to the account authority version, not the recovery epoch, so a server after it answers such a code `422 wrong_code` and the caller asks for a new one. Codes live 15 minutes: replace every instance at once (or drain code exchanges for 15 minutes) rather than run old and new side by side. The SQLite schema moves to version 9 in place; MongoDB documents need no migration.
+- **Retired records are private by default:** a retired address answers its agent-document lookup with the same 404 as an unknown address, before keys or unpairing are projected, through both direct calls and the listener, and is never given out again. Publishing signed retirement evidence is an explicit opt-in: `AGNT_RETIRED_AGENT_DOCUMENTS=public`, or `createServer({ ..., retiredAgentDocuments: 'public' })`, which overrides the configuration; a retired address then answers its retired document for as long as the server serves its domain. Any other value of the variable stops the server from starting. Internal retired state and authentication remain intact. The server has no import from a domain's previous server, so it carries over neither key history nor retired documents; every document it serves is signed with its own key.
+
+## Fetching files
+
+The reference schedules fetches independently of recipient admission and reads, aiming to avoid revealing either through fetch timing. Budgets, retries, retention and network observations still have limits; PROTOCOL.md section 12 describes the disclosures.
+
+- **It fetches the files of every message it accepts,** soon after accepting it, whoever the recipients are and whatever its policy decides. It checks the bytes of a message no agent took like any others, then drops them.
+- **It never fetches because an agent asked** for a file or read a message.
+- **Each fetch waits** a random interval of up to a few minutes.
+- **Retries:** six attempts with backoff. After terminal exhaustion it does not restart that message's fetch because of a read. A private read without another usable grant gets `404`; independent held or publication grants still compose.
+- **A file declared larger than `partBytes`** is refused at deliver, whether the message names it or a message it carries inline does (PROTOCOL.md sections 5.3 and 6.3), so nothing is ever fetched only on demand and no fetch is larger than `partBytes`.
+- **Fair sharing:**
+  - 4 fetches at once in one process, with at most 64 MiB of declared size underway;
+  - at most 2 live fetch leases from one carrier across processes sharing the store, taken in turn across carriers; a slot that frees goes first to a carrier with the fewest fetches underway in that process, so a few carriers with older backlogs cannot hold every slot from a newer one (each tick reads 64 due rows in turn across carriers, so more than 64 carriers with older backlogs can still delay it); stale I/O requires ownership-fenced settlement;
+  - slow and failed fetches count against the carrier that caused them.
+- **Claims.** The Store contract uses a unique attempt token and snapshot revision. Renewal and retry/defer/completion/terminal-exhaustion settlement are conditional on ownership; a stale worker cannot alter a newer claim. The worker renews its two-minute claim and carrier slot and waits for an in-flight renewal before settlement. Terminal exhaustion stays on that same fenced row. SQLite/Mongo contract regressions exercise ownership, late-writer and revision-ABA behavior; their actual run status is recorded with the implementation PR. They do not establish live crash-recovery or failover proof.
+- **Budget:** 256 MiB per carrier per hour, kept in the store and shared by every process, charged at every attempt by the declared size, served or not. A fetch past the budget waits for the next hour without spending an attempt; it is never skipped for some recipients and not others.
+
+## Signals
+
+- Accepted signals enter eligible recipients' sync streams for at most five minutes and are offered to the extensions' signal listeners. They are short-lived sync entries, never inbox/history messages or content-log entries. Clients request outbound signals through `POST /agnt/send-signal`; the server carries them through the protocol's server-to-server signal endpoint. Sync changes also wake verified webhooks under the host's delivery policy.
+- It is never written to a log of content.
+- It passes on only signals about messages the agent holds, from that message's author or recipients. That is this server's policy; the protocol lets any server drop any signal.
+
+## Lookups of agent documents
+
+- Lookups for addresses with no agent are limited per client.
+- Past the limit, every agent document, an agent's or not, is answered `429` with `Retry-After`, so the refusal tells nothing about any address.
+- An agent document lists every active key and then the newest retained revoked keys, with at most 32 total entries and 131072 final canonical signed bytes. It prunes retained revoked history when necessary; it never omits an active key to make a document fit. A legacy account that cannot fit is refused until repaired.
+
+## Policy and scope
+
+These are reference-host policies, not fixed core limits. The reference caller lookup default is 300/hour. Public retirement evidence is an optional host choice; the reference server keeps retired identity and unpairing records private. Dedicated recovery, sync, signals, webhooks and token-fenced Store interfaces are part of the reference implementation. Live migration, crash recovery, high-availability failover and throughput are properties of a deployment, not of this source or its component tests.

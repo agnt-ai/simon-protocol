@@ -1,0 +1,249 @@
+/**
+ * `POST /agnt/send` (CLIENT.md): an agent here hands over a message for delivery. Checked in the order the
+ * client API gives: the message as a delivery would check it (spec section 6.3, steps 1, 3 and 4); a
+ * version this server implements; `from` the agent's own address, on a domain that still names this
+ * server; the author's signature; the paired or solo rule; the 24-hour window; no message with an audience
+ * carried whole (spec section 7.1); every content-addressed
+ * part held for this agent, uploaded or received, so a part it received can be forwarded. Then the message,
+ * this server's claims about it signed for it (spec section 6.2), and one delivery row per recipient domain
+ * are stored as one, and the answer is given; delivery follows.
+ *
+ * A repeat answers as the first call did, and stores again whatever rows a store lost, so a client that
+ * retries after a crash never leaves its message undelivered.
+ */
+import {
+  carriedMessages,
+  checkEnvelopeShape,
+  claimsBytes,
+  checkMessage,
+  checkPrincipal,
+  checkSupportedVersion,
+  deliveryWindow,
+  domainOf,
+  invalid,
+  isFresh,
+  isJsonObject,
+  judgeClaims,
+  messageId,
+  namedFiles,
+  parseMessage,
+  parseStrict,
+  SEND_WINDOW_MS,
+  sign,
+  unauthorized,
+  verifyMessage,
+  type AnyMessage,
+  type Claim,
+  type Hints,
+  type Json,
+} from '@agnt-protocol/protocol';
+import { authenticateAgent } from './auth.ts';
+import { iso, later, type Context } from './context.ts';
+import { badRequest, conflict } from './errors.ts';
+import { json, type Reply, type Request } from './http.ts';
+import { MOVE_WINDOW_MS, SERVING_SINCE } from './outbox.ts';
+import type { Agent, Delivery, StoredMessage } from './store/store.ts';
+import { changed } from './sync.ts';
+
+const DAY_MS = 86_400_000;
+
+export async function send(ctx: Context, req: Request): Promise<Reply> {
+  const agent = await authenticateAgent(ctx, req);
+  const m = parseMessage(req.body, ctx.config.limits);
+  return json(await write(ctx, agent, m, readHintsHeader(req.headers['agnt-hints'])));
+}
+
+/** `send` for an extension's own agent, with the message as an object: checked from step 4 on. */
+export async function sendAs(ctx: Context, m: AnyMessage, hints?: Hints) {
+  const agent = await ctx.store.agentByAddress(m.from);
+  if (!agent || agent.retiredAt) throw invalid(`${m.from} is not an agent here.`, { field: 'from' });
+  return write(ctx, agent, checkMessage(m, ctx.config.limits), hints ?? {});
+}
+
+/** The checks after the message's own, then storage. Answers the id and when it was received. */
+async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
+  checkSupportedVersion(m);
+  const id = messageId(m);
+  const now = ctx.now();
+
+  const earlier = await ctx.store.message(id);
+  if (earlier && earlier.message.from === agent.address && earlier.carrier === ctx.config.origin) {
+    // The claims that travel, as the first call checked them: without this server's judgement.
+    checkHints(ctx, hints, m, earlier.signedClaims?.claims ?? []);
+    await ctx.store.putMessage(earlier, { deliveries: deliveriesFor(earlier, hints as Hints) });
+    ctx.wake();
+    return { id, receivedAt: earlier.receivedAt };
+  }
+
+  if (m.from !== agent.address) throw invalid(`This agent sends only as ${agent.address}.`, { field: 'from' });
+  const domain = domainOf(agent.address);
+  // Its lookups are the agent's, in its share of the server's own pool (resolver.ts).
+  const payer = { agent: agent.address };
+  if (!(await ctx.resolver.servesHere(domain, payer))) {
+    await ctx.store.setValue(SERVING_SINCE, domain, null, iso(now));
+    throw conflict('address_not_served', `${domain} no longer names this server.`);
+  }
+  await notedServing(ctx, domain, now);
+  if (!verifyMessage(m, agent.keys)) {
+    throw unauthorized('bad_signature', "The message does not verify with the author's keys valid at its sentAt.", now);
+  }
+  checkPrincipal(m, agent.principal === null ? { kind: 'solo' } : { kind: 'paired', for: agent.principal });
+  if (!isFresh(m, now, SEND_WINDOW_MS)) {
+    throw invalid('sentAt is more than 24 hours old or more than 5 minutes ahead.', { field: 'sentAt' });
+  }
+  checkCarriedAudience(m);
+  for (const p of contentParts(m)) {
+    if (!(await holds(ctx, agent.address, p))) {
+      throw badRequest('part_not_uploaded', `Upload part ${p.sha256} (${p.size} bytes) first.`, { sha256: p.sha256 });
+    }
+  }
+  const made = await ctx.hooks.claimsFor(m, agent);
+  const claims = await judgeClaims(m, made, agent.kind, ctx.config.origin, d =>
+    ctx.resolver.resolve(d, { charge: payer }),
+  );
+  // What travels, and is signed for the message, is the claims considered, without this server's judgement.
+  const sent = claims.map(({ authoritative: _, ...c }) => c as Claim);
+  checkHints(ctx, hints, m, sent);
+
+  ctx.rate.hit('send', agent.address);
+  ctx.rate.distinct('destinations', agent.address, m.to.map(domainOf));
+
+  const record: StoredMessage = {
+    id,
+    message: m,
+    carrier: ctx.config.origin,
+    claims,
+    signedClaims: sent.length ? { claims: sent, signature: sign(ctx.config.serverKey, claimsBytes(sent, id)) } : null,
+    receivedAt: iso(now),
+    expiresAt: later(now, ctx.config.retentionDays * DAY_MS),
+  };
+  const stored = await ctx.store.putMessage(record, { deliveries: deliveriesFor(record, hints as Hints) });
+  ctx.defer(() => ctx.hooks.emit('stored', { message: stored }));
+  await changed(ctx, agent.address);
+  return { id, receivedAt: stored.receivedAt };
+}
+
+/** How often a send renews what it noted about serving its domain, at most. */
+const SERVING_CHECKED_EVERY_MS = 10 * 60_000;
+
+/**
+ * Note when this server began serving an agent's domain, as far as it can tell: the outbox retries a 403 for
+ * an hour after it, while receivers' caches may still name the server before (spec section 6.3). The note
+ * lapses an hour after the last send that found the domain naming this server, so a domain that moved away
+ * and back unseen in between begins again, rather than keeping a beginning from before it left.
+ */
+async function notedServing(ctx: Context, domain: string, now: Date): Promise<void> {
+  const noted = await ctx.store.value<{ since: string; checked: string } | string>(SERVING_SINCE, domain, iso(now));
+  const expires = later(now, MOVE_WINDOW_MS);
+  const fresh = { since: iso(now), checked: iso(now) };
+  if (!noted) {
+    await ctx.store.valueOnce(SERVING_SINCE, domain, fresh, expires, iso(now));
+  } else if (typeof noted !== 'object') {
+    // An earlier version noted a bare time that never lapsed; it is read as lapsed, and the note begins anew.
+    await ctx.store.setValue(SERVING_SINCE, domain, fresh, expires);
+  } else if (now.getTime() - Date.parse(noted.checked) >= SERVING_CHECKED_EVERY_MS) {
+    await ctx.store.setValue(SERVING_SINCE, domain, { since: noted.since, checked: iso(now) }, expires);
+  }
+}
+
+/**
+ * A message with an `audience` header is never forwarded or quoted whole (spec section 7.1): a message that
+ * carries one inline, at any depth, is refused as the message checks refuse a part (`400 invalid`, `parts`).
+ * One carried by content address is not seen here; its bytes are the client's to keep to itself.
+ */
+function checkCarriedAudience(m: AnyMessage): void {
+  for (const inner of carriedMessages(m)) {
+    const headers = inner.headers;
+    if (inner.v === 1 && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
+      throw invalid('A message with an audience is never forwarded or quoted whole (spec section 7.1).', {
+        field: 'parts',
+      });
+    }
+  }
+}
+
+/**
+ * Verify possession at the declared size and retain received bytes as this sender's own source. Its new
+ * naming message then pins that copy even after earlier messages and their inbox grants expire.
+ */
+async function holds(ctx: Context, address: string, p: { sha256: string; size: number }) {
+  for (const source of await ctx.store.heldFor(p.sha256, address, ctx.config.origin)) {
+    if (source.size !== p.size) continue;
+    const bytes = await ctx.store.part(p.sha256, source);
+    if (bytes?.length !== p.size) continue;
+    if (!('uploader' in source) || source.uploader !== address) {
+      await ctx.store.putPart(p.sha256, bytes, { uploader: address }, iso(ctx.now()));
+    }
+    return true;
+  }
+  return false;
+}
+
+/**
+ * The files a version 1 message names by content address: its own, and those of every message it carries
+ * whole, which count as its own (spec section 5.3). A later version's are not known here.
+ */
+export function contentParts(m: AnyMessage): { sha256: string; size: number }[] {
+  const seen = new Set<string>();
+  return namedFiles(m).filter(p => !seen.has(p.sha256) && seen.add(p.sha256));
+}
+
+/**
+ * The `agnt-hints` header: one JSON object, in ASCII (CLIENT.md send), or `{}` when absent. A byte outside
+ * printable ASCII is refused rather than read as Latin-1 and passed on changed.
+ */
+function readHintsHeader(header: string | string[] | undefined): Json {
+  if (header === undefined) return {};
+  if (typeof header === 'string' && /[^\x20-\x7e]/.test(header)) {
+    throw invalid('agnt-hints is ASCII: escape every other character as \\uXXXX.', { field: 'agnt-hints' });
+  }
+  try {
+    const hints = typeof header === 'string' ? parseStrict(header) : null;
+    if (isJsonObject(hints)) return hints;
+  } catch {
+    // Refused below, as any other value that is not a JSON object.
+  }
+  throw invalid('agnt-hints is one JSON object keyed by recipient address.', { field: 'agnt-hints' });
+}
+
+/**
+ * Hints: an object keyed by recipients in `to`, of objects of strings, small enough to travel in an
+ * envelope beside this server's claims, checked as the envelope they will travel in. The message's own
+ * signature stands in for the envelope's: only the shape is checked here.
+ */
+function checkHints(ctx: Context, hints: Json, m: AnyMessage, claims: Claim[]): void {
+  if (isJsonObject(hints) && Object.keys(hints).length === 0) return;
+  if (m.to.length === 0) throw invalid('A public message has no recipients to give hints to.', { field: 'agnt-hints' });
+  const envelope = {
+    message: m,
+    server: ctx.config.origin,
+    recipients: m.to,
+    ...(claims.length ? { claims, claimsSignature: m.signature } : {}),
+    hints,
+    signature: m.signature,
+  };
+  checkEnvelopeShape(envelope as unknown as Json, ctx.config.dev);
+}
+
+/**
+ * One delivery row per recipient domain, each with its recipients' hints, first due at `sentAt` (never
+ * before it) and ending at the delivery deadline (spec section 6.3).
+ */
+function deliveriesFor(record: StoredMessage, hints: Hints): Delivery[] {
+  const accepted = new Date(record.receivedAt);
+  const { earliest, deadline } = deliveryWindow(record.message, accepted);
+  const byDomain = Map.groupBy(record.message.to, domainOf);
+  return [...byDomain].map(([domain, recipients]) => ({
+    id: record.id,
+    domain,
+    recipients,
+    hints: Object.fromEntries(recipients.filter(r => hints[r]).map(r => [r, hints[r]])),
+    server: null,
+    status: 'pending',
+    reason: null,
+    attempts: 0,
+    nextAttemptAt: iso(earliest > accepted ? earliest : accepted),
+    createdAt: record.receivedAt,
+    deadline: iso(deadline),
+  }));
+}

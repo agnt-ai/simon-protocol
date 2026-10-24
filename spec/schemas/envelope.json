@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "envelope.json",
+  "title": "AGNT transport envelope",
+  "description": "What one server posts to another at POST /agnt/deliver (PROTOCOL.md 6.1, 6.2). The signature is the carrying server's, over AGNT-ENVELOPE\\n and the canonical envelope without signature; claimsSignature is over AGNT-CLAIMS\\n and the canonical {\"claims\",\"message\":<id>}. Members a receiver does not know are ignored and signed.",
+  "type": "object",
+  "required": ["message", "server", "recipients", "signature"],
+  "properties": {
+    "message": {
+      "type": "object",
+      "description": "A message of any version; message.json for version 1."
+    },
+    "server": {
+      "$ref": "common.json#/$defs/origin"
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.json#/$defs/address"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "$ref": "common.json#/$defs/claim"
+      }
+    },
+    "claimsSignature": {
+      "$ref": "common.json#/$defs/base64url"
+    },
+    "hints": {
+      "type": "object",
+      "propertyNames": {
+        "$ref": "common.json#/$defs/address"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "string"
+        }
+      }
+    },
+    "signature": {
+      "$ref": "common.json#/$defs/base64url"
+    }
+  },
+  "dependentRequired": {
+    "claims": ["claimsSignature"],
+    "claimsSignature": ["claims"]
+  }
+}

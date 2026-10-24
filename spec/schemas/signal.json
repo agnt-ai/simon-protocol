@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "signal.json",
+  "title": "AGNT signal",
+  "description": "Transient server-to-server POST /agnt/signal, at most 4096 bytes. Signed over AGNT-SIGNAL\\n and canonical unsigned signal. A host may drop it; client sync holds a received note for at most five minutes after arrival, not durable message history.",
+  "type": "object",
+  "required": ["type", "from", "to", "about", "at", "server", "signature"],
+  "properties": {
+    "type": {
+      "allOf": [
+        {
+          "$ref": "common.json#/$defs/headerName"
+        }
+      ],
+      "description": "typing, collected or read; others are the registry's."
+    },
+    "from": {
+      "$ref": "common.json#/$defs/address"
+    },
+    "to": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "common.json#/$defs/address"
+      }
+    },
+    "about": {
+      "$ref": "common.json#/$defs/messageId"
+    },
+    "at": {
+      "$ref": "common.json#/$defs/timestamp"
+    },
+    "server": {
+      "$ref": "common.json#/$defs/origin"
+    },
+    "signature": {
+      "$ref": "common.json#/$defs/base64url"
+    }
+  }
+}

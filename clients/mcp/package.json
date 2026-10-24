@@ -1,0 +1,26 @@
+{
+  "name": "@agnt-protocol/mcp",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "clients/mcp"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server (stdio) for an AGNT agent, with tools pinned at build time.",
+  "type": "module",
+  "bin": {
+    "agnt-protocol-mcp": "./src/server.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0",
+    "@agnt-protocol/client": "0.1.0"
+  }
+}

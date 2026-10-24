@@ -1,0 +1,245 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "message.json",
+  "title": "AGNT message, version 1",
+  "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over AGNT-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
+  "type": "object",
+  "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"],
+  "additionalProperties": false,
+  "properties": {
+    "v": {
+      "const": 1
+    },
+    "from": {
+      "$ref": "common.json#/$defs/address"
+    },
+    "to": {
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/$defs/address"
+      },
+      "uniqueItems": true,
+      "description": "Recipients; empty means published (section 7)."
+    },
+    "inReplyTo": {
+      "oneOf": [
+        {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parts": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/part"
+      },
+      "description": "0 to 32 blocks, each typed by its media type (5.3). No block is required: a subject alone, or an attachment alone, is a message."
+    },
+    "headers": {
+      "type": "object",
+      "maxProperties": 32,
+      "propertyNames": {
+        "$ref": "common.json#/$defs/headerName"
+      },
+      "additionalProperties": {
+        "type": "string"
+      },
+      "properties": {
+        "for": {
+          "$ref": "common.json#/$defs/principal"
+        },
+        "pairing": {
+          "$ref": "common.json#/$defs/base64url"
+        },
+        "critical": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$",
+          "description": "Present named headers must be understood before acting; a listed header absent from the message is ignored. Unknown present critical names make the message not understood; absence gives no inferred opt-in or commitment."
+        },
+        "rel": {
+          "$ref": "common.json#/$defs/headerName"
+        },
+        "feed": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "listed": {
+          "const": "yes",
+          "description": "Exact signed writer consent to public related listing; valid only on a non-published relation. Absence gives no such consent. Host policy may further filter; an ordinary reply stays private."
+        }
+      }
+    },
+    "sentAt": {
+      "$ref": "common.json#/$defs/timestamp"
+    },
+    "signature": {
+      "$ref": "common.json#/$defs/base64url"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "headers": {
+            "required": ["for"],
+            "properties": {
+              "for": {
+                "pattern": "^agnt-key:"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "headers": {
+            "required": ["pairing"]
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "headers": {
+            "not": {
+              "required": ["pairing"]
+            }
+          }
+        }
+      },
+      "description": "pairing is present exactly when for is an agnt-key: identifier (5.4)."
+    },
+    {
+      "if": {
+        "properties": {
+          "inReplyTo": {
+            "type": "null"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "headers": {
+            "not": {
+              "required": ["rel"]
+            }
+          }
+        }
+      },
+      "description": "rel appears only when inReplyTo is not null (5.4)."
+    },
+    {
+      "if": {
+        "properties": {
+          "to": {
+            "minItems": 1
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "headers": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": ["feed"]
+                },
+                {
+                  "required": ["audience"]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "description": "feed and audience appear only on a published message, with an empty to (5.4)."
+    },
+    {
+      "if": {
+        "properties": {
+          "headers": {
+            "required": ["listed"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "headers": {
+            "required": ["rel"]
+          },
+          "inReplyTo": {
+            "$ref": "common.json#/$defs/messageId"
+          },
+          "to": {
+            "minItems": 1
+          }
+        }
+      },
+      "description": "listed is valid only with rel, a non-null inReplyTo and non-empty to (PROTOCOL.md 5.4)."
+    }
+  ],
+  "$defs": {
+    "part": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "$ref": "common.json#/$defs/mediaType"
+        },
+        "data": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "common.json#/$defs/sha256"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "1 to 255 bytes of UTF-8; not . or ..; no /, backslash, control or bidirectional formatting characters.",
+          "maxLength": 255,
+          "pattern": "^(?!\\.\\.?$)[^/\\\\\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]+$"
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1,
+          "description": "One line, 1 to 1024 bytes of UTF-8, no control or bidirectional formatting characters.",
+          "maxLength": 1024,
+          "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]+$"
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["data"],
+          "not": {
+            "anyOf": [
+              {
+                "required": ["sha256"]
+              },
+              {
+                "required": ["size"]
+              }
+            ]
+          }
+        },
+        {
+          "required": ["sha256", "size"],
+          "not": {
+            "required": ["data"]
+          }
+        }
+      ],
+      "description": "A block: inline data (the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries."
+    }
+  }
+}

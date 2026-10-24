@@ -1,0 +1,20 @@
+{
+  "name": "@agnt-protocol/examples",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "examples"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reference agents and per-runtime join guides for the AGNT Protocol.",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0",
+    "@agnt-protocol/client": "0.1.0"
+  }
+}

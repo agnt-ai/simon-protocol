@@ -1,0 +1,828 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "client.json",
+  "title": "AGNT client API shapes",
+  "description": "CLIENT.md lifecycle, sync and selected optional history/delegation bodies under $defs. Requests use PROTOCOL.md section 8. These open shapes do not enforce cryptography, authorization, endpoint availability or all semantic rules. Errors use problem.json except OAuth exchange errors.",
+  "$defs": {
+    "recoveryState": {
+      "type": "object",
+      "properties": {
+        "completesAt": {
+          "$ref": "common.json#/$defs/timestamp"
+        },
+        "cancellable": {
+          "type": "boolean"
+        }
+      },
+      "required": ["completesAt", "cancellable"]
+    },
+    "accountKeyEntry": {
+      "allOf": [
+        {
+          "$ref": "common.json#/$defs/keyEntry"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        }
+      ],
+      "description": "Private account view; device label is never part of a public key projection."
+    },
+    "grant": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "client": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "$ref": "common.json#/$defs/timestamp"
+        },
+        "lastUsedAt": {
+          "oneOf": [
+            {
+              "$ref": "common.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "client", "scopes", "createdAt", "lastUsedAt"]
+    },
+    "accountAnswer": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/accountKeyEntry"
+          }
+        },
+        "grants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/grant"
+          }
+        },
+        "recovery": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/recoveryState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["address", "keys", "grants", "recovery"],
+      "description": "GET /agnt/account and successful registration, recovery, key changes, or agent-key grant revocation. No active status field is required."
+    },
+    "codeSentAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "code_sent"
+        },
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        }
+      },
+      "required": ["status", "address"]
+    },
+    "pairingRequiredAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "pairing_required"
+        },
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        }
+      },
+      "required": ["status", "address"]
+    },
+    "recoveryPendingAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "recovery_pending"
+        },
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "completesAt": {
+          "$ref": "common.json#/$defs/timestamp"
+        }
+      },
+      "required": ["status", "address", "completesAt"]
+    },
+    "registerRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "common.json#/$defs/keyToken"
+        },
+        "address": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "for": {
+          "allOf": [
+            {
+              "$ref": "common.json#/$defs/principal"
+            },
+            {
+              "pattern": "^agnt-key:"
+            }
+          ]
+        },
+        "pairing": {
+          "$ref": "common.json#/$defs/base64url"
+        }
+      },
+      "required": ["key"],
+      "description": "POST /agnt/register creates or pairs an address only. key equals the request signing key. Host-defined request members remain open; recovery and unpairing use separate resources."
+    },
+    "registerAnswer": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/accountAnswer"
+        },
+        {
+          "$ref": "#/$defs/codeSentAnswer"
+        },
+        {
+          "$ref": "#/$defs/pairingRequiredAnswer"
+        }
+      ]
+    },
+    "recoveryRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "key": {
+          "$ref": "common.json#/$defs/keyToken"
+        },
+        "code": {
+          "type": "string"
+        },
+        "at": {
+          "$ref": "common.json#/$defs/timestamp"
+        },
+        "recover": {
+          "$ref": "common.json#/$defs/base64url"
+        }
+      },
+      "required": ["address", "key"],
+      "description": "POST /agnt/recovery. Mailbox code exchange or key-principal proof; key equals the request signing key. The principal signature binds address, new key and at. Proof, freshness and current authority are semantic checks."
+    },
+    "recoveryAnswer": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/accountAnswer"
+        },
+        {
+          "$ref": "#/$defs/codeSentAnswer"
+        },
+        {
+          "$ref": "#/$defs/recoveryPendingAnswer"
+        }
+      ]
+    },
+    "recoveryStatusAnswer": {
+      "type": "object",
+      "properties": {
+        "recovery": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/recoveryState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["recovery"],
+      "description": "GET /agnt/recovery; cancellable is relative to the authenticated agent key."
+    },
+    "addKeyRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "$ref": "common.json#/$defs/keyToken"
+        },
+        "proof": {
+          "$ref": "common.json#/$defs/base64url"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": ["key", "proof"],
+      "description": "POST /agnt/keys. proof is signed by the new key over AGNT-ADD-KEY, address and key."
+    },
+    "cancelRecoveryRequest": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "address": {
+              "$ref": "common.json#/$defs/address"
+            },
+            "cancelCode": {
+              "type": "string"
+            }
+          },
+          "required": ["address", "cancelCode"]
+        },
+        {
+          "type": "object",
+          "not": {
+            "anyOf": [
+              {
+                "required": ["address"]
+              },
+              {
+                "required": ["cancelCode"]
+              }
+            ]
+          },
+          "description": "Empty ordinary body, signed by an eligible agent key. Unknown extension members remain open."
+        }
+      ],
+      "description": "POST /agnt/recovery/cancel: agent-key cancellation or exact address and cancelCode."
+    },
+    "cancelRecoveryAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "cancelled"
+        },
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        }
+      },
+      "required": ["status", "address"]
+    },
+    "unpairRequest": {
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "unpairing": {
+          "$ref": "common.json#/$defs/base64url"
+        }
+      },
+      "required": ["address", "unpairing"],
+      "description": "POST /agnt/unpair; a principal proof authorizes retirement, independent of current agent keys."
+    },
+    "unpairAnswer": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "const": "retired"
+        },
+        "address": {
+          "$ref": "common.json#/$defs/address"
+        }
+      },
+      "required": ["status", "address"]
+    },
+    "endGrantAnswer": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/accountAnswer"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "ended"
+            }
+          },
+          "required": ["status"]
+        }
+      ],
+      "description": "DELETE /agnt/grants/<id>: account for an agent-key caller; ended for that grant's own client key."
+    },
+    "sendRequest": {
+      "$ref": "message.json",
+      "description": "POST /agnt/send with an agent key: signed canonical version 1 message. Unknown versions and grant signing require semantic handling; see unsignedSendRequest."
+    },
+    "unsignedSendRequest": {
+      "type": "object",
+      "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt"],
+      "not": {
+        "required": ["signature"]
+      },
+      "description": "Grant send-scope request without signature. Apply the protocol message rules to these members; this intentionally broad shape alone does not validate a message or authorize server signing."
+    },
+    "sendAnswer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "receivedAt": {
+          "$ref": "common.json#/$defs/timestamp"
+        },
+        "message": {
+          "type": "object"
+        }
+      },
+      "required": ["id", "receivedAt"],
+      "description": "POST /agnt/send; signed message is added when a host signs through a grant."
+    },
+    "signedClaims": {
+      "type": "object",
+      "properties": {
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/claim"
+          }
+        },
+        "signature": {
+          "$ref": "common.json#/$defs/base64url"
+        }
+      },
+      "required": ["claims", "signature"],
+      "description": "Exact carrier claims and their signature; not the server-judged claims copy."
+    },
+    "syncEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "message": {
+          "type": "object",
+          "description": "Message of any version. Version 1 shape is message.json; unsupported versions are not understood."
+        },
+        "carrier": {
+          "$ref": "common.json#/$defs/origin"
+        },
+        "claims": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/claim"
+          }
+        },
+        "signedClaims": {
+          "$ref": "#/$defs/signedClaims"
+        },
+        "receivedAt": {
+          "$ref": "common.json#/$defs/timestamp"
+        }
+      },
+      "required": ["id", "message", "carrier", "claims", "receivedAt"],
+      "description": "Sent or received message; deduplicate by id. No numeric cursor appears on an entry."
+    },
+    "receivedSignal": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "common.json#/$defs/headerName"
+        },
+        "from": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "about": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "at": {
+          "$ref": "common.json#/$defs/timestamp"
+        }
+      },
+      "required": ["type", "from", "about", "at"],
+      "description": "Transient sync note held until five minutes after arrival; any host may drop signals."
+    },
+    "mark": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "marks": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/mark"
+      },
+      "maxItems": 32,
+      "uniqueItems": true
+    },
+    "markChange": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "marks": {
+          "$ref": "#/$defs/marks"
+        }
+      },
+      "required": ["id", "marks"]
+    },
+    "syncAnswer": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/syncEntry"
+          },
+          "maxItems": 200
+        },
+        "marks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/markChange"
+          }
+        },
+        "removed": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/messageId"
+          }
+        },
+        "signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/receivedSignal"
+          }
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+        },
+        "more": {
+          "type": "boolean"
+        }
+      },
+      "required": ["messages", "marks", "removed", "signals", "token", "more"],
+      "description": "GET /agnt/sync?since=<opaque token>&limit=1..200&wait=0..60. Includes sent and received messages. History hosts add conversation and marks to entries; non-history hosts return empty marks and removed. A 410 token_expired is a gap, never an empty success."
+    },
+    "sendSignalRequest": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "common.json#/$defs/headerName"
+        },
+        "about": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/address"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": ["type", "about", "to"],
+      "description": "POST /agnt/send-signal; agent holds about and recipients must be its message parties. Open registered type grammar; authorization is not a shape check."
+    },
+    "sendSignalAnswer": {
+      "type": "object",
+      "properties": {
+        "accepted": {
+          "const": true
+        }
+      },
+      "required": ["accepted"],
+      "description": "202 acceptance says nothing about recipient visibility."
+    },
+    "webhookRequest": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "pattern": "^[Hh][Tt][Tt][Pp][Ss]://",
+          "maxLength": 2000
+        }
+      },
+      "required": ["url"],
+      "description": "POST /agnt/webhooks. Full HTTPS URL safety and transport policy require semantic checks; credentials and fragments are refused by the reference host."
+    },
+    "webhookAnswer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["id"],
+      "description": "Reference host creation answer; CLIENT defines verification and signed wakeup behavior."
+    },
+    "webhookVerifyRequest": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        }
+      },
+      "required": ["code"],
+      "description": "POST /agnt/webhooks/<id>/verify"
+    },
+    "webhookVerifiedAnswer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "verified": {
+          "const": true
+        }
+      },
+      "required": ["id", "verified"],
+      "description": "Reference host verification answer."
+    },
+    "webhookDeletedAnswer": {
+      "type": "object",
+      "properties": {
+        "deleted": {
+          "const": true
+        }
+      },
+      "required": ["deleted"],
+      "description": "Reference host deletion answer."
+    },
+    "webhookNotification": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "verify"
+            },
+            "code": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "code"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "changed"
+            },
+            "agent": {
+              "$ref": "common.json#/$defs/address"
+            }
+          },
+          "required": ["type", "agent"]
+        }
+      ],
+      "description": "Server-signed POST to the webhook URL; verify control before any changed notification. Receiver verifies origin binding and server signature, then syncs."
+    },
+    "sentAnswer": {
+      "type": "object",
+      "required": ["id", "servers"],
+      "description": "GET /agnt/sent/<id>",
+      "properties": {
+        "id": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["server", "recipients", "status"],
+            "properties": {
+              "server": {
+                "oneOf": [
+                  {
+                    "$ref": "common.json#/$defs/origin"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "recipients": {
+                "type": "array",
+                "items": {
+                  "$ref": "common.json#/$defs/address"
+                }
+              },
+              "status": {
+                "enum": ["pending", "delivered", "failed"]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "partUploadAnswer": {
+      "type": "object",
+      "required": ["sha256", "size"],
+      "description": "PUT /agnt/parts/<sha256>; the body is the bytes.",
+      "properties": {
+        "sha256": {
+          "$ref": "common.json#/$defs/sha256"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "historyEntry": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/syncEntry"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "conversation": {
+              "$ref": "common.json#/$defs/messageId"
+            },
+            "marks": {
+              "$ref": "#/$defs/marks"
+            }
+          },
+          "required": ["conversation", "marks"]
+        }
+      ]
+    },
+    "historyAnswer": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/historyEntry"
+          },
+          "maxItems": 200
+        },
+        "cursor": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+        }
+      },
+      "required": ["messages", "cursor", "more", "token"],
+      "description": "Optional history host only: GET /agnt/history or /agnt/conversations/<id>; newest first. Listing snapshot token is held across pages. Relay-only host may answer 404."
+    },
+    "conversation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.json#/$defs/messageId"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/address"
+          }
+        },
+        "marks": {
+          "$ref": "#/$defs/marks"
+        },
+        "unread": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "latest": {
+          "$ref": "#/$defs/historyEntry"
+        }
+      },
+      "required": ["id", "subject", "members", "marks", "unread", "latest"]
+    },
+    "conversationsAnswer": {
+      "type": "object",
+      "properties": {
+        "conversations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/conversation"
+          },
+          "maxItems": 200
+        },
+        "cursor": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+        }
+      },
+      "required": ["conversations", "cursor", "more", "token"],
+      "description": "Optional history host only: GET /agnt/conversations. No claim that a relay implements history."
+    },
+    "marksRequest": {
+      "type": "object",
+      "properties": {
+        "ids": {
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/$defs/messageId"
+          }
+        },
+        "add": {
+          "$ref": "#/$defs/marks"
+        },
+        "remove": {
+          "$ref": "#/$defs/marks"
+        }
+      },
+      "required": ["ids", "add", "remove"],
+      "description": "Optional history host: POST /agnt/marks; scopes and per-object limits require semantic checks."
+    },
+    "marksAnswer": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Opaque host-issued token. Preserve and return it unchanged; no numeric cursor or client interpretation."
+        }
+      },
+      "required": ["token"]
+    },
+    "grantTokenAnswer": {
+      "type": "object",
+      "properties": {
+        "grant": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string"
+        },
+        "agnt_address": {
+          "$ref": "common.json#/$defs/address"
+        },
+        "expires_in": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["grant", "scope", "agnt_address"],
+      "description": "Optional delegated-access host: signed OAuth code exchange bound to client key; no bearer access or refresh token. Discovery 404 means grants are unavailable. OAuth failures use OAuth error shape."
+    }
+  }
+}

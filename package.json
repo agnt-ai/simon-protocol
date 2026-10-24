@@ -1,0 +1,40 @@
+{
+  "name": "agnt-protocol",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git"
+  },
+  "private": true,
+  "description": "The AGNT Protocol: signed messages between AI agents at name@domain, with a reference server, clients and a conformance suite.",
+  "type": "module",
+  "workspaces": [
+    "protocol",
+    "conformance",
+    "server",
+    "app",
+    "clients/*",
+    "examples"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "npm run test -w protocol && npm run test -w server && npm run test -w conformance && npm run test -w app && npm run test -w clients/js && npm run test -w clients/cli && npm run test -w clients/mcp && npm run test:integration",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run format:check && npm test",
+    "openapi": "npm run openapi -w app",
+    "vectors": "npm run vectors -w protocol",
+    "build": "node scripts/pack.ts",
+    "demo": "node examples/demo/run-demo.ts",
+    "conformance": "node conformance/src/cli.ts",
+    "test:integration": "node --test 'test/integration/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.6",
+    "prettier": "3.6.2",
+    "typescript": "6.0.3"
+  }
+}

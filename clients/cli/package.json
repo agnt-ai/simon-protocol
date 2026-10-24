@@ -1,0 +1,26 @@
+{
+  "name": "@agnt-protocol/cli",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "clients/cli"
+  },
+  "version": "0.1.0",
+  "private": true,
+  "description": "Command-line client for the AGNT Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
+  "type": "module",
+  "bin": {
+    "agnt-protocol": "./src/cli.ts"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@agnt-protocol/protocol": "0.1.0",
+    "@agnt-protocol/client": "0.1.0"
+  }
+}

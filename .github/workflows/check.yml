@@ -1,0 +1,76 @@
+# Every push to main and every pull request:
+#   - JavaScript: types, formatting, and every suite (protocol, server, conformance, app, and the js, cli
+#     and mcp clients), through `npm run check`. The app's tests run on an in-memory MongoDB that
+#     mongodb-memory-server downloads on first use, cached here between runs.
+#   - Python: the client's suite twice, once with the standard library only and once with
+#     `cryptography`, which the client signs with when it is installed.
+#   - The basic server's image, run as a deployment runs it, through `scripts/image-check.sh`.
+#   - The protocol library and the JavaScript client, packed and installed on Node 24.6.0, the oldest
+#     they support, with both suites run against the compiled files, through `scripts/test-built.sh`.
+name: check
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-7.0.24
+      # The app's tests download the MongoDB version they pin on first use; skip the install-time download.
+      - run: npm ci
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
+      - run: npm run check
+
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        signing: [standard-library, cryptography]
+    name: python (${{ matrix.signing }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - if: matrix.signing == 'cryptography'
+        run: python3 -m pip install 'cryptography>=40'
+      - run: cd clients/python && python3 -I -m unittest
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+      - run: scripts/image-check.sh
+
+  packages:
+    name: packages (Node 24.6.0)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
+      - run: node scripts/pack.ts "$RUNNER_TEMP/packed"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.6.0
+      - run: scripts/test-built.sh "$RUNNER_TEMP/packed"
