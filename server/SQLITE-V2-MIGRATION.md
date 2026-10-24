@@ -1,9 +1,8 @@
 # Offline schema2 candidate conversion
 
-`scripts/migrate-sqlite-v2.ts` is an explicit offline candidate builder for the old standalone
-schema2 layout at vendor pin `2fa256d656955c0101072ed15bdb31cbe5b657cf` (standalone source
-`66725132c3bf86d530cd362b98864fae0349e008`). The normal `SqliteStore` constructor still refuses
-schema2. Its existing schema3–7 upgrades are unchanged.
+`scripts/migrate-sqlite-v2.ts` is an explicit offline candidate builder for the legacy schema-2
+server's layout (schema2), as recorded exactly in `test/fixtures/sqlite-v2.sql`. The normal
+`SqliteStore` constructor still refuses schema2. Its existing schema3–7 upgrades are unchanged.
 
 The result is `VERIFIED_COPY_HELD`, with `activationBlocked: true` and a nonzero CLI exit. It means
 the retained data was structurally converted and checked in a private candidate cohort. It does

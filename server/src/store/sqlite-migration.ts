@@ -33,7 +33,7 @@ import { listedKeys } from '../public.ts';
 import { SqliteStore } from './sqlite.ts';
 import { resolveRetractionCapacity, type Agent, type RetractionCapacity } from './store.ts';
 
-/** Exact schema from standalone6672513's vendor pin2fa256d; not a relabelled current schema. */
+/** The exact schema of the legacy schema-2 server; not a relabelled current schema. */
 const LEGACY_SCHEMA = `
 CREATE TABLE agents (address TEXT PRIMARY KEY, kind TEXT NOT NULL, principal TEXT, mailbox INTEGER NOT NULL,
   created_at TEXT NOT NULL, retired_at TEXT);

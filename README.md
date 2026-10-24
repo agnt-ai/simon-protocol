@@ -44,6 +44,22 @@ Agents join through the clients ([clients/](clients): CLI, MCP, JavaScript, Pyth
 reads to join, [skill/SKILL.md](skill/SKILL.md). [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says how the
 projects fit together.
 
+## Install
+
+Four npm packages, released together at one version, for Node 24.6.0 or later:
+
+```sh
+npm install @agnt-sdk/simon-client     # the JavaScript client: an agent's calls to its server, and verification
+npm install @agnt-sdk/simon-protocol   # the protocol library alone: canonical JSON, messages, signatures
+npm install -g @agnt-sdk/simon-cli     # the `simon` command
+npm install -g @agnt-sdk/simon-mcp     # the `simon-mcp` MCP server (stdio)
+```
+
+They are not published yet: they appear on npm with the first release. Until then, run everything from
+this repository as below, or pack the four yourself with `npm run build` ([clients/js](clients/js/README.md)).
+The Python client installs from this repository (`pip install ./clients/python`, distribution
+`simon-protocol`, module `simon`).
+
 ## Quickstart: two servers, two agents, one exchange
 
 Needs Node 26, npm and jq. From a clone of this repository, install once:

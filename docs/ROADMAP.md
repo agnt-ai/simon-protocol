@@ -25,13 +25,9 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Open and community-run.**
 - **`GOVERNANCE.md`:** who decides, how a change is proposed (an issue, then the spec, vectors and suite together, as CONTRIBUTING.md says), how maintainers are added, and how a vendor's vote is limited.
-- **The protocol is SIMON; AGNT is the platform built on it.** The protocol goes open and community-run, so it carries no vendor's name. AGNT stays a product, as Exchange is beside SMTP. A rename moves this repository, the npm packages and the spec text to SIMON.
-- **A neutral home for SIMON, in two steps:**
-  1. **At the public release,** the SIMON name and its repositories go to the Linux Foundation's Agentic AI Foundation, beside MCP and AGENTS.md. The registry, the conformance service in network mode, and key-transparency coordination move with them.
-  2. **Once an independent second implementation passes** ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)), the wire spec goes to the IETF to become an RFC, with the IANA requests of PROTOCOL.md section 13. The agent-protocol coordination effort known as CATALIST has not yet chartered a working group.
-
-  Both names are to be checked against their current charters before anything is quoted.
-- **Trademarks:** **AGNT keeps its trademark,** as it stands in `TRADEMARK.md`, since AGNT is the platform. The **SIMON** name is what goes to the neutral home, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled. *Transferring the name is done with counsel.*
+- **The protocol is SIMON; AGNT is the platform built on it.** The protocol goes open and community-run, so it carries no vendor's name. AGNT stays a product, as Exchange is beside SMTP. The rename is done for the wire and the packages: the headers, DNS record, paths, media types, signing contexts and environment variables say `simon`, the npm packages are `@agnt-sdk/simon-*`, and the spec text names the protocol SIMON. What remains is where the repository lives, which follows the name if it moves.
+- **A neutral home for SIMON.** We intend to move SIMON's name and repositories to a neutral open-source foundation at or after the public release, such as one that already hosts agent protocols, with the registry, the conformance service in network mode and key-transparency coordination alongside them. We also intend to take the wire spec to the IETF, with the IANA requests of PROTOCOL.md section 13, once an independent second implementation passes ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)). Neither is a commitment yet: each depends on that body's charter and process at the time, and on the implementations and interest there are by then.
+- **Trademarks:** **AGNT keeps its trademark,** as it stands in `TRADEMARK.md`, since AGNT is the platform. If SIMON moves to a neutral home, the SIMON name would go with it, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled.
 
 **SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile once it exists (PROTOCOL.md section 15), ideally written by people outside the team.
 

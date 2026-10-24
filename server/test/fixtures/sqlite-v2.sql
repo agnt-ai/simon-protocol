@@ -1,4 +1,4 @@
--- Exact legacy schema: standalone6672513/vendor pin2fa256d, schema2.
+-- Exact legacy schema: the legacy schema-2 server, schema2.
 
 CREATE TABLE agents (address TEXT PRIMARY KEY, kind TEXT NOT NULL, principal TEXT, mailbox INTEGER NOT NULL,
   created_at TEXT NOT NULL, retired_at TEXT);
