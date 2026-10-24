@@ -1,0 +1,60 @@
+# A release: pushing a tag vX.Y.Z publishes the four npm packages at version X.Y.Z, in dependency order
+# (@agnt-sdk/simon-protocol, then -client, then -cli and -mcp). Every package.json of the four must already
+# say X.Y.Z (CONTRIBUTING.md, "Releasing"). The packages are the builds of scripts/pack.ts --release,
+# checked first as CI checks main, then on Node 24 with scripts/test-built.sh.
+#
+# Publishing authenticates by npm trusted publishing (OIDC): no token, and npm shows the packages as
+# published by GitHub Actions, with provenance. The NPM_TOKEN secret exists only for the first release,
+# before the packages exist on npm and a trusted publisher can be configured for them; when it is set, it
+# is passed as NODE_AUTH_TOKEN. Delete it once trusted publishing is configured.
+name: publish
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26
+          cache: npm
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-7.0.24
+      - run: npm ci
+        env:
+          MONGOMS_DISABLE_POSTINSTALL: '1'
+      - run: npm run check
+      - name: The tag names the packages' version
+        run: node scripts/release-version.ts "$TAG"
+      - run: node scripts/pack.ts --release "$RUNNER_TEMP/packed"
+      # npm trusted publishing needs npm 11.5.1 or later; provenance needs a supported Node.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.x
+      - run: npm install --global npm@11.19.0
+      - run: scripts/test-built.sh "$RUNNER_TEMP/packed"
+      - name: Publish with the bootstrap token
+        if: env.HAS_NPM_TOKEN == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: scripts/publish.sh "$RUNNER_TEMP/packed" "${TAG#v}"
+      - name: Publish by trusted publishing
+        if: env.HAS_NPM_TOKEN != 'true'
+        run: scripts/publish.sh "$RUNNER_TEMP/packed" "${TAG#v}"
