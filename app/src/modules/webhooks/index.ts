@@ -7,7 +7,7 @@
  *
  * Hooks: on.inbox.
  */
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import { z } from 'zod';
 import type { Ctx, Module } from '../../context.ts';
 import { conflict, invalid, notFound } from '../../lib/errors.ts';

@@ -1,6 +1,6 @@
 /**
- * The server's Store on MongoDB, verified by the shared contract suite (test/store.test.ts). Each rule is
- * one atomic document write or a unique index:
+ * The server's Store on MongoDB and Amazon DocumentDB, verified by the shared contract suite
+ * (test/store.test.ts). Each rule is one atomic document write or a unique index:
  *
  *   core.agents      one document per address; a unique index on `keys.key` gives a key to one agent
  *   core.messages    one per id, the message and claims kept as canonical JSON text (a later version's
@@ -21,7 +21,16 @@
  * A crash between the two leaves the rows in the message, where the next claim copies them out.
  */
 import { randomUUID } from 'node:crypto';
-import { Binary, type Collection, type Db, type Document, type Filter } from 'mongodb';
+import {
+  Binary,
+  MongoServerError,
+  type Collection,
+  type CreateIndexesOptions,
+  type Db,
+  type Document,
+  type Filter,
+  type IndexSpecification,
+} from 'mongodb';
 import {
   canonicalize,
   header,
@@ -46,8 +55,13 @@ import type {
   SweepCounts,
   SyncEntry,
   Webhook,
-} from 'simon-server';
-import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from 'simon-server';
+} from '@agnt-sdk/simon-server';
+import {
+  MAX_STORED_KEYS,
+  StoreCapacityError,
+  resolveRetractionCapacity,
+  type RetractionCapacity,
+} from '@agnt-sdk/simon-server';
 import { insertOnce, isDuplicate } from './db.ts';
 
 interface AgentDoc extends Omit<Agent, 'address'> {
@@ -269,6 +283,51 @@ const arrivalDoc = (a: QueuedArrival): ArrivalDoc => ({
   due: date(a.dueAt),
 });
 
+/** How `init` tries again an index build another process's build refused (DocumentDB builds one at a time). */
+export interface IndexBuildRetry {
+  /** Tries per index, the first included (default 12). */
+  attempts?: number;
+  /** The longest first wait, in milliseconds, doubling with each try (default 250). */
+  delayMs?: number;
+  /** The longest wait, in milliseconds (default 5000). */
+  maxDelayMs?: number;
+}
+
+export interface MongoStoreOptions {
+  /** Limits on stored listing retractions (the server's `RetractionCapacity`). */
+  retractions?: Partial<RetractionCapacity>;
+  /** How `init` waits out index builds that collide with another process's. */
+  indexBuilds?: IndexBuildRetry;
+}
+
+const DEFAULT_INDEX_BUILD_RETRY: Required<IndexBuildRetry> = { attempts: 12, delayMs: 250, maxDelayMs: 5000 };
+
+/** Error names of a build refused or abandoned because another build or a collection's creation was underway. */
+const INDEX_BUILD_CONFLICTS = new Set([
+  'IndexBuildAlreadyInProgress',
+  'IndexBuildAborted',
+  'BackgroundOperationInProgressForNamespace',
+  'BackgroundOperationInProgressForDatabase',
+  'ConflictingOperationInProgress',
+  'NamespaceExists',
+  'WriteConflict',
+  'LockTimeout',
+]);
+/** The same by number, for servers that send no name. */
+const INDEX_BUILD_CONFLICT_CODES = new Set([12586, 12587, 117, 276, 48, 112, 24]);
+
+/**
+ * Whether an index build failed only because another was underway on the collection: by error name or
+ * number, or by the "in progress" DocumentDB words its refusal with. An invalid or conflicting index
+ * definition is none of these, and is not tried again.
+ */
+export function isIndexBuildConflict(e: unknown): boolean {
+  if (!(e instanceof MongoServerError)) return false;
+  if (e.codeName && INDEX_BUILD_CONFLICTS.has(e.codeName)) return true;
+  if (typeof e.code === 'number' && INDEX_BUILD_CONFLICT_CODES.has(e.code)) return true;
+  return /in progress|currently being built/i.test(e.message);
+}
+
 export class MongoStore implements Store {
   readonly #admission: Collection<RetractionAdmission>;
   readonly #retractionCapacity: RetractionCapacity;
@@ -288,13 +347,15 @@ export class MongoStore implements Store {
   readonly #counters: Collection<Expiring>;
   readonly #values: Collection<Expiring>;
   readonly #close: () => Promise<void>;
+  readonly #indexBuilds: Required<IndexBuildRetry>;
 
-  constructor(
-    db: Db,
-    close: () => Promise<void> = async () => {},
-    options: { retractions?: Partial<RetractionCapacity> } = {},
-  ) {
+  /**
+   * A store on `db`, a database of a client connected with reads from the primary (`connect` makes one).
+   * `close` is what `close()` runs, the client's own close for a store that owns its client.
+   */
+  constructor(db: Db, close: () => Promise<void> = async () => {}, options: MongoStoreOptions = {}) {
     this.#retractionCapacity = resolveRetractionCapacity(options.retractions);
+    this.#indexBuilds = { ...DEFAULT_INDEX_BUILD_RETRY, ...options.indexBuilds };
     const collection = <T extends Document>(name: string) => db.collection<T>(name, { readPreference: 'primary' });
     this.#retractions = collection('core.listing_retractions');
     this.#admission = collection('core.retraction_admission');
@@ -315,40 +376,60 @@ export class MongoStore implements Store {
     this.#close = close;
   }
 
-  /** Create the indexes the rules rest on. Run once at startup; repeating it changes nothing. */
+  /** One index, made or found made, its build tried again while another build holds its collection. */
+  async #index(collection: Collection<never>, keys: IndexSpecification, options: CreateIndexesOptions = {}) {
+    const { attempts, delayMs, maxDelayMs } = this.#indexBuilds;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await collection.createIndex(keys, options);
+        return;
+      } catch (e) {
+        if (attempt >= attempts || !isIndexBuildConflict(e)) throw e;
+        // Full jitter: processes that collided once spread out instead of colliding again.
+        const ceiling = Math.min(maxDelayMs, delayMs * 2 ** (attempt - 1));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * ceiling));
+      }
+    }
+  }
+
+  /**
+   * Create the indexes the rules rest on, and upgrade what older versions left. Run at startup; repeating it
+   * changes nothing, and several processes may run it at once: DocumentDB builds one index on a collection
+   * at a time and refuses a second build meanwhile, so a refused build is tried again after a jittered wait,
+   * and an index another process made first is simply there.
+   */
   async init(): Promise<this> {
-    await this.#retractions.createIndex({ owner: 1, target: 1, author: 1 });
-    await this.#agents.createIndex({ 'keys.key': 1 }, { unique: true });
-    await this.#messages.createIndex({ 'parts.sha256': 1 });
-    await this.#messages.createIndex({ carrier: 1, 'parts.sha256': 1 });
-    await this.#messages.createIndex({ expires: 1 });
-    await this.#messages.createIndex({ rows: 1 }, { partialFilterExpression: { rows: { $exists: true } } });
-    await this.#messages.createIndex(
-      { pendingRows: 1 },
-      { partialFilterExpression: { pendingRows: { $exists: true } } },
-    );
-    await this.#messages.createIndex({ from: 1, cursor: -1 }, { partialFilterExpression: { public: true } });
-    await this.#messages.createIndex({ from: 1, to: 1 });
-    await this.#messages.createIndex({ inReplyTo: 1 });
-    await this.#messages.createIndex(
-      { from: 1, cursor: 1 },
-      { partialFilterExpression: { cursor: { $exists: true } } },
-    );
-    await this.#inbox.createIndex({ address: 1, cursor: 1 });
-    await this.#inbox.createIndex({ address: 1, parts: 1 });
-    await this.#signals.createIndex({ address: 1, cursor: 1 });
-    await this.#signals.createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
-    await this.#webhooks.createIndex({ address: 1, slot: 1 }, { unique: true });
-    await this.#webhooks.createIndex({ due: 1 });
-    await this.#inbox.createIndex({ id: 1 });
-    await this.#inbox.createIndex({ cursor: 1 }, { partialFilterExpression: { event: true } });
-    await this.#deliveries.createIndex({ status: 1, nextAttemptAt: 1 });
-    await this.#deliveries.createIndex({ id: 1 });
-    await this.#arrivals.createIndex({ due: 1 });
-    await this.#arrivals.createIndex({ id: 1 });
-    await this.#fetches.createIndex({ due: 1 });
-    await this.#fetches.createIndex({ carrier: 1, due: 1 });
-    for (const c of [this.#marks, this.#counters, this.#values]) await c.createIndex({ expires: 1 });
+    const indexes: [Collection<never>, IndexSpecification, CreateIndexesOptions?][] = [
+      [this.#retractions, { owner: 1, target: 1, author: 1 }],
+      [this.#agents, { 'keys.key': 1 }, { unique: true }],
+      [this.#messages, { 'parts.sha256': 1 }],
+      [this.#messages, { carrier: 1, 'parts.sha256': 1 }],
+      [this.#messages, { expires: 1 }],
+      [this.#messages, { rows: 1 }, { partialFilterExpression: { rows: { $exists: true } } }],
+      [this.#messages, { pendingRows: 1 }, { partialFilterExpression: { pendingRows: { $exists: true } } }],
+      [this.#messages, { from: 1, cursor: -1 }, { partialFilterExpression: { public: true } }],
+      [this.#messages, { from: 1, to: 1 }],
+      [this.#messages, { inReplyTo: 1 }],
+      [this.#messages, { from: 1, cursor: 1 }, { partialFilterExpression: { cursor: { $exists: true } } }],
+      [this.#inbox, { address: 1, cursor: 1 }],
+      [this.#inbox, { address: 1, parts: 1 }],
+      [this.#signals, { address: 1, cursor: 1 }],
+      [this.#signals, { expires: 1 }, { expireAfterSeconds: 0 }],
+      [this.#webhooks, { address: 1, slot: 1 }, { unique: true }],
+      [this.#webhooks, { due: 1 }],
+      [this.#inbox, { id: 1 }],
+      [this.#inbox, { cursor: 1 }, { partialFilterExpression: { event: true } }],
+      [this.#deliveries, { status: 1, nextAttemptAt: 1 }],
+      [this.#deliveries, { id: 1 }],
+      [this.#arrivals, { due: 1 }],
+      [this.#arrivals, { id: 1 }],
+      [this.#fetches, { due: 1 }],
+      [this.#fetches, { carrier: 1, due: 1 }],
+      [this.#marks, { expires: 1 }],
+      [this.#counters, { expires: 1 }],
+      [this.#values, { expires: 1 }],
+    ] as never;
+    for (const [collection, keys, options] of indexes) await this.#index(collection, keys, options);
     // Older versions' documents are upgraded by plain operators, one document at a time, as DocumentDB has no
     // update pipelines. Array reservations keep their live writers: each is rewritten only while unchanged.
     // Rolling mixed-version writers are not supported.

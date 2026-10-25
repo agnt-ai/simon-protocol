@@ -97,23 +97,24 @@ implementations use it; link both in the pull request that changes its status.
 
 ## Releasing
 
-Four packages are published to npm, together and always at one version: `@agnt-sdk/simon-protocol`
-(`protocol/`), `@agnt-sdk/simon-client` (`clients/js`), `@agnt-sdk/simon-cli` (`clients/cli`, the `simon`
-binary) and `@agnt-sdk/simon-mcp` (`clients/mcp`, the `simon-mcp` binary). What is published is the build
+Six packages are published to npm, together and always at one version: `@agnt-sdk/simon-protocol`
+(`protocol/`), `@agnt-sdk/simon-server` (`server/`, the `simon-server` binary), `@agnt-sdk/simon-store-mongo`
+(`store-mongo/`), `@agnt-sdk/simon-client` (`clients/js`), `@agnt-sdk/simon-cli` (`clients/cli`, the
+`simon` binary) and `@agnt-sdk/simon-mcp` (`clients/mcp`, the `simon-mcp` binary). What is published is the build
 of `scripts/pack.ts`: compiled JavaScript with type declarations for Node 24.6.0 or later, never the
 TypeScript sources, which is why `npm publish` refuses to run in a source directory. Every other workspace
 is private.
 
-1. **Bump the versions.** In one pull request, set `version` in the four `package.json` files to the new
-   version, and the four packages' dependencies on each other to exactly that version. Run `npm install`
+1. **Bump the versions.** In one pull request, set `version` in the six `package.json` files to the new
+   version, and the six packages' dependencies on each other to exactly that version. Run `npm install`
    to update `package-lock.json`, and add the release to [CHANGELOG.md](CHANGELOG.md).
 2. **Tag the merged commit** `vX.Y.Z`, with the same version, and push the tag:
    `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. **The publish workflow** ([.github/workflows/publish.yml](.github/workflows/publish.yml)) runs the full
-   check, confirms the tag matches every package's version (`scripts/release-version.ts`), packs the four
+   check, confirms the tag matches every package's version (`scripts/release-version.ts`), packs the six
    with `node scripts/pack.ts --release`, runs `scripts/test-built.sh` on the packed files on Node 24, and
-   publishes them in dependency order (protocol, client, then the CLI and the MCP server) with
-   `--access public --provenance`.
+   publishes them in dependency order (protocol, server, the MongoDB store, client, then the CLI and the
+   MCP server) with `--access public --provenance`.
 
 A version on npm cannot be published again. If the workflow fails part way, fix the cause and release the
 next patch version.
@@ -127,7 +128,7 @@ needs the repository to be public. Setting it up:
    configured for them yet. For it, store a granular access token of a bot account (not a person's
    account), with publish rights on the `@agnt-sdk` scope, as the repository secret `NPM_TOKEN`. The
    workflow passes it to npm as `NODE_AUTH_TOKEN` when it is set, and uses no token when it is empty.
-2. **Then configure a trusted publisher** on npmjs.com for each of the four packages (the package's
+2. **Then configure a trusted publisher** on npmjs.com for each of the six packages (the package's
    settings, "Trusted Publisher"): GitHub Actions; organization `agnt-ai`; repository `simon-protocol`;
    workflow `publish.yml`; no environment (unless one is added to the workflow, in which case name it).
 3. **Then delete the `NPM_TOKEN` secret,** and set each package's publishing access to "Require two-factor

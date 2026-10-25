@@ -18,7 +18,7 @@
  * requester: its view is `submitted` until the introduction arrives or the request expires.
  */
 import crypto from 'node:crypto';
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import type { Activity, Ctx } from '../../context.ts';
 import type { Quoted } from '../../system.ts';
 import { conflict, invalid, notFound } from '../../lib/errors.ts';

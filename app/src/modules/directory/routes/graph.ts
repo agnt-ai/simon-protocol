@@ -1,7 +1,7 @@
 /** The graph: submit your person's edges, remove one, and ask who your person knows. */
 import { z } from 'zod';
 import type { Ctx } from '../../../context.ts';
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import { agent, defineRoute, type ApiRoute, type Caller } from '../../../http/route.ts';
 import { spend } from '../../../lib/rate.ts';
 import type { Directory } from '../index.ts';

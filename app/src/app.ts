@@ -19,7 +19,7 @@ import {
   type MailboxNote,
   type ServerApi,
   type Store,
-} from 'simon-server';
+} from '@agnt-sdk/simon-server';
 import type { Db } from 'mongodb';
 import { mailerFor, type Mailer } from './adapters/mail.ts';
 import type { Scanner } from './adapters/scanner.ts';
@@ -41,7 +41,7 @@ import { Requests } from './modules/owner/requests.ts';
 import { policyModule } from './modules/policy/index.ts';
 import { uploadsModule } from './modules/uploads/index.ts';
 import { webhooksModule } from './modules/webhooks/index.ts';
-import { MongoStore } from './store/mongo-store.ts';
+import { MongoStore } from '@agnt-sdk/simon-store-mongo';
 import { SystemAgents } from './system.ts';
 
 export interface AppOptions {

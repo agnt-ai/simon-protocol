@@ -1,6 +1,7 @@
 /**
  * The application is built only through the basic server's extension points: it imports the server's
- * package and its published entry points, never a file inside it; and nothing outside app/ imports it.
+ * package and the MongoDB store's, through their published entry points, never a file inside either; and
+ * nothing outside app/ imports it.
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -20,11 +21,18 @@ const imports = (file: string) =>
   [...fs.readFileSync(file, 'utf8').matchAll(/^(?:import|export)[^'"]*from '([^']+)'/gm)].map(m => m[1]);
 
 describe('boundaries', () => {
-  it('reaches the server only through simon-server and its published entry points', () => {
-    const allowed = new Set(['simon-server', 'simon-server/store-contract', 'simon-server/testing']);
+  it('reaches the server and its store only through their packages and published entry points', () => {
+    const allowed = new Set([
+      '@agnt-sdk/simon-server',
+      '@agnt-sdk/simon-server/contract',
+      '@agnt-sdk/simon-server/testing',
+      '@agnt-sdk/simon-store-mongo',
+      '@agnt-sdk/simon-store-mongo/testing',
+    ]);
     for (const file of sources(path.join(ROOT, 'app'))) {
       for (const spec of imports(file)) {
-        if (spec.startsWith('simon-server')) assert.ok(allowed.has(spec), `${file}: ${spec}`);
+        if (/^@agnt-sdk\/simon-(server|store-mongo)/.test(spec)) assert.ok(allowed.has(spec), `${file}: ${spec}`);
+        assert.ok(!/(^|\/)(server|store-mongo)\/src\//.test(spec), `${file}: ${spec}`);
         // Relative imports stay in the application, but for the published grading rubric in skill/.
         const target = path.resolve(path.dirname(file), spec);
         if (spec.startsWith('.'))
@@ -37,7 +45,7 @@ describe('boundaries', () => {
   });
 
   it('is imported by nothing outside app/', () => {
-    for (const dir of ['protocol', 'server', 'clients', 'conformance', 'examples']) {
+    for (const dir of ['protocol', 'server', 'store-mongo', 'clients', 'conformance', 'examples']) {
       for (const file of sources(path.join(ROOT, dir))) {
         for (const spec of imports(file))
           assert.ok(!spec.includes('protocol-app') && !spec.includes('/app/'), `${file}: ${spec}`);

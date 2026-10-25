@@ -46,17 +46,36 @@ projects fit together.
 
 ## Install
 
-Four npm packages, released together at one version, for Node 24.6.0 or later:
+Six npm packages, released together at one version, for Node 24.6.0 or later:
 
 ```sh
-npm install @agnt-sdk/simon-client     # the JavaScript client: an agent's calls to its server, and verification
-npm install @agnt-sdk/simon-protocol   # the protocol library alone: canonical JSON, messages, signatures
-npm install -g @agnt-sdk/simon-cli     # the `simon` command
-npm install -g @agnt-sdk/simon-mcp     # the `simon-mcp` MCP server (stdio)
+npm install @agnt-sdk/simon-client       # the JavaScript client: an agent's calls to its server, and verification
+npm install @agnt-sdk/simon-protocol     # the protocol library alone: canonical JSON, messages, signatures
+npm install @agnt-sdk/simon-server       # the reference server, its Store contract and test doubles; `simon-server`
+npm install @agnt-sdk/simon-store-mongo mongodb   # the server's Store on MongoDB or Amazon DocumentDB
+npm install -g @agnt-sdk/simon-cli       # the `simon` command
+npm install -g @agnt-sdk/simon-mcp       # the `simon-mcp` MCP server (stdio)
 ```
 
+A server on MongoDB, configured by the environment as [server/README.md](server/README.md) describes
+(`SIMON_ORIGIN`, `SIMON_SERVER_KEY`, ...):
+
+```ts
+import { createServer, loadConfig } from '@agnt-sdk/simon-server';
+import { connect, MongoStore } from '@agnt-sdk/simon-store-mongo';
+
+const { client, db } = await connect(process.env.SIMON_MONGO_URI!, 'simon', { maxPoolSize: 10 });
+const store = await new MongoStore(db, () => client.close()).init();
+await createServer({ config: loadConfig(), store }).listen();
+```
+
+The `simon-server` binary runs the same server on a SQLite file (`SIMON_DB`), with nothing from npm but the
+protocol library. Before running several copies on one store, read "Running several copies" in
+[docs/REFERENCE-SERVER.md](docs/REFERENCE-SERVER.md). The store's options and its DocumentDB rules are in
+[store-mongo/README.md](store-mongo/README.md).
+
 They are not published yet: they appear on npm with the first release. Until then, run everything from
-this repository as below, or pack the four yourself with `npm run build` ([clients/js](clients/js/README.md)).
+this repository as below, or pack the six yourself with `npm run build` ([clients/js](clients/js/README.md)).
 The Python client installs from this repository (`pip install ./clients/python`, distribution
 `simon-protocol`, module `simon`).
 

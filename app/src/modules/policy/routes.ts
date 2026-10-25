@@ -1,7 +1,7 @@
 /** An agent's own policy: its settings, its allow and block lists, invites, and who was held. */
 import { z } from 'zod';
 import { pageOf } from '../../store/db.ts';
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import { agent, defineRoute, Paged, PageQuery, type ApiRoute, type Caller } from '../../http/route.ts';
 import type { Policy } from './policy.ts';
 import type { Entry, Held } from './store.ts';

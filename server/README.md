@@ -1,6 +1,18 @@
-# simon-server
+# @agnt-sdk/simon-server
 
-The basic SIMON server: everything in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md) and [`spec/CLIENT.md`](../spec/CLIENT.md), and nothing else. No people, directory, graph, blocklists, webhooks or bridges; those are extensions. Runtime dependencies: `@agnt-sdk/simon-protocol` and Node's standard library (`node:http`, `node:sqlite`, `node:crypto`, `node:dns`). Node 26.
+The basic SIMON server: everything in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md) and [`spec/CLIENT.md`](../spec/CLIENT.md), and nothing else. No people, directory, graph, blocklists, webhooks or bridges; those are extensions. Runtime dependencies: `@agnt-sdk/simon-protocol` and Node's standard library (`node:http`, `node:sqlite`, `node:crypto`, `node:dns`). Node 26 runs it from this repository's TypeScript sources; the npm package is compiled and runs on Node 24.6.0 or later.
+
+```sh
+npm install @agnt-sdk/simon-server   # the library, and the simon-server binary
+```
+
+| Import | What it gives |
+| --- | --- |
+| `@agnt-sdk/simon-server` | `createServer`, `defineConfig`, `loadConfig`, `SqliteStore`, the `Store` interface and its record types, the extension types, `json`, the DNS and HTTP seams |
+| `@agnt-sdk/simon-server/contract` | `storeContract` and `retractionCapacityContract`: the Store contract as `node:test` suites |
+| `@agnt-sdk/simon-server/testing` | `Clock`, `FakeDns`, `FakeNet`, `toRequest`, `replyBody`: the outside world as test doubles |
+
+`node:sqlite` is loaded only when a `SqliteStore` is made, so an application on another Store (such as [`@agnt-sdk/simon-store-mongo`](../store-mongo/README.md)) never loads it. `simon-server help` lists the main settings.
 
 ## Run
 
@@ -199,7 +211,7 @@ An application adds behaviour by passing extensions; it never edits the core. Ev
 `api` (`ServerApi`) offers `config`, `store`, `now()`, `log`, `authenticate(req)`, `admit(address, id)` (release a `'later'`), `offer(address, id)` (a stored message to an agent here, through the admit chain), `send(message, hints?)` (as an agent here, checked as `send` checks it) and `retire(address)`.
 
 ```ts
-import { createServer, json, loadConfig, SqliteStore, type Extension } from 'simon-server';
+import { createServer, json, loadConfig, SqliteStore, type Extension } from '@agnt-sdk/simon-server';
 
 const held = new Map<string, string>(); // message id -> recipient
 const quiet: Extension = {
@@ -245,13 +257,15 @@ retries, or previously published signed messages.
 `store/store.ts` is everything the core keeps, with its uniqueness and retention rules written on the interface. Another store proves itself with the contract suite:
 
 ```ts
-import { storeContract } from 'simon-server/store-contract';
-storeContract('mongo', () => new MongoStore(/* a fresh database */));
+import { storeContract } from '@agnt-sdk/simon-server/contract';
+storeContract('mongo', async () => new MongoStore(await freshDb()).init());
 ```
+
+[`@agnt-sdk/simon-store-mongo`](../store-mongo/README.md) is the Store on MongoDB and Amazon DocumentDB. Before running several processes on one store, read "Running several copies" in [docs/REFERENCE-SERVER.md](../docs/REFERENCE-SERVER.md): elect one of them to run the worker loop.
 
 ## Testing
 
-`simon-server/testing` is the fake outside world the tests use: a movable `Clock`, `FakeDns`, and `FakeNet`, whose origins answer in-process. An application runs whole federations of its own servers on it.
+`@agnt-sdk/simon-server/testing` is the fake outside world the tests use: a movable `Clock`, `FakeDns`, and `FakeNet`, whose origins answer in-process. An application runs whole federations of its own servers on it.
 
 ```sh
 node --test server/test          # spec rules, federation on a fake network, hardening, the store contract

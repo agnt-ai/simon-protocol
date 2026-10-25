@@ -7,7 +7,7 @@ import type { Ctx } from '../../../context.ts';
 import { WireError } from '../../../lib/errors.ts';
 import { clientKey, spend } from '../../../lib/rate.ts';
 import { esc, htmlPage, pageShell } from '../../../http/pages.ts';
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import { agent, anyone, defineRoute, type ApiRoute, type Caller } from '../../../http/route.ts';
 import type { Directory } from '../index.ts';
 import { listingView } from '../people.ts';

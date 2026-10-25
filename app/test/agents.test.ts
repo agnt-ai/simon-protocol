@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { after, describe, it } from 'node:test';
 import { checkMessage, checkSupportedVersion, sha256Hex } from '@agnt-sdk/simon-protocol';
-import type { Request } from 'simon-server';
+import type { Request } from '@agnt-sdk/simon-server';
 import { received, notices, texts, World } from './harness.ts';
 
 describe('agents', async () => {

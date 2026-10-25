@@ -9,7 +9,7 @@
  *   SIMON_SYSTEM_DOMAIN              the domain of this application's own agents (default: the first hosted domain)
  *   SIMON_APP_RATES                  rate overrides (lib/rate.ts)
  */
-import { loadConfig, type Config } from 'simon-server';
+import { loadConfig, type Config } from '@agnt-sdk/simon-server';
 import { normalizeDomain } from '@agnt-sdk/simon-protocol';
 import { readMailConfig, type MailConfig } from './adapters/mail.ts';
 import { readSmsConfig, type SmsConfig } from './adapters/sms.ts';

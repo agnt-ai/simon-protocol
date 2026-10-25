@@ -11,7 +11,7 @@
  *   })
  */
 import { parseJson, type Json } from '@agnt-sdk/simon-protocol';
-import type { Agent, Reply, Request, Route, ServerApi } from 'simon-server';
+import type { Agent, Reply, Request, Route, ServerApi } from '@agnt-sdk/simon-server';
 import { z } from 'zod';
 import { invalid } from '../lib/errors.ts';
 

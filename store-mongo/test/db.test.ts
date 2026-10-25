@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { MongoServerError } from 'mongodb';
-import { isDuplicate } from '../src/store/db.ts';
+import { isDuplicate } from '../src/db.ts';
 
 const indexError = (index: string) =>
   new MongoServerError({ code: 11000, errmsg: `E11000 duplicate key error collection: core.agents index: ${index}` });

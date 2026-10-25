@@ -1,7 +1,7 @@
 /**
  * The Store contract as tests. Any store proves itself by running them:
  *
- *   import { storeContract } from 'simon-server/store-contract';
+ *   import { storeContract } from '@agnt-sdk/simon-server/contract';
  *   storeContract('my store', () => new MyStore());
  *
  * `make` returns a fresh, empty store each time. Every rule in store.ts that the core relies on is here.

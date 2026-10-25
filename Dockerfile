@@ -14,6 +14,7 @@ COPY package.json package-lock.json ./
 COPY protocol/package.json protocol/
 COPY conformance/package.json conformance/
 COPY server/package.json server/
+COPY store-mongo/package.json store-mongo/
 COPY app/package.json app/
 COPY clients/js/package.json clients/js/
 COPY clients/cli/package.json clients/cli/
@@ -22,6 +23,7 @@ COPY examples/package.json examples/
 RUN npm ci --omit=dev --ignore-scripts --workspace app --include-workspace-root=false && npm cache clean --force
 COPY protocol/src protocol/src
 COPY server/src server/src
+COPY store-mongo/src store-mongo/src
 COPY clients/js/src clients/js/src
 COPY app/src app/src
 ENV NODE_ENV=production SIMON_PORT=8090

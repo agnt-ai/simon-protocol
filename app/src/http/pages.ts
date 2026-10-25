@@ -2,7 +2,7 @@
  * This application's few HTML pages (owner sign-in, the link sent after a key recovery): one frame,
  * escaping, and the headers every page is served with. No scripts.
  */
-import type { Reply } from 'simon-server';
+import type { Reply } from '@agnt-sdk/simon-server';
 
 export const esc = (s: string) =>
   s.replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);

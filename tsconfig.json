@@ -24,6 +24,8 @@
     "server/src",
     "server/test",
     "server/scripts",
+    "store-mongo/src",
+    "store-mongo/test",
     "app/src",
     "app/test",
     "app/scripts",

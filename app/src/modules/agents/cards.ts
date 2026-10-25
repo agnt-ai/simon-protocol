@@ -2,7 +2,7 @@
  * Agent cards: what an agent says about itself (a name, a description, what it can do), declared and not
  * verified, and whether anyone may read it. Kept in `agents.cards`, with the agent's read cursor.
  */
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import type { Db } from 'mongodb';
 import { fingerprint } from '../../lib/secrets.ts';
 import { isDuplicate } from '../../store/db.ts';

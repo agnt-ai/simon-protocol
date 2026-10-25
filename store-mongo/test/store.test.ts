@@ -5,11 +5,11 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
-import type { StoredMessage } from 'simon-server';
-import { storeContract, retractionCapacityContract } from 'simon-server/store-contract';
+import type { StoredMessage } from '@agnt-sdk/simon-server';
+import { storeContract, retractionCapacityContract } from '@agnt-sdk/simon-server/contract';
 import type { Collection, Db, Document } from 'mongodb';
-import { MongoStore } from '../src/store/mongo-store.ts';
-import { freshDb, stopMongo } from './mongo.ts';
+import { MongoStore } from '../src/mongo-store.ts';
+import { freshDb, stopMongo } from '../src/testing.ts';
 
 after(stopMongo);
 storeContract('MongoStore', async () => new MongoStore(await freshDb()).init());

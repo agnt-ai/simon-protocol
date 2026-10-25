@@ -1,0 +1,64 @@
+{
+  "name": "@agnt-sdk/simon-store-mongo",
+  "version": "0.1.0",
+  "description": "The SIMON reference server's Store on MongoDB and Amazon DocumentDB: single-document writes and unique indexes, primary reads, no sessions.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "simon",
+    "agents",
+    "ai-agents",
+    "protocol",
+    "signed-messages",
+    "mongodb",
+    "documentdb",
+    "store"
+  ],
+  "homepage": "https://github.com/agnt-ai/simon-protocol/tree/main/store-mongo#readme",
+  "bugs": {
+    "url": "https://github.com/agnt-ai/simon-protocol/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/agnt-ai/simon-protocol.git",
+    "directory": "store-mongo"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=26"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 'test/**/*.test.ts'",
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
+  },
+  "dependencies": {
+    "@agnt-sdk/simon-protocol": "0.1.0",
+    "@agnt-sdk/simon-server": "0.1.0"
+  },
+  "peerDependencies": {
+    "mongodb": "^7.6.0",
+    "mongodb-memory-server": "^11.2.0"
+  },
+  "peerDependenciesMeta": {
+    "mongodb-memory-server": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "mongodb": "7.6.0",
+    "mongodb-memory-server": "11.2.0"
+  }
+}

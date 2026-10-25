@@ -14,7 +14,7 @@
  * for those 30 days and no longer. Hooks: on.unroutable.
  */
 import { header, sha256Hex, textOf, type Message } from '@agnt-sdk/simon-protocol';
-import type { Events } from 'simon-server';
+import type { Events } from '@agnt-sdk/simon-server';
 import { z } from 'zod';
 import type { Ctx, Module } from '../../context.ts';
 import { notFound, unauthorized } from '../../lib/errors.ts';

@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * The four npm packages, the protocol library, the JavaScript client, the CLI and the MCP server, as
- * tarballs for Node 24, which cannot run TypeScript from node_modules: `node scripts/pack.ts [out-dir]`
- * compiles each to JavaScript with type declarations and packs it into out-dir (packed/ by default). The
- * sources stay the source of truth: nothing compiled is committed. Each build is its own version,
+ * The six npm packages, the protocol library, the reference server, its MongoDB store, the JavaScript
+ * client, the CLI and the MCP server, as tarballs for Node 24, which cannot run TypeScript from
+ * node_modules: `node scripts/pack.ts [out-dir]` compiles each to JavaScript with type declarations and
+ * packs it into out-dir (packed/ by default). The sources stay the source of truth: nothing compiled is
+ * committed. Each build is its own version,
  * `<version>-g<commit>`, so a cache never serves one build for another, and each package depends on the
- * others of the same build. The tree must be committed first.
+ * others of the same build; a dependency from npm (the store's peer `mongodb`) keeps its range, and
+ * development dependencies are dropped. The tree must be committed first.
  *
  * `--release` packs a release instead: the versions in the package.json files, which must all be the same,
  * with dependencies on exactly that version. The publish workflow publishes these tarballs, in this order.
@@ -20,7 +22,8 @@ import path from 'node:path';
 /** The oldest Node the packages run on: node:crypto has ML-DSA-65 keys from 24.6.0. */
 const NODE = '>=24.6.0';
 const ROOT = path.resolve(import.meta.dirname, '..');
-const PACKAGES = ['protocol', 'clients/js', 'clients/cli', 'clients/mcp'];
+/** In dependency order: each is packed after the packages it depends on. */
+const PACKAGES = ['protocol', 'server', 'store-mongo', 'clients/js', 'clients/cli', 'clients/mcp'];
 const TSC = path.join(ROOT, 'node_modules/typescript/bin/tsc');
 
 const run = (cmd: string, args: string[], cwd = ROOT) => execFileSync(cmd, args, { cwd, encoding: 'utf8' }).trim();
@@ -48,9 +51,9 @@ function compiledBin(file: string) {
   return compiled(file).default;
 }
 
-const versions = new Set(
-  PACKAGES.map(dir => JSON.parse(fs.readFileSync(path.join(ROOT, dir, 'package.json'), 'utf8')).version),
-);
+const manifests = PACKAGES.map(dir => JSON.parse(fs.readFileSync(path.join(ROOT, dir, 'package.json'), 'utf8')));
+const ours = new Set<string>(manifests.map(p => p.name));
+const versions = new Set(manifests.map(p => p.version));
 if (release && versions.size !== 1) fail(`a release has one version; the packages have ${[...versions].join(', ')}.`);
 
 try {
@@ -59,12 +62,19 @@ try {
     const source = path.join(ROOT, dir);
     const target = path.join(stage, dir);
     run(process.execPath, [TSC, '-p', path.join(source, 'tsconfig.build.json'), '--outDir', path.join(target, 'dist')]);
-    const { scripts: _, ...pkg } = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
+    const {
+      scripts: _,
+      devDependencies: __,
+      ...pkg
+    } = JSON.parse(fs.readFileSync(path.join(source, 'package.json'), 'utf8'));
     const version = release ? pkg.version : `${pkg.version}-g${commit.slice(0, 12)}`;
     builds.set(pkg.name, version);
     const dependencies = pkg.dependencies && {
       dependencies: Object.fromEntries(
-        Object.keys(pkg.dependencies).map(name => [name, builds.get(name) ?? fail(`${name} is not packed first.`)]),
+        Object.entries(pkg.dependencies as Record<string, string>).map(([name, range]) => [
+          name,
+          ours.has(name) ? (builds.get(name) ?? fail(`${name} is not packed first.`)) : range,
+        ]),
       ),
     };
     const packed = {

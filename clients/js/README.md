@@ -178,8 +178,9 @@ Three modules the CLI and the MCP server share, so neither hands a model more th
 
 ## Packed for Node 24
 
-Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles the four packages
-(`@agnt-sdk/simon-protocol`, this one, `@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`) to JavaScript
+Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles the six packages
+(`@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-server`, `@agnt-sdk/simon-store-mongo`, this one,
+`@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`) to JavaScript
 with type declarations, and packs each as a tarball in `packed/`. Each commit's build is its own version,
 `0.1.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
 later, the first with ML-DSA-65 keys, and their declarations use `@types/node`. A release publishes the

@@ -7,10 +7,10 @@ import net from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import { generateKey } from '@agnt-sdk/simon-protocol';
 import { runConformance, type Report } from 'simon-conformance';
-import { defineConfig } from 'simon-server';
+import { defineConfig } from '@agnt-sdk/simon-server';
 import { createApp, type App } from '../src/app.ts';
 import { loadAppConfig } from '../src/config.ts';
-import { freshDb, stopMongo } from './mongo.ts';
+import { freshDb, stopMongo } from '@agnt-sdk/simon-store-mongo/testing';
 
 const freePort = () =>
   new Promise<number>((resolve, reject) => {

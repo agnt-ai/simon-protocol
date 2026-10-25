@@ -23,6 +23,25 @@ moved to the protocol's name. Nothing reads the old names; there is no compatibi
 - Members under a host's own domain, such as the application template's `agnt.ai:scope` and
   `agnt.ai:pairingCode`, are that host's extensions and keep their names.
 
+### The server and its MongoDB store on npm (2026-10-25)
+
+- **Two more published packages,** released with the other four at one version: `@agnt-sdk/simon-server`
+  (`server/`, binary `simon-server`; exports `.`, `./contract` and `./testing`) and
+  `@agnt-sdk/simon-store-mongo` (`store-mongo/`; exports `.` and `./testing`), so a host can run the
+  reference server by version. The Store contract's entry is now `@agnt-sdk/simon-server/contract`
+  (was `simon-server/store-contract`).
+- **`MongoStore` moved** from the application template (`app/src/store/`) to `store-mongo/`, with its
+  suite and its in-memory or `SIMON_TEST_MONGO_URI` test databases; the template depends on the package.
+- **`connect` bounds its pool:** `maxPoolSize` 10, `minPoolSize` 0, `maxIdleTimeMS` 60000 by default, and
+  `appName`; reads stay on the primary, and another read preference is refused.
+- **`MongoStore.init()` on a shared database:** several processes may run it at once. An index build
+  DocumentDB refuses because another is underway on the collection is tried again after a jittered wait.
+- **`SqliteStore` loads `node:sqlite` only when made,** so an application on another store never loads it.
+- **`simon-server help`** prints how to run the server.
+- **"Running several copies"** in `docs/REFERENCE-SERVER.md` states what is safe on a shared store today
+  (deliveries, fetches and webhooks are leased) and what is not (arrivals and inbox events: one process
+  runs the worker loop).
+
 ### Packages for npm (2026-10-24)
 
 - **Four published packages,** released together at one version: `@agnt-sdk/simon-protocol`,

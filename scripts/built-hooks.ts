@@ -1,7 +1,9 @@
 /**
  * The packages' own suites, run against their packed builds: an import that resolves into protocol/src,
- * clients/js/src, clients/cli/src or clients/mcp/src resolves instead to the compiled file of the package
- * installed under SIMON_BUILT, a directory whose node_modules holds all four. scripts/test-built.sh runs:
+ * server/src, store-mongo/src, clients/js/src, clients/cli/src or clients/mcp/src resolves instead to the
+ * compiled file of the package installed under SIMON_BUILT, a directory whose node_modules holds all six.
+ * The MongoDB driver resolves to the copy installed there too, the one the store's build uses, so an error
+ * a test makes is the class the store recognises. scripts/test-built.sh runs:
  *
  *   SIMON_BUILT=<dir> NODE_OPTIONS=--import=<this file> node --test 'protocol/test/**' 'clients/js/test/**' ...
  *
@@ -18,14 +20,20 @@ const root = pathToFileURL(path.resolve(import.meta.dirname, '..')).href;
 const installed = pathToFileURL(fs.realpathSync(path.resolve(process.env.SIMON_BUILT, 'node_modules'))).href;
 const BUILDS: [string, string][] = [
   [`${root}/protocol/src/`, `${installed}/@agnt-sdk/simon-protocol/dist/`],
+  [`${root}/server/src/`, `${installed}/@agnt-sdk/simon-server/dist/`],
+  [`${root}/store-mongo/src/`, `${installed}/@agnt-sdk/simon-store-mongo/dist/`],
   [`${root}/clients/js/src/`, `${installed}/@agnt-sdk/simon-client/dist/`],
   [`${root}/clients/cli/src/`, `${installed}/@agnt-sdk/simon-cli/dist/`],
   [`${root}/clients/mcp/src/`, `${installed}/@agnt-sdk/simon-mcp/dist/`],
 ];
+/** Packages from npm the builds and the suites must share: one copy, the installed one. */
+const SHARED: [string, string][] = ['mongodb'].map(name => [`${root}/node_modules/${name}/`, `${installed}/${name}/`]);
 
 registerHooks({
   resolve(specifier, context, next) {
     const resolved = next(specifier, context);
+    const shared = SHARED.find(([source]) => resolved.url.startsWith(source));
+    if (shared) return { ...resolved, url: shared[1] + resolved.url.slice(shared[0].length) };
     const build = BUILDS.find(([source]) => resolved.url.startsWith(source));
     if (!build) return resolved;
     const file = resolved.url.slice(build[0].length).replace(/\.ts$/, '.js');

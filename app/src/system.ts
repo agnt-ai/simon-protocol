@@ -19,7 +19,7 @@ import {
   type Message,
   type Part,
 } from '@agnt-sdk/simon-protocol';
-import type { ServerApi } from 'simon-server';
+import type { ServerApi } from '@agnt-sdk/simon-server';
 
 export type SystemName = 'notices' | 'bridge';
 

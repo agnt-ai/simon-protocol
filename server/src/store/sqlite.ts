@@ -4,7 +4,7 @@
  * the file. Times are stored as epoch milliseconds, so comparisons never depend on how a timestamp is spelled.
  */
 import { randomUUID } from 'node:crypto';
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import { canonicalize, header, namedFiles, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from './store.ts';
 import type {
@@ -133,6 +133,9 @@ export class SqliteStore implements Store {
 
   constructor(path = ':memory:', options: { retractions?: Partial<RetractionCapacity> } = {}) {
     this.#retractionCapacity = resolveRetractionCapacity(options.retractions);
+    // node:sqlite is loaded when a SqliteStore is made, never on import: an application on another Store never
+    // loads it, nor sees the warnings some Node versions print for it.
+    const { DatabaseSync } = process.getBuiltinModule('node:sqlite');
     this.#db = new DatabaseSync(path);
     this.#db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = OFF;');
     try {

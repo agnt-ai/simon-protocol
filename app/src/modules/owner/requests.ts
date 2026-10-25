@@ -13,7 +13,7 @@
  * an agent may ask, and only its person decides. A solo agent speaks for no one, so its key is all the
  * authority there is, and its calls run at once.
  */
-import type { Agent, Reply, Request, ServerApi } from 'simon-server';
+import type { Agent, Reply, Request, ServerApi } from '@agnt-sdk/simon-server';
 import { z } from 'zod';
 import type { Ctx } from '../../context.ts';
 import { agent, run, type ApiRoute, type Call, type Caller, type RouteSpec } from '../../http/route.ts';

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { Ctx } from '../../../context.ts';
 import { notFound } from '../../../lib/errors.ts';
 import { clientKey, spend } from '../../../lib/rate.ts';
-import type { Agent } from 'simon-server';
+import type { Agent } from '@agnt-sdk/simon-server';
 import { agentOrAnyone, defineRoute, type ApiRoute, type Caller } from '../../../http/route.ts';
 import type { Directory } from '../index.ts';
 import { AttestationId, AttestationIn, Disposal, PersonId, Principal, Profile } from '../schemas.ts';

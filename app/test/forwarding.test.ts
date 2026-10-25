@@ -2,10 +2,10 @@
 import assert from 'node:assert/strict';
 import { it } from 'node:test';
 import { generateKey, sha256Hex } from '@agnt-sdk/simon-protocol';
-import { createServer, defineConfig, type SimonServer } from 'simon-server';
-import { MongoStore } from '../src/store/mongo-store.ts';
+import { createServer, defineConfig, type SimonServer } from '@agnt-sdk/simon-server';
+import { MongoStore } from '@agnt-sdk/simon-store-mongo';
 import { World } from './harness.ts';
-import { freshDb } from './mongo.ts';
+import { freshDb } from '@agnt-sdk/simon-store-mongo/testing';
 
 it('Mongo-backed sends retain the final forward after source messages expire', async () => {
   const world = new World();

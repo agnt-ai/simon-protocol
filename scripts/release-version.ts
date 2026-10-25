@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * A release tag against the packages it publishes: `node scripts/release-version.ts vX.Y.Z` fails unless the
- * tag is a plain version and each of the four npm packages has exactly that version and depends on the
+ * tag is a plain version and each of the six npm packages has exactly that version and depends on the
  * others at exactly that version.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 
-const PACKAGES = ['protocol', 'clients/js', 'clients/cli', 'clients/mcp'];
+const PACKAGES = ['protocol', 'server', 'store-mongo', 'clients/js', 'clients/cli', 'clients/mcp'];
 const ROOT = path.resolve(import.meta.dirname, '..');
 const tag = process.argv[2] ?? '';
 const m = /^v(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/.exec(tag);

@@ -13,8 +13,8 @@
 import type { KeyObject } from 'node:crypto';
 import { generateKey, keyToken, sign, signPairing } from '@agnt-sdk/simon-protocol';
 import { Agent, type Delivered, SimonError, type Fetch } from '@agnt-sdk/simon-client';
-import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from 'simon-server';
-import { Clock, FakeDns, FakeNet, replyBody, toRequest } from 'simon-server/testing';
+import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from '@agnt-sdk/simon-server';
+import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '@agnt-sdk/simon-server/testing';
 import type { Db } from 'mongodb';
 import type { Email, Mailer } from '../src/adapters/mail.ts';
 import type { Scanner } from '../src/adapters/scanner.ts';
@@ -23,7 +23,7 @@ import { createApp, type App } from '../src/app.ts';
 import { AppAgent, AppOwner, isAwaiting, pair, type Awaiting } from '../src/client.ts';
 import { loadAppConfig } from '../src/config.ts';
 import { pkceS256, randomToken } from '../src/lib/secrets.ts';
-import { freshDb, stopMongo } from './mongo.ts';
+import { freshDb, stopMongo } from '@agnt-sdk/simon-store-mongo/testing';
 
 /** Mail and text messages, kept; a text message is kept as mail with no subject. */
 export class Outbox implements Mailer, Sms {

@@ -12,7 +12,7 @@
  * can see it and ignore it. Key principals pair by their own signature, which the core checks.
  */
 import type { Claim, Json } from '@agnt-sdk/simon-protocol';
-import type { Agent, PrincipalAnswer, PrincipalRequest } from 'simon-server';
+import type { Agent, PrincipalAnswer, PrincipalRequest } from '@agnt-sdk/simon-server';
 import type { Activity, Ctx } from '../../context.ts';
 import type { Codes } from '../../lib/codes.ts';
 import { gone, invalid } from '../../lib/errors.ts';

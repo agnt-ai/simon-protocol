@@ -5,8 +5,9 @@
 #   - Python: the client's suite twice, once with the standard library only and once with
 #     `cryptography`, which the client signs with when it is installed.
 #   - The basic server's image, run as a deployment runs it, through `scripts/image-check.sh`.
-#   - The four npm packages (protocol, client, CLI, MCP server), packed and installed on Node 24.6.0, the
-#     oldest they support, with their suites run against the compiled files, through `scripts/test-built.sh`.
+#   - The six npm packages (protocol, server, MongoDB store, client, CLI, MCP server), packed and installed
+#     on Node 24.6.0, the oldest they support, with their suites (the Store contract on an in-memory MongoDB
+#     among them) run against the compiled files, through `scripts/test-built.sh`.
 name: check
 on:
   push:
@@ -69,6 +70,11 @@ jobs:
       - run: npm ci
         env:
           MONGOMS_DISABLE_POSTINSTALL: '1'
+      # The store's suite runs on the in-memory MongoDB the javascript job caches.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-7.0.24
       - run: node scripts/pack.ts "$RUNNER_TEMP/packed"
       - uses: actions/setup-node@v4
         with:

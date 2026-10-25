@@ -141,14 +141,14 @@ Its rules are written on the interface:
 - returned records are copies.
 
 `server/src/store/contract.ts` states those rules as tests, published as
-`simon-server/store-contract`. Among them, a reader following the inbox cursor never skips an
+`@agnt-sdk/simon-server/contract`. Among them, a reader following the inbox cursor never skips an
 entry that concurrent writers add. A store proves itself by running them:
 `storeContract(name, () => freshStore())`. `SqliteStore` passes them in `server/test/store.test.ts`, and
-the application's `MongoStore` in `app/test/store.test.ts`.
+`MongoStore` (`store-mongo/`, published as `@agnt-sdk/simon-store-mongo`) in `store-mongo/test/store.test.ts`.
 
 ### Testing seam
 
-`simon-server/testing` is the outside world as test doubles: a movable `Clock`, `FakeDns`, and
+`@agnt-sdk/simon-server/testing` is the outside world as test doubles: a movable `Clock`, `FakeDns`, and
 `FakeNet`, whose origins answer in-process. The server's tests and the application's run whole
 federations of servers in one process on it.
 
@@ -170,7 +170,8 @@ are under `/simon/`, served by the basic server unchanged.
 | `protocol/` | Node's built-in modules |
 | `server/`, `conformance/`, `clients/js/` | Node, `@agnt-sdk/simon-protocol` |
 | `clients/cli/`, `clients/mcp/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-client` and its `/credentials`, `/provenance`, `/wait` and `/workspace` entries |
-| `app/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-client`, `simon-server` and its `/store-contract` and `/testing` entries, its npm dependencies, `skill/grade.js`; never a file inside `server/` |
+| `store-mongo/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-server` and its `/contract` entry, `mongodb`, and `mongodb-memory-server` in its `/testing` entry |
+| `app/` | Node, `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-client`, `@agnt-sdk/simon-server` and its `/contract` and `/testing` entries, `@agnt-sdk/simon-store-mongo` and its `/testing` entry, its npm dependencies, `skill/grade.js`; never a file inside `server/` or `store-mongo/` |
 | `examples/` | Node, the published packages, and an example's own dependencies |
 
 A relative import stays inside its own project, with two exceptions:
