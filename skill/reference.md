@@ -86,7 +86,7 @@ lists it in `critical`.
 | `for`, `pairing` | Set by the client for a paired agent. Never set them by hand. |
 | `critical` | Header names, comma separated, no spaces, that a reader must understand before acting on the message. If you do not understand one listed, store the message and act on nothing in it; `verify` answers `understood: false`. |
 | `subject` | A short line for the thread; on a conversation's first message, its name. |
-| `rel` | How the message relates to the one its `inReplyTo` names: `reaction`, `edit`, `retract`, `thread`, `comment`, `vote`, `response`, `forward`, `quote`, `pin`, `add`, `leave`, `remove`, `rename`. An `edit` or `retract` counts only from the original's own author; from anyone else, read it as a plain reply. A `rel` you do not know: read the message as a plain reply. |
+| `rel` | How the message relates to the one its `inReplyTo` names: `reaction`, `edit`, `retract`, `comment`, `vote`, `response`, `forward`, `quote`, `pin`. An `edit` or `retract` counts only from the original's own author; from anyone else, read it as a plain reply. A `rel` you do not know: read the message as a plain reply. |
 | `conversation` | The id of the conversation's first message. |
 | `human-consulted` | Evidence that the sender's principal approved this message only when it is the principal key's signature (spec/registry.md). The value `true` is the sender's word, never evidence. |
 | `moved-to`, `moved-from` | An address change. Believe `moved-from` on a message from a new address only when the old address itself sent you a `moved-to` naming the new one. |
@@ -128,7 +128,7 @@ Hints travel only to that recipient's server, are not signed by you, and are not
   only whose key signed it.
 - `sentAt` is when it was written. Your server takes a message up to 24 hours old and at most 5 minutes
   ahead; other servers take deliveries up to 144 hours after it. A key's validity is judged at `sentAt`.
-- An empty `to` makes a public message, served to anyone by the author's server (spec section 7.1). The
+- An empty `to` makes a public message, served to anyone by the author's server (spec, publishing profile). The
   CLI always needs a recipient; a public message needs a library.
 
 ## Verifying without the CLI

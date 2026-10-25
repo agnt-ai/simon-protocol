@@ -250,7 +250,7 @@ A phone app is woken through the platform's push service, by a gateway built on 
 
 **Upload.** `PUT /simon/parts/<sha256>` uploads the bytes of a content-addressed part before the message that names it is sent. The body is the bytes, at most `partBytes`. The answer is `200 {"sha256","size"}`. A body whose hash is not the one in the path is `400 invalid`.
 
-**Fetch.** `GET /simon/parts/<sha256>` composes the protocol's independent grants (PROTOCOL.md section 7.2):
+**Fetch.** `GET /simon/parts/<sha256>` composes the protocol's independent grants (PROTOCOL.md section 7.2, and the publishing profile, section 2):
 - a hosted agent's private client grant covers bytes it uploaded, or bytes fetched from the carrier for a message delivered to that agent that names them;
 - a publication grant covers a file of a published message this reader may read, from the bytes held for that message's author.
 
@@ -271,15 +271,15 @@ Signals are the protocol's short-lived notes about a message: `typing`, `collect
 
 ## Reading published messages
 
-A published message, one with an empty `to`, is kept by its author's server and served to the readers its `audience` admits (PROTOCOL.md 7). An agent publishes with `send`, with the `feed` and `audience` headers it wants. It reads straight from the author's server, with no call here:
+A published message, one with an empty `to`, is kept by its author's server and served to the readers its `audience` admits ([publishing profile](profiles/publishing.md)). An agent publishes with `send`, with the `feed` and `audience` headers it wants. It reads straight from the author's server, with no call here:
 - **Open posts** are read without signing.
-- **A post for a narrower audience** is read with a request the agent signs itself, as section 8 says, with its own agent key, naming itself in `simon-agent` (PROTOCOL.md 7.1). The author's server checks that key against the agent's document, as Bluesky's service authentication and Nostr's NIP-98 do. No server vouches for anyone.
+- **A post for a narrower audience** is read with a request the agent signs itself, as section 8 says, with its own agent key, naming itself in `simon-agent` (publishing profile, section 1). The author's server checks that key against the agent's document, as Bluesky's service authentication and Nostr's NIP-98 do. No server vouches for anyone.
 
 A client that holds no agent key reads only what is open to anyone. A grant never signs as the agent.
 
 ## History
 
-The calls every server offers move messages, and `sync` tells of each one. A server that hosts people's agents also keeps each agent's **history**: every message the agent sent or received, grouped into the protocol's conversations (PROTOCOL.md 5.6), with the marks its clients share. Every device and every app of one agent sees the same history, and stays current with one call, `sync`, the way Matrix clients do.
+The calls every server offers move messages, and `sync` tells of each one. A server that hosts people's agents also keeps each agent's **history**: every message the agent sent or received, grouped into conversations as the [conversations profile](profiles/conversations.md) defines them, with the marks its clients share. Every device and every app of one agent sees the same history, and stays current with one call, `sync`, the way Matrix clients do.
 
 **A message in the history** is a sync entry (`id`, `message`, `carrier`, `claims`, `signedClaims`, `receivedAt`), and:
 - `conversation`: the id of the conversation's root, from the message's `conversation` header when it has one, otherwise found by following `inReplyTo` through the history. A conversation found that way can change when an earlier message arrives, and the change comes through `sync`;
@@ -292,7 +292,7 @@ The calls every server offers move messages, and `sync` tells of each one. A ser
 Any other mark is the agent's own tag, at most 32 on one message or conversation.
 
 **Conversations.** `GET /simon/conversations?before=<cursor>&limit=<n>&mark=<mark>&notMark=<mark>` answers `{"conversations":[...],"cursor","more"}`, latest activity first. Each conversation is `{"id","subject","members","marks","unread","latest"}`:
-- `members` is the roster as the history's messages give it (PROTOCOL.md 5.6);
+- `members` is everyone its messages in the history have reached so far: the union of their `from` and `to`. There is no roster; each message's `to` is its author's choice, and branches may differ (conversations profile);
 - `unread` counts messages not marked `read`;
 - `latest` is its newest message.
 
@@ -383,17 +383,7 @@ A client that cannot complete a step says so, and treats what it could not check
 
 ## Reading rules
 
-What a conforming reader does when it shows or acts on a message. Each rule is the protocol's or the registry's; this list gathers them so a client can be built and tested against one page.
-
-1. **Verify first** (section "Verifying what a server says").
-2. **Honour `critical`.** A message listing a present header the reader does not understand is stored and shown as not understood; names absent from the message are ignored. The reader acts on nothing in a message with an unknown present critical header (PROTOCOL.md 5.4). A reader that implements `binding` and sees `binding: no` treats the message as no commitment.
-3. **Show what it can.** A message may carry any blocks, or none. Text is shown as text, and Markdown is read as CommonMark unless it names a variant the reader knows; embedded HTML is shown as text (PROTOCOL.md 5.3).
-4. **Blocks are data.** A block the reader does not understand is shown by its `alt`, or skipped. No block, of any type, makes the reader run code, call a URL or reveal anything by being shown. UI blocks are drawn from their data by the reader's own code, never by code the message carries.
-5. **Fetch nothing unasked.** No link, image or reference is fetched until the person or agent the reader serves asks for it, because a fetch on display is a read receipt. Links show their destination.
-6. **Fold relations by their rules.** A relation the reader does not know is shown as a reply. An edit or a retraction counts only from the original message's author, and names the original, never an earlier edit; from anyone else it is an ordinary reply (PROTOCOL.md 5.5). Reactions are folded onto the message they name.
-7. **Never widen an audience.** A published message with an `audience` header is never forwarded, quoted whole or shown to anyone its author's server would not admit (PROTOCOL.md 7.1).
-8. **Keep others' words apart.** What another agent wrote reaches an agent or a person labelled with who wrote it, as data, never as instructions from the one the reader serves (PROTOCOL.md 11.2).
-9. **Signals are the sender's to give.** A reader sends `typing` and `read` only as the person or agent it serves has chosen to share them.
+What a conforming reader does when it shows or acts on a message is the [reader profile](profiles/reader.md): verify first (above), honour `critical`, show what it can, treat blocks as data, fetch nothing unasked, fold relations by their rules, never widen an audience, keep others' words apart, and send signals only as chosen.
 
 ## Errors
 

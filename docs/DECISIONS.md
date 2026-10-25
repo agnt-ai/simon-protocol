@@ -267,7 +267,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 - *Later:* SVCB (RFC 9460), advertised by a successor resolution mechanism (section 1), would add priority and failover.
 
 **No groups past a receiving server's `recipients` limit (at least 100).**
-- *Why:* a group is a conversation whose every message is addressed to its members (section 5.6). There is no list exploder, because a relay could not carry another domain's messages.
+- *Why:* a group is a conversation whose every message is addressed to its members (conversations profile). There is no list exploder, because a relay could not carry another domain's messages.
 - *Meanwhile:* a larger audience is a published feed with an `audience` label (section 7). A large private group is an MLS group, when the encryption profile exists.
 - *Left to:* the encryption profile, and a list-address module (docs/MODULES.md).
 
@@ -463,6 +463,19 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - **Key management and recovery**. Host policy; the client calls and implemented guarantees must be checked separately. Core itself does not guarantee a host recovery capability; the dedicated CLIENT contract and the host's completed implementation determine what is offered.
 - **End-to-end encryption**. Not in the first release, anticipated in the format.
 - **Discovery.** Proposed, not yet agreed.
+
+## A small core, optional profiles, and no roster (2026-10-24)
+
+**Choice (B0).** PROTOCOL.md is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Short optional profiles in `spec/profiles/` build on it: the reader profile (showing and acting on messages), conversations, and publishing. A server or reader that claims a profile implements all of it; the core never depends on one, and moved sections keep their numbers as pointers.
+
+**Choice (B1).** A conversation has no roster. Each message's `to` is its author's choice; a reply may reach more or fewer people than the one before, which forks the conversation, as email and texting do. The `add`, `leave`, `remove` and `rename` relations, the `members` header and the reader's roster rule are gone. A side thread is marked by a `thread` header naming its anchor, so `inReplyTo` can name the message actually answered (B11).
+
+**Alternatives.**
+- *One document for everything,* as before: reviewers found it spends too much on how a messaging product behaves.
+- *An owner-signed roster with revisions,* which closes the backdated-`add` hole but keeps membership state and an owner who can disappear.
+- *A chain of membership changes,* Matrix's state resolution: the hardest part of Matrix to get right.
+
+**Reason.** One obvious way, with nothing to forge: whoever writes decides who reads. Precedent: XMPP's core and XEPs, Nostr's NIP-01 and NIPs; email and SMS for the threads.
 
 ## Revisions and reconciliation (2026-10-22)
 

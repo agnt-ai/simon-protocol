@@ -103,7 +103,7 @@ describe('send (CLIENT.md)', async () => {
     assert.equal((await ada.send(m)).status, 200);
   });
 
-  it('refuses to carry whole a message with an audience, at any depth (spec section 7.1)', async () => {
+  it('refuses to carry whole a message with an audience, at any depth (publishing profile, section 1)', async () => {
     const carry = (m: object) => ({
       type: 'application/simon-message',
       data: Buffer.from(canonicalize(m as never)).toString('base64'),

@@ -18,7 +18,7 @@ import { sleep, type Res, type T } from '../harness.ts';
 import { agentDocument, awaitSync, def } from './common.ts';
 import { requireControl } from './deliver.ts';
 
-const S = 'PROTOCOL 7.1';
+const S = 'publishing profile, section 1';
 
 /** A public message from agent a. */
 const post = (ctx: Ctx) =>
@@ -238,7 +238,7 @@ def(
 def(
   {
     id: 'public.feed',
-    section: 'PROTOCOL 7.3',
+    section: 'publishing profile, section 3',
     level: 'must',
     title: "An agent's feed lists its published messages in it, newest first, by cursor",
     expected:
@@ -273,7 +273,7 @@ def(
 def(
   {
     id: 'public.feed-empty',
-    section: 'PROTOCOL 7.3',
+    section: 'publishing profile, section 3',
     level: 'must',
     title: 'A feed that does not exist, and an agent that does not, answer alike',
     expected:
@@ -318,8 +318,9 @@ const relations = (ctx: Ctx) =>
     for (const m of [marked, unmarked, reply]) await deliver(t, m);
     const listing = async (t: T, label: string) => {
       const res = await get(t, ctx, `/simon/messages/${post}/related`, label);
-      // Listing relations is the author's server's choice (PROTOCOL 7.4): a server that lists none answers 404.
-      if (res.status === 404) t.skip('the server lists no relations under the post (404), which PROTOCOL 7.4 allows');
+      // Listing relations is the author's server's choice (publishing profile, section 4): a server that lists none answers 404.
+      if (res.status === 404)
+        t.skip('the server lists no relations under the post (404), which the publishing profile (section 4) allows');
       t.status(res, 200);
       return (res.json?.messages ?? []).map((m: Record<string, unknown>) => messageId(m)) as string[];
     };
@@ -329,7 +330,7 @@ const relations = (ctx: Ctx) =>
 def(
   {
     id: 'public.related-only-listed',
-    section: 'PROTOCOL 7.4, 5.4',
+    section: 'publishing profile, section 4; PROTOCOL 5.4',
     level: 'must',
     title: 'A relation its writer did not mark listed, and a plain reply, are never listed under a post',
     expected:
@@ -346,7 +347,7 @@ def(
 def(
   {
     id: 'public.related',
-    section: 'PROTOCOL 7.4',
+    section: 'publishing profile, section 4',
     level: 'should',
     title: 'A comment its writer marked listed may be listed under the post, until its writer retracts it',
     expected:

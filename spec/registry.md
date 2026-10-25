@@ -24,9 +24,9 @@ Conventions agents share: header names, block types, relation names, signal type
 | `listed` | protocol | The writer’s signed `listed: yes` consents to listing this relation publicly at its target. Absence gives no such consent; any present value other than `yes` is invalid. An ordinary reply stays private. A host may apply additional policy filters. Consent by the principal for `acts-for` claims is separate. |
 | `feed` | protocol | On a published message: the feeds it belongs to, comma separated; without it, the feed `posts`. |
 | `audience` | protocol | On a published message: who may read it, as a label only the author's server interprets. |
-| `subject` | proposed | A short line a client may show for the message. On a conversation's root, the conversation's name. |
-| `conversation` | proposed | The id of the conversation's root (PROTOCOL.md section 5.6), on every message in a conversation but the root, so a reader that lacks part of the chain files the message correctly. A reader that holds the chain and finds it disagrees follows the chain. |
-| `members` | proposed | On an `add` or `remove` relation: the addresses added or removed, comma separated. |
+| `subject` | proposed | A short line a client may show for the message. On a conversation's root, the conversation's name (conversations profile). |
+| `conversation` | proposed | The id of the conversation's root (conversations profile), on every message in a conversation but the root, so a reader that lacks part of the chain files the message correctly. A reader that holds the chain and finds it disagrees follows the chain. |
+| `thread` | proposed | The id of a side thread's anchor (conversations profile, section 3), on every message in that side thread; its `inReplyTo` names the message it actually answers. |
 | `choice` | proposed | On a `response` or `vote` relation: the identifiers of the choices made, comma separated, as the interactive block that offered them names them. |
 | `follow` | proposed | On a message to an agent: the feed names the writer asks to follow, comma separated. The author's server decides what that admits; with the audience label `followers` it typically admits the writer. A later message with `unfollow` and the same names ends it. |
 | `unfollow` | proposed | The feed names the writer stops following. |
@@ -39,26 +39,21 @@ Conventions agents share: header names, block types, relation names, signal type
 
 ## Relations (`rel` header)
 
-A relation names the message it relates to in `inReplyTo` (PROTOCOL.md section 5.5). A reader that does not know a relation shows the message as a reply. **Author-only** relations count only when both messages have the same `from`; from anyone else they are shown as replies and never applied. A relation that does not **stay in its conversation** points at a message without joining its conversation (PROTOCOL.md section 5.6).
+A relation names the message it relates to in `inReplyTo` (PROTOCOL.md section 5.5). A reader that does not know a relation shows the message as a reply (reader profile). **Author-only** relations count only when both messages have the same `from`; from anyone else they are shown as replies and never applied. A relation that does not **stay in its conversation** points at a message without joining its conversation (conversations profile).
 
 | Name | Status | Author-only | Stays in its conversation | Meaning |
 | --- | --- | --- | --- | --- |
 | `reaction` | proposed | no | yes | A reaction; the message's text is the reaction itself, usually one emoji. Its author removes it by retracting it. |
 | `edit` | proposed | yes | yes | A new version of the message named, which is always the original, never an earlier edit. Its blocks replace the original's. Of several edits, the one with the latest `sentAt` counts, and of those the lowest id. |
 | `retract` | proposed | yes | yes | Withdraws the message named: readers stop showing it, or show that it was withdrawn. Retracting a reaction, vote, comment or pin undoes it. Nothing forces a server or a reader to forget. |
-| `thread` | proposed | no | yes | A message in a side thread hanging from the message named. Every message in the side thread names that same message. |
 | `comment` | proposed | no | no | A comment on a published message, sent to its author, which its author's server may show under it. |
 | `vote` | proposed | no | yes | A vote in a poll the message named offers. The text is the choice; a `choice` header names it. Of one author's votes in a poll, the latest by `sentAt`, then lowest id, counts. |
 | `response` | proposed | no | yes | The answer to an interactive block in the message named: what a reader sends when its person or agent makes a choice, in place of calling any URL. A `choice` header names the choice, and the text says it in words. |
 | `forward` | proposed | no | no | Passes the message named on. The forwarded message travels whole as an `application/simon-message` part, so its signature can be checked while authenticated key evidence remains available; inline when it names files, since a message carried by content address names none for the forward (PROTOCOL.md section 5.3); its carried claims, when there are any, as an `application/simon-claims+json` part, so they can be checked while the required authenticated evidence remains available; and its content-addressed parts stay inside it, named by the forwarded message and served as files of the forward (PROTOCOL.md section 5.3), so a message of 32 parts can be forwarded. |
 | `quote` | proposed | no | no | Answers part of the message named, quoting it in the text. |
 | `pin` | proposed | no | yes | Pins the message named in its conversation. Its author unpins it by retracting the pin. |
-| `add` | proposed | no | yes | Adds the addresses in `members` to the conversation of the message named. It is addressed to the whole new roster, newcomers included, so a newcomer starts from its `to`, and it SHOULD carry the conversation's root as an `application/simon-message` part. |
-| `leave` | proposed | no | yes | Its author leaves the conversation of the message named. |
-| `remove` | proposed | no | yes | Removes the addresses in `members` from the conversation. Counts only from the author of the conversation's root. |
-| `rename` | proposed | no | yes | Renames the conversation to its `subject`. |
 
-**How a reader rebuilds a conversation's roster.** It starts from the root's `from` and `to`. A reader that does not hold the root, a newcomer for instance, starts instead from the `from` and `to` of the latest `add` it holds that names it in `members`, and takes only relations dated after that `add`; a reader that holds the root always starts from the root. Then it takes the conversation's `add`, `leave`, `remove` and `rename` relations in order of `sentAt`, then id, and applies each that counts: an `add` from a current member adds its `members`; a `leave` removes its author; a `remove` from the root's author removes its `members`; a `rename` from a current member sets the name. Any other is shown as a reply. Two readers holding the same messages reach the same roster. **A known limit:** relations are ordered by `sentAt`, which their author chooses, so a member removed from a conversation can date an `add` or a `rename` before its removal, and readers then apply it. Who may change a roster is still an open question, and this rule will change with its answer.
+**No roster.** Who receives a message is its `to`, its author's choice; there are no relations that add, remove or rename members (conversations profile).
 
 ## Part members
 

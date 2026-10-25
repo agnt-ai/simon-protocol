@@ -16,7 +16,7 @@ export const AUTHOR_ONLY_RELATIONS: readonly string[] = ['edit', 'retract'];
 
 /**
  * Relations the reference server lists under a published message. Which relations an author's server lists is
- * its own choice (spec section 7.4); this is one server's policy, kept here so its clients can share it.
+ * its own choice (publishing profile, section 4); this is one server's policy, kept here so its clients can share it.
  */
 export const PUBLIC_RELATIONS: readonly string[] = ['comment', 'reaction', 'vote'];
 

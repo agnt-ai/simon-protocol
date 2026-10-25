@@ -1976,7 +1976,7 @@ function reading() {
     ['an agent of a kind the reader does not know', signedQuestion, 'robot'],
     ['a paired agent writing a version the reader does not implement', version7, 'paired'],
   ];
-  const known = ['reaction', 'edit', 'retract', 'thread', 'comment'];
+  const known = ['reaction', 'edit', 'retract', 'pin', 'comment'];
   const rel = (from: string, name: string | null): Message => ({
     ...signedQuestion,
     from,
@@ -2280,7 +2280,7 @@ function publications() {
   ];
   return {
     about:
-      'Published response and paged feed fixtures (sections 7.1 and 7.3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
+      'Published response and paged feed fixtures (publishing profile, sections 1 and 3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
     carrierKeys: [keyEntry(exampleCom.key)],
     post: {
       id: messageId(post),

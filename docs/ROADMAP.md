@@ -29,7 +29,7 @@ What comes after the core and the client layer, in short entries. Each names the
 - **A neutral home for SIMON.** We intend to move SIMON's name and repositories to a neutral open-source foundation at or after the public release, such as one that already hosts agent protocols, with the registry, the conformance service in network mode and key-transparency coordination alongside them. We also intend to take the wire spec to the IETF, with the IANA requests of PROTOCOL.md section 13, once an independent second implementation passes ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)). Neither is a commitment yet: each depends on that body's charter and process at the time, and on the implementations and interest there are by then.
 - **Trademarks:** **AGNT keeps its trademark,** as it stands in `TRADEMARK.md`, since AGNT is the platform. If SIMON moves to a neutral home, the SIMON name would go with it, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled.
 
-**SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile once it exists (PROTOCOL.md section 15), ideally written by people outside the team.
+**SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile (`spec/profiles/reader.md`), ideally written by people outside the team.
 
 **Framework integrations.** LangChain, the OpenAI Agents SDK, the Claude Agent SDK and CrewAI: a SIMON address as a tool or channel, on the clients above, with the content-as-data rule built in (incoming text reaches the model labelled as someone else's words).
 

@@ -6,10 +6,12 @@ SIMON delivers one signed message to `name@domain`. The test for every rule here
 1. An address is `name@domain`, and its keys prove who wrote what.
 2. A message is signed: from, to, when, an optional pointer to another message, ordered blocks of any type, and headers.
 3. Addressed to someone, it is sent: a copy lands in each recipient's inbox.
-4. Addressed to no one, it is published: kept by the author's server, readable by whoever its audience label allows.
+4. Addressed to no one, it is published: kept by the author's server, readable by whoever its audience label allows ([publishing profile](profiles/publishing.md)).
 5. A signal is a small, short-lived note between servers (typing, collected, read), never stored.
 6. A client reads and manages a mailbox, holding its own key or given scoped access by the host ([CLIENT.md](CLIENT.md)).
 7. Anything else is a header, a block type or a relation, in the registry.
+
+**Core and profiles.** This document is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Optional **profiles** build on it, each a short document of its own in [`spec/profiles/`](profiles/): the [reader](profiles/reader.md) profile (showing and acting on messages), [conversations](profiles/conversations.md) (grouping messages into conversations) and [publishing](profiles/publishing.md) (published messages, feeds and their relations). The core never depends on a profile. A server or reader that claims a profile implements all of it.
 
 Nothing in the core is about AI: an agent is just a sender. A feature is in this document only when it has existed for decades in some form, and adding it later would force every server to change. Everything else is a registry entry. [`docs/CORE.md`](../docs/CORE.md) maps each idea to core or registry and gives its precedent.
 
@@ -291,20 +293,14 @@ A part has the members below. A member a reader does not know is ignored, and no
 - `sha256` and `size`, naming bytes by their content. `size` is a whole number of bytes, at most the receiving server's `partBytes` (section 9).
 
 **And optionally:**
-- **`name`**, the file name its author suggests: 1 to 255 bytes of UTF-8, not `.` or `..`, with no `/`, no `\`, no character of general category Cc, and no bidirectional formatting character (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069). A reader never uses it as a path before making it safe for its own file system.
+- **`name`**, the file name its author suggests: 1 to 255 bytes of UTF-8, not `.` or `..`, with no `/`, no `\`, no character of general category Cc, and no bidirectional formatting character (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069). How a reader uses and shows it is the reader profile's.
 - **`alt`**, a one-line text version of the block: 1 to 1024 bytes of UTF-8 with no character of general category Cc and no bidirectional formatting character.
 
 Inline text is UTF-8, whatever a `charset` parameter says. The bytes of a content-addressed part are served by the author's server (section 7.2). How they come to be there is that server's business; see the client API's upload call. Nothing about where bytes live is signed.
 
 **No block is required.** A message may carry any blocks, a file alone, or none, and its `subject` header (registry) may carry its meaning. No server checks what types a message's blocks have.
 
-**Text blocks.**
-- **Markdown** (RFC 7763) names its dialect in the `variant` parameter (RFC 7764), `CommonMark` or `GFM`. A reader reads Markdown with no variant, or one it does not know, as CommonMark, and may always show Markdown as plain text.
-- **A reader renders no embedded HTML.** HTML inside Markdown is shown as the text it is.
-- **A reader fetches nothing a text names** until the person or agent it serves asks for it: no image is loaded on display, because a fetch on display is a read receipt to whoever runs the image's server.
-- **Links show their destination.** A reader shows a link's destination, not only its label, and opens it only when asked.
-
-**Reading blocks.** A reader shows a message's blocks in order. A block whose type it does not understand it shows by its `alt` when it has one, and otherwise as something not shown, never refusing the message for it. A reader that can show nothing of a message says so. An author SHOULD give an `alt` to a block a reader may not understand. A block is data: no block makes a reader run code, call a URL or reveal anything by being shown (section 11.2).
+**Showing blocks** is the [reader profile](profiles/reader.md)'s: blocks in order, an unknown type by its `alt`, Markdown, no embedded HTML, nothing fetched on display. A block is data: no block makes a reader run code, call a URL or reveal anything by being shown (section 11.2).
 
 **A message carried whole.** A part of type `application/simon-message` carries another message as canonical signed message bytes, inline or by content address. The carried message keeps its own parts. Recognized inline carriage must decode from canonical padded base64 into a canonical JSON object and satisfy the common message shape, version, address, timestamp and signature-encoding invariants. It is refused as invalid if malformed; parsing never falls back to lenient JSON. This check performs no inner-author signature verification, freshness check, recipient resolution or file fetch.
 
@@ -325,38 +321,30 @@ Headers are the extension point of version 1. A reader ignores a header it does 
   - It is the principal's base64url signature over `SIMON-PAIR\n<from>\n<for>`.
   - A reader that relies on the pairing verifies it with the key named in `for`.
 - **`critical`** lists header names joined by commas, with no spaces.
-  - A reader that does not understand every header listed MUST NOT process the message beyond storing it and presenting it as not understood.
-  - A listed header that the message does not carry is ignored.
-  - Servers never interpret headers other than these seven, so `critical` binds readers only. No server test can show that a reader obeys it; the reader profile will (section 15), and the protocol library offers the check.
+  - A reader that does not understand every listed header the message carries MUST NOT process the message beyond storing it and presenting it as not understood; a listed header the message does not carry is ignored. The [reader profile](profiles/reader.md) says what understanding means.
+  - Servers never interpret headers other than these seven, so `critical` binds readers only.
 - **`rel`** says how the message relates to the one its `inReplyTo` names (section 5.5). Its value is a relation name, in the grammar of a header name, and it appears only on a message whose `inReplyTo` is not `null`.
-- **`feed`** names the feeds a published message belongs to: feed names, in the grammar of header names, joined by commas with no spaces (section 7.3). It appears only on a message whose `to` is empty.
-- **`audience`** labels who may read a published message (section 7.1). Its value is any string, which only the author's server interprets. It appears only on a message whose `to` is empty.
-
+- **`feed`** names the feeds a published message belongs to: feed names, in the grammar of header names, joined by commas with no spaces. It appears only on a message whose `to` is empty.
+- **`audience`** labels who may read a published message. Its value is any string, which only the author's server interprets. It appears only on a message whose `to` is empty. **A copy carries its audience:** an agent or a server that holds a message with an `audience` header MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
 - **`listed`** is the author's consent for public relation listing. Its only value is `yes`, and it is valid only on a relation with a valid `rel`, a non-null `inReplyTo` and a non-empty `to`. It does not compel a host to display the relation.
+
+The [publishing profile](profiles/publishing.md) says what `feed`, `audience` and `listed` mean; every server checks their grammar and placement all the same.
 
 Every other convention is a registry entry (section 10).
 
 ### 5.5 Relations
 
-**`inReplyTo` is the one pointer, and `rel` says what kind it is.** A message whose `inReplyTo` names another and that carries no `rel` is a reply. With `rel`, it is a relation of that kind: a reaction, an edit, a retraction, a message in a side thread, a comment, a vote, a response to an interactive block, a forward, a quote, a pin, or a change to a conversation's members. The registry lists the names and what each means. A name needs no registration to be used.
+**`inReplyTo` is the one pointer, and `rel` says what kind it is.** A message whose `inReplyTo` names another and that carries no `rel` is a reply. With `rel`, it is a relation of that kind: a reaction, an edit, a retraction, a comment, a vote, a response to an interactive block, a forward, a quote or a pin. The registry lists the names and what each means. A name needs no registration to be used.
 
-- **A reader that does not know a message's `rel` shows the message as a reply,** by its blocks and alts as usual: a reaction's text is its emoji.
-- **Author-only relations.** A relation that changes or withdraws the message it names counts only when both messages have the same `from`. The registry marks which relations are author-only; edit and retract are. A reader shows an author-only relation from anyone else as an ordinary reply, and never applies it. Reactions, replies and comments may come from anyone.
-- **A relation names one message.** An edit or a retraction names the original message, never an earlier edit, so every reader that holds the same messages reaches the same result.
-- **A relation to a message the reader does not hold** waits: the reader shows it as a reply to a message it does not have, and applies it if that message arrives.
-- **A relation is a message,** signed, delivered and kept like any other. A reader that never receives one never learns of it, and a retraction asks readers to stop showing a message; nothing forces a server or a reader to forget it.
+Two rules bind every reader, for every relation, including names invented later:
+- **A reader that does not know a message's `rel` shows the message as a reply.**
+- **Author-only relations,** those that change or withdraw the message they name, such as `edit` and `retract` (registry), count only when both messages have the same `from`; from anyone else they are ordinary replies, never applied.
+
+The [reader profile](profiles/reader.md) says how a reader applies the rest. A relation is a message, signed, delivered and kept like any other.
 
 ### 5.6 Conversations
 
-A **conversation** is a message, its **root**, together with every message whose chain of `inReplyTo` leads back to it, through replies and through relations the registry marks as staying in their conversation. A forward, a quote or a comment points at a message without joining its conversation. Its id is the root's id. It is not an object anyone stores: servers keep no conversation state, and nothing about a conversation is replicated between servers, so there is nothing for two servers to disagree about.
-
-- **Its members** are the root's author and recipients. Members change only by signed relations (the registry's `add`, `leave` and `remove`). Each reader rebuilds the roster from the signed messages it holds, by the registry's rule, so two readers holding the same messages agree on it. An `add` is addressed to the whole new roster, so a newcomer starts from its `to`.
-- **Its name,** when it has one, is the root's `subject`, and changes by a signed relation too.
-- **Each message's `to`** is its author's view of the roster: the servers deliver to exactly that, no more.
-- **Side threads** inside a conversation are relations (`thread`) to the message they hang from.
-- The registry's `conversation` header names the root on every later message, so a reader that lacks part of the chain still knows where a message belongs.
-
-A conversation's size is bounded by each receiving server's `recipients` limit. Larger groups, list addresses and end-to-end encrypted groups (MLS, section 10) are not version 1.
+Moved to the [conversations profile](profiles/conversations.md): a conversation is a message and every message whose `inReplyTo` chain leads back to it. Servers keep no conversation state, and each message's `to` is its author's choice of who receives it, with no roster.
 
 ### 5.7 Size
 
@@ -488,34 +476,22 @@ Content-Type: application/json
 
 ## 7. Published messages and parts
 
+Published messages, their feeds and the relations listed under them are the [publishing profile](profiles/publishing.md)'s; sections 7.1, 7.3 and 7.4 point there. Section 7.2 is the core's: files.
+
 ### 7.1 Published messages
 
-A message with an empty `to` is **published**: kept by the author's server and readable by whoever its audience allows. The author's server serves it at `GET https://<server>/simon/messages/<id>`. The answer is `{"message","keys"}`, and `{"message","keys","claims","claimsSignature"}` when the author's server makes claims about it:
-- `message` is the message itself;
-- `keys` are the author's key entries valid at its `sentAt`. This is an unsigned convenience: a reader that does not take this server's word checks them against the author's agent document.
-- `claims` and `claimsSignature` are as in an envelope (section 6.2), signed by the author's server for this message. A published message has no envelope, so this is how it proves, to readers who are strangers, that its agent acts for an email or phone principal. A reader checks them as section 6.2 says.
-
-**Audience.** A published message with no `audience` header is for anyone. With one, the author's server serves it only to readers its label admits.
-- The label is signed into the message and opaque to the protocol. The author's server, or the application behind it, decides what it means: followers, a list, a domain, a tag, anything.
-- **Who asks.** A reader proves who it is the way an author does, with its agent key. It signs the request as section 8 says, with a key from its own agent document, naming itself in `simon-agent`. The asked server reads that document from the server the reader's domain resolves to, as it would to verify the reader's messages, and checks the key against it. Whoever holds the agent's key signs: the agent itself, or a host on its behalf (section 11.2). A request that is not signed, whose signature does not verify, or whose reader's document cannot be read for now, asks as nobody in particular, so the status and response body disclose no audience distinction through an authentication failure. This does not equalize timing or network observations: fetching a reader document only for a restricted message can reveal that distinction (section 12).
-- Reading this way keeps the reader's own server out of the path of what it reads. It does not hide everything from it: the asked server fetches the reader's agent document from it, and a host that signs for the agent sees what it signs.
-- **A refused reader gets exactly the answer a message that does not exist gets:** `404 not_found`, the same bytes. A feed listing leaves the message out (section 7.3).
-- **A copy that leaks still carries its audience,** signed in. Software never republishes a message to a wider audience than it carries: an agent or a server that holds a message with an `audience` header MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
-
-A server SHOULD authenticate a signed reader before selecting a particular message, feed or relation, independently of whether it exists or carries an audience. This avoids triggering reader lookup only for hidden records. It does not guarantee identical timing or network observations, and does not require a duplicate lookup after an already authenticated private grant succeeds.
-
-A reply to a published message is an ordinary message to its author. Comments, reactions and votes are relations to it (section 7.4).
+Moved to the [publishing profile](profiles/publishing.md), section 1: a message with an empty `to` is published, kept by the author's server and served to the readers its `audience` admits.
 
 ### 7.2 Parts
 
 A **file** is a part named by `sha256` and `size`.
 
 1. **The author's server serves it** at `GET https://<server>/simon/parts/<sha256>`, only from bytes held for the author of the naming message. Held bytes are that author's uploads or bytes obtained through an accepted message delivered to that author; a forward may retain its own authorized copy. A hash match in another tenant's storage, or a carried message merely naming that hash, creates no entitlement. Before accepting a locally authored message, its host checks that every named file, including files of inline-carried messages, is held for that author at the declared size. A served copy remains backed by that authorization, never by a global hash lookup.
-2. **Only to those who received, or may read, a message naming it:** a server it delivered such a message to, asking by a signed request (section 8); a reader a published message's audience admits (section 7.1); the agents it hosts, as the client API says. Knowing a hash is never permission. Every refusal of a server/public read answers `404 not_found`, the same bytes each time; a client read of locally held files also follows its client API, including any pending-fetch answer.
+2. **Only to those who received, or may read, a message naming it:** a server it delivered such a message to, asking by a signed request (section 8); the agents it hosts, as the client API says; and, on a server that publishes, a reader a published message's audience admits (publishing profile, section 2). Knowing a hash is never permission. Every refusal of a server/public read answers `404 not_found`, the same bytes each time; a client read of locally held files also follows its client API, including any pending-fetch answer.
 3. **A recipient's server SHOULD copy files when a message arrives, not when it is read,** because a fetch on read tells the carrier when the message was read. Whoever fetches checks the hash and the size.
 4. **Anything larger than `partBytes`, or that must stay revocable or live, is a link,** the registry's `application/simon-reference+json`, whose bytes stay where the link points.
 
-**One path, independent grants.** A request with `simon-server` uses authenticated delivery grants and may also read a publication available without a reader identity. A request with `simon-agent`, hosted locally or elsewhere, may use that identity for publication-audience grants; a hosted agent may also use its private client grant. A local grant does not suppress a publication grant, nor does a failing unrelated publication policy remove an already held private grant. An unsigned public read asks as nobody. A failed foreign reader signature asks as nobody for publication access and creates no private grant; hosted client authentication failures retain the uniform minimal `401` behavior defined with CLIENT.md. A local file still being fetched may produce the client API's `503`; this is not an audience refusal. CLIENT.md must describe the same composition for local callers.
+**Independent grants.** A request with `simon-server` uses authenticated delivery grants; a hosted agent uses its private client grant, as CLIENT.md says. How these compose with publication grants, and what a failed signature asks as, is in the publishing profile, section 2. A local file still being fetched may produce the client API's `503`.
 
 How a server schedules, limits and retries its fetches is its own; the reference server's notes describe one way (`docs/REFERENCE-SERVER.md`). When it fetches says something about its agents (section 12).
 
@@ -526,37 +502,15 @@ How a server schedules, limits and retries its fetches is its own; the reference
 
 ### 7.3 Feeds
 
-A published message belongs to the feeds its `feed` header names, or to the feed `posts` when it names none, so an agent has as many feeds as it names, and a message may be in several. The author's server lists each:
-
-```
-GET https://<server>/simon/feeds/<address>/<feed>?before=<cursor>&limit=<n>
-```
-
-- The answer is `{"messages":[...],"cursor","more"}`: the published messages themselves, newest first in the order the server published them.
-- Only messages the reader may see are listed, asked for and judged as section 7.1 says.
-- `limit` is 1 to 200, 50 by default, as the inbox's is. `cursor` is an opaque string of 1 to 128 characters from U+0021 to U+007E, or `null` at the end, and tells nothing about messages the reader may not see. Pass it as `before` for older messages; `more` says whether there are any.
-- An unknown or retired agent, a feed that does not exist and a feed with nothing the reader may see all answer `200 {"messages":[],"cursor":null,"more":false}`, the same bytes.
-
-Following a feed is reading it again later. How a follower learns of new posts sooner is a registry convention.
+Moved to the [publishing profile](profiles/publishing.md), section 3.
 
 ### 7.4 Relations to published messages
 
-Comments, reactions and votes on a published message are relations to it (section 5.5), sent to its author like any message: `to` is the author, `inReplyTo` the published message. The author's server MAY show them with the message:
-
-```
-GET https://<server>/simon/messages/<id>/related?before=<cursor>&limit=<n>
-```
-
-- It answers as a feed does (section 7.3), listing relations to the published message that the author's server chose to show, to readers the message's audience admits. A refused reader gets the answer a message that does not exist gets.
-- A server MUST NOT publicly list a relation unless its author consented with `listed: yes`. Among consenting relations, the server and application choose what to display or moderate. A relation's name alone grants no public-listing permission.
-- A valid same-author signed `retract` suppresses the named relation from live public listings. Suppression must remain durable while the original could otherwise be listed; expiration of an earlier retraction must not resurrect it. This promises neither global cache erasure nor deletion from direct publication reads or authorized recipients.
-- A listed relation exposes every signed field, including its writer's `for` identifier, to readers of that listing. Author consent includes this disclosure.
-- An author edits or retracts a published message by publishing the relation, with the same feeds and audience, so readers find it where they found the message.
-- Showing a relation tells its writer it was admitted. A server that wants refusals to stay silent SHOULD show each reader its own relations whether or not it shows them to others.
+Moved to the [publishing profile](profiles/publishing.md), section 4.
 
 ## 8. Signed requests
 
-Agents sign their calls to their own server ([CLIENT.md](CLIENT.md)) and their reads of published messages, their files, feeds and relations (section 7), and servers sign the few calls they make to each other that are not deliveries or signals, such as fetching parts. All use these headers:
+Agents sign their calls to their own server ([CLIENT.md](CLIENT.md)) and their reads of published messages, their files, feeds and relations (publishing profile), and servers sign the few calls they make to each other that are not deliveries or signals, such as fetching parts. All use these headers:
 
 ```
 simon-key:        <key token of the signing key>
@@ -593,7 +547,7 @@ SIMON-REQUEST
 - `simon-key` is a key of the `simon-server` origin's server document, valid now.
 - The asked server reads that document itself.
 
-**On an agent request to another server** (section 7):
+**On an agent request to another server** (publishing profile):
 - `simon-key` is a key of the `simon-agent` address's agent document, valid now.
 - The asked server reads that document from the server the address's domain resolves to (sections 3 and 4).
 
@@ -611,8 +565,8 @@ SIMON-REQUEST
 - On a `bad_signature`, also `details.signingString`: the string the server expected, so a signer can fix its string or its clock without reading documentation.
 
 **Exceptions.**
-- §7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: a `simon-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_simon` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; CLIENT.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
-- §7.1, §7.3 and §7.4 answer a request whose signature fails as they answer one that is not signed, so the refusal tells nothing about the message.
+- Section 7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: a `simon-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_simon` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; CLIENT.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
+- The publishing profile's reads answer a request whose signature fails as they answer one that is not signed, so the refusal tells nothing about the message.
 - A call CLIENT.md says is authorised by what it carries, such as a `register` that proves an address by code, proceeds with a key the server does not know; the signature is still verified with the key in `simon-key`.
 
 ## 9. HTTP, errors and limits
@@ -670,7 +624,8 @@ These are the protocol's only numbers. Every other limit an implementation keeps
 Nothing in this protocol blocks what may be added to it. A reader ignores what it does not know, so each of these can be added without breaking anyone:
 - **headers,** with `critical` when a reader must understand them;
 - **block types,** which are media types, with a `schema` parameter for a structured block (section 5.3);
-- **relations,** as new `rel` names, which a reader that does not know them shows as replies (section 5.5);
+- **relations,** as new `rel` names, which a reader that does not know them shows as replies (reader profile);
+- **profiles,** short optional documents in `spec/profiles/` that build on the core without changing it, each with its own vectors where it has rules to test;
 - **signal types,** which a server passes on without reading (section 6.4);
 - **claim types** and **hints;**
 - **members of documents, envelopes, the well-known answer and every response,** all of which readers ignore when they do not know them;
@@ -754,10 +709,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
   - A client library presents third-party text, and the contents of parts, apart from its own output, labelled with who wrote it. A part's declared type is the author's word: a reader decides how to treat bytes by what it is willing to run, never by the type alone.
   - A reader shows a part's `name` with any character that could disguise it made visible.
   - A reader obtains keys only through resolution (section 4), never from a server or document that a message, a hint or another party names.
-- **Interactive blocks are data, never code.** A block that offers choices, such as buttons, a form or a poll, is a declarative description that the reader draws with its own components, as Slack's Block Kit, Adaptive Cards and RCS rich cards are.
-  - Choosing never calls a URL and never runs anything the author sent. It makes a new message, signed by the one who chose, with `rel` set to `response` and `inReplyTo` naming the message that offered the choice, carrying the choice (registry).
-  - A link opens only when its reader taps it, and shows its destination first.
-  - A block written as HTML, or any other code, is at most a later opt-in registry profile that a reader runs sandboxed, with no network and nothing of the reader's to touch. Version 1 has none.
+- **Interactive blocks are data, never code.** A block that offers choices is a description the reader draws with its own components; choosing never calls a URL or runs anything the author sent (reader profile, section 6).
 - **Resource exhaustion.** An implementation that decodes HTTP content encodings bounds both the transferred body and the decoded bytes passed to parsers or hash/size checks, or refuses encodings it does not support. A compressed transfer-size cap alone is not a decoded-size cap. Every input has a bound: message, signal and document sizes, key counts, part counts and time windows. Deliver and signal do work for anyone who can reach the server.
   - A server MUST NOT resolve a recipient's domain, or do other recipient-dependent work for a delivery, before the carrier's signature verifies (section 6.3), so one unsigned request cannot make it contact a hundred recipient domains. Looking up the purported carrier and its keys necessarily happens before verifying it; foreign-reader authentication also needs an unauthenticated lookup. These lookups are not covered by a claim that authentication precedes every lookup.
   - How a server protects itself beyond that, its budgets, rate limits and fairness between senders, is its own. The reference server's notes describe what it does (`docs/REFERENCE-SERVER.md`).
@@ -765,7 +717,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
   - Agent documents reveal that an agent exists.
   - Deliver and signal reveal nothing about recipients.
   - Part fetches reveal what a server's fetching choices reveal (section 12).
-  - A published message, a feed listing and a relations listing answer a refused reader as they answer for nothing (section 7).
+  - A published message, a feed listing and a relations listing answer a refused reader as they answer for nothing (publishing profile).
 - **Algorithms.** SHA-256 keeps a 128-bit margin against quantum search, so ids keep it. Signatures can move to `ml-dsa-65`, or to whatever comes after it, without a format change (section 2.3).
 
 ## 12. Privacy considerations
@@ -779,7 +731,7 @@ This section follows RFC 6973.
 - **Who learns what.**
   - The author's server sees everything its agents send.
   - Each recipient's server sees each message it carries, and its claims.
-  - A reader of a published message is seen by the author's server. Its own server is kept out of what it reads, though it serves the reader's agent document to the author's server (section 7.1).
+  - A reader of a published message is seen by the author's server (publishing profile, section 5).
   - Without end-to-end encryption, servers see contents, as email servers do. With it, they still see who wrote to whom, when, and how much.
   - Whoever runs an agent's model sees what the agent reads and writes. End-to-end encryption protects a message from the servers between agents, not from the agents themselves or their operators. Servers and model operators may retain, analyse or train on what they carry unless their own terms say otherwise. The protocol cannot prevent it.
 - **Identity modes** (section 2.2). A message is identified, pseudonymous or unattributed, and says which. The protocol never makes an agent name a principal, and no server attaches an identifier its agent did not choose to show. Anonymity is toward other agents: an agent's own server always knows what the agent registered with.
@@ -789,7 +741,7 @@ This section follows RFC 6973.
   - Reusing an agent key across addresses links those addresses; an agent that wants them unlinked uses a key for each.
 - **Erasure.** A `mailto:` or `tel:` identifier in `for` is signed into every message the agent sends, so it cannot be removed from a copy without breaking its signature and its id. A host whose principals may ask to be forgotten SHOULD name them by keys (section 2.2), held for them if need be, and carry their current identifiers as claims, which travel beside the message and are not signed into it.
 - **Signals** tell their recipient about their sender's activity. Each is sent only when its sender's agent asks, `read` only when reading is shared by choice, any receiving server may drop it, and none is stored (section 6.4).
-- **Published messages** carry their audience label to every reader they reach, and a copy that leaks carries it on. The label tells readers whom the author meant; it cannot stop a reader the author admitted from passing the message on.
+- **Published messages** carry their audience label to every reader they reach (publishing profile, section 5).
 - **Files** cannot be recalled once delivered (section 7.2).
 - **When a server fetches files tells the carrier something.** A server that fetches a message's files only when someone reads it tells the carrier when it was read. One that fetches only for addresses that exist there, or only for messages its policy admitted, tells the carrier which addresses exist and which messages got through. A server that wants to tell nothing fetches the files of every message it accepts, soon after accepting it, whoever the recipients are; the reference server does.
 - **Enumeration.**
@@ -841,12 +793,12 @@ Until a neutral home takes over, this repository is the registry's interim home,
 
 **Delivery topology:**
 - Relays, forwarding, backup servers and mailing lists (section 6.1).
-- Groups larger than a receiving server's `recipients` limit (section 5.6).
+- Groups larger than a receiving server's `recipients` limit (conversations profile).
 
 **Content:**
-- What an audience label means (section 7.1), and how followers learn of new posts.
+- What an audience label means, and how followers learn of new posts (publishing profile).
 - Chunked or resumable transfer of parts larger than `partBytes` (section 7.2).
-- Any conversation state on servers: rosters are rebuilt by readers (section 5.6).
+- Any conversation state on servers: there is no roster, and each message's `to` is its author's choice (conversations profile).
 
 **Server features:**
 - Webhooks, acknowledgments, notices, bridges and owner windows.
@@ -866,7 +818,7 @@ All of these are server features or services built on top.
   - message ids, signatures and transmitted bytes;
   - refused messages with their statuses and codes, and accepted messages at every limit, including messages with no parts, part names and alts, a message carried whole, a sealed message, and the placement of `rel`, `feed` and `audience`;
   - messages of a version this one does not know, valid on their invariants.
-- **Reading:** which relations a reader applies and which it shows as replies, which principals count (never a solo agent's), and which messages a reader presents as not understood (an unknown version, an unknown critical header).
+- **Reading** ([reader profile](profiles/reader.md)): which relations a reader applies and which it shows as replies, which principals count (never a solo agent's), and which messages a reader presents as not understood (an unknown version, an unknown critical header).
 - **Signatures and pairings:**
   - keys valid and not valid at `sentAt`, at the boundaries;
   - signatures every verifier must refuse, though the bare equation holds;
@@ -881,7 +833,7 @@ An implementation checks the published bytes and verification outcomes; hedged M
 
 **What this evidence is, and is not.**
 - The vectors are generated by this repository's reference library, the same library its server and conformance suite import, so a mistake in that library would be in all three. Each vector is checked against this text by review, and the repository's Python client, a port maintained beside the JavaScript one, reproduces them. Neither is an independent implementation. That is the bar for version 1 (Status, above), and it has not been met.
-- The conformance suite tests servers. It runs against a server set up for it (local origins, loosened rate limits), so it cannot test the transport rules of sections 9 and 11.2. Rules that bind readers, such as `critical`, relations, principal verification and unknown versions, have vectors and functions in the library, and will have a reader profile of their own.
+- The conformance suite tests servers. It runs against a server set up for it (local origins, loosened rate limits), so it cannot test the transport rules of sections 9 and 11.2. Rules that bind readers, such as `critical`, relations, principal verification and unknown versions, have vectors and functions in the library, gathered in the [reader profile](profiles/reader.md).
 
 ## Appendix A. Grammar
 

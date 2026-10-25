@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+**A small core and optional profiles.** PROTOCOL.md is now the transport core. Three optional profiles in
+`spec/profiles/` take what only some parties implement: `reader.md` (showing and acting on messages, the
+reading rules CLIENT.md used to list), `conversations.md` and `publishing.md` (published messages, feeds and
+relations listings, moved from PROTOCOL.md section 7). Moved sections keep their numbers as pointers. No
+wire, server or library behaviour changes.
+
+**No roster.** A conversation's membership is each message's `to`, its author's choice; a reply that reaches
+more or fewer people forks the conversation, as email and texting do. The registry's `add`, `leave`,
+`remove` and `rename` relations, the `members` header and the reader's roster rule are gone; none had an
+implementation. A side thread is marked by a new `thread` header naming its anchor, replacing the `thread`
+relation, so `inReplyTo` names the message actually answered.
+
 ## 0.1.1 (2026-10-25)
 
 The first release published by trusted publishing: GitHub Actions publishes the six packages with no

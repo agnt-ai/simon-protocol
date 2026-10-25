@@ -294,8 +294,8 @@ export interface Store {
   published(author: string, before: string | null, limit: number): Promise<Page>;
   /**
    * The messages in `address`'s inbox whose `inReplyTo` is `id`, newest first, after the one whose id is
-   * `before` (null for the newest): the relations to a published message its author may show (spec section
-   * 7.4). A record's cursor is its message id.
+   * `before` (null for the newest): the relations to a published message its author may show (publishing
+   * profile, section 4). A record's cursor is its message id.
    */
   repliesTo(address: string, id: string, before: string | null, limit: number): Promise<Page>;
 

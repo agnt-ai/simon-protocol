@@ -7167,7 +7167,7 @@
     ]
   },
   "publications": {
-    "about": "Published response and paged feed fixtures (sections 7.1 and 7.3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.",
+    "about": "Published response and paged feed fixtures (publishing profile, sections 1 and 3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.",
     "carrierKeys": [
       {
         "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
@@ -7731,7 +7731,7 @@
       "reaction",
       "edit",
       "retract",
-      "thread",
+      "pin",
       "comment"
     ],
     "relations": [

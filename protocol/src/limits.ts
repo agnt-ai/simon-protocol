@@ -63,7 +63,7 @@ export const MAX_SIGNAL_BYTES = 4096;
 export const MAX_SIGNAL_BODY_BYTES = 16384;
 export const SIGNAL_SKEW_MS = 300_000;
 
-/** Feed and relations listings (spec section 7.3): how many per page, as the inbox's, and a cursor's length. */
+/** Feed and relations listings (publishing profile, section 3): how many per page, as the inbox's, and a cursor's length. */
 export const MAX_LISTING_LIMIT = 200;
 export const DEFAULT_LISTING_LIMIT = 50;
 export const MAX_CURSOR_LENGTH = 128;

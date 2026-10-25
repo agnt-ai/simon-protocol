@@ -244,7 +244,7 @@ function checkVersion1(m: Record<string, Json>, limits: Limits) {
       field: 'headers',
     });
   }
-  // The writer's consent to have a relation listed under the published message it names (spec section 7.4).
+  // The writer's consent to have a relation listed under the published message it names (publishing profile, section 4).
   const { listed } = m.headers;
   if (listed !== undefined && !(isListedValue(listed) && rel !== undefined && to.length > 0)) {
     throw invalid('The listed header is yes, on a relation (it carries rel) whose to is not empty.', {

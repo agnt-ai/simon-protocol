@@ -1,5 +1,5 @@
 /**
- * Spec section 4 (documents) and section 7.1 (public messages), as this server serves them.
+ * Spec section 4 (documents) and the publishing profile (public messages), as this server serves them.
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
@@ -251,7 +251,7 @@ describe('documents (spec section 4)', async () => {
   });
 });
 
-describe('public messages (spec section 7.1)', async () => {
+describe('public messages (publishing profile, section 1)', async () => {
   const fed = new Federation();
   after(() => fed.close());
   const alpha = await fed.server('alpha');
@@ -290,7 +290,7 @@ describe('public messages (spec section 7.1)', async () => {
     assert.deepEqual(await read(), [404, 404]);
   });
 
-  it('lists only the relations their writers marked listed, and drops one its writer retracts (spec section 7.4)', async () => {
+  it('lists only the relations their writers marked listed, and drops one its writer retracts (publishing profile, section 4)', async () => {
     const { json: sent } = await ada.send(ada.message([], 'A post to comment on.'));
     const relate = (text: string, headers: Record<string, string>, inReplyTo = sent.id) =>
       bob.message([ada.address], text, { inReplyTo, headers });

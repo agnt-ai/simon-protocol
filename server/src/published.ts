@@ -33,7 +33,7 @@ import type { Page, StoredMessage } from './store/store.ts';
  * scan that ends there ends the listing too: its next cursor would be a hidden message's.
  */
 const MAX_SCANNED = 5000;
-/** The feed of a published message that names none (spec section 7.3). */
+/** The feed of a published message that names none (publishing profile, section 3). */
 const DEFAULT_FEED = 'posts';
 const CURSOR = new RegExp(`^[\\x21-\\x7e]{1,${MAX_CURSOR_LENGTH}}$`);
 const EMPTY = { messages: [], cursor: null, more: false };
@@ -92,7 +92,7 @@ async function listing(
 }
 
 /**
- * Whether a relation to a published message is one its author's server lists (spec section 7.4): its writer
+ * Whether a relation to a published message is one its author's server lists (publishing profile, section 4): its writer
  * marked it `listed`, a plain reply never is; of those, the relations this server shows (PUBLIC_RELATIONS);
  * and not retracted by its writer since.
  */

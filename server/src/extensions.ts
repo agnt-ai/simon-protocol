@@ -110,7 +110,7 @@ export interface Upload {
 }
 
 /**
- * A reader asking for a published message whose `audience` header is `audience` (spec section 7.1). `reader`
+ * A reader asking for a published message whose `audience` header is `audience` (publishing profile, section 1). `reader`
  * is the address that signed the request with a key of its own agent document, or null when nobody in
  * particular asks.
  */

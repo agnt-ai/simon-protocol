@@ -3,7 +3,7 @@
  * client API gives: the message as a delivery would check it (spec section 6.3, steps 1, 3 and 4); a
  * version this server implements; `from` the agent's own address, on a domain that still names this
  * server; the author's signature; the paired or solo rule; the 24-hour window; no message with an audience
- * carried whole (spec section 7.1); every content-addressed
+ * carried whole (spec section 5.4); every content-addressed
  * part held for this agent, uploaded or received, so a part it received can be forwarded. Then the message,
  * this server's claims about it signed for it (spec section 6.2), and one delivery row per recipient domain
  * are stored as one, and the answer is given; delivery follows.
@@ -147,7 +147,7 @@ async function notedServing(ctx: Context, domain: string, now: Date): Promise<vo
 }
 
 /**
- * A message with an `audience` header is never forwarded or quoted whole (spec section 7.1): a message that
+ * A message with an `audience` header is never forwarded or quoted whole (spec section 5.4): a message that
  * carries one inline, at any depth, is refused as the message checks refuse a part (`400 invalid`, `parts`).
  * One carried by content address is not seen here; its bytes are the client's to keep to itself.
  */
@@ -155,7 +155,7 @@ function checkCarriedAudience(m: AnyMessage): void {
   for (const inner of carriedMessages(m)) {
     const headers = inner.headers;
     if (inner.v === 1 && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
-      throw invalid('A message with an audience is never forwarded or quoted whole (spec section 7.1).', {
+      throw invalid('A message with an audience is never forwarded or quoted whole (spec section 5.4).', {
         field: 'parts',
       });
     }

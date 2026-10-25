@@ -389,7 +389,7 @@ def _check_headers(m: dict[str, Any]) -> None:
 
 def is_listed_value(value: object) -> bool:
     """Whether a value is a ``listed`` header: exactly ``yes`` (section 5.4), the writer's consent to have
-    a relation listed under the published message it names (section 7.4)."""
+    a relation listed under the published message it names (publishing profile, section 4)."""
     return value == "yes"
 
 

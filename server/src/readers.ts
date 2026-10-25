@@ -1,5 +1,5 @@
 /**
- * Who reads a published message, and whether its audience admits them (spec section 7.1).
+ * Who reads a published message, and whether its audience admits them (publishing profile, section 1).
  *
  * A reader proves who it is the way an author does: it signs the request with a key of its own agent
  * document and names itself in `simon-agent` (section 8). A request that is not signed, or whose signature
@@ -28,7 +28,7 @@ export const asReader = (address: string): Asker => ({ reader: async () => addre
  * Who asks, settled before anything is looked up for the request: a request naming `simon-agent` is
  * authenticated at once, its reader's document fetched and charged to the client, whatever it asks for and
  * whether or not anything matches, so neither the answer nor the fetches it makes tell which ids, feeds or
- * parts hold audience-limited posts (spec section 7.1).
+ * parts hold audience-limited posts (publishing profile, section 1).
  */
 export async function askerOf(ctx: Context, req: Request): Promise<Asker> {
   if (!isAgentSigned(req)) return NOBODY;
