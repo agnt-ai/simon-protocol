@@ -148,17 +148,26 @@ async function notedServing(ctx: Context, domain: string, now: Date): Promise<vo
 }
 
 /**
- * A message with an `audience` header is never forwarded or quoted whole (spec section 5.4): a message that
- * carries one inline, at any depth, is refused as the message checks refuse a part (`400 invalid`, `parts`).
- * One carried by content address is not seen here; its bytes are the client's to keep to itself.
+ * A message whose `audience` is narrower than `public` is never forwarded or quoted whole (spec section
+ * 5.4): a message that carries one inline, at any depth, is refused as the message checks refuse a part
+ * (`400 invalid`, `parts`). One carried by content address is not seen here; its bytes are the client's to
+ * keep to itself.
  */
 function checkCarriedAudience(m: AnyMessage): void {
   for (const inner of carriedMessages(m)) {
     const headers = inner.headers;
-    if (inner.v === VERSION && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
-      throw invalid('A message with an audience is never forwarded or quoted whole (spec section 5.4).', {
-        field: 'parts',
-      });
+    if (
+      inner.v === VERSION &&
+      isJsonObject(headers) &&
+      Object.hasOwn(headers, 'audience') &&
+      headers.audience !== 'public'
+    ) {
+      throw invalid(
+        'A message for a narrower audience than public is never forwarded or quoted whole (spec section 5.4).',
+        {
+          field: 'parts',
+        },
+      );
     }
   }
 }

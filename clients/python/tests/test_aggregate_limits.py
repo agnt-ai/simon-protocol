@@ -14,7 +14,7 @@ def file(size, key):
 
 def message(parts):
     return {"v": VERSION, "from": "ada@example.com", "to": [], "inReplyTo": None,
-            "parts": parts, "headers": {}, "sentAt": "2026-10-01T00:00:00Z", "signature": "AAAA"}
+            "parts": parts, "headers": {"audience": "public"}, "sentAt": "2026-10-01T00:00:00Z", "signature": "AAAA"}
 
 
 def carry(parts):

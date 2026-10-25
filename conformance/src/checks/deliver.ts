@@ -812,9 +812,9 @@ def(
     section: `${S} step 4, PROTOCOL 5.4`,
     level: 'must',
     title:
-      'rel only on a message that points at another; feed and audience only on a published one; listed only as yes, on a relation with recipients',
+      'audience only on a published one; a misplaced rel or feed ignored; listed only as yes, on a relation with recipients',
     expected:
-      '202 for a message with inReplyTo and a rel the registry does not list, and for a relation marked listed: yes; 400 invalid with details.field "headers" for rel without inReplyTo, rel in upper case, feed on a message with recipients, audience on a message with recipients, listed on a plain reply, and listed: Yes',
+      '202 for a message with inReplyTo and a rel the registry does not list, for a relation marked listed: yes, for rel without inReplyTo and for feed on a message with recipients (each ignored); 400 invalid with details.field "headers" for rel in upper case, audience on a message with recipients, listed on a plain reply, and listed: Yes',
   },
   async (t: T, ctx: Ctx) => {
     const parent = 'a'.repeat(64);
@@ -822,15 +822,17 @@ def(
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(rel), 'an unknown relation'), 'an unknown relation');
     const listed = (await valid(ctx, { inReplyTo: parent, headers: { rel: 'comment', listed: 'yes' } })).m;
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(listed), 'a listed relation'), 'a listed relation');
+    const loose = (await valid(ctx, { headers: { rel: 'reaction' } })).m;
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(loose), 'rel without inReplyTo'), 'rel without inReplyTo');
+    const fed = (await valid(ctx, { headers: { feed: 'posts' } })).m;
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(fed), 'feed with recipients'), 'feed with recipients');
     const { a, m } = await valid(ctx);
     await messageCases(
       t,
       ctx,
       [a.address],
       [
-        ['rel without inReplyTo', { ...m, headers: { rel: 'reaction' } }, 'headers'],
         ['rel in upper case', { ...m, inReplyTo: parent, headers: { rel: 'Reaction' } }, 'headers'],
-        ['feed on a message with recipients', { ...m, headers: { feed: 'posts' } }, 'headers'],
         ['audience on a message with recipients', { ...m, headers: { audience: 'followers' } }, 'headers'],
         ['listed on a plain reply', { ...m, inReplyTo: parent, headers: { listed: 'yes' } }, 'headers'],
         ['listed: Yes', { ...m, inReplyTo: parent, headers: { rel: 'comment', listed: 'Yes' } }, 'headers'],

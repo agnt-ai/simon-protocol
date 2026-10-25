@@ -245,22 +245,31 @@ function checkVersionRules(m: Record<string, Json>, limits: Limits) {
     throw invalid('The critical header is header names joined by commas, with no spaces.', { field: 'headers' });
   }
   const { rel, feed, audience } = m.headers;
-  if (rel !== undefined && !(isHeaderName(rel) && m.inReplyTo !== null)) {
-    throw invalid('The rel header is a relation name, on a message whose inReplyTo names another.', {
-      field: 'headers',
-    });
+  // A rel without inReplyTo, or a feed on a message with recipients, means nothing and is ignored; audience is
+  // security metadata, so its placement is checked (spec section 5.4).
+  if (rel !== undefined && !isHeaderName(rel)) {
+    throw invalid('The rel header is a relation name.', { field: 'headers' });
   }
   if (feed !== undefined && !isCriticalValue(feed)) {
     throw invalid('The feed header is feed names joined by commas, with no spaces.', { field: 'headers' });
   }
-  if ((feed !== undefined || audience !== undefined) && to.length > 0) {
-    throw invalid('The feed and audience headers belong only on a published message, whose to is empty.', {
+  if (audience !== undefined && to.length > 0) {
+    throw invalid('The audience header belongs only on a published message, whose to is empty.', {
       field: 'headers',
     });
   }
+  // Publishing is explicit: a message names recipients, or says who may read it (spec section 5.2).
+  if (to.length === 0 && audience === undefined) {
+    throw invalid(
+      'A message with no recipients is published, and says who may read it: an audience header, public for anyone.',
+      {
+        field: 'headers',
+      },
+    );
+  }
   // The writer's consent to have a relation listed under the published message it names (publishing profile, section 4).
   const { listed } = m.headers;
-  if (listed !== undefined && !(isListedValue(listed) && rel !== undefined && to.length > 0)) {
+  if (listed !== undefined && !(isListedValue(listed) && rel !== undefined && m.inReplyTo !== null && to.length > 0)) {
     throw invalid('The listed header is yes, on a relation (it carries rel) whose to is not empty.', {
       field: 'headers',
     });

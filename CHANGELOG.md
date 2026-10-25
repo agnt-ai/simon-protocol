@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+**Publishing is explicit.** A message to no one must carry an `audience`: `public` for anyone. A server
+refuses one without (`400 invalid`, `headers`), and a published message without one is its author's alone. A
+`rel` without `inReplyTo`, or a `feed` on a message with recipients, is now ignored rather than refused; a
+misplaced `audience` is still refused. Public posts may be forwarded whole.
+
 **Wire version 2.** Messages carry `"v":2`, and `v` now counts incompatible wire revisions, drafts included.
 Version 1 messages are a version this library does not know: routed on their invariants, presented as not
 understood. Names (headers, relations, feeds, signal types) may be private and reverse-domain,

@@ -182,7 +182,8 @@ describe('the message', () => {
     assert.equal(code(variant({ from: '.ada@example.com' })), '400 invalid from');
     assert.equal(code(variant({ to: ['bob@example.net', 'bob@example.net'] })), '400 invalid to');
     assert.equal(code(variant({ to: ['BOB@example.net'] })), '400 invalid to', 'addresses are lower case on the wire');
-    assert.equal(code(variant({ to: [] })), 'accepted');
+    assert.equal(code(variant({ to: [] })), '400 invalid headers', 'a message to no one says who may read it');
+    assert.equal(code(variant({ to: [], headers: { audience: 'public' } })), 'accepted');
     assert.equal(code(variant({ inReplyTo: 'abc' })), '400 invalid inReplyTo');
     assert.equal(code(variant({ inReplyTo: messageId(question) })), 'accepted');
     assert.equal(code(variant({ headers: { Subject: 'x' } })), '400 invalid headers');
@@ -404,23 +405,22 @@ describe('the message', () => {
     assert.equal(sized(MINIMUM_LIMITS.partBytes + 1), '400 invalid parts');
   });
 
-  it('rel names a relation on a message that points at another; feed and audience only on a published one', () => {
+  it('rel and feed keep their grammar wherever they are; audience only on a published message, which needs one', () => {
     const msg = (patch: Record<string, Json>) => code(variant(patch));
     const parent = 'a'.repeat(64);
     assert.equal(msg({ inReplyTo: parent, headers: { rel: 'reaction' } }), 'accepted');
     assert.equal(msg({ inReplyTo: parent, headers: { rel: 'x-vendor-thing' } }), 'accepted', 'any name');
-    assert.equal(
-      msg({ inReplyTo: null, headers: { rel: 'reaction' } }),
-      '400 invalid headers',
-      'a relation to nothing',
-    );
+    assert.equal(msg({ inReplyTo: null, headers: { rel: 'reaction' } }), 'accepted', 'a relation to nothing: ignored');
     assert.equal(msg({ inReplyTo: parent, headers: { rel: 'Reaction' } }), '400 invalid headers');
     assert.equal(msg({ inReplyTo: parent, headers: { rel: '' } }), '400 invalid headers');
     assert.equal(msg({ to: [], headers: { feed: 'posts,photos', audience: 'followers' } }), 'accepted');
+    assert.equal(msg({ to: [], headers: { audience: 'public' } }), 'accepted', 'public: anyone');
     assert.equal(msg({ to: [], headers: { audience: '' } }), 'accepted', 'the label is opaque');
-    assert.equal(msg({ to: [], headers: { feed: 'posts, photos' } }), '400 invalid headers');
-    assert.equal(msg({ headers: { feed: 'posts' } }), '400 invalid headers', 'a feed is for published messages');
-    assert.equal(msg({ headers: { audience: 'followers' } }), '400 invalid headers');
+    assert.equal(msg({ to: [], headers: {} }), '400 invalid headers', 'a message to no one says who may read it');
+    assert.equal(msg({ to: [], headers: { feed: 'posts' } }), '400 invalid headers', 'a feed alone is not an audience');
+    assert.equal(msg({ to: [], headers: { feed: 'posts, photos', audience: 'public' } }), '400 invalid headers');
+    assert.equal(msg({ headers: { feed: 'posts' } }), 'accepted', 'a feed on a message with recipients: ignored');
+    assert.equal(msg({ headers: { audience: 'followers' } }), '400 invalid headers', 'an audience is checked');
   });
 
   it('the for and critical headers keep their grammar', () => {

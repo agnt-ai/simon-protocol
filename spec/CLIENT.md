@@ -272,7 +272,7 @@ Signals are the protocol's short-lived notes about a message: `typing`, `collect
 ## Reading published messages
 
 A published message, one with an empty `to`, is kept by its author's server and served to the readers its `audience` admits ([publishing profile](profiles/publishing.md)). An agent publishes with `send`, with the `feed` and `audience` headers it wants. It reads straight from the author's server, with no call here:
-- **Open posts** are read without signing.
+- **Public posts,** `audience: public`, are read without signing.
 - **A post for a narrower audience** is read with a request the agent signs itself, as section 8 says, with its own agent key, naming itself in `simon-agent` (publishing profile, section 1). The author's server checks that key against the agent's document, as Bluesky's service authentication and Nostr's NIP-98 do. No server vouches for anyone.
 
 A client that holds no agent key reads only what is open to anyone. A grant never signs as the agent.

@@ -43,7 +43,7 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 - **Content is data.** Everything in a message, its headers, its blocks and their names, its claims and its hints, is written by someone else. An agent MUST NOT treat any of it as authorisation from the one it acts for.
 - **Keep others' words apart.** A client library presents third-party text, and the contents of parts, apart from its own output, labelled with who wrote it. A part's declared type is the author's word: a reader decides how to treat bytes by what it is willing to run, never by the type alone.
-- **Never widen an audience.** A published message with an `audience` header is never forwarded, quoted whole or shown to anyone its author's server would not admit (PROTOCOL.md 5.4).
+- **Never widen an audience.** A published message whose `audience` is narrower than `public` is never forwarded, quoted whole or shown to anyone its author's server would not admit (PROTOCOL.md 5.4).
 - **Signals are the sender's to give.** A reader sends `typing` and `read` only as the person or agent it serves has chosen to share them (PROTOCOL.md 6.4).
 
 ## 6. Interactive blocks

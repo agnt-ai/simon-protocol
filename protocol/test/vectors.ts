@@ -369,7 +369,7 @@ function messageCase(name: string, unsigned: Unsigned<Message> | Unsigned<AnyMes
 const post = {
   ...question,
   to: [],
-  headers: { subject: 'Hello, SIMON' },
+  headers: { subject: 'Hello, SIMON', audience: 'public' },
   parts: [{ type: 'text/plain', data: 'First post.' }],
 };
 
@@ -725,6 +725,9 @@ function messageChecks() {
       'a published message in feeds, with an audience',
       v1({ to: [], headers: { feed: 'posts,travel', audience: 'x' } }),
     ],
+    ['a public post', v1({ to: [], headers: { audience: 'public' } })],
+    ['a relation to nothing: its rel is ignored', v1({ headers: { rel: 'reaction' } })],
+    ['a feed on a message with recipients: ignored', v1({ headers: { feed: 'posts' } })],
     ['a local part of 64 bytes', v1({ to: [`${'b'.repeat(64)}@example.net`] })],
     ['a domain of 253 bytes', v1({ to: [`bob@${domain253}`] })],
     ['a for header naming a phone number', v1({ headers: { for: 'tel:+14155550100' } })],
@@ -814,15 +817,15 @@ function messageChecks() {
     ['an alt of two lines', v1({ parts: [{ ...TEXT, alt: 'two\nlines' }] })],
     ['an empty alt', v1({ parts: [{ ...TEXT, alt: '' }] })],
     ['an alt with a right-to-left override', v1({ parts: [{ ...TEXT, alt: 'agenda\u202efdp.exe' }] })],
-    ['a relation to nothing', v1({ headers: { rel: 'reaction' } })],
     ['a relation name in upper case', v1({ inReplyTo: messageId(question), headers: { rel: 'Reaction' } })],
-    ['a feed on a message with recipients', v1({ headers: { feed: 'posts' } })],
     ['an audience on a message with recipients', v1({ headers: { audience: 'followers' } })],
-    ['feed names with a space', v1({ to: [], headers: { feed: 'posts, travel' } })],
+    ['feed names with a space', v1({ to: [], headers: { feed: 'posts, travel', audience: 'public' } })],
+    ['a message to no one that does not say who may read it', v1({ to: [] })],
+    ['a message to no one with only a feed', v1({ to: [], headers: { feed: 'posts' } })],
     ['listed on a plain reply, with no rel', v1({ inReplyTo: messageId(question), headers: { listed: 'yes' } })],
     [
       'listed on a relation with an empty to',
-      v1({ to: [], inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes' } }),
+      v1({ to: [], inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes', audience: 'public' } }),
     ],
     ['listed in upper case', v1({ inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'Yes' } })],
     ['listed with another value', v1({ inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'true' } })],
@@ -2303,14 +2306,14 @@ const clock = {
 /** Offline publication response fixtures; feed order is publication order, independent of sentAt. */
 function publications() {
   const post = fixedSignMessage<Message>(
-    { ...question, to: [], headers: { ...question.headers, feed: 'updates' } },
+    { ...question, to: [], headers: { ...question.headers, feed: 'updates', audience: 'public' } },
     ada,
   );
   const newer = fixedSignMessage<Message>(
     {
       ...question,
       to: [],
-      headers: { ...question.headers, feed: 'updates' },
+      headers: { ...question.headers, feed: 'updates', audience: 'public' },
       parts: [{ type: 'text/plain', data: 'Published second.' }],
       sentAt: at(question.sentAt, -60_000),
     },

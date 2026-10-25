@@ -42,14 +42,24 @@ export async function askerOf(ctx: Context, req: Request): Promise<Asker> {
   }
 }
 
-/** The audience label a published version 2 message carries, or null for anyone. */
+/** The audience label that admits anyone (publishing profile, section 1). */
+export const PUBLIC = 'public';
+
+/** The audience label a published message of a version known here carries, or null. */
 export const audienceOf = (m: AnyMessage) => (m.v === VERSION ? header(m as Message, 'audience') : null);
 
-/** Whether a published message written here may be shown to this asker. */
+/** Whether anyone may read a published message: its audience is `public`. */
+export const isPublic = (m: AnyMessage) => audienceOf(m) === PUBLIC;
+
+/**
+ * Whether a published message written here may be shown to this asker. A message without an audience
+ * label, which this version refuses, is its author's alone: closed, never open.
+ */
 export async function mayRead(ctx: Context, m: AnyMessage, asker: Asker): Promise<boolean> {
   const audience = audienceOf(m);
-  if (audience === null) return true;
+  if (audience === PUBLIC) return true;
   const reader = await asker.reader();
   if (reader === m.from) return true;
+  if (audience === null) return false;
   return (await ctx.hooks.admitsReader({ message: m, audience, reader })) === 'admit';
 }

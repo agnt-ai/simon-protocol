@@ -284,9 +284,10 @@ export class TestAgent {
         to,
         inReplyTo: null,
         parts: [{ type: 'text/plain', data: text }],
-        headers: {},
         sentAt: timestamp(this.fed.clock.t),
         ...extra,
+        // A message to no one is published, and says who may read it: public unless the test says otherwise.
+        headers: { ...(to.length === 0 ? { audience: 'public' } : {}), ...extra.headers },
       },
       this.key,
     );

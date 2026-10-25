@@ -2242,8 +2242,8 @@
       {
         "name": "public post (empty to)",
         "signer": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
-        "signingBytes": "SIMON-MESSAGE\n{\"from\":\"ada@example.com\",\"headers\":{\"subject\":\"Hello, SIMON\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"First post.\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[],\"v\":2}",
-        "id": "9a2ff7a45ca72549df196ba076acf77071e37a58d6e8dc976b7cf0dbfdafe2b1",
+        "signingBytes": "SIMON-MESSAGE\n{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"subject\":\"Hello, SIMON\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"First post.\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[],\"v\":2}",
+        "id": "0e3a0824c7f0e937958737d5768cffb01caee9b548d6b5f6457e57c26a4050e1",
         "message": {
           "v": 2,
           "from": "ada@example.com",
@@ -2256,12 +2256,13 @@
             }
           ],
           "headers": {
-            "subject": "Hello, SIMON"
+            "subject": "Hello, SIMON",
+            "audience": "public"
           },
           "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "r5ekMuI_ZKe-4PrzsXjDtSnUxDMIxy7tW3cKUq8cVk4vHZTy3yGTXRQFhhsl6uRBOroiFMEFkO2PIU9uB5XFBg"
+          "signature": "TnWWpZmZP5j9YcHD9PROF2W8rNKOuRZpucp63wCAeneOEm-Qr_03St0OjQb4c-A1czdME4bTZ2s1M5TRLzioCQ"
         },
-        "transmitted": "{\"from\":\"ada@example.com\",\"headers\":{\"subject\":\"Hello, SIMON\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"First post.\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"r5ekMuI_ZKe-4PrzsXjDtSnUxDMIxy7tW3cKUq8cVk4vHZTy3yGTXRQFhhsl6uRBOroiFMEFkO2PIU9uB5XFBg\",\"to\":[],\"v\":2}"
+        "transmitted": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"subject\":\"Hello, SIMON\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"First post.\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"TnWWpZmZP5j9YcHD9PROF2W8rNKOuRZpucp63wCAeneOEm-Qr_03St0OjQb4c-A1czdME4bTZ2s1M5TRLzioCQ\",\"to\":[],\"v\":2}"
       },
       {
         "name": "media type parameters, one quoted",
@@ -2297,15 +2298,15 @@
       {
         "name": "reply to the public post, by bob",
         "signer": "ed25519:d7pSFFULH_rVydhVTuzeArymVKgPbE0mIFtdpwZ2cNo",
-        "signingBytes": "SIMON-MESSAGE\n{\"from\":\"bob@example.net\",\"headers\":{},\"inReplyTo\":\"9a2ff7a45ca72549df196ba076acf77071e37a58d6e8dc976b7cf0dbfdafe2b1\",\"parts\":[{\"data\":\"👍\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[\"ada@example.com\"],\"v\":2}",
-        "id": "b02644c52da36cc15c7f7123dbae5130e5ad0df709c8d4c0a09a18c10344903e",
+        "signingBytes": "SIMON-MESSAGE\n{\"from\":\"bob@example.net\",\"headers\":{},\"inReplyTo\":\"0e3a0824c7f0e937958737d5768cffb01caee9b548d6b5f6457e57c26a4050e1\",\"parts\":[{\"data\":\"👍\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[\"ada@example.com\"],\"v\":2}",
+        "id": "beb7ad59ea3758941ba24d0a799893118d3822805107c7b0bc3f49530a135418",
         "message": {
           "v": 2,
           "from": "bob@example.net",
           "to": [
             "ada@example.com"
           ],
-          "inReplyTo": "9a2ff7a45ca72549df196ba076acf77071e37a58d6e8dc976b7cf0dbfdafe2b1",
+          "inReplyTo": "0e3a0824c7f0e937958737d5768cffb01caee9b548d6b5f6457e57c26a4050e1",
           "parts": [
             {
               "type": "text/plain",
@@ -2314,9 +2315,9 @@
           ],
           "headers": {},
           "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "pD8IuyNDPUh1FkYYeLBAMp-MBMng_Gr9nJivwJu_c-78k07Gv79e2d48cwLgic5WYkuoDtC5uDb_wZks4CvLCw"
+          "signature": "8vhi6zCIAyYRcTRWPAanf1-8-4Y17qwMAOsNlBN-8or_QW8e75S5XfIO1XTx3Y9YrCxHMJXq0iLTowXs8YDtAg"
         },
-        "transmitted": "{\"from\":\"bob@example.net\",\"headers\":{},\"inReplyTo\":\"9a2ff7a45ca72549df196ba076acf77071e37a58d6e8dc976b7cf0dbfdafe2b1\",\"parts\":[{\"data\":\"👍\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"pD8IuyNDPUh1FkYYeLBAMp-MBMng_Gr9nJivwJu_c-78k07Gv79e2d48cwLgic5WYkuoDtC5uDb_wZks4CvLCw\",\"to\":[\"ada@example.com\"],\"v\":2}"
+        "transmitted": "{\"from\":\"bob@example.net\",\"headers\":{},\"inReplyTo\":\"0e3a0824c7f0e937958737d5768cffb01caee9b548d6b5f6457e57c26a4050e1\",\"parts\":[{\"data\":\"👍\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"8vhi6zCIAyYRcTRWPAanf1-8-4Y17qwMAOsNlBN-8or_QW8e75S5XfIO1XTx3Y9YrCxHMJXq0iLTowXs8YDtAg\",\"to\":[\"ada@example.com\"],\"v\":2}"
       },
       {
         "name": "signed with ML-DSA-65, speaking for a phone number",
@@ -2851,6 +2852,21 @@
         "accepted": true
       },
       {
+        "name": "a public post",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"35lTX_zr2zovwflPdabFwZGkocRhcvHjH8M7j518BEzWdr2Lr1hHc3ZGHVhKHvmkap2RxmXDpr5iKR9pkrvfAQ\",\"to\":[],\"v\":2}",
+        "accepted": true
+      },
+      {
+        "name": "a relation to nothing: its rel is ignored",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"rel\":\"reaction\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"4Nn1BGg4kMLrU38ojtdDuhxd4X61U0vPZOPkPHfI1XaeSBcmePm_XuQKnstbbgwmpwJfcZ5nIT2RWf1dYXYyDg\",\"to\":[\"bob@example.net\"],\"v\":2}",
+        "accepted": true
+      },
+      {
+        "name": "a feed on a message with recipients: ignored",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"feed\":\"posts\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"Lvc1vhBN9nExd_2r8KM1QKR04J94BeVcvaW0_YCZIUxzT8w8OL0pLWif_64OPyHkTka9XxPyB3b67Ky3ccxtBg\",\"to\":[\"bob@example.net\"],\"v\":2}",
+        "accepted": true
+      },
+      {
         "name": "a local part of 64 bytes",
         "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"4H630HaqHXT3uFDbzNWAFfYW_bI0ZFebozZsxymfCSTBe-YcFsTCz-VK-IHvgWBPjD8fsMkn5N4EM0M6B2_CAA\",\"to\":[\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb@example.net\"],\"v\":2}",
         "accepted": true
@@ -3290,22 +3306,8 @@
         "field": "parts"
       },
       {
-        "name": "a relation to nothing",
-        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"rel\":\"reaction\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"4Nn1BGg4kMLrU38ojtdDuhxd4X61U0vPZOPkPHfI1XaeSBcmePm_XuQKnstbbgwmpwJfcZ5nIT2RWf1dYXYyDg\",\"to\":[\"bob@example.net\"],\"v\":2}",
-        "status": 400,
-        "code": "invalid",
-        "field": "headers"
-      },
-      {
         "name": "a relation name in upper case",
         "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"rel\":\"Reaction\"},\"inReplyTo\":\"84d8e611aef5397e06f77267b1e8feefad1a9d31b65b49e54504636137943f28\",\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"3Sj4HNo73yJBsOWyS0bf2qj86luhtIKp3G_SF9Wfw5z7PsuE4-l72koSIz7fGQauN6SxAxE2s8kX60Vvo9DaCw\",\"to\":[\"bob@example.net\"],\"v\":2}",
-        "status": 400,
-        "code": "invalid",
-        "field": "headers"
-      },
-      {
-        "name": "a feed on a message with recipients",
-        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"feed\":\"posts\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"Lvc1vhBN9nExd_2r8KM1QKR04J94BeVcvaW0_YCZIUxzT8w8OL0pLWif_64OPyHkTka9XxPyB3b67Ky3ccxtBg\",\"to\":[\"bob@example.net\"],\"v\":2}",
         "status": 400,
         "code": "invalid",
         "field": "headers"
@@ -3319,7 +3321,21 @@
       },
       {
         "name": "feed names with a space",
-        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"feed\":\"posts, travel\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"w8UFEvF4f9YoElFg2k1_vb1LzmrzgXQqBAX-P7bks7p6nBLmQ2AdrbtPYwB57JyAMwuHbHQ0VEddwAk5lRogBw\",\"to\":[],\"v\":2}",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"feed\":\"posts, travel\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"lMNbw31i7-zYxOVjL-9Nkn_X5qJRvEltc8WghWXokjLfUN-AddcBlwiFEIUbMLx_t78Yr-7UqOCDwD8-Q9orDA\",\"to\":[],\"v\":2}",
+        "status": 400,
+        "code": "invalid",
+        "field": "headers"
+      },
+      {
+        "name": "a message to no one that does not say who may read it",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"nyxWwp3hoO0vJRpQk1UMQQEF1rAe58Go5XfRRYHfSlNKR8yY6R7CA3_pDhKB28m9iIYS4xcycaeSJRSnoGl1CQ\",\"to\":[],\"v\":2}",
+        "status": 400,
+        "code": "invalid",
+        "field": "headers"
+      },
+      {
+        "name": "a message to no one with only a feed",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"feed\":\"posts\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"26aAj9T7yZ7cC4ts0UueSlOytQSoZlnXkTgnVQJ1VBReRqhO9Ti5z9qtykiEKDuDBKGlx9M63FnA5x4PdGuTDQ\",\"to\":[],\"v\":2}",
         "status": 400,
         "code": "invalid",
         "field": "headers"
@@ -3333,7 +3349,7 @@
       },
       {
         "name": "listed on a relation with an empty to",
-        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"listed\":\"yes\",\"rel\":\"comment\"},\"inReplyTo\":\"84d8e611aef5397e06f77267b1e8feefad1a9d31b65b49e54504636137943f28\",\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"b1t0aAnkKQ0PVultLif2c0ZMeKG2VJmX-bo-BHqPyp6PT6RnJBgXVZmVI9t5KjZzdos-cSx12pYUhK5SI2o-CQ\",\"to\":[],\"v\":2}",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"listed\":\"yes\",\"rel\":\"comment\"},\"inReplyTo\":\"84d8e611aef5397e06f77267b1e8feefad1a9d31b65b49e54504636137943f28\",\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"imPkPWqEK2IzOkomuKDyi_y5wrLYXl3cjMmugYM9sGZ3kNCLIK1TTX8O2JlDhQRZXe996Gaj2InUT24tphmMBw\",\"to\":[],\"v\":2}",
         "status": 400,
         "code": "invalid",
         "field": "headers"
@@ -7285,7 +7301,7 @@
       }
     ],
     "post": {
-      "id": "bfafb516efb6699bb9e92fd998bcc76fb7b6e33c0588975a54945b9c30d42a5a",
+      "id": "32d14ac19c5f598bf2971e087091aeb4657def7f51a723a7ad7acbcabe4d1085",
       "response": {
         "message": {
           "v": 2,
@@ -7301,10 +7317,11 @@
           "headers": {
             "for": "mailto:alice@example.org",
             "subject": "Thursday",
-            "feed": "updates"
+            "feed": "updates",
+            "audience": "public"
           },
           "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "PT5IL2xKBQp-0Q2ajsYM32Wj3lOhd2N30hJZg93iuJv6IziTmNsZ_YHBJJSjrhta76-Zj7yOJVgoCpcCy94uDw"
+          "signature": "oTCiHbtapRouGF5-SEBGfAtUvstvjbL7laoKAP70M0KRqXhVTQr9ZP0sRTBLg-S7SWM2VKX4eWP_FVPmbq9LAw"
         },
         "keys": [
           {
@@ -7324,7 +7341,7 @@
             "verifiedAt": "2026-10-01T00:00:00Z"
           }
         ],
-        "claimsSignature": "1cVZ3asi4muhVSuQ2a-A8zh99Stcq6QjXDngGcpFh9xVFq0IAALYmhCR045RnIdAtvILf4H9tU33YpFIwuBeDA"
+        "claimsSignature": "AtgBCHeBPjKbB8RPj69qpO9iGXGWYuI20G5zwF6l9hD_ZefKwZhiZCAStufhimo-9U5gAssm6ME9J_zdjK3YDw"
       }
     },
     "feed": {
@@ -7345,10 +7362,11 @@
           "headers": {
             "for": "mailto:alice@example.org",
             "subject": "Thursday",
-            "feed": "updates"
+            "feed": "updates",
+            "audience": "public"
           },
           "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "PT5IL2xKBQp-0Q2ajsYM32Wj3lOhd2N30hJZg93iuJv6IziTmNsZ_YHBJJSjrhta76-Zj7yOJVgoCpcCy94uDw"
+          "signature": "oTCiHbtapRouGF5-SEBGfAtUvstvjbL7laoKAP70M0KRqXhVTQr9ZP0sRTBLg-S7SWM2VKX4eWP_FVPmbq9LAw"
         },
         {
           "v": 2,
@@ -7364,24 +7382,25 @@
           "headers": {
             "for": "mailto:alice@example.org",
             "subject": "Thursday",
-            "feed": "updates"
+            "feed": "updates",
+            "audience": "public"
           },
           "sentAt": "2026-10-14T20:59:00.000Z",
-          "signature": "bkF5mdoLskgIe9GIMDynGXI3LR7Xhz9BLUFUTStw718UP5gsTWmbwoL5tFhrJTCUGHiipYiW8jY6wshDXFkUCg"
+          "signature": "gxewzFEhEi81t7QxEt1Y713MBnph4BoALoLXjZI0MdJ9JuOq0btdkwaCBs5Yiysb__e7yBnSOEEUpiPrDShEAA"
         }
       ],
       "pages": [
         {
           "limit": 1,
           "messageIds": [
-            "3276b4d5d495284dcee0d89a1f6ed76991d888b1ad0599f94639f9bfceef5ea7"
+            "dfac357892c788b295fa51f1e7f05c62f0a8bcfa479c4b8d018de74528b8b19d"
           ],
           "more": true
         },
         {
           "limit": 1,
           "messageIds": [
-            "bfafb516efb6699bb9e92fd998bcc76fb7b6e33c0588975a54945b9c30d42a5a"
+            "32d14ac19c5f598bf2971e087091aeb4657def7f51a723a7ad7acbcabe4d1085"
           ],
           "more": false
         }

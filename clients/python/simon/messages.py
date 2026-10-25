@@ -377,21 +377,29 @@ def _check_headers(m: dict[str, Any]) -> None:
             "The critical header is header names joined by commas, with no spaces.", field="headers"
         )
     rel, feed, audience = headers.get("rel"), headers.get("feed"), headers.get("audience")
-    if rel is not None and not (is_header_name(rel) and m["inReplyTo"] is not None):
-        raise invalid(
-            "The rel header is a relation name, on a message whose inReplyTo names another.", field="headers"
-        )
+    # A rel without inReplyTo, or a feed on a message with recipients, means nothing and is ignored; audience
+    # is security metadata, so its placement is checked (spec section 5.4).
+    if rel is not None and not is_header_name(rel):
+        raise invalid("The rel header is a relation name.", field="headers")
     if feed is not None and not is_critical_value(feed):
         raise invalid(
             "The feed header is feed names joined by commas, with no spaces.", field="headers"
         )
-    if (feed is not None or audience is not None) and m["to"]:
+    if audience is not None and m["to"]:
         raise invalid(
-            "The feed and audience headers belong only on a published message, whose to is empty.",
+            "The audience header belongs only on a published message, whose to is empty.", field="headers"
+        )
+    # Publishing is explicit: a message names recipients, or says who may read it (spec section 5.2).
+    if not m["to"] and audience is None:
+        raise invalid(
+            "A message with no recipients is published, and says who may read it: an audience header, "
+            "public for anyone.",
             field="headers",
         )
     listed = headers.get("listed")
-    if listed is not None and not (is_listed_value(listed) and rel is not None and m["to"]):
+    if listed is not None and not (
+        is_listed_value(listed) and rel is not None and m["inReplyTo"] is not None and m["to"]
+    ):
         raise invalid(
             "The listed header is yes, on a relation (it carries rel) whose to is not empty.", field="headers"
         )

@@ -270,7 +270,7 @@ Version 2 defines exactly eight members, all required. Any other member makes a 
 
 - `v` is `2`. (Version 1, the first draft, is a version this one does not know: servers route it on its invariants, and readers present it as not understood.)
 - `from` is the author's address.
-- `to` is an array of distinct addresses. Empty means published (section 7).
+- `to` is an array of distinct addresses. Empty means published, and the message then says who may read it with an `audience` header (section 5.4): publishing is never an accident.
 - `inReplyTo` is `null` or a message id: the message this one answers or relates to (section 5.5).
 - `parts` is an array of 0 to 32 parts, its blocks (section 5.3).
 - `headers` is an object (section 5.4).
@@ -325,9 +325,9 @@ Headers are the extension point of version 2. A reader ignores a header it does 
 - **`critical`** lists header names joined by commas, with no spaces.
   - A reader that does not understand every listed header the message carries MUST NOT process the message beyond storing it and presenting it as not understood; a listed header the message does not carry is ignored. The [reader profile](profiles/reader.md) says what understanding means.
   - Servers never interpret headers other than these seven, so `critical` binds readers only.
-- **`rel`** says how the message relates to the one its `inReplyTo` names (section 5.5). Its value is a relation name, in the grammar of a header name, and it appears only on a message whose `inReplyTo` is not `null`.
-- **`feed`** names the feeds a published message belongs to: feed names, in the grammar of header names, joined by commas with no spaces. It appears only on a message whose `to` is empty.
-- **`audience`** labels who may read a published message. Its value is any string, which only the author's server interprets. It appears only on a message whose `to` is empty. **A copy carries its audience:** an agent or a server that holds a message with an `audience` header MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
+- **`rel`** says how the message relates to the one its `inReplyTo` names (section 5.5). Its value is a relation name, in the grammar of a header name. On a message whose `inReplyTo` is `null` it means nothing, and is ignored.
+- **`feed`** names the feeds a published message belongs to: feed names, in the grammar of header names, joined by commas with no spaces. On a message with recipients it means nothing, and is ignored.
+- **`audience`** labels who may read a published message. Every message whose `to` is empty carries one, and only such a message does; a server refuses a message to no one that has none (`400 invalid`, `headers`). Its value is any string: `public` admits anyone, and only the author's server interprets any other. A message to no one without one, met anywhere, is readable by its author alone: closed, never open. **A copy carries its audience:** an agent or a server that holds a message whose `audience` is anything but `public` MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
 - **`listed`** is the author's consent for public relation listing. Its only value is `yes`, and it is valid only on a relation with a valid `rel`, a non-null `inReplyTo` and a non-empty `to`. It does not compel a host to display the relation.
 
 The [publishing profile](profiles/publishing.md) says what `feed`, `audience` and `listed` mean; every server checks their grammar and placement all the same.

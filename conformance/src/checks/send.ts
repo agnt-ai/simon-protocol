@@ -94,7 +94,7 @@ def(
     level: 'must',
     title: 'send applies the message rules of section 6.3 step 4',
     expected:
-      '400 invalid naming the field for a field version 2 does not define, and naming to for one recipient over the published limit',
+      '400 invalid naming the field for a field version 2 does not define, naming to for one recipient over the published limit, and naming headers for a message to no one with no audience',
   },
   async (t: T, ctx: Ctx) => {
     const { a, b } = await pair(ctx);
@@ -105,6 +105,12 @@ def(
     const many = a.message({ to: Array.from({ length: recipients + 1 }, (_, i) => `${ctx.runId}-r${i}@${domain}`) });
     t.error(await a.send(t, many, {}, `${recipients + 1} recipients`), 400, 'invalid', 'too many recipients', {
       field: 'to',
+    });
+    // Publishing is explicit: a message to no one says who may read it (PROTOCOL 5.4).
+    const unsaid = a.message({ to: [], headers: {} });
+    const bare = resign({ ...unsaid, headers: {} }, a.key);
+    t.error(await a.send(t, bare, {}, 'a message to no one with no audience'), 400, 'invalid', 'no audience', {
+      field: 'headers',
     });
   },
 );

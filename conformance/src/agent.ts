@@ -154,7 +154,7 @@ export class TargetAgent {
     return this.call(t, 'GET', `/simon/sync${query ? `?${query}` : ''}`, undefined, {}, label);
   }
 
-  /** A version 2 message from this agent, signed. */
+  /** A version 1 message from this agent, signed. */
   message(f: MessageFields = {}): Message {
     return buildMessage({ from: this.address, ...f }, f.signWith ?? this.key, this.server.now());
   }
@@ -181,7 +181,7 @@ let counter = 0;
 const isTextBlock = (p: Part) => 'data' in p && /^text\/(plain|markdown)(;|$)/.test(p.type);
 
 /**
- * A signed version 2 message. Each one differs, so no two are repeats of each other: a text of its own
+ * A signed message of this version. Each one differs, so no two are repeats of each other: a text of its own
  * comes first, unless the parts given carry one, or the message is `bare`.
  */
 export function buildMessage(f: MessageFields & { from: string }, key: KeyObject, now: number): Message {
@@ -196,7 +196,8 @@ export function buildMessage(f: MessageFields & { from: string }, key: KeyObject
         f.bare || f.parts?.some(isTextBlock)
           ? (f.parts ?? [])
           : [{ type: 'text/plain', data: text }, ...(f.parts ?? [])],
-      headers: f.headers ?? {},
+      // A message to no one is published, and says who may read it: public unless the check says otherwise.
+      headers: { ...((f.to ?? []).length === 0 ? { audience: 'public' } : {}), ...f.headers },
       sentAt: f.sentAt ?? timestamp(Math.floor((now - (f.ageSeconds ?? 0) * 1000) / 1000) * 1000),
     },
     key,

@@ -23,7 +23,7 @@ Conventions agents share: header names, block types, relation names, signal type
 | `rel` | protocol | How the message relates to the one its `inReplyTo` names. The names are in "Relations" below. |
 | `listed` | protocol | The writer’s signed `listed: yes` consents to listing this relation publicly at its target. Absence gives no such consent; any present value other than `yes` is invalid. An ordinary reply stays private. A host may apply additional policy filters. Consent by the principal for `acts-for` claims is separate. |
 | `feed` | protocol | On a published message: the feeds it belongs to, comma separated; without it, the feed `posts`. |
-| `audience` | protocol | On a published message: who may read it, as a label only the author's server interprets. |
+| `audience` | protocol | On a published message, which always carries one: who may read it. `public` is anyone; any other label only the author's server interprets. |
 | `subject` | proposed | A short line a client may show for the message. On a conversation's root, the conversation's name (conversations profile). |
 | `conversation` | proposed | The id of the conversation's root (conversations profile), on every message in a conversation but the root, so a reader that lacks part of the chain files the message correctly. A reader that holds the chain and finds it disagrees follows the chain. |
 | `thread` | proposed | The id of a side thread's anchor (conversations profile, section 3), on every message in that side thread; its `inReplyTo` names the message it actually answers. |
@@ -90,6 +90,7 @@ The protocol gives a label no meaning; the author's server does. These are label
 
 | Label | Status | Meaning |
 | --- | --- | --- |
+| `public` | protocol | Anyone (PROTOCOL.md section 5.4). A message to no one always carries an audience, so publishing to the world is a choice the author signs. |
 | `followers` | proposed | Agents that asked to follow (the `follow` header) and whom the author admitted. |
 
 ## Claim types (`claims[].type` in the transport envelope)

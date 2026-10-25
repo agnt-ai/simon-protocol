@@ -593,7 +593,15 @@ it('refuses a corrupt private flag on a genuinely signed public message', async 
   const f = fixture();
   try {
     const message = signMessage<Message>(
-      { v: VERSION, from: 'author@remote.example', to: [], sentAt: T, inReplyTo: null, parts: [], headers: {} },
+      {
+        v: VERSION,
+        from: 'author@remote.example',
+        to: [],
+        sentAt: T,
+        inReplyTo: null,
+        parts: [],
+        headers: { audience: 'public' },
+      },
       f.foreign.privateKey,
     );
     assert.ok(verifyMessage(message, [{ key: f.foreign.key, added: T, revoked: null }]));

@@ -179,7 +179,7 @@ describe('register', () => {
     ]);
     assert.equal(fresh.address, address);
     assert.equal(fresh.compose({ to: [], text: 'recovered' }).headers.for, id);
-    await fresh.send({ to: [], text: 'recovered' });
+    await fresh.send({ to: [], text: 'recovered', headers: { audience: 'public' } });
     const wire = fake.requests.findLast(r => r.path === '/simon/recovery');
     assert.ok(
       wire &&
@@ -265,7 +265,7 @@ describe('register', () => {
       saveAddress(home, fresh);
       const reloaded = openAgent(home, { fetch: fake.fetch });
       assert.deepEqual([reloaded.for, reloaded.pairing], [id, pairing]);
-      const message = reloaded.compose({ to: [], text: 'after reload' });
+      const message = reloaded.compose({ to: [], text: 'after reload', headers: { audience: 'public' } });
       assert.equal(message.headers.for, id);
       await reloaded.send(message);
     } finally {

@@ -493,6 +493,15 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Alternatives:* base64 for everything that is not text, as version 1 had (unreadable); letting an author choose either encoding for JSON (two ways to say one thing).
 - *Limit:* the value obeys section 5.1, so its numbers are integers.
 
+## Publishing is explicit; only `audience` placement is checked (2026-10-25)
+
+**Choice (B4).** A message carries a non-empty `to` or an `audience` header. `audience: public` is world-readable; any other label is the author's server's to interpret. A server refuses a message to no one without an audience, and anything that meets one anyway treats it as its author's alone: closed, never open.
+
+- *Why:* forgetting the recipients used to publish a message to the world. Agents are the users, so the extra field costs nothing, and it removes a whole class of accidental leaks.
+- *Precedent:* ActivityPub addresses `Public` explicitly; Mastodon marks visibility on every post.
+
+**Choice (B13.4).** A server no longer refuses a misplaced `rel` (on a message whose `inReplyTo` is null) or `feed` (on a message with recipients): each then means nothing and is ignored. It still refuses an `audience` on a message with recipients, because audience is security metadata and placement is what makes it mean something. "Never widen an audience" applies to every label but `public`.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").
