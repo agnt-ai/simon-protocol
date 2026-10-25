@@ -361,7 +361,7 @@ async function pairByLease(t: T, ctx: Ctx): Promise<{ first: Res; second?: Res; 
 }
 
 /** A new paired agent whose principal is a key: leased when the server leases, else on the hosted domain. */
-async function registerPaired(t: T, ctx: Ctx, name: string): Promise<Paired> {
+export async function registerPaired(t: T, ctx: Ctx, name: string): Promise<Paired> {
   if (await leasing(ctx)) {
     const { paired, first, second } = await pairByLease(t, ctx);
     if (paired) return paired;

@@ -32,7 +32,7 @@ A key is a **key token**, `ed25519:<32-byte public key, base64url>` (or `ml-dsa-
 | claims | `SIMON-CLAIMS\n` + canonical `{"claims":[...],"message":"<id>"}` |
 | a signal | `SIMON-SIGNAL\n` + the canonical signal without `signature` |
 | an agent document | `SIMON-AGENT\n` + the canonical document without `signature` |
-| a pairing, a new key, an unpairing | `SIMON-PAIR\n<address>\n<principal>\n<until>`, `SIMON-ADD-KEY\n<address>\n<key>`, `SIMON-UNPAIR\n<address>\n<principal>` |
+| a pairing, a new key, an unpairing | `SIMON-PAIR\n<address>\n<principal>\n<until>`, `SIMON-ADD-KEY\n<address>\n<key>`, `SIMON-UNPAIR\n<address>\n<principal>`, a principal's new key `SIMON-SUCCEED\n<old>\n<new>` |
 
 **Canonical JSON** is RFC 8785 with integers only: keys sorted, no whitespace, minimal escapes. An agent request carries `simon-key`, `simon-agent`, `simon-timestamp`, `simon-nonce` and `simon-signature`; proof-authorized calls may omit `simon-agent`, and a leased registration leaves its identity line empty. Ordinary `401 bad_signature` diagnostics include the expected signing string; hosted part authentication uses the uniform minimal response described below.
 

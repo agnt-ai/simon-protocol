@@ -20,6 +20,7 @@ import {
   checkSupportedVersion,
   deliveryWindow,
   domainOf,
+  header,
   invalid,
   isFresh,
   isJsonObject,
@@ -36,6 +37,7 @@ import {
   type Claim,
   type Hints,
   type Json,
+  type Message,
   VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { authenticateAgent } from './auth.ts';
@@ -106,6 +108,17 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
 
   ctx.rate.hit('send', agent.address);
   ctx.rate.distinct('destinations', agent.address, m.to.map(domainOf));
+
+  // A succession its principal signed moves a paired agent's principal on to the successor (spec section 2.2).
+  const forValue = m.v === VERSION ? header(m as Message, 'for') : null;
+  if (agent.principal !== null && forValue !== null && forValue !== agent.principal) {
+    const moved = await ctx.store.succeedPrincipal(agent.address, agent.principal, forValue);
+    // A concurrent send may have made the same move first; anything else changed under this one.
+    if (!moved && (await ctx.store.agentByAddress(agent.address))?.principal !== forValue) {
+      throw conflict('principal_changed', "This agent's principal changed meanwhile: compose the message again.");
+    }
+    if (moved) ctx.log('info', 'principal succeeded', { address: agent.address });
+  }
 
   const record: StoredMessage = {
     id,

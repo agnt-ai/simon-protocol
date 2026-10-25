@@ -522,6 +522,15 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Precedent:* TLS certificate lifetimes (398 days until 2026, 200 now, 47 by 2029, made bearable by ACME's automatic renewal), OAuth refresh, UCAN's `exp`; PGP's optional expiry is the cautionary tale, since an optional expiry is set by no one.
 - *Default start untouched:* email and phone principals and solo agents sign no pairing, so the person who starts with one link has nothing to renew. A host holding a key for its principal renews it as their policy allows.
 
+## A key principal moves to a new key by a succession (2026-10-25)
+
+**Choice (B7).** Planned rotation only. The old key and the new both sign `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; each step names the one before it, and messages carry the chain, oldest first, as the `succession` header. The agent's own server moves its record along the chain on the first message that carries it and holds the agent to the new key from then on; readers that knew any key in the chain know the principal. Two steps from one key to different keys are a fork, and a reader that holds both links neither successor. A lost key is recovery, and stays host policy.
+
+- *Why:* without it, a principal who replaces a key becomes a stranger to everyone who knew it, and every agent paired with it must start again under new addresses.
+- *Both keys sign:* the old consents to pass its place on, the new to take it. Neither alone can attach a principal's history to a key, or pass it to a key the principal doesn't hold.
+- *The chain travels with messages,* not in the agent document, so it reaches only recipients, as `for` does. The agent chooses how much history to carry.
+- *Precedent:* KERI's pre-rotation and key event logs (signed successions, duplicity as forks), DKIM selector rotation, X.509 cross-signing during CA key rollover, Signal's safety-number change notice for what readers see without a succession.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").

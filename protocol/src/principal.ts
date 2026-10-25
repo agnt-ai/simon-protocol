@@ -10,13 +10,15 @@
  * A key principal approves a pairing by signing `SIMON-PAIR\n<agent address>\n<identifier>\n<until>`, where
  * `until` is when the pairing lapses. Every message the agent sends carries `<until> <signature>` as its
  * `pairing` header, so any recipient can check the pairing without trusting a server. A pairing counts at a
- * moment before its `until` and at most 366 days before it; the principal renews it by signing a later one. It ends the pairing by signing `SIMON-UNPAIR\n<agent address>\n<identifier>`,
+ * moment before its `until` and at most 366 days before it; the principal renews it by signing a later one.
+ * A principal moves to a new key by a succession its old and new keys both sign,
+ * `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain as their `succession` header. It ends the pairing by signing `SIMON-UNPAIR\n<agent address>\n<identifier>`,
  * the unpairing, which retires the address whatever the agent's keys say. It recovers the agent at once by
  * signing `SIMON-RECOVER\n<agent address>\n<new key token>\n<timestamp>` (CLIENT.md dedicated recovery).
  */
 import type { KeyObject } from 'node:crypto';
 import { isV1Address } from './address.ts';
-import { isB64url, parseKeyToken, sign, verify } from './keys.ts';
+import { isB64url, keyToken, parseKeyToken, privateKeyObject, sign, verify } from './keys.ts';
 import { parseTimestamp, timestamp } from './time.ts';
 
 const TEL = /^tel:\+[1-9][0-9]{1,14}$/;
@@ -78,6 +80,65 @@ export function verifyPairing(agent: string, principal: string, pairing: unknown
   const t = new Date(at).getTime();
   if (!(t < until && until - t <= PAIRING_MAX_MS)) return false;
   return verify(key, pairingBytes(agent, principal, parsed.until), parsed.signature);
+}
+
+/** The bytes a key principal's old key and its new key both sign when the new key succeeds the old. */
+export const successionBytes = (from: string, to: string) => `SIMON-SUCCEED\n${from}\n${to}`;
+
+/**
+ * One step of a `succession` header, `<old key token> <old signature> <new signature>`: the old key and the
+ * new key, both the principal's, each signing that the new key succeeds the old (spec section 2.2).
+ */
+export function signSuccession(oldPrivateKey: string | KeyObject, newPrivateKey: string | KeyObject): string {
+  const [old, fresh] = [privateKeyObject(oldPrivateKey), privateKeyObject(newPrivateKey)];
+  const bytes = successionBytes(`${KEY_PREFIX}${keyToken(old)}`, `${KEY_PREFIX}${keyToken(fresh)}`);
+  return `${keyToken(old)} ${sign(old, bytes)} ${sign(fresh, bytes)}`;
+}
+
+/** A step of a succession: the identifier it leaves and the one it reaches. */
+export interface SuccessionStep {
+  from: string;
+  to: string;
+}
+
+/** The most steps a `succession` header holds: a principal moves keys rarely, and each step costs every reader. */
+export const MAX_SUCCESSION_STEPS = 16;
+
+/** Whether a value has the `succession` header's grammar: 1 to 16 steps joined by commas, no spaces between. */
+export function isSuccessionValue(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const steps = value.split(',');
+  return (
+    steps.length <= MAX_SUCCESSION_STEPS &&
+    steps.every(step => {
+      const [key, oldSignature, newSignature, ...rest] = step.split(' ');
+      return (
+        rest.length === 0 &&
+        newSignature !== undefined &&
+        parseKeyToken(key) !== null &&
+        isB64url(oldSignature) &&
+        isB64url(newSignature)
+      );
+    })
+  );
+}
+
+/**
+ * The steps a `succession` header names, oldest first, from its first key on to `principal`, the message's
+ * `for`; null unless the grammar holds, every step's new key is the next step's old key (and the last's is
+ * `principal`'s), no key appears twice, and both of every step's signatures verify.
+ */
+export function readSuccession(value: unknown, principal: string): SuccessionStep[] | null {
+  if (!isSuccessionValue(value) || principalKey(principal) === null) return null;
+  const parsed = value.split(',').map(step => step.split(' '));
+  const ids = [...parsed.map(([key]) => `${KEY_PREFIX}${key}`), principal];
+  if (new Set(ids).size !== ids.length) return null;
+  const steps = parsed.map((_, i) => ({ from: ids[i], to: ids[i + 1] }));
+  const verifies = parsed.every(([key, oldSignature, newSignature], i) => {
+    const bytes = successionBytes(steps[i].from, steps[i].to);
+    return verify(key, bytes, oldSignature) && verify(principalKey(steps[i].to)!, bytes, newSignature);
+  });
+  return verifies ? steps : null;
 }
 
 /** The bytes a key principal signs to end its pairing with an agent. */

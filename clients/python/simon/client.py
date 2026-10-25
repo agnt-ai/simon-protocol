@@ -55,13 +55,14 @@ from .messages import (
     message_verdict,
     parse_pairing,
     principal_key,
+    read_succession,
     sign_message,
     sign_pairing,
     verify_pairing,
     verify_recovery,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood, pairing_standing
+from .reading import claimed_principal, is_understood, pairing_standing, predecessors
 from .request import add_key_proof, sign_request
 from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .transport import HostNotFound, Response, fetch
@@ -141,6 +142,10 @@ class PrincipalTrust:
     #: For ``key-pairing``: True when the pairing counted when the message was sent but has lapsed since.
     #: The message spoke for the principal then; act on nothing in it for the principal now.
     lapsed: bool = False
+    #: For ``key-pairing``: the principal's earlier keys, oldest first, from the message's verified
+    #: ``succession`` (spec section 2.2). Whoever knew one of them knows this principal, unless it has seen
+    #: that key succeeded by another as well.
+    succeeds: tuple[str, ...] = ()
 
     def to_json(self) -> dict[str, Any]:
         out: dict[str, Any] = {"id": self.id, "basis": self.basis}
@@ -148,6 +153,8 @@ class PrincipalTrust:
             out.update(claimant=self.claimant, authoritative=self.authoritative, scope=list(self.scope or ()))
         if self.basis == "key-pairing":
             out["until"] = self.until
+        if self.succeeds:
+            out["succeeds"] = list(self.succeeds)
         if self.lapsed:
             out["lapsed"] = True
         if self.ended:
@@ -195,7 +202,7 @@ class Trust:
 
 #: Why a message did not verify: ``invalid_message``, ``no_server``, ``no_agent``, ``bad_document``,
 #: ``bad_signature``, ``unsupported_algorithm`` (the author has keys, none of an algorithm implemented
-#: here) or ``bad_pairing``.
+#: here), ``bad_pairing`` or ``bad_succession``.
 NotVerifiedReason = Literal[
     "invalid_message",
     "no_server",
@@ -204,6 +211,7 @@ NotVerifiedReason = Literal[
     "bad_signature",
     "unsupported_algorithm",
     "bad_pairing",
+    "bad_succession",
 ]
 
 
@@ -312,11 +320,14 @@ class Reader:
             if standing == "refused":
                 return NotVerified(id, "bad_pairing")
             lapsed = standing == "lapsed"
+            earlier = predecessors(m)
+            if earlier == "refused":
+                return NotVerified(id, "bad_succession")
             unpairing = author.get("unpairing")
             ended = unpairing is not None and verify_unpairing(m["from"], principal, unpairing)
             until = parse_pairing(header(m, "pairing"))[0]  # type: ignore[index]
             proves = _PROVES["key-pairing"]
-            return _with(trust, PrincipalTrust(principal, "key-pairing", proves, ended=ended, until=until, lapsed=lapsed))
+            return _with(trust, PrincipalTrust(principal, "key-pairing", proves, ended=ended, until=until, lapsed=lapsed, succeeds=tuple(earlier)))
         considered = claims_about(m, claims or ())
         claim = next((c for c in considered if c["type"] == "acts-for"), None)
         if claim is None:
@@ -451,6 +462,7 @@ class Agent(Reader):
         *,
         principal: str | None = None,
         pairing: str | None = None,
+        succession: str | None = None,
         timeout: float = 30.0,
         resolver: Callable[[str], Resolution] | None = None,
     ) -> None:
@@ -460,6 +472,7 @@ class Agent(Reader):
         self.address = None if address is None else _address_arg("address", address)
         self.principal = principal
         self.pairing = pairing
+        self.succession = succession
 
     def __repr__(self) -> str:
         return f"Agent({self.origin!r}, {self.key!r}, {self.address!r})"
@@ -499,7 +512,7 @@ class Agent(Reader):
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
             if principal is not None:
-                self.principal, self.pairing = principal, pairing
+                self.principal, self.pairing, self.succession = principal, pairing, None
         return result
 
     def account(self) -> dict[str, Any]:
@@ -541,6 +554,8 @@ class Agent(Reader):
         result = self.call("POST", "/simon/recovery", canonical_bytes(body), agent=address)
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
+            if effective_principal != self.principal:
+                self.succession = None
             self.principal, self.pairing = effective_principal, effective_pairing
         return result
 
@@ -600,6 +615,25 @@ class Agent(Reader):
             raise _invalid("pairing", "A renewed pairing must be the principal's, for this address, and count now.")
         self.pairing = pairing
 
+    def succeed(self, principal: str, pairing: str, succession: str) -> None:
+        """Move to the principal's new key (spec section 2.2): ``principal`` its new identifier, a ``pairing``
+        that key signed, and the ``succession``, steps both keys signed, leading from the principal this agent
+        has to it. The steps from this agent's principal on are added to the chain it already carries, so moving
+        twice before sending keeps the whole way. Checked here; the server moves its record on the next
+        message, so this needs no call."""
+        address = self._address()
+        steps = read_succession(succession, principal) or []
+        start = next((i for i, step in enumerate(steps) if step["from"] == self.principal), None)
+        if start is None:
+            raise _invalid("succession", "A succession must verify and lead from this agent's principal to the new one.")
+        added = ",".join(succession.split(",")[start:])
+        chain = succession if self.succession is None else f"{self.succession},{added}"
+        if read_succession(chain, principal) is None:
+            raise _invalid("succession", "The chain this agent carries and the new steps do not make one succession.")
+        if not verify_pairing(address, principal, pairing, self._now_ms()):
+            raise _invalid("pairing", "The new key's pairing must be for this address, and count now.")
+        self.principal, self.pairing, self.succession = principal, pairing, chain
+
     def compose(
         self,
         to: Iterable[str],
@@ -615,7 +649,7 @@ class Agent(Reader):
         carry any parts, or none. An empty ``to`` publishes the message, which then needs an ``audience`` header (``public`` for anyone). The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
         """
         headers = dict(headers or {})
-        for name in ("for", "pairing"):
+        for name in ("for", "pairing", "succession"):
             if name in headers:
                 raise _invalid(
                     "headers", f"The agent writes the {name} header from its pairing; leave it out."
@@ -624,6 +658,8 @@ class Agent(Reader):
             headers["for"] = self.principal
         if self.pairing is not None:
             headers["pairing"] = self.pairing
+        if self.succession is not None:
+            headers["succession"] = self.succession
         message = sign_message(
             {
                 "v": VERSION,

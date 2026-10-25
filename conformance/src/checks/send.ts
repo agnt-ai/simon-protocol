@@ -1,11 +1,19 @@
 /** CLIENT send: the order of its checks, the paired and solo rule, its time window, parts and hints. */
 import crypto from 'node:crypto';
-import { canonicalize, keyToken, messageId, parseTimestamp, sha256Hex, signPairing } from '@agnt-sdk/simon-protocol';
+import {
+  canonicalize,
+  keyToken,
+  messageId,
+  parseTimestamp,
+  sha256Hex,
+  signPairing,
+  signSuccession,
+} from '@agnt-sdk/simon-protocol';
 import { resign, type TargetAgent } from '../agent.ts';
 import type { Ctx } from '../context.ts';
 import type { T } from '../harness.ts';
 import { def } from './common.ts';
-import { pairedAgent } from './register.ts';
+import { pairedAgent, registerPaired } from './register.ts';
 
 const DAY = 86_400_000;
 const S = 'CLIENT send';
@@ -217,6 +225,52 @@ def(
         field: 'headers',
       });
     }
+  },
+);
+
+def(
+  {
+    id: 'send.succession',
+    section: `${S}, PROTOCOL 2.2, 5.4`,
+    level: 'must',
+    title: "A key principal's successor speaks for the agent only along a succession both keys signed",
+    expected:
+      '400 invalid with details.field "headers" for the successor as for, with its pairing, and no succession, or a succession from another key; 200 with a succession from the principal; then 400 for the principal it left',
+  },
+  async (t: T, ctx: Ctx) => {
+    // An agent of its own: moving the shared paired agent would change it under other checks.
+    const p = await registerPaired(t, ctx, 'moving');
+    const { b } = await pair(ctx);
+    const a = p.agent;
+    const fresh = crypto.generateKeyPairSync('ed25519').privateKey;
+    const newFor = `simon-key:${keyToken(fresh)}`;
+    const pairing = signPairing(fresh, a.address, newFor, ctx.until());
+    const stranger = crypto.generateKeyPairSync('ed25519').privateKey;
+    const refused: [string, Record<string, string>][] = [
+      ['no succession', { for: newFor, pairing }],
+      ['a succession from another key', { for: newFor, pairing, succession: signSuccession(stranger, fresh) }],
+    ];
+    for (const [what, headers] of refused) {
+      t.error(await a.send(t, a.message({ to: [b.address], headers }), {}, what), 400, 'invalid', what, {
+        field: 'headers',
+      });
+    }
+    const succession = signSuccession(p.principal, fresh);
+    t.status(
+      await a.send(t, a.message({ to: [b.address], headers: { for: newFor, pairing, succession } }), {}, 'moving'),
+      200,
+      'moving along the succession',
+    );
+    const old = { for: p.for, pairing: signPairing(p.principal, a.address, p.for, ctx.until()) };
+    t.error(
+      await a.send(t, a.message({ to: [b.address], headers: old }), {}, 'the principal it left'),
+      400,
+      'invalid',
+      '',
+      {
+        field: 'headers',
+      },
+    );
   },
 );
 

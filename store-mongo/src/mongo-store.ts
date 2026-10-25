@@ -665,6 +665,14 @@ export class MongoStore implements Store {
     }
   }
 
+  async succeedPrincipal(address: string, from: string, to: string) {
+    const r = await this.#agents.updateOne(
+      { _id: address, principal: from, retiredAt: null },
+      { $set: { principal: to }, $inc: { authorityVersion: 1 } },
+    );
+    return r.matchedCount === 1;
+  }
+
   async retireAgent(address: string, at: string, unpairing?: string) {
     for (let attempt = 0; ; await backoff(++attempt)) {
       const doc = await this.#recoveryAgent(address);

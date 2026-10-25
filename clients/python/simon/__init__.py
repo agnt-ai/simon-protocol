@@ -47,14 +47,18 @@ from .messages import (
     parse_message,
     sign_message,
     sign_pairing,
+    sign_succession,
     sign_unpairing,
+    succession_bytes,
+    is_succession_value,
+    read_succession,
     text_of,
     unpairing_bytes,
     verify_message,
     verify_pairing,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood, pairing_standing, reads_as
+from .reading import claimed_principal, is_understood, pairing_standing, predecessors, reads_as
 from .provenance import RULE, invisible_in, present_delivery, present_entry, untrusted, unwrap_entry
 from .request import (
     add_key_proof,
@@ -115,6 +119,7 @@ __all__ = [
     "PAIRING_MAX_MS",
     "pairing_bytes",
     "pairing_standing",
+    "predecessors",
     "parse_pairing",
     "parse",
     "parse_envelope",
@@ -136,7 +141,11 @@ __all__ = [
     "sign_message",
     "sign_pairing",
     "sign_request",
+    "sign_succession",
     "sign_unpairing",
+    "succession_bytes",
+    "is_succession_value",
+    "read_succession",
     "signature_verdict",
     "signing_bytes",
     "signing_string",

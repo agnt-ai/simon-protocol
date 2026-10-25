@@ -8,6 +8,11 @@ What a conforming reader does when it shows or acts on a message. A **reader** i
 
 A reader checks a message against authenticated evidence from its author's domain before it relies on it: the author's signature, the version, the principal and the claims, as [CLIENT.md](../CLIENT.md) ("Verifying what a server says") lists. A message of a version the reader does not implement is **not understood**: the reader may say whose key signed it, and nothing about what it says or whom it speaks for (PROTOCOL.md 1, "Unknown versions").
 
+**Successions.** A key principal may move to a new key along a `succession` (PROTOCOL.md 2.2). A reader that remembers principals:
+- treats `for` as the principal it knew by any key the chain names, once every step verifies;
+- remembers each step it has seen, and when it holds two from one key to different keys, a fork, treats neither successor as that key's, now or later, and shows each as a principal of its own;
+- never links a key to an earlier one by anything but a step both keys signed.
+
 ## 2. `critical`
 
 `critical` lists header names (PROTOCOL.md 5.4).
@@ -55,4 +60,4 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 ## 7. Vectors
 
-`spec/vectors/v2.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).
+`spec/vectors/v2.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), where a pairing stands now, which earlier keys a succession names, and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).

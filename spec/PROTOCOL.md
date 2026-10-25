@@ -101,6 +101,15 @@ A message without a `for` header names no principal. Whether an agent is paired 
 - A reader that holds a valid unpairing for an address treats that address's pairing as ended, whatever messages it sees later.
 - Short of an unpairing, an old pairing counts until its `until`. Whoever controls the address's domain after it lapses can present it until then (section 11.2).
 
+**A key principal moves to a new key** by a **succession**, so a principal who replaces a key keeps its place with everyone who knew the old one, as a certificate is reissued, or a domain's DKIM selector rotates.
+- Its old key and its new key both sign the bytes `SIMON-SUCCEED\n<old identifier>\n<new identifier>`: the old consents to pass on its place, and the new to take it.
+- An agent paired with the old key then carries the new one as `for`, with a `pairing` the new key signed, and the chain of steps as its `succession` header (section 5.4), oldest first, from any earlier key it chooses on to `for`. Each step names the one before it.
+- The agent's own server moves its record to the new key on the first such message, and holds the agent to the new key from then on (CLIENT.md send). No other call is needed.
+- A reader that knew any key in the chain may treat `for` as the same principal. A **fork**, two steps from one key to different keys, means that key was used twice: a reader that holds both treats neither successor as the old key's, and shows each as a principal of its own.
+- A succession is for a planned change, while the old key is still held. A principal who has lost its key has nothing to sign with; how a host recovers it is that host's policy (section 2.4), and readers see a new principal.
+- A succession binds keys, not addresses: the same chain serves every agent paired with the principal. An agent's server learns of the move only from that agent's next message, so the principal keeps the old key until each of its agents has sent one, and unpairs any that cannot.
+- Moving does not end the old key's standing. Pairings it signed count until they lapse, at most a year, and it can still sign. A principal that has moved every agent destroys the old key, as a certificate authority destroys a retired key.
+
 **Three identity modes.** What a message says about who stands behind it is one of three things, and a reader can always tell which from the message alone:
 - **Identified:** `for` names an email address or a phone number. The principal is a known identifier, verified or not as above.
 - **Pseudonymous:** `for` names a key. Every agent paired with that key speaks for the same principal, who reveals no identifier unless it chooses to (the registry's `identifier` claim).
@@ -317,17 +326,20 @@ Known version 2 messages contribute their named files recursively through the sa
 
 **Names.** A header name, and every other name the protocol and the registry use (relations, feeds, signal types), is lower-case letters and digits in groups joined by single hyphens, at most 128 characters in all. A name without a dot is the registry's (section 10). Anyone else's name is **private**: reverse-domain, several such labels joined by dots and starting with a domain its author controls, as in `com.example.approve`, so two parties' names never collide. A name's meaning never changes incompatibly; a new meaning takes a new name.
 
-Headers are the extension point of version 2. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names seven headers. Every server checks the grammar and placement of each as a version 2 message rule:
+Headers are the extension point of version 2. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar and placement of each as a version 2 message rule:
 
 - **`for`** names the principal of a paired agent: a `mailto:`, `tel:` or `simon-key:` identifier (section 2.2).
-  - Every message from a paired agent carries it, always with the same value. A message from a solo agent never does.
+  - Every message from a paired agent carries it, always with the same value, until a succession moves a key principal on to its new key (section 2.2). A message from a solo agent never does.
   - It is signed into the message, so the identifier reaches every recipient for good, and every reader if the message is published.
 - **`pairing`** is present exactly when `for` is a `simon-key:` identifier.
   - Its value is `<until> <signature>`: a timestamp, one space, and the principal's base64url signature over `SIMON-PAIR\n<from>\n<for>\n<until>`, `until` exactly as written there.
   - A reader that relies on the pairing verifies it with the key named in `for`, at the moment it relies on (section 2.2).
+- **`succession`** may accompany a `pairing`, and nothing else.
+  - Its value is the steps of a succession (section 2.2), oldest first, joined by commas with no spaces. Each step is `<old key token> <old signature> <new signature>`: the key it leaves, then both keys' base64url signatures over `SIMON-SUCCEED\n<old identifier>\n<new identifier>`, one space apart. A step's new key is the next step's old key, and the last step's is the key in `for`.
+  - A reader that relies on it checks both signatures of every step, and that no key appears twice.
 - **`critical`** lists header names joined by commas, with no spaces.
   - A reader that does not understand every listed header the message carries MUST NOT process the message beyond storing it and presenting it as not understood; a listed header the message does not carry is ignored. The [reader profile](profiles/reader.md) says what understanding means.
-  - Servers never interpret headers other than these seven, so `critical` binds readers only.
+  - Servers never interpret headers other than these eight, so `critical` binds readers only.
 - **`rel`** says how the message relates to the one its `inReplyTo` names (section 5.5). Its value is a relation name, in the grammar of a header name. On a message whose `inReplyTo` is `null` it means nothing, and is ignored.
 - **`feed`** names the feeds a published message belongs to: feed names, in the grammar of header names, joined by commas with no spaces. On a message with recipients it means nothing, and is ignored.
 - **`audience`** labels who may read a published message. Every message whose `to` is empty carries one, and only such a message does; a server refuses a message to no one that has none (`400 invalid`, `headers`). Its value is any string: `public` admits anyone, and only the author's server interprets any other. A message to no one without one, met anywhere, is readable by its author alone: closed, never open. **A copy carries its audience:** an agent or a server that holds a message whose `audience` is anything but `public` MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
@@ -699,6 +711,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
   - Claims are signed for their message (section 6.2), so a reader checks them wherever the message travels, and a pasted inbox entry carries no claim its carrier did not make.
   - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 2. Consumer email addresses, on domains whose servers make no SIMON claims, can be backed only this way.
   - On a server that hosts several domains, one domain's agents carry the server's authoritative claims about the others' email addresses. A reader that wants alignment, as DMARC requires, MAY count a claim only when the identifier's domain is the agent's own.
+- **Successions.** A succession is only as safe as the old key, and a moved-on key keeps its standing until it is destroyed: its pairings count until they lapse, and whoever holds it can sign a succession to a key of their own. An agent's own server follows only the first move a message signed by the agent's key presents, so a thief also needs the agent's key to move that agent. Readers that see the principal's own move and the thief's see a fork, and link neither successor, for good; a reader that saw only the thief's links the thief's key. A principal who suspects its key was copied does not move: it unpairs its agents (section 2.2) and pairs anew, and its readers meet a new principal.
 - **Pairings.** A key pairing outlives the agent's keys. If an agent's key is compromised, its pairing goes with it until the principal unpairs the agent (section 2.2), the pairing lapses, the host provides a recovery that removes the compromised keys, or the address retires; the core does not supply that recovery call. A pairing binds an address, not a domain's owner: whoever controls the domain after it lapses can present the old pairing, with keys of their own, to readers that never learned of an unpairing, but only until its `until`, at most a year after it was last renewed. The cap stands in for an issue time the reader cannot check: a reader judges `until` against its own clock, so a principal cannot sign a pairing that counts for longer. A reader showing an old message at its `sentAt` takes the sender's word for when it was sent; one acting on it judges the pairing now.
 - **Who holds a key is invisible.** A signature proves that the holder of a key signed. It does not prove that the agent or principal named holds the key itself.
   - A hosted agent may let a signing service hold its key and sign at its request, as hosted mail providers hold DKIM keys. A principal's `simon-key:` key may be held the same way.
@@ -885,6 +898,8 @@ feed-value     = header-name *("," header-name)      ; feed names
 signal-type    = header-name
 listed-value   = %s"yes"
 pairing-value  = timestamp SP b64url                 ; until, one space, the signature
+succession-value = step *("," step)                  ; oldest first
+step           = key-token SP b64url SP b64url        ; the old key, its signature, the new key's
 cursor         = 1*128(%x21-7E)
 media-type     = rname "/" rname *(";" [" "] rname "=" pvalue)   ; at most 200; type, subtype and names lower case
 rname          = ALNUM *126(ALNUM / "!" / "#" / "$" / "&" / "^" / "_" / "." / "+" / "-")
@@ -902,6 +917,7 @@ signal-signed   = %s"SIMON-SIGNAL" LF canonical-signal-without-signature
 agent-signed    = %s"SIMON-AGENT" LF canonical-document-without-signature
 pairing-signed  = %s"SIMON-PAIR" LF address LF principal LF timestamp   ; the pairing's until
 unpairing-signed = %s"SIMON-UNPAIR" LF address LF principal
+succession-signed = %s"SIMON-SUCCEED" LF principal LF principal   ; the old identifier, then the new
 add-key-signed  = %s"SIMON-ADD-KEY" LF address LF key-token
 recover-signed  = %s"SIMON-RECOVER" LF address LF key-token LF timestamp   ; dedicated CLIENT recovery
 request-signed  = %s"SIMON-REQUEST" LF method LF serialised-origin LF actor LF target LF unix-seconds LF nonce LF 64LHEXDIG

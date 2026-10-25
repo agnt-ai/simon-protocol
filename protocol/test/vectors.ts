@@ -52,7 +52,10 @@ import {
   isPrincipal,
   pairingBytes,
   pairingStanding,
+  predecessors,
   parsePairing,
+  isSuccessionValue,
+  readSuccession,
   verifyPairing,
   verifyRecovery,
   isCriticalValue,
@@ -97,6 +100,8 @@ import {
   fixedKey,
   fixedPairing,
   fixedSign,
+  fixedStep,
+  gwen,
   PAIRED_UNTIL,
   fixedSignMessage,
   keyEntry,
@@ -802,7 +807,15 @@ function messageChecks() {
     ['a for header with a number that is not E.164', v1({ headers: { for: 'tel:4155550100' } })],
     ['a for header percent-encoded', v1({ headers: { for: 'mailto:alice%40example.org' } })],
     ['a for header naming a key in upper case', v1({ headers: { for: `simon-key:${erin.key.toUpperCase()}` } })],
-    ['a pairing that is not base64url', v1({ headers: { for: `simon-key:${erin.key}`, pairing: 'AA==' } })],
+    [
+      'a pairing that is not base64url',
+      v1({ headers: { for: `simon-key:${erin.key}`, pairing: `${PAIRED_UNTIL} AA==` } }),
+    ],
+    ['a succession without a pairing', v1({ headers: { ...question.headers, succession: fixedStep(erin, gwen) } })],
+    [
+      'a succession of seventeen steps',
+      v1({ headers: { ...keyPaired.headers, succession: Array(17).fill(fixedStep(erin, gwen)).join(',') } }),
+    ],
     ['a key for without a pairing', v1({ headers: { for: `simon-key:${erin.key}` } })],
     ['a pairing without a for', v1({ headers: { pairing: keyPaired.headers.pairing } })],
     ['a pairing beside a mailto for', v1({ headers: { ...question.headers, pairing: keyPaired.headers.pairing } })],
@@ -869,7 +882,7 @@ function messageChecks() {
 
 const headerValues = {
   about:
-    'The values of four headers the protocol names (section 5.4), and whether each is well formed: for, critical, pairing, and listed, whose only value is yes (placement is in messageChecks). A for header is a principal (section 2.2), written exactly, with nothing percent-encoded.',
+    'The values of five headers the protocol names (section 5.4), and whether each is well formed: for, critical, pairing (until, one space, a signature), succession (1 to 16 steps joined by commas, each a key token and two signatures one space apart), and listed, whose only value is yes (placement is in messageChecks). A for header is a principal (section 2.2), written exactly, with nothing percent-encoded.',
   cases: [
     ...[
       'mailto:alice@example.org',
@@ -921,6 +934,14 @@ const headerValues = {
       'AA',
       '',
     ].map(value => ({ header: 'pairing', value, valid: parsePairing(value) !== null })),
+    ...[
+      fixedStep(erin, gwen),
+      `${fixedStep(erin, gwen)},${fixedStep(gwen, frank)}`,
+      `${fixedStep(erin, gwen)}, ${fixedStep(gwen, frank)}`,
+      `${erin.key} AA`,
+      `x:AA AA AA`,
+      '',
+    ].map(value => ({ header: 'succession', value, valid: isSuccessionValue(value) })),
     ...['yes', 'Yes', 'YES', 'yes ', 'true', 'no', ''].map(value => ({
       header: 'listed',
       value,
@@ -963,6 +984,31 @@ function pairings() {
       { why: 'judged a millisecond before it lapses', ...pair('bob@example.net', erin, { at: at(PAIRED_UNTIL, -1) }) },
       { why: 'lasting 366 days from the moment judged', ...pair('bob@example.net', erin, { until: year(366) }) },
       { why: 'lasting longer than 366 days', ...pair('bob@example.net', erin, { until: at(year(366), 1) }) },
+    ],
+  };
+}
+
+/** Successions of a key principal (section 2.2): which chains lead to `for`, and the steps they name. */
+function successions() {
+  const id = (k: FixedKey) => `simon-key:${k.key}`;
+  const chain = (principal: FixedKey, ...steps: string[]) => {
+    const succession = steps.join(',');
+    return { principal: id(principal), succession, steps: readSuccession(succession, id(principal)) };
+  };
+  return {
+    about:
+      "Successions (section 2.2): each step is the old key's token, its signature and the new key's, one space apart, over SIMON-SUCCEED, the old identifier and the new, joined by newlines; steps are joined by commas, oldest first, each step's new key the next step's old key and the last's the principal's (for). steps is what a reader takes from it, from and to identifiers, or null when it does not verify.",
+    cases: [
+      { why: 'one step', ...chain(gwen, fixedStep(erin, gwen)) },
+      {
+        why: 'two steps, the second to an ML-DSA-65 key',
+        ...chain(frank, fixedStep(erin, gwen), fixedStep(gwen, frank)),
+      },
+      { why: 'a chain that does not reach for', ...chain(frank, fixedStep(erin, gwen)) },
+      { why: 'a step the new key did not sign', ...chain(gwen, fixedStep(erin, gwen, [erin, frank])) },
+      { why: 'a step the old key did not sign', ...chain(gwen, fixedStep(erin, gwen, [frank, gwen])) },
+      { why: 'a chain back to a key it left', ...chain(erin, fixedStep(erin, gwen), fixedStep(gwen, erin)) },
+      { why: 'two spaces in a step', ...chain(gwen, fixedStep(erin, gwen).replace(' ', '  ')) },
     ],
   };
 }
@@ -1652,6 +1698,13 @@ function principals() {
       headers: { for: principal, pairing: fixedPairing(k, 'bob@example.net', principal) },
     };
   };
+  const withSuccession = (k: FixedKey, succession: string) => {
+    const principal = `simon-key:${k.key}`;
+    return {
+      ...keyPairedFields,
+      headers: { for: principal, pairing: fixedPairing(k, 'bob@example.net', principal), succession },
+    };
+  };
   const cases: [string, AnyMessage, Principal][] = [
     ['a paired agent naming its principal', signedQuestion, paired],
     ['a paired agent naming no one', sign({ ...question, headers: { subject: 'Thursday' } }, ada), paired],
@@ -1715,11 +1768,45 @@ function principals() {
       ),
       byKey,
     ],
+    [
+      "a key-paired agent moving to its principal's successor along a succession",
+      sign(withSuccession(gwen, fixedStep(erin, gwen)), bob),
+      byKey,
+    ],
+    [
+      'a key-paired agent naming a successor with no succession',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: `simon-key:${gwen.key}`,
+            pairing: fixedPairing(gwen, 'bob@example.net', `simon-key:${gwen.key}`),
+          },
+        },
+        bob,
+      ),
+      byKey,
+    ],
+    [
+      "a key-paired agent naming a successor of someone else's key",
+      sign(withSuccession(gwen, fixedStep(frank, gwen)), bob),
+      byKey,
+    ],
+    [
+      'a key-paired agent carrying a succession that does not verify',
+      sign(withSuccession(gwen, fixedStep(erin, gwen, [erin, frank])), bob),
+      byKey,
+    ],
+    [
+      'an agent already moved, carrying the succession for readers',
+      sign(withSuccession(gwen, fixedStep(erin, gwen)), bob),
+      { kind: 'paired', for: `simon-key:${gwen.key}` },
+    ],
     ['a paired agent sending a version whose headers this server does not know', version7, paired],
   ];
   return {
     about:
-      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt, exactly when the principal is a key; a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
+      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
     cases: cases.map(([name, message, agent]) => ({
       name,
       agent,
@@ -2091,6 +2178,22 @@ function reading() {
     ],
     ['a message whose principal is not a key', signedQuestion, NOW],
   ];
+  const successor = (succession: string) => {
+    const principal = `simon-key:${gwen.key}`;
+    return fixedSignMessage<Message>(
+      {
+        ...keyPairedFields,
+        headers: { for: principal, pairing: fixedPairing(gwen, 'bob@example.net', principal), succession },
+      },
+      bob,
+    );
+  };
+  const predecessorCases: [string, AnyMessage][] = [
+    ['a key principal with no succession', keyPaired],
+    ['a key principal that succeeded another', successor(fixedStep(erin, gwen))],
+    ['a succession the new key did not sign', successor(fixedStep(erin, gwen, [erin, frank]))],
+    ['a message whose principal is not a key', signedQuestion],
+  ];
   const known = ['reaction', 'edit', 'retract', 'pin', 'comment'];
   const rel = (from: string, name: string | null): Message => ({
     ...signedQuestion,
@@ -2114,7 +2217,7 @@ function reading() {
   ];
   return {
     about:
-      "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+      "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     understoodHeaders: understood,
     understood: understoodCases.map(([name, message]) => ({
       name,
@@ -2132,6 +2235,7 @@ function reading() {
       now,
       standing: pairingStanding(message, Date.parse(now)),
     })),
+    predecessors: predecessorCases.map(([name, message]) => ({ name, message, predecessors: predecessors(message) })),
     knownRelations: known,
     relations: relationCases.map(([name, message, target]) => ({
       name,
@@ -2453,6 +2557,7 @@ export async function buildVectors() {
     messageChecks: messageChecks(),
     headerValues,
     pairings: pairings(),
+    successions: successions(),
     signatures: signatures(),
     requests: await requests(),
     documents: documents(),

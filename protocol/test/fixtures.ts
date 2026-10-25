@@ -16,6 +16,7 @@ import {
   sha256Hex,
   sign,
   signingBytes,
+  successionBytes,
   type AnyMessage,
   type KeyEntry,
   type Message,
@@ -45,6 +46,7 @@ export const exampleCom = fixedKey('server https://simon.example.com');
 /** Principals who pair with agents by key. */
 export const erin = fixedKey('principal erin');
 export const frank = fixedKey('principal frank', 'ml-dsa-65');
+export const gwen = fixedKey('principal gwen');
 
 const SIGNATURES_FILE = path.resolve(import.meta.dirname, 'ml-dsa-signatures.json');
 const kept: Record<string, string> = JSON.parse(fs.readFileSync(SIGNATURES_FILE, 'utf8'));
@@ -66,6 +68,12 @@ export function saveFixedSignatures() {
 
 /** When the fixtures' pairings lapse: 365 days after the question's sentAt. */
 export const PAIRED_UNTIL = '2027-10-14T21:00:00Z';
+
+/** A `succession` step that is the same on every run: `old` succeeded by `fresh`, signed by `signers`. */
+export const fixedStep = (old: FixedKey, fresh: FixedKey, signers: [FixedKey, FixedKey] = [old, fresh]) => {
+  const bytes = successionBytes(`simon-key:${old.key}`, `simon-key:${fresh.key}`);
+  return `${old.key} ${fixedSign(signers[0], bytes)} ${fixedSign(signers[1], bytes)}`;
+};
 
 /** A `pairing` value that is the same on every run: `<until> <signature>` by `k` over the pairing bytes. */
 export const fixedPairing = (k: FixedKey, agent: string, principal: string, until = PAIRED_UNTIL) =>

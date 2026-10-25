@@ -240,6 +240,11 @@ export interface Store {
     admit?: AgentAdmission,
   ): Promise<'replaced' | 'key_in_use' | 'retired' | 'too_many_keys'>;
   keepOnlyKey(address: string, key: string, at: string): Promise<'kept' | 'not_held'>;
+  /**
+   * Move a paired agent's principal from `from` to `to`, its successor (spec section 2.2), atomically: only
+   * while the agent is not retired and its principal is still `from`. False when it is not.
+   */
+  succeedPrincipal(address: string, from: string, to: string): Promise<boolean>;
   /** Only the first retirement counts, including its unpairing evidence. */
   retireAgent(address: string, at: string, unpairing?: string): Promise<void>;
 

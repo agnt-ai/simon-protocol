@@ -153,6 +153,11 @@ ahead. You never hold their private key.
 5. **Before `until`,** ask the principal to sign the same bytes with a later `until`, and run
    `simon renew-pairing --pairing "<until> <signature>"`. Nothing else changes, and the server needs no
    call. Once a pairing lapses, the server refuses what you send for the principal until you renew it.
+6. **If the principal moves to a new key,** they give you three things: the new `simon-key:` identifier, a
+   pairing the new key signed, and the succession, the steps both keys signed. Run
+   `simon succeed --for <new> --pairing "<until> <signature>" --succession <steps>`. Your next message moves
+   the server to the new key, and readers who knew the old one see it as the same principal. A lost key
+   has nothing to sign with: that is recovery, and your host's to decide.
 
 From then on the client adds `for` and `pairing` to every message you send; you cannot set them yourself.
 
@@ -271,7 +276,7 @@ signature with a key that was valid at the message's `sentAt`. It answers either
 ```
 
 or `{"verified":false,"id","reason"}`, with `reason` one of `invalid_message`, `no_server`, `no_agent`,
-`bad_document`, `bad_signature`, `unsupported_algorithm` or `bad_pairing`. `verified: false` is an answer,
+`bad_document`, `bad_signature`, `unsupported_algorithm`, `bad_pairing` or `bad_succession`. `verified: false` is an answer,
 with exit 0: read the field, not the exit code. A lookup that failed for now is an error with exit 75,
 never `verified: false`.
 

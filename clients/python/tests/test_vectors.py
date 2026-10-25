@@ -43,6 +43,8 @@ from simon.errors import SimonError, parse_problem
 from simon.keys import SigningKey, is_public_key, verify
 from simon.limits import DELIVERY_WINDOW_MS, MINIMUM_LIMITS, REPEAT_WINDOW_MS, SEND_WINDOW_MS
 from simon.messages import (
+    is_succession_value,
+    read_succession,
     check_author_signature,
     check_principal,
     is_critical_value,
@@ -67,6 +69,7 @@ from simon.messages import (
 from simon.reading import (
     claimed_principal,
     pairing_standing,
+    predecessors,
     is_understood,
     reads_as,
 )
@@ -250,6 +253,7 @@ class HeaderValues(VectorCase):
         "for": is_principal,
         "critical": is_critical_value,
         "pairing": lambda v: parse_pairing(v) is not None,
+        "succession": is_succession_value,
         "listed": is_listed_value,
     }
 
@@ -274,6 +278,15 @@ class Pairings(VectorCase):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
                             self.assertEqual(sign_pairing(signer(token), c["agent"], until), c["pairing"])
+
+
+class Successions(VectorCase):
+    section = "successions"
+
+    def test_cases(self):
+        for c in V["successions"]["cases"]:
+            with self.case(c["why"]):
+                self.assertEqual(read_succession(c["succession"], c["principal"]), c["steps"])
 
 
 class Signatures(VectorCase):
@@ -660,7 +673,7 @@ class Recoveries(VectorCase):
 
 class Reading(VectorCase):
     section = "reading"
-    members = ("understoodHeaders", "understood", "principals", "pairings", "knownRelations", "relations")
+    members = ("understoodHeaders", "understood", "principals", "pairings", "predecessors", "knownRelations", "relations")
 
     def test_understood(self):
         headers = set(V["reading"]["understoodHeaders"])
@@ -677,6 +690,11 @@ class Reading(VectorCase):
         for c in V["reading"]["pairings"]:
             with self.case(c["name"]):
                 self.assertEqual(pairing_standing(c["message"], parse_timestamp(c["now"])), c["standing"])
+
+    def test_predecessors(self):
+        for c in V["reading"]["predecessors"]:
+            with self.case(c["name"]):
+                self.assertEqual(predecessors(c["message"]), c["predecessors"])
 
     def test_relations(self):
         known = set(V["reading"]["knownRelations"])

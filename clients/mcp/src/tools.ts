@@ -303,6 +303,24 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'succeed',
+    description:
+      "Move to your key principal's new key, when they give you one: for, its simon-key: identifier; pairing, " +
+      'that key\'s "<until> <signature>"; and succession, the steps both keys signed. Your next message moves ' +
+      'the server to it; no other call is needed.',
+    inputSchema: schema({ for: { type: 'string' }, pairing: { type: 'string' }, succession: { type: 'string' } }, [
+      'for',
+      'pairing',
+      'succession',
+    ]),
+    run: async (args, ctx) => {
+      const a = registered(ctx);
+      a.succeed({ for: args.for, pairing: args.pairing, succession: args.succession });
+      saveAddress(ctx.home, a);
+      return answer({ address: a.address, for: a.for, until: parsePairing(a.pairing)!.until });
+    },
+  },
+  {
     name: 'unpair',
     description:
       'Retire a paired agent address with its principal unpairing signature, only when the one you act for asks.',

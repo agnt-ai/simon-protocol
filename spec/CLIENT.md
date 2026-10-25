@@ -183,7 +183,7 @@ Recovery and key management protect only a host's own users, so how a host runs 
 - `from` must be the authenticated agent's address (`400 invalid`, with `details.field` set to `from`).
 - `from` must be on a domain that still names this server (`409 address_not_served`).
 - The message's signature must verify with one of the agent's keys valid at its `sentAt` (`401 bad_signature`).
-- A paired agent's message must carry its principal as `for`, along with the `pairing` header when the principal is a key, counting at the message's `sentAt`. A solo agent's message must carry neither. Otherwise `400 invalid`, with `details.field` set to `headers`.
+- A paired agent's message must carry its principal as `for`, along with the `pairing` header when the principal is a key, counting at the message's `sentAt`. A `succession` must verify (PROTOCOL.md 5.4). With one, `for` may instead be a successor of the agent's principal along it: the server moves its record to that successor, atomically, once every other check has passed, and holds the agent to it from then on. A message that names the old principal afterwards is refused. Until an agent's first such message its server knows only the old key, so unpairing and principal recovery there still take the old key's signature. A concurrent move to the same successor is the same move; any other change of the record meanwhile is `409 principal_changed`. A solo agent's message must carry neither. Otherwise `400 invalid`, with `details.field` set to `headers`.
 - `sentAt` must be at most 24 hours old and at most 5 minutes ahead (`400 invalid`, with `details.field` set to `sentAt`).
 - Every file the message names must be held by this server for this agent, at its declared size: uploaded by it, or fetched for a message delivered to it, so a received part can be forwarded without uploading it again. That covers the message's own content-addressed parts and the files named by every message it carries inline, at any depth, which count as named by it (PROTOCOL.md sections 5.3 and 7.2). Otherwise `400 part_not_uploaded`, with `details.sha256`.
 
@@ -403,6 +403,7 @@ These are the codes this API adds to the protocol's, all in the protocol's error
 | 409 | `recovery_not_cancellable` | cancelling a recovery by key: the server's policy does not let this key cancel it |
 | 409 | `no_signing_key` | `send` through a grant: the server keeps no key for the agent |
 | 409 | `address_not_served` | `send`: the agent's domain no longer names this server |
+| 409 | `principal_changed` | `send` moving to a successor: the agent's principal changed meanwhile to another key; compose the message again |
 | 410 | `code_expired`, `code_locked` | a code handed back to registration or recovery after it expired, or after too many wrong attempts |
 | 410 | `token_expired` | `sync`: a token older than the server holds, or unknown |
 | 422 | `wrong_code` | a code handed back that is not the one sent, or a cancel code that cancels nothing |

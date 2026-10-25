@@ -12,7 +12,7 @@ SIMON_HOME.
 The agent lives in $SIMON_HOME (default ~/.config/simon), the layout the JavaScript command line keeps too:
 
     key.pem        the Ed25519 private key, PKCS #8 PEM, created exclusively, mode 600
-    address.json   {"server", "address", "for"?, "pairing"?} once registered, mode 600
+    address.json   {"server", "address", "for"?, "pairing"?, "succession"?} once registered, mode 600
     wait.json      what ``simon wait`` has shown, mode 600
 
 There is no default server: ``register`` takes ``--server`` (or SIMON_SERVER) and saves it.
@@ -145,6 +145,11 @@ def _parser() -> argparse.ArgumentParser:
     p = commands.add_parser("renew-pairing", help="carry a renewed pairing from now on; the server needs no call")
     p.add_argument("--pairing", required=True, help="<until> <signature>, the principal's signature over a later until")
     p.set_defaults(run=_renew_pairing)
+    p = commands.add_parser("succeed", help="move to the key principal's new key; the server needs no call")
+    p.add_argument("--for", dest="principal", metavar="PRINCIPAL", required=True, help="the new simon-key: identifier")
+    p.add_argument("--pairing", required=True, help="'<until> <signature>', by the new key")
+    p.add_argument("--succession", required=True, help="the steps both keys signed, from your principal to the new key")
+    p.set_defaults(run=_succeed)
     p = commands.add_parser("send-signal", help="explicitly send a typing, collected or read signal")
     p.add_argument("--type", required=True)
     p.add_argument("--about", required=True)
@@ -270,6 +275,15 @@ def _renew_pairing(args: argparse.Namespace) -> dict[str, Any]:
     return {"address": agent.address, "for": agent.principal, "until": parse_pairing(agent.pairing)[0]}
 
 
+def _succeed(args: argparse.Namespace) -> dict[str, Any]:
+    home = _home(args)
+    agent = _agent(args)
+    agent.succeed(args.principal, args.pairing, args.succession)
+    record = {**_record(home), "for": agent.principal, "pairing": agent.pairing, "succession": agent.succession}
+    _save(home / "address.json", json.dumps(record))
+    return {"address": agent.address, "for": agent.principal, "until": parse_pairing(agent.pairing)[0]}
+
+
 def _register(args: argparse.Namespace) -> dict[str, Any]:
     home = _home(args)
     if args.cancel_recovery:
@@ -293,8 +307,13 @@ def _register(args: argparse.Namespace) -> dict[str, Any]:
             return agent.cancel_recovery(cancel_code=args.cancel_code, address=args.address)
         result = agent.recover_by_principal(args.address, args.at, args.principal_recovery, principal=args.principal, pairing=args.pairing)
         if isinstance(result.get("keys"), list):
-            record = {**_record(home), "server": agent.origin, "address": agent.address}
-            record.update({k: v for k, v in (("for", agent.principal), ("pairing", agent.pairing)) if v is not None})
+            kept = {k: v for k, v in _record(home).items() if k not in ("for", "pairing", "succession")}
+            record = {**kept, "server": agent.origin, "address": agent.address}
+            # The same principal keeps the succession readers link it by; another starts afresh.
+            same = agent.principal is not None and agent.principal == _record(home).get("for")
+            succession = _record(home).get("succession") if same else None
+            local = (("for", agent.principal), ("pairing", agent.pairing), ("succession", succession))
+            record.update({k: v for k, v in local if v is not None})
             _save(home / "address.json", json.dumps(record))
         return result
     if args.recover:
@@ -320,7 +339,7 @@ def _register(args: argparse.Namespace) -> dict[str, Any]:
             if value is not None:
                 record[name] = value
         if args.principal is None and agent.address == _record(home).get("address"):
-            record.update({k: v for k, v in _record(home).items() if k in ("for", "pairing")})
+            record.update({k: v for k, v in _record(home).items() if k in ("for", "pairing", "succession")})
         _save(home / "address.json", json.dumps(record))
     # The whole command to run next: nothing is saved until the agent is active.
     again = f"simon register --server {shlex.quote(agent.origin)} --address {shlex.quote(str(result.get('address')))}"
@@ -487,7 +506,9 @@ def _agent(args: argparse.Namespace, *, server: str | None = None) -> Agent:
     server = server or os.environ.get("SIMON_SERVER") or record.get("server")
     if not server:
         raise SimonError("no_server", "This agent has no server saved: run simon register --server URL.")
-    return Agent(server, key, address, principal=record.get("for"), pairing=record.get("pairing"))
+    return Agent(
+        server, key, address, principal=record.get("for"), pairing=record.get("pairing"), succession=record.get("succession")
+    )
 
 
 def _key(home: Path, *, create: bool) -> SigningKey:

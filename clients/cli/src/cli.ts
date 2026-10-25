@@ -295,6 +295,21 @@ const VERBS: Record<string, Verb> = {
       return { address: a.address, for: a.for, until: parsePairing(a.pairing)!.until };
     },
   },
+  succeed: {
+    usage: 'succeed --for simon-key:K --pairing P --succession S',
+    summary:
+      "Move to your key principal's new key: --for its identifier, --pairing that key signed, and --succession, " +
+      'the steps both keys signed from your principal to it. Checked here and saved; the server moves its record ' +
+      'on your next message.',
+    options: { for: { type: 'string' }, pairing: { type: 'string' }, succession: { type: 'string' } },
+    async run(v) {
+      if (!v.for || !v.pairing || !v.succession) throw usageError('Give --for, --pairing and --succession.');
+      const a = agent();
+      a.succeed({ for: String(v.for), pairing: String(v.pairing), succession: String(v.succession) });
+      saveAddress(home, a);
+      return { address: a.address, for: a.for, until: parsePairing(a.pairing)!.until };
+    },
+  },
   unpair: {
     usage: 'unpair --address A --unpairing SIG [--server URL]',
     summary: 'Retire a paired address using its principal signature.',

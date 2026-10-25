@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from typing import Any
 
-from .messages import VERSION, header, parse_pairing, principal_key, verify_pairing
+from .messages import VERSION, header, parse_pairing, principal_key, read_succession, verify_pairing
 from .wire import parse_timestamp
 
 #: The relations the registry marks author-only: they change or withdraw the message they name.
@@ -77,3 +77,16 @@ def pairing_standing(message: Mapping[str, Any], now_ms: int) -> str | None:
         return "refused"
     until = parse_timestamp(parse_pairing(pairing)[0])  # type: ignore[index]
     return "lapsed" if now_ms >= until else "counts"  # type: ignore[operator]
+
+
+def predecessors(message: Mapping[str, Any]) -> list[str] | str:
+    """The earlier keys of a message's key principal, oldest first, as its ``succession`` header names them
+    (section 2.2): ``[]`` when it carries none, or ``"refused"`` when it does not verify. A reader that knew
+    any of them may treat ``for`` as the same principal, unless it holds a fork, two steps from one key to
+    different keys: then neither successor inherits that key's place."""
+    principal = claimed_principal(message)
+    succession = header(message, "succession") if message["v"] == VERSION else None
+    if principal is None or succession is None:
+        return []
+    steps = read_succession(succession, principal)
+    return "refused" if steps is None else [step["from"] for step in steps]

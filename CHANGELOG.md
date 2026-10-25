@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+**A key principal moves to a new key.** A succession step is signed by the old key and the new over
+`SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain as the protocol's eighth
+header, `succession`, from earlier keys on to `for`. The agent's own server accepts a successor as `for`
+only along a succession from the principal it holds, moves its record on that message (`Store` gains
+`succeedPrincipal`), and holds the agent to the new key from then on. `signSuccession`, `readSuccession`,
+`isSuccessionValue` and `predecessors` (with Python twins); `succeed` in both libraries, MCP and both CLIs;
+`verifyAuthor` shows `succeeds`, and answers `bad_succession` for a chain that does not verify. A reader
+that holds a fork, two steps from one key to different keys, links neither successor to it.
+
 **Pairings lapse.** A key principal's pairing signs an `until`: the bytes are
 `SIMON-PAIR\n<address>\n<for>\n<until>`, and the `pairing` header (and register's `pairing`) is
 `<until> <signature>`. A pairing counts before its `until`, by at most 366 days. The agent's server refuses a

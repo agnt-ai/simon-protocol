@@ -61,7 +61,7 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 | `{for}` | Pair with a key principal (`simon-key:<token>`). A leased address answers `pairing_required`. |
 | `{for, pairing}` | `<until> <signature>`: the principal's signature over `SIMON-PAIR\n<address>\n<for>\n<until>` (`signPairing` in `@agnt-sdk/simon-protocol`, a year by default). |
 
-An account answer binds `address`, and `for`/`pairing` when given. Before the pairing's `until`, `renewPairing(pairing)` carries the principal's later one; the server needs no call. `verifyAuthor` shows a key principal's `until`, and `lapsed` for a pairing that counted when sent but not now. `recover` is separate from
+An account answer binds `address`, and `for`/`pairing` when given. Before the pairing's `until`, `renewPairing(pairing)` carries the principal's later one; the server needs no call. `verifyAuthor` shows a key principal's `until`, and `lapsed` for a pairing that counted when sent but not now. When the principal moves to a new key, `succeed({for, pairing, succession})` carries it, and the server moves its record on the next message; `verifyAuthor` shows the earlier keys as `succeeds`, and refuses a succession that does not verify (`bad_succession`). `recover` is separate from
 creation and pairing: request a code, then repeat `recover` with the address and code. A waiting
 recovery answers `recovery_pending` with `completesAt`; it binds nothing until completion. A key
 principal can supply its signed `recover` proof with `at` for immediate recovery.
@@ -106,7 +106,7 @@ resolves to, read by `verifyAuthor` itself. An entry's `claims` never count: any
 ```
 
 or `{verified: false, id, reason}`, where `reason` is `invalid_message`, `no_server`, `no_agent`,
-`bad_document`, `bad_signature`, `unsupported_algorithm` or `bad_pairing`. A lookup or fetch that may
+`bad_document`, `bad_signature`, `unsupported_algorithm`, `bad_pairing` or `bad_succession`. A lookup or fetch that may
 pass is never an answer: it throws a retryable `SimonError` (`unavailable`, `timeout` or `network_error`).
 
 `understood` is false for a message of a version this client does not implement, or whose `critical`

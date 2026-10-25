@@ -104,6 +104,18 @@ export function storeContract(name: string, make: () => Store | Promise<Store>) 
         assert.equal(await store.createAgent(agent('ada@a.test', 'k3')), 'address_taken');
       });
 
+      it("moves a paired agent's principal to its successor only from the principal it holds, never once retired", async () => {
+        await store.createAgent({ ...agent('ada@a.test', 'k1'), kind: 'paired', principal: 'simon-key:p1' });
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p0', 'simon-key:p2'), false, 'stale');
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p1', 'simon-key:p2'), true);
+        assert.equal((await store.agentByAddress('ada@a.test'))?.principal, 'simon-key:p2');
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p1', 'simon-key:p3'), false, 'a fork');
+        assert.equal(await store.succeedPrincipal('bob@a.test', 'simon-key:p1', 'simon-key:p2'), false, 'no agent');
+        await store.retireAgent('ada@a.test', at(1));
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p2', 'simon-key:p3'), false, 'retired');
+        assert.equal((await store.agentByAddress('ada@a.test'))?.principal, 'simon-key:p2');
+      });
+
       it('keeps the unpairing that retired an address, and only the first retirement', async () => {
         await store.createAgent(agent('ada@a.test', 'k1'));
         await store.retireAgent('ada@a.test', at(1), 'UNPAIRING');

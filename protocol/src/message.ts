@@ -25,7 +25,15 @@ import {
 import { isAddress, isV1Address } from './address.ts';
 import { bodyTooLarge, forbidden, invalid, unsupportedVersion } from './errors.ts';
 import { isB64url, sha256Hex, sign, signatureVerdict, type KeyEntry, type SignatureVerdict } from './keys.ts';
-import { isPrincipal, pairingBytes, parsePairing, principalKey, verifyPairing } from './principal.ts';
+import {
+  isPrincipal,
+  isSuccessionValue,
+  pairingBytes,
+  parsePairing,
+  principalKey,
+  readSuccession,
+  verifyPairing,
+} from './principal.ts';
 import {
   MAX_ALT_BYTES,
   MAX_HEADERS,
@@ -87,7 +95,16 @@ const NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+(-[a-z0-9]+)*)*$/;
 /** The longest name, header, relation, feed or signal type. */
 export const MAX_NAME_LENGTH = 128;
 /** The headers the protocol names (spec section 5.4); every other header is a registry convention. */
-export const PROTOCOL_HEADERS: readonly string[] = ['for', 'pairing', 'critical', 'rel', 'feed', 'audience', 'listed'];
+export const PROTOCOL_HEADERS: readonly string[] = [
+  'for',
+  'pairing',
+  'succession',
+  'critical',
+  'rel',
+  'feed',
+  'audience',
+  'listed',
+];
 
 /** What a part's `name` never holds: `/`, a backslash, category Cc, and the bidirectional formatting characters. */
 const NOT_IN_NAME = /[/\\\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
@@ -243,6 +260,15 @@ function checkVersionRules(m: Record<string, Json>, limits: Limits) {
       field: 'headers',
     });
   }
+  const { succession } = m.headers;
+  if (succession !== undefined && pairing === undefined) {
+    throw invalid('The succession header goes only with a simon-key: for and its pairing.', { field: 'headers' });
+  }
+  if (succession !== undefined && !isSuccessionValue(succession)) {
+    throw invalid('The succession header is steps joined by commas: a key token and two signatures, one space apart.', {
+      field: 'headers',
+    });
+  }
   if (critical !== undefined && !isCriticalValue(critical)) {
     throw invalid('The critical header is header names joined by commas, with no spaces.', { field: 'headers' });
   }
@@ -377,8 +403,10 @@ export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
 /**
  * What an agent's own server checks on `send`, beyond the message's validity (CLIENT.md). A paired agent's
  * version 2 message carries its principal as `for`; with a key principal it also carries a `pairing` that
- * verifies, and with any other it carries none. A solo agent's message carries neither. Refused as
- * `400 invalid` on `headers`. A later version's headers are not known here, so its messages pass.
+ * verifies, and with any other it carries none. A solo agent's message carries neither. A `succession` must
+ * verify; with one, a key principal's `for` may be a successor of the agent's principal, and the server then
+ * moves its record to it (spec section 2.2). Refused as `400 invalid` on `headers`. A later version's headers
+ * are not known here, so its messages pass.
  */
 export function checkPrincipal(m: AnyMessage, agent: Principal): void {
   if (m.v !== VERSION) return;
@@ -389,13 +417,24 @@ export function checkPrincipal(m: AnyMessage, agent: Principal): void {
     if (forValue !== null || pairing !== null) throw refuse('A solo agent speaks for no one: no for, no pairing.');
     return;
   }
-  if (forValue !== agent.for) throw refuse(`A paired agent's messages carry its principal as for: ${agent.for}.`);
-  if (principalKey(agent.for) === null) {
+  const succession = header(m as Message, 'succession');
+  const steps = succession === null || forValue === null ? [] : readSuccession(succession, forValue);
+  if (steps === null) {
+    throw refuse(
+      `Each succession step must be signed by both its keys over SIMON-SUCCEED, the old and the new identifier, leading to for.`,
+    );
+  }
+  if (forValue !== agent.for && !steps.some(s => s.from === agent.for)) {
+    throw refuse(`A paired agent's messages carry its principal as for, or a successor it signed: ${agent.for}.`);
+  }
+  // The agent's principal, or the successor it moves to: either way the one that must have signed the pairing.
+  const principal = forValue!;
+  if (principalKey(principal) === null) {
     if (pairing !== null) throw refuse('Only a key principal pairs by signature: this message carries no pairing.');
-  } else if (!verifyPairing(m.from, agent.for, pairing, parseTimestamp(m.sentAt) ?? NaN)) {
+  } else if (!verifyPairing(m.from, principal, pairing, parseTimestamp(m.sentAt) ?? NaN)) {
     const until = parsePairing(pairing)?.until ?? '<until>';
     throw refuse(
-      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, agent.for, until))}, valid at sentAt: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
+      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, principal, until))}, valid at sentAt: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
     );
   }
 }

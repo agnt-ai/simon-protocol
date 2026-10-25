@@ -55,6 +55,9 @@
         "pairing": {
           "$ref": "common.json#/$defs/pairing"
         },
+        "succession": {
+          "$ref": "common.json#/$defs/succession"
+        },
         "critical": {
           "type": "string",
           "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*(,[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*)*$",
@@ -118,21 +121,19 @@
     {
       "if": {
         "properties": {
-          "inReplyTo": {
-            "type": "null"
+          "headers": {
+            "required": ["succession"]
           }
         }
       },
       "then": {
         "properties": {
           "headers": {
-            "not": {
-              "required": ["rel"]
-            }
+            "required": ["pairing"]
           }
         }
       },
-      "description": "rel appears only when inReplyTo is not null (5.4)."
+      "description": "succession goes only with a pairing (5.4)."
     },
     {
       "if": {
@@ -146,19 +147,19 @@
         "properties": {
           "headers": {
             "not": {
-              "anyOf": [
-                {
-                  "required": ["feed"]
-                },
-                {
-                  "required": ["audience"]
-                }
-              ]
+              "required": ["audience"]
             }
           }
         }
       },
-      "description": "feed and audience appear only on a published message, with an empty to (5.4)."
+      "else": {
+        "properties": {
+          "headers": {
+            "required": ["audience"]
+          }
+        }
+      },
+      "description": "audience is present exactly on a message to no one: a server refuses one without it, and one with recipients carrying it; a misplaced rel or feed is ignored (5.4)."
     },
     {
       "if": {

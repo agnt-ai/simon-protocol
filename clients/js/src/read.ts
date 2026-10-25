@@ -29,6 +29,7 @@ import {
   normalizeAddress,
   pairingStanding,
   parsePairing,
+  predecessors,
   principalKey,
   PROTOCOL_HEADERS,
   readAgentDocument,
@@ -112,6 +113,12 @@ export interface PrincipalTrust {
   /** For `key-pairing`: when the pairing lapses, unless the principal renews it (spec section 2.2). */
   until?: string;
   /**
+   * For `key-pairing`: the principal's earlier keys, oldest first, from the message's verified `succession`
+   * (spec section 2.2). Whoever knew one of them knows this principal, unless it has seen that key succeeded
+   * by another as well.
+   */
+  succeeds?: string[];
+  /**
    * For `key-pairing`: true when the pairing counted when the message was sent but has lapsed since. The
    * message spoke for the principal then; act on nothing in it for the principal now.
    */
@@ -165,7 +172,8 @@ export type Verification =
         | 'bad_document'
         | 'bad_signature'
         | 'unsupported_algorithm'
-        | 'bad_pairing';
+        | 'bad_pairing'
+        | 'bad_succession';
     };
 
 const PROVES: Record<string, string> = {
@@ -264,6 +272,8 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
   if (principalKey(forValue) !== null) {
     const standing = pairingStanding(m, (opts.now ?? (() => new Date()))());
     if (standing === 'refused') return { verified: false, id, reason: 'bad_pairing' };
+    const earlier = predecessors(m);
+    if (earlier === 'refused') return { verified: false, id, reason: 'bad_succession' };
     const lapsed = standing === 'lapsed';
     const ended = author.unpairing !== undefined && verifyUnpairing(m.from, forValue, author.unpairing);
     return {
@@ -272,6 +282,7 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
         id: forValue,
         basis: 'key-pairing',
         until: parsePairing(header(m as Message, 'pairing'))!.until,
+        ...(earlier.length > 0 && { succeeds: earlier }),
         proves: PROVES['key-pairing'],
         ...(lapsed && { lapsed: true }),
         ...(ended && { ended: true }),

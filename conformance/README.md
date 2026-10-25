@@ -217,7 +217,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 <!-- checks:start -->
 
-235 checks: 217 must, 18 should.
+236 checks: 218 must, 18 should.
 
 ### Documents (PROTOCOL 4)
 
@@ -376,6 +376,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `send.from` | must | CLIENT send | 400 invalid with details.field "from" for a message whose from is another agent's address, sent by this agent |
 | `send.solo` | must | CLIENT send, PROTOCOL 2.2 | 400 invalid with details.field "headers" for a solo agent's message with a for header |
 | `send.paired` | must | CLIENT send, PROTOCOL 2.2, 5.4 | 200 with the principal as for and its pairing; 400 invalid with details.field "headers" with no for, with another principal (and that principal's valid pairing), with a pairing signed for another address, with a pairing that lapsed a minute before sentAt, and with one lasting more than 366 days past it |
+| `send.succession` | must | CLIENT send, PROTOCOL 2.2, 5.4 | 400 invalid with details.field "headers" for the successor as for, with its pairing, and no succession, or a succession from another key; 200 with a succession from the principal; then 400 for the principal it left |
 | `send.sent-at` | must | CLIENT send | 200 for sentAt 5 minutes ahead less the clock margin; 400 invalid with details.field "sentAt" 5 minutes ahead plus the margin; 401 bad_signature for 24 hours old plus the margin, since the signature is checked first and a key registered during the run was not valid 24 hours earlier |
 | `send.part-not-uploaded` | must | CLIENT send | 400 part_not_uploaded with details.sha256 for a part nobody uploaded, and for a part another agent uploaded |
 | `send.unsupported-version` | must | CLIENT send, CLIENT errors, PROTOCOL 1 | 400 unsupported_version for a version 7 message, signed by the agent, that keeps the invariants (a server routes such a message on deliver, but takes none from its own agents) |

@@ -39,6 +39,7 @@ from simon.messages import (
     parse_message,
     sign_message,
     sign_pairing,
+    sign_succession,
     sign_recovery,
     sign_unpairing,
     verify_pairing,
@@ -443,6 +444,27 @@ class ClientTest(unittest.TestCase):
         renewed = sign_pairing(principal, address)
         agent.renew_pairing(renewed)
         self.assertEqual(agent.compose([], "Renewed.", headers={"audience": "public"})["headers"]["pairing"], renewed)
+
+    def test_a_principal_moves_to_a_new_key(self):
+        """A succession both keys signed moves the agent to the new key; the server's record follows on the
+        next message, and readers see the earlier key."""
+        old, new = SigningKey.generate(), SigningKey.generate()
+        agent = self.agent()
+        address = agent.register(principal=old.identifier)["address"]
+        agent.register(principal=old.identifier, pairing=sign_pairing(old, address))
+        with self.assertRaises(SimonError):
+            agent.succeed(new.identifier, sign_pairing(new, address), sign_succession(SigningKey.generate(), new))
+        succession = sign_succession(old, new)
+        agent.succeed(new.identifier, sign_pairing(new, address), succession)
+        message = agent.compose([], "From my new key.", headers={"audience": "public"})
+        self.assertEqual((message["headers"]["for"], message["headers"]["succession"]), (new.identifier, succession))
+        trust = Reader(resolver=self.server.resolve).verify_author(message)
+        self.assertEqual((trust.principal.id, trust.principal.succeeds), (new.identifier, (old.identifier,)))
+        self.assertEqual(trust.principal.to_json()["succeeds"], [old.identifier])
+        third = SigningKey.generate()
+        agent.succeed(third.identifier, sign_pairing(third, address), sign_succession(new, third))
+        later = Reader(resolver=self.server.resolve).verify_author(agent.compose([], "Again.", headers={"audience": "public"}))
+        self.assertEqual(later.principal.succeeds, (old.identifier, new.identifier))
 
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends

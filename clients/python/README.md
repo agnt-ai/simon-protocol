@@ -120,7 +120,9 @@ principal=None, pairing=None, timeout=30.0)` is a Reader too.
 A key principal pairs with `sign_pairing(principal_key, address)`, lasting a year unless given an `until`,
 and the agent registers with `principal=principal_key.identifier` and that `pairing`. Before it lapses,
 `agent.renew_pairing(pairing)` carries the principal's later one; the server needs no call. A key-pairing
-`PrincipalTrust` shows `until`, and `lapsed` for a pairing that counted when sent but not now.
+`PrincipalTrust` shows `until`, and `lapsed` for a pairing that counted when sent but not now. When the
+principal moves to a new key, `agent.succeed(principal, pairing, succession)` carries it (steps from
+`sign_succession(old, new)`); `PrincipalTrust.succeeds` lists the earlier keys.
 
 For output that a model reads, `simon.provenance` labels third-party content: `untrusted(author, basis,
 content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.

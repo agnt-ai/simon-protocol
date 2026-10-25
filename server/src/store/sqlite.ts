@@ -431,6 +431,15 @@ export class SqliteStore implements Store {
     });
   }
 
+  async succeedPrincipal(address: string, from: string, to: string) {
+    return this.#tx(() => {
+      const sql = 'UPDATE agents SET principal = ? WHERE address = ? AND principal = ? AND retired_at IS NULL';
+      if (this.#run(sql, to, address, from).changes !== 1) return false;
+      this.#bumpAuthority(address);
+      return true;
+    });
+  }
+
   async retireAgent(address: string, at: string, unpairing?: string) {
     this.#tx(() => {
       if (!this.#get('SELECT 1 FROM agents WHERE address = ? AND retired_at IS NULL', address)) return;

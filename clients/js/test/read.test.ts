@@ -7,11 +7,15 @@ import assert from 'node:assert/strict';
 import {
   generateKey,
   messageId,
+  sign,
   signMessage,
   signPairing,
+  signSuccession,
+  successionBytes,
   signUnpairing,
   timestamp,
   type AnyMessage,
+  type Message,
   type ResolverIO,
 } from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
@@ -101,6 +105,47 @@ describe('verifyAuthor', () => {
     const renewed = signPairing(principal.privateKey, address, id);
     a.renewPairing(renewed);
     assert.equal(a.compose({ to: ['bob@agents.test'], text: 'Renewed.' }).headers.pairing, renewed);
+  });
+
+  it("moves to the principal's new key along a succession, and reads the earlier key as its predecessor", async () => {
+    const { fake, opts } = await world();
+    const [old, fresh, agentKey] = [generateKey(), generateKey(), generateKey()];
+    const [oldId, newId] = [`simon-key:${old.key}`, `simon-key:${fresh.key}`];
+    const a = new Agent({ server: fake.origin, key: agentKey.privateKeyPem, fetch: fake.fetch });
+    const { address } = await a.register({ for: oldId });
+    await a.register({ for: oldId, pairing: signPairing(old.privateKey, address, oldId) });
+    const pairing = signPairing(fresh.privateKey, address, newId);
+    assert.throws(() =>
+      a.succeed({ for: newId, pairing, succession: signSuccession(generateKey().privateKey, fresh.privateKey) }),
+    );
+    const succession = signSuccession(old.privateKey, fresh.privateKey);
+    a.succeed({ for: newId, pairing, succession });
+    const m = a.compose({ to: ['bob@agents.test'], text: 'From my new key.' });
+    assert.deepEqual([m.headers.for, m.headers.succession], [newId, succession]);
+    const v = await verifyAuthor(m, opts);
+    assert.ok(v.verified);
+    assert.deepEqual([v.principal?.id, v.principal?.succeeds], [newId, [oldId]]);
+    // Moving again before the server has seen the first move keeps the whole way from the key it holds.
+    const third = generateKey();
+    const thirdId = `simon-key:${third.key}`;
+    a.succeed({
+      for: thirdId,
+      pairing: signPairing(third.privateKey, address, thirdId),
+      succession: signSuccession(fresh.privateKey, third.privateKey),
+    });
+    const later = await verifyAuthor(a.compose({ to: ['bob@agents.test'], text: 'Again.' }), opts);
+    assert.ok(later.verified);
+    assert.deepEqual(later.principal?.succeeds, [oldId, newId]);
+    const { signature: _, ...unsigned } = m;
+    // A step that claims the old key but was signed by another.
+    const bytes = successionBytes(oldId, newId);
+    const forged = `${old.key} ${sign(generateKey().privateKey, bytes)} ${sign(fresh.privateKey, bytes)}`;
+    const bad = signMessage<Message>(
+      { ...unsigned, headers: { ...m.headers, succession: forged } },
+      agentKey.privateKey,
+    );
+    const r = await verifyAuthor(bad, opts);
+    assert.deepEqual(r.verified || r.reason, 'bad_succession');
   });
 
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {

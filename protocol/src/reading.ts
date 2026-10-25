@@ -11,7 +11,7 @@
  *   the original's author is shown as a reply and never applied (section 5.5).
  */
 import { header, VERSION, type AnyMessage, type Message } from './message.ts';
-import { parsePairing, principalKey, verifyPairing } from './principal.ts';
+import { parsePairing, principalKey, readSuccession, verifyPairing } from './principal.ts';
 import { parseTimestamp } from './time.ts';
 
 /** The relations the registry marks author-only: they change or withdraw the message they name. */
@@ -61,6 +61,19 @@ export function pairingStanding(m: AnyMessage, now: Date | number): 'counts' | '
   const pairing = header(m as Message, 'pairing');
   if (!verifyPairing(m.from, forValue, pairing, parseTimestamp(m.sentAt) ?? NaN)) return 'refused';
   return new Date(now).getTime() >= parseTimestamp(parsePairing(pairing)!.until)! ? 'lapsed' : 'counts';
+}
+
+/**
+ * The earlier keys of a message's key principal, oldest first, as its `succession` header names them (spec
+ * section 2.2): [] when it carries none, or `refused` when it does not verify. A reader that knew any of them
+ * may treat `for` as the same principal, unless it holds a fork, two steps from one key to different keys:
+ * then neither successor inherits that key's place.
+ */
+export function predecessors(m: AnyMessage): string[] | 'refused' {
+  const forValue = claimedPrincipal(m);
+  const succession = m.v === VERSION ? header(m as Message, 'succession') : null;
+  if (forValue === null || succession === null) return [];
+  return readSuccession(succession, forValue)?.map(step => step.from) ?? 'refused';
 }
 
 /**

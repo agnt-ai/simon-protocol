@@ -58,6 +58,7 @@ describe('offline', () => {
       'end-grant',
       'cancel-recovery',
       'renew-pairing',
+      'succeed',
       'unpair',
       'sync',
       'send-signal',

@@ -46,7 +46,7 @@ MAX_NAME_LENGTH = 128
 _NAME = r"[a-z0-9][a-z0-9!#$&^_.+-]{0,126}"
 _MEDIA_TYPE = re.compile(rf'{_NAME}/{_NAME}(?:; ?{_NAME}=(?:[A-Za-z0-9!#$&^_.+-]+|"[ !#-\[\]-~]*"))*')
 # The headers the protocol names (spec section 5.4); every other header is a registry convention.
-PROTOCOL_HEADERS = frozenset({"for", "pairing", "critical", "rel", "feed", "audience", "listed"})
+PROTOCOL_HEADERS = frozenset({"for", "pairing", "succession", "critical", "rel", "feed", "audience", "listed"})
 # What a part's name never holds: "/", a backslash, category Cc, and the bidirectional formatting characters.
 _NOT_IN_NAME = re.compile(r"[/\\\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 _NOT_IN_ALT = re.compile(r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -375,6 +375,14 @@ def _check_headers(m: dict[str, Any]) -> None:
             "The pairing header is present exactly when the for header is a simon-key: principal.",
             field="headers",
         )
+    succession = headers.get("succession")
+    if succession is not None and pairing is None:
+        raise invalid("The succession header goes only with a simon-key: for and its pairing.", field="headers")
+    if succession is not None and not is_succession_value(succession):
+        raise invalid(
+            "The succession header is steps joined by commas: a key token and two signatures, one space apart.",
+            field="headers",
+        )
     if critical is not None and not is_critical_value(critical):
         raise invalid(
             "The critical header is header names joined by commas, with no spaces.", field="headers"
@@ -555,6 +563,54 @@ def verify_recovery(agent: str, principal: str, new_key: str, at: str, recover: 
     return key is not None and verify(key, recover_bytes(agent, new_key, at), recover)
 
 
+def succession_bytes(old: str, new: str) -> bytes:
+    """What a key principal's old key and its new key both sign when the new key succeeds the old:
+    ``SIMON-SUCCEED``, the old identifier and the new."""
+    return f"SIMON-SUCCEED\n{old}\n{new}".encode()
+
+
+def sign_succession(old: SigningKey, new: SigningKey) -> str:
+    """One step of a ``succession`` header, ``<old key token> <old signature> <new signature>``: both of the
+    principal's keys signing that ``new`` succeeds ``old`` (section 2.2)."""
+    data = succession_bytes(old.identifier, new.identifier)
+    return f"{old.token} {old.sign(data)} {new.sign(data)}"
+
+
+#: The most steps a ``succession`` header holds: a principal moves keys rarely, and each step costs every reader.
+MAX_SUCCESSION_STEPS = 16
+
+
+def is_succession_value(value: object) -> bool:
+    """Whether a value has the ``succession`` header's grammar: 1 to 16 steps joined by commas, each a key
+    token and two canonical base64url signatures, one space apart."""
+    if not isinstance(value, str) or len(value.split(",")) > MAX_SUCCESSION_STEPS:
+        return False
+    for step in value.split(","):
+        parts = step.split(" ")
+        if len(parts) != 3 or parse_key_token(parts[0]) is None or not all(is_b64url(p) for p in parts[1:]):
+            return False
+    return True
+
+
+def read_succession(value: object, principal: str) -> list[dict[str, str]] | None:
+    """The steps a ``succession`` header names, oldest first, as ``{"from", "to"}`` identifiers leading to
+    ``principal``, the message's ``for``; None unless the grammar holds, each step's new key is the next
+    step's old key (the last's is ``principal``'s), no key appears twice, and both signatures of every step
+    verify."""
+    if not is_succession_value(value) or principal_key(principal) is None:
+        return None
+    parsed = [step.split(" ") for step in value.split(",")]  # type: ignore[union-attr]
+    ids = [_KEY_PRINCIPAL + key for key, _, _ in parsed] + [principal]
+    if len(set(ids)) != len(ids):
+        return None
+    steps = [{"from": ids[i], "to": ids[i + 1]} for i in range(len(parsed))]
+    for (key, old_signature, new_signature), step in zip(parsed, steps):
+        data = succession_bytes(step["from"], step["to"])
+        if not (verify(key, data, old_signature) and verify(principal_key(step["to"]), data, new_signature)):
+            return None
+    return steps
+
+
 def sign_unpairing(key: SigningKey, agent: str) -> str:
     """The unpairing a key principal gives to end the pairing of ``key.identifier`` with ``agent``."""
     return key.sign(unpairing_bytes(agent, key.identifier))
@@ -571,7 +627,9 @@ def check_principal(message: Mapping[str, Any], kind: str, principal: str | None
     """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
     ``solo``, and a paired agent's principal. A paired agent's version 2 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
-    neither. Raises ``400 invalid`` on ``headers``. A later version's headers are not known, so it passes."""
+    neither. A ``succession`` must verify; with one, a key principal's ``for`` may be a successor of the
+    agent's principal, and the server then moves its record to it (section 2.2). Raises ``400 invalid`` on
+    ``headers``. A later version's headers are not known, so it passes."""
     if message["v"] != VERSION:
         return
     found, pairing = header(message, "for"), header(message, "pairing")
@@ -581,10 +639,21 @@ def check_principal(message: Mapping[str, Any], kind: str, principal: str | None
                 "A solo agent speaks for no one: its messages carry no for and no pairing.", field="headers"
             )
         return
-    if found != principal:
+    succession = header(message, "succession")
+    steps = [] if succession is None or found is None else read_succession(succession, found)
+    if steps is None:
         raise invalid(
-            f"A paired agent's messages carry its principal as the for header: {principal}.", field="headers"
+            "Each succession step must be signed by both its keys over SIMON-SUCCEED, the old and the new "
+            "identifier, leading to for.",
+            field="headers",
         )
+    if found != principal and not any(step["from"] == principal for step in steps):
+        raise invalid(
+            f"A paired agent's messages carry its principal as the for header, or a successor it signed: {principal}.",
+            field="headers",
+        )
+    # The agent's principal, or the successor it moves to: either way the one that must have signed the pairing.
+    principal = found
     if principal_key(principal) is None:
         if pairing is not None:
             raise invalid(
