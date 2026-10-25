@@ -47,7 +47,7 @@ origins, how long an outcome may be cached), `request` (signed requests and the 
 as an argument, and the document readers take the fetched bytes.
 
 `protocol/test/vectors.ts` builds the test vectors from this code, and `npm run vectors` writes them to
-`spec/vectors/v1.json`; a test fails when the committed file differs. The Python client reproduces every
+`spec/vectors/v2.json`; a test fails when the committed file differs. The Python client reproduces every
 vector without reading this code.
 
 ## The basic server
@@ -188,7 +188,7 @@ schema version 2 of `server/src/store/sqlite.ts`, and its test imports that file
 
 ## Evidence of interoperability
 
-1. **Test vectors** (`spec/vectors/v1.json`), written from the protocol code and checked by a test.
+1. **Test vectors** (`spec/vectors/v2.json`), written from the protocol code and checked by a test.
 2. **The conformance suite** (`conformance/`), black-box over HTTP against any origin; the application's
    tests run it against the application with every module on.
 3. **Federation** in the test harnesses: basic servers and application servers delivering to each other

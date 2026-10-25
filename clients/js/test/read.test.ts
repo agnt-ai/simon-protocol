@@ -168,10 +168,10 @@ describe('what is understood', () => {
 
   it('presents a message of an unknown version as signed but not understood, with no principal', async () => {
     const { a, key, opts } = await signer();
-    // A later version's members mean nothing here, however much they look like version 1's.
+    // A later version's members mean nothing here, however much they look like version 2's.
     const headers = { for: 'mailto:ceo@agents.test' };
     const later = signMessage<AnyMessage & { headers: object }>(
-      { v: 2, from: a.address!, to: ['bob@agents.test'], sentAt: timestamp(new Date()), headers },
+      { v: 9, from: a.address!, to: ['bob@agents.test'], sentAt: timestamp(new Date()), headers },
       key,
     );
     const v = await verifyAuthor(later, opts);

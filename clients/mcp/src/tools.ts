@@ -98,7 +98,10 @@ const PART = {
   type: 'object',
   properties: {
     type: { type: 'string' },
-    data: { type: 'string' },
+    // A JSON value for a JSON type, the text for text/*, base64 otherwise (spec section 5.3).
+    data: {
+      description: 'A JSON value for a JSON type (application/json, +json), the text for text/*, base64 otherwise.',
+    },
     sha256: { type: 'string' },
     size: { type: 'integer' },
     name: { type: 'string' },

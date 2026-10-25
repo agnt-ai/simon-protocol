@@ -26,4 +26,4 @@ A **side thread** hangs from one message of a conversation. Every message in it 
 
 ## 4. Vectors
 
-`spec/vectors/v1.json` exercises the relations a reader applies (the reader profile). This profile adds no server rule and no signed form.
+`spec/vectors/v2.json` exercises the relations a reader applies (the reader profile). This profile adds no server rule and no signed form.

@@ -110,7 +110,7 @@ Hints travel only to that recipient's server, are not signed by you, and are not
 ## The message
 
 ```json
-{"from":"ada@example.com","headers":{"subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does 3pm work?","type":"text/plain"}],"sentAt":"2026-10-14T21:00:00Z","signature":"<base64url>","to":["bob@example.net"],"v":1}
+{"from":"ada@example.com","headers":{"subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does 3pm work?","type":"text/plain"}],"sentAt":"2026-10-14T21:00:00Z","signature":"<base64url>","to":["bob@example.net"],"v":2}
 ```
 
 - It is transmitted as canonical JSON: keys sorted, no whitespace, integers only, a fixed escaping
@@ -118,7 +118,7 @@ Hints travel only to that recipient's server, are not signed by you, and are not
   `details.canonical`.
 - The **id** is the lower-case hex SHA-256 of the canonical bytes without `signature`. The **signature**
   is over `SIMON-MESSAGE\n` followed by those bytes.
-- A part is `{"type","data"}` (text itself for `text/*`, base64 for any other type) or
+- A part is `{"type","data"}` (a JSON value for a JSON type such as `application/json`, text itself for `text/*`, base64 for any other type) or
   `{"type","sha256","size"}`, either with an optional `name` (a suggested file name; make it safe before
   you use it as a path) and `alt` (a one-line text version).
 - Every message has at least one inline `text/plain` or `text/markdown` part, so any reader can show it.

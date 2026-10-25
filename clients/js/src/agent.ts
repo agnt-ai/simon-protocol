@@ -21,6 +21,7 @@ import {
   type Message,
   type Part,
   type SignedClaims,
+  isHeaderName,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
@@ -305,7 +306,7 @@ export class Agent {
     );
   }
 
-  /** A signed version 1 message from a draft, written now. Send it with `send`; sending it again is safe. */
+  /** A signed version 2 message from a draft, written now. Send it with `send`; sending it again is safe. */
   compose(draft: Draft): Message {
     const from = this.#requireAddress();
     for (const name of ['for', 'pairing']) {
@@ -375,8 +376,8 @@ export class Agent {
   }
 
   async sendSignal(type: Signal['type'], about: string, to: string[]): Promise<{ accepted: true }> {
-    if (typeof type !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(type))
-      throw invalid('type', 'Signal type is a lower-case registry name.');
+    if (!isHeaderName(type))
+      throw invalid('type', 'A signal type is a name: a registry name, or a private reverse-domain one.');
     if (!HEX64.test(about)) throw invalid('about', 'A message id is 64 lower-case hex digits.');
     return this.call('POST', '/simon/send-signal', { type, about, to: to.map((a, i) => addressArg(`to[${i}]`, a)) });
   }

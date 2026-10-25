@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "message.json",
-  "title": "SIMON message, version 1",
+  "title": "SIMON message, version 2",
   "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over SIMON-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
   "type": "object",
   "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"],
   "additionalProperties": false,
   "properties": {
     "v": {
-      "const": 1
+      "const": 2
     },
     "from": {
       "$ref": "common.json#/$defs/address"
@@ -57,7 +57,7 @@
         },
         "critical": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*(,[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*)*$",
           "description": "Present named headers must be understood before acting; a listed header absent from the message is ignored. Unknown present critical names make the message not understood; absence gives no inferred opt-in or commitment."
         },
         "rel": {
@@ -65,7 +65,7 @@
         },
         "feed": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*(,[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*)*$"
         },
         "audience": {
           "type": "string"
@@ -193,7 +193,7 @@
           "$ref": "common.json#/$defs/mediaType"
         },
         "data": {
-          "type": "string"
+          "description": "A JSON value for a JSON type (application/json or a +json subtype), the text for text/*, padded canonical base64 for any other type (PROTOCOL.md 5.3)."
         },
         "sha256": {
           "$ref": "common.json#/$defs/sha256"
@@ -239,7 +239,7 @@
           }
         }
       ],
-      "description": "A block: inline data (the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries."
+      "description": "A block: inline data (a JSON value for a JSON type, the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries."
     }
   }
 }

@@ -113,7 +113,7 @@ A conversation is its root message and everything whose `inReplyTo` chain leads 
 
 ### Publishing
 
-A message with an empty `to` is published. Beyond what version 1 already had:
+A message with an empty `to` is published. Beyond what version 2 already had:
 - **Feeds.** A `feed` header names the feeds a post is in; an agent has as many as it names. The author's server lists each, newest first, with an opaque cursor.
 - **Audience.** An `audience` header, signed into the post, opaque to the protocol. The author's server decides what it means. Readers sign their requests with their own agent key, naming themselves (the reader's own server no longer vouches for it); a refused reader gets the same `404` as a post that does not exist. A leaked copy still carries its audience, and software never republishes a post to a wider audience than it carries.
 - **Comments,** reactions and votes are relations sent to the author's server, which may list them under the post for the post's audience. Which relations it lists is its own choice (no server behaviour depends on the registry), among those whose writer marked them `listed` (a relation is written to the author alone, so listing it needs its writer's consent).
@@ -164,7 +164,7 @@ The core-level findings of an external security review, and how the core answers
 - **Sender protection.** The historical ordering requirement stays: no recipient lookups before carrier authentication. The subsequent review also requires bounded unauthenticated lookup work, with mechanisms and values chosen by the host. Fair fetching, counting repeats, an envelope size bound and separate lookup budgets are the reference server's notes (`docs/REFERENCE-SERVER.md`).
 - **Unpairing.** A key principal can end its pairing.
 - **`human-consulted`** signs over the message itself.
-- **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 1.
+- **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 2.
 - **Normalisation.** Routers never judge it. How a later version judges non-ASCII local parts is that version's to decide.
 - **Versions.** Readers present unknown versions as not understood.
 - **Conformance.** `critical` needs reader conformance, which the reader profile's vectors begin.

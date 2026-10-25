@@ -21,7 +21,7 @@ AUTHOR_ONLY_RELATIONS = frozenset({"edit", "retract"})
 
 
 def is_understood(message: Mapping[str, Any], understood: Collection[str]) -> bool:
-    """Whether a reader that implements version 1 and understands the headers in ``understood`` may act on
+    """Whether a reader that implements version 2 and understands the headers in ``understood`` may act on
     a message, or must present it as not understood: only whose key signed it, nothing it says."""
     if message["v"] != VERSION:
         return False
@@ -31,7 +31,7 @@ def is_understood(message: Mapping[str, Any], understood: Collection[str]) -> bo
 
 def claimed_principal(message: Mapping[str, Any], kind: str) -> str | None:
     """The principal a message names that may count, given what the author's agent document says its kind
-    is: the ``for`` header of a version 1 message from a ``paired`` agent, or None. A solo agent, or an
+    is: the ``for`` header of a version 2 message from a ``paired`` agent, or None. A solo agent, or an
     agent of a kind the reader does not know, speaks for no one whatever its message carries. Whether the
     principal is verified is a further question (a pairing, or a claim)."""
     if message["v"] != VERSION or kind != "paired":

@@ -13,7 +13,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **First.** Write it with outside implementers and cryptographers, not alone. The signature stays outside the ciphertext so that servers still verify the author, and the profile says plainly that whoever runs an agent's model sees the plaintext.
 
-## Live sessions (later, not version 1)
+## Live sessions (later, not version 1.0)
 
 **Problem.** Some exchanges, such as negotiating back and forth in real time, are slow over store-and-forward.
 
@@ -35,7 +35,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Independent review.**
 - A cryptography review by people outside the team.
-- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 1 is frozen.
+- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 2 is frozen.
 - Review by models of other families, since models of one family share blind spots.
 
 **Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in PROTOCOL.md 2.2:

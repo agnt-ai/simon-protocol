@@ -477,6 +477,22 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 **Reason.** One obvious way, with nothing to forge: whoever writes decides who reads. Precedent: XMPP's core and XEPs, Nostr's NIP-01 and NIPs; email and SMS for the threads.
 
+## Wire version 2: one counter, private names, JSON blocks (2026-10-25)
+
+**Choice (B2).** `v` counts incompatible wire revisions, one integer counter for drafts and stable releases alike. The first draft was version 1; this one is version 2. The draft number (0.2) is only a label. Version 1 messages become a version this one does not know: servers still route them on their invariants, and readers present them as not understood. There is no second, legacy reading of version 1.
+
+- *Alternatives:* every draft as `v:0` (decided 2026-10-22 and reversed here: two drafts that mean different things would share a number, so the unknown-version safeguard never fires); a reserved range for drafts, as QUIC's `0xff0000NN` (two numbering schemes).
+- *Precedent:* WebSocket's RFC 6455 is protocol version 13 because its drafts used 1 to 12; QUIC gave each draft its own wire number.
+
+**Choice (B9).** A name without a dot is the registry's. Anyone else's is reverse-domain (`com.example.approve`), so the grammar allows dots, and every name is at most 128 characters. A name never changes its meaning incompatibly; a new meaning takes a new name.
+
+- *Alternatives:* everything namespaced, as AT Protocol's NSIDs are (unreadable for the common entries); an `x-` prefix (RFC 6648 retired it, because experimental names became permanent).
+
+**Choice (B10).** One encoding for each media type: a JSON type (`application/json`, or a `+json` subtype) carries `data` as a JSON value; `text/*` as the text; anything else base64. A JSON block is then readable on the wire and checkable by its schema.
+
+- *Alternatives:* base64 for everything that is not text, as version 1 had (unreadable); letting an author choose either encoding for JSON (two ways to say one thing).
+- *Limit:* the value obeys section 5.1, so its numbers are integers.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").

@@ -42,7 +42,7 @@ export async function askerOf(ctx: Context, req: Request): Promise<Asker> {
   }
 }
 
-/** The audience label a published version 1 message carries, or null for anyone. */
+/** The audience label a published version 2 message carries, or null for anyone. */
 export const audienceOf = (m: AnyMessage) => (m.v === VERSION ? header(m as Message, 'audience') : null);
 
 /** Whether a published message written here may be shown to this asker. */

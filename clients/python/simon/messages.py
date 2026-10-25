@@ -1,7 +1,7 @@
 """The message, the protocol's only object (spec sections 1, 2.2 and 5).
 
 Every version has ``v``, ``from``, ``to``, ``sentAt`` and ``signature``; those, the canonical form and the
-size are all a server checks of a version it does not know. Version 1 has exactly eight fields::
+size are all a server checks of a version it does not know. Version 2 has exactly eight fields::
 
     {v, from, to, inReplyTo, parts, headers, sentAt, signature}
 
@@ -31,11 +31,15 @@ from .limits import (
 )
 from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex
 
-VERSION = 1
-V1_FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
+# The wire version this port implements (spec section 5.2): one counter for every incompatible revision.
+VERSION = 2
+FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
 
 _HEX64 = re.compile(r"[0-9a-f]{64}")
-_HEADER_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+# A name (spec section 5.4): hyphen-joined lower-case groups, and for a private name several such labels
+# joined by dots, reverse-domain ("com.example.approve").
+_HEADER_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*")
+MAX_NAME_LENGTH = 128
 # An RFC 6838 restricted name in lower case, then parameters: ";", an optional space, a lower-case name,
 # "=", and a value of restricted-name characters in any case or a quoted string of printable ASCII.
 _NAME = r"[a-z0-9][a-z0-9!#$&^_.+-]{0,126}"
@@ -122,10 +126,13 @@ def parse_message(body: bytes, limits: Mapping[str, int] = MINIMUM_LIMITS) -> di
 
 def check_message(value: Any, limits: Mapping[str, int] = MINIMUM_LIMITS) -> dict[str, Any]:
     """Step 4 of section 6.3: the invariants hold, the size is within ``messageBytes``, ``to`` is within
-    ``recipients``, and a version 1 message keeps version 1's rules. A later version passes on its
+    ``recipients``, and a version 2 message keeps version 2's rules. A later version passes on its
     invariants alone. Raises ``400 invalid`` with ``details.field``."""
     message = check_invariants(value)
-    size = len(canonical_bytes(message))
+    try:
+        size = len(canonical_bytes(message))
+    except ValueError as e:  # a float, say: no canonical form, as a parsed message would never hold
+        raise invalid(f"The message has no canonical JSON form: {e}", field="message") from None
     if size > limits["messageBytes"]:
         raise invalid(
             f"A message is at most {limits['messageBytes']} canonical bytes; this one is {size}.",
@@ -134,7 +141,7 @@ def check_message(value: Any, limits: Mapping[str, int] = MINIMUM_LIMITS) -> dic
     if len(message["to"]) > limits["recipients"]:
         raise invalid(f"A message names at most {limits['recipients']} recipients.", field="to")
     if message["v"] == VERSION:
-        _check_version_1(message, limits)
+        _check_version_rules(message, limits)
     return message
 
 
@@ -161,14 +168,14 @@ def check_invariants(value: Any) -> dict[str, Any]:
     return value
 
 
-def _check_version_1(m: dict[str, Any], limits: Mapping[str, int]) -> None:
-    extra = next((k for k in m if k not in V1_FIELDS), None)
+def _check_version_rules(m: dict[str, Any], limits: Mapping[str, int]) -> None:
+    extra = next((k for k in m if k not in FIELDS), None)
     if extra is not None:
-        raise invalid(f"A version 1 message has no field {extra}.", field=extra)
+        raise invalid(f"A version {VERSION} message has no field {extra}.", field=extra)
     if not is_v1_address(m["from"]):
-        raise invalid("from must be an ASCII address in version 1.", field="from")
+        raise invalid(f"from must be an ASCII address in version {VERSION}.", field="from")
     if not all(is_v1_address(a) for a in m["to"]):
-        raise invalid("to must hold ASCII addresses in version 1.", field="to")
+        raise invalid(f"to must hold ASCII addresses in version {VERSION}.", field="to")
     if len(set(m["to"])) != len(m["to"]):
         raise invalid("An address appears twice in to.", field="to")
     if "inReplyTo" not in m or not (m["inReplyTo"] is None or _is_hex64(m["inReplyTo"])):
@@ -208,7 +215,7 @@ def _read_carried(data: str) -> dict[str, Any] | None:
 def _carried_parts(m: Mapping[str, Any], depth: int = 0) -> list[Any]:
     """The parts of every message ``m`` carries whole inline, at every depth up to ``MAX_CARRIED_DEPTH``. A
     carried message ``_read_carried`` refuses, or one carried deeper, makes the carrying message invalid."""
-    parts = m.get("parts") if type(m.get("v")) is int and m.get("v") == 1 else None
+    parts = m.get("parts") if type(m.get("v")) is int and m.get("v") == VERSION else None
     if not isinstance(parts, list):
         return []
     found: list[Any] = []
@@ -228,7 +235,7 @@ def _carried_parts(m: Mapping[str, Any], depth: int = 0) -> list[Any]:
                 else f"Messages are carried inline at most {MAX_CARRIED_DEPTH} deep.",
                 field="parts",
             )
-        if type(carried.get("v")) is int and carried.get("v") == 1 and isinstance(carried.get("parts"), list):
+        if type(carried.get("v")) is int and carried.get("v") == VERSION and isinstance(carried.get("parts"), list):
             found.extend(carried["parts"])
         found.extend(_carried_parts(carried, depth + 1))
     return found
@@ -301,12 +308,15 @@ def _check_part(i: int, part: Any, limits: Mapping[str, int]) -> None:
     # Other members are ignored, so a later one needs no flag day; the content is one of exactly two shapes.
     content = tuple(name in part for name in ("data", "sha256", "size"))
     if content == (True, False, False):
-        if not isinstance(part["data"], str):
-            raise invalid(f"Part {i}: data must be a string.", field="parts")
-        if not part["type"].startswith("text/") and not is_base64(part["data"]):
-            raise invalid(
-                f"Part {i}: the data of a part that is not text/* is padded, canonical base64.", field="parts"
-            )
+        # One encoding per type: a JSON value for a JSON type, the text for text/*, base64 for anything else.
+        if not is_json_type(part["type"]):
+            if not isinstance(part["data"], str):
+                raise invalid(f"Part {i}: data must be a string.", field="parts")
+            if not part["type"].startswith("text/") and not is_base64(part["data"]):
+                raise invalid(
+                    f"Part {i}: the data of a part that is neither JSON nor text is padded, canonical base64.",
+                    field="parts",
+                )
     elif content == (False, True, True):
         if not _is_hex64(part["sha256"]):
             raise invalid(f"Part {i}: sha256 must be 64 lower-case hex.", field="parts")
@@ -403,8 +413,16 @@ def is_media_type(value: object) -> bool:
 
 
 def is_header_name(value: object) -> bool:
-    """Lower-case letters and digits in groups joined by single hyphens, at most 64 characters."""
-    return isinstance(value, str) and len(value) <= 64 and _HEADER_NAME.fullmatch(value) is not None
+    """A name: lower-case letters and digits in groups joined by single hyphens, or several such labels
+    joined by dots for a private name, at most 128 characters."""
+    return isinstance(value, str) and len(value) <= MAX_NAME_LENGTH and _HEADER_NAME.fullmatch(value) is not None
+
+
+def is_json_type(media_type: str) -> bool:
+    """Whether a media type is a JSON type (spec section 5.3), whose inline ``data`` is a JSON value:
+    ``application/json``, or any type with the ``+json`` suffix, whatever its parameters."""
+    base = media_type.split(";", 1)[0].strip()
+    return base == "application/json" or base.endswith("+json")
 
 
 def is_critical_value(value: object) -> bool:
@@ -413,14 +431,16 @@ def is_critical_value(value: object) -> bool:
 
 
 def header(message: Mapping[str, Any], name: str) -> str | None:
-    """A version 1 header's value, or None."""
+    """A version 2 header's value, or None."""
     return message["headers"].get(name)
 
 
 def text_of(message: Mapping[str, Any], separator: str = "\n") -> str:
     """The text of a message's inline ``text/*`` parts."""
     return separator.join(
-        p["data"] for p in message["parts"] if "data" in p and p["type"].startswith("text/")
+        p["data"]
+        for p in message["parts"]
+        if "data" in p and p["type"].startswith("text/") and isinstance(p["data"], str)
     )
 
 
@@ -508,7 +528,7 @@ def verify_unpairing(agent: str, principal: str, unpairing: object) -> bool:
 
 def check_principal(message: Mapping[str, Any], kind: str, principal: str | None = None) -> None:
     """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
-    ``solo``, and a paired agent's principal. A paired agent's version 1 message carries its principal as
+    ``solo``, and a paired agent's principal. A paired agent's version 2 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
     neither. Raises ``400 invalid`` on ``headers``. A later version's headers are not known, so it passes."""
     if message["v"] != VERSION:

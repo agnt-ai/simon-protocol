@@ -41,6 +41,12 @@ export const visible = (s: unknown): string =>
 
 type Row = Record<string, any>;
 
+/** How many bytes a part's inline data holds: a JSON value's text, or what base64 decodes to. */
+const inlineBytes = (p: Row) =>
+  typeof p.data === 'string' && !/(^application\/json|\+json)(;|$)/.test(p.type)
+    ? Buffer.byteLength(p.data, 'base64')
+    : Buffer.byteLength(JSON.stringify(p.data ?? null));
+
 /** Every message held here, oldest first, optionally only those from or to one address. */
 export function snapshot(db: DatabaseSync, address: string | null = null) {
   const all = (sql: string, ...p: any[]) => db.prepare(sql).all(...p) as Row[];
@@ -75,7 +81,7 @@ export function snapshot(db: DatabaseSync, address: string | null = null) {
       parts: (Array.isArray(m.parts) ? m.parts : []).map((p: Row) =>
         typeof p.data === 'string' && /^text\//.test(p.type)
           ? { text: visible(p.data) }
-          : { label: `[part: ${visible(p.type)}, ${p.size ?? Buffer.byteLength(p.data ?? '', 'base64')} bytes]` },
+          : { label: `[part: ${visible(p.type)}, ${p.size ?? inlineBytes(p)} bytes]` },
       ),
       direction: sent ? 'sent' : 'received',
       deliveries: sent

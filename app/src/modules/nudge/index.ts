@@ -16,7 +16,15 @@
  *
  * Hooks: on.stored (the author), on.inbox (each recipient).
  */
-import { header, messageId, principalKey, verify, verifyPairing, type Message } from '@agnt-sdk/simon-protocol';
+import {
+  header,
+  messageId,
+  principalKey,
+  verify,
+  verifyPairing,
+  type Message,
+  VERSION,
+} from '@agnt-sdk/simon-protocol';
 import type { ServerApi, StoredMessage } from '@agnt-sdk/simon-server';
 import type { Ctx, Module } from '../../context.ts';
 
@@ -61,7 +69,7 @@ export function nudgeModule(ctx: Ctx): { module: Module } {
 
   async function runOf(record: StoredMessage): Promise<number> {
     const m = record.message as Message;
-    if (m.v !== 1 || (await consulted(record))) return 0;
+    if (m.v !== VERSION || (await consulted(record))) return 0;
     const { store } = ctx.api;
     const parent = m.inReplyTo ? await store.value<number>('nudge-run', m.inReplyTo, ctx.now().toISOString()) : null;
     return store.valueOnce('nudge-run', record.id, (parent ?? 0) + 1, record.expiresAt, ctx.now().toISOString());

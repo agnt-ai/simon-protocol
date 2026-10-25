@@ -22,6 +22,7 @@ import {
   signSignal,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import type { Request } from '../src/http.ts';
@@ -350,7 +351,7 @@ describe('lifecycle router handoffs', () => {
       server = createServer({ config, store, dns, http: net, now: clock.now, worker: false });
       const message = signMessage<Message>(
         {
-          v: 1,
+          v: VERSION,
           from: other,
           to: [address],
           inReplyTo: null,

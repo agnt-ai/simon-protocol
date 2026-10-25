@@ -34,7 +34,7 @@ export interface ServerDocument {
   limits: Limits;
 }
 
-/** The algorithms every version 1 server verifies, and so every server document lists. */
+/** The algorithms every version 2 server verifies, and so every server document lists. */
 export const V1_ALGORITHMS: readonly string[] = Object.freeze(['ed25519', 'ml-dsa-65']);
 
 /**
@@ -112,7 +112,7 @@ export function readServerDocument(body: Uint8Array, origin: string, now: Date):
 
 /**
  * The algorithms a server document lists, or null: an array of algorithm names (lower-case letters, digits
- * and hyphens) that includes both version 1 algorithms. Names this reader does not know are kept.
+ * and hyphens) that includes both version 2 algorithms. Names this reader does not know are kept.
  */
 function readAlgorithms(value: Json | undefined): string[] | null {
   if (!Array.isArray(value) || !value.every(a => typeof a === 'string' && /^[a-z0-9-]+$/.test(a))) return null;

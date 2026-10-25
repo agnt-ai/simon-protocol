@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+**Wire version 2.** Messages carry `"v":2`, and `v` now counts incompatible wire revisions, drafts included.
+Version 1 messages are a version this library does not know: routed on their invariants, presented as not
+understood. Names (headers, relations, feeds, signal types) may be private and reverse-domain,
+`com.example.approve`, up to 128 characters. A JSON block (`application/json`, any `+json` type) carries its
+`data` as a JSON value instead of base64. The vectors move to `spec/vectors/v2.json`.
+
 **A small core and optional profiles.** PROTOCOL.md is now the transport core. Three optional profiles in
 `spec/profiles/` take what only some parties implement: `reader.md` (showing and acting on messages, the
 reading rules CLIENT.md used to list), `conversations.md` and `publishing.md` (published messages, feeds and

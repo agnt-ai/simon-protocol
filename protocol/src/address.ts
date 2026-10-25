@@ -6,7 +6,7 @@
  *     capital and no character of general category Cc: a set Unicode's stability policy fixes, so routers
  *     on any Unicode version agree. Normalisation is not checked here: whether a string is NFC depends on
  *     the runtime's Unicode tables, and a version that allows non-ASCII local parts judges them against
- *     Unicode 17.0 on agents' own servers and in readers. Version 1 narrows the local part to email's ASCII
+ *     Unicode 17.0 on agents' own servers and in readers. Version 2 narrows the local part to email's ASCII
  *     dot-atom, so a later version can widen it without touching routing.
  *   - Inside a message an address is written in lower case (ASCII lowercasing only), so one message has one
  *     form and one id. Elsewhere (an API, a command line) any case is accepted and lowered.
@@ -28,7 +28,7 @@ export function normalizeDomain(input: unknown): string | null {
   return d;
 }
 
-/** A version 1 address in its wire form (ASCII, lower case), from any case, or null. */
+/** A version 2 address in its wire form (ASCII, lower case), from any case, or null. */
 export function normalizeAddress(input: unknown): string | null {
   if (typeof input !== 'string' || !/^[\x21-\x7e]+$/.test(input)) return null;
   const s = lower(input);
@@ -38,7 +38,7 @@ export function normalizeAddress(input: unknown): string | null {
   return at > 0 && domain && local.length <= 64 && LOCAL_V1.test(local) ? `${local}@${domain}` : null;
 }
 
-/** Whether a value is an address as a version 1 message writes it. */
+/** Whether a value is an address as a version 2 message writes it. */
 export const isV1Address = (value: unknown): value is string =>
   typeof value === 'string' && normalizeAddress(value) === value;
 
@@ -62,7 +62,7 @@ const PCHAR = /^[A-Za-z0-9\-._~!$&'()*+,;=:@]$/;
 /**
  * An address as one path segment (spec section 8): every byte of its UTF-8 that is not an RFC 3986 `pchar`
  * percent-encoded with upper-case hex digits, and nothing else, so `@` stays literal and an address has one
- * form in a path. In a version 1 address those are the characters `# % / ? ^ \` { | }`.
+ * form in a path. In a version 2 address those are the characters `# % / ? ^ \` { | }`.
  */
 export function addressSegment(address: string): string {
   let out = '';

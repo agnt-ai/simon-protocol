@@ -1,4 +1,4 @@
-/** The message: its invariants, version 1's rules, its id, its signature, and its age. */
+/** The message: its invariants, version 2's rules, its id, its signature, and its age. */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -106,7 +106,7 @@ describe('the message', () => {
   });
 
   it('a version this server does not know is routed on its invariants alone', () => {
-    const later = { ...m, v: 2, inReplyTo: 'not an id', thread: { anything: [1, 2] } };
+    const later = { ...m, v: 9, inReplyTo: 'not an id', thread: { anything: [1, 2] } };
     assert.equal(
       code(() => checkMessage(later)),
       'accepted',
@@ -155,7 +155,7 @@ describe('the message', () => {
   });
 
   it("the size and recipients are checked against the server's limits, for every version", () => {
-    const later = { ...m, v: 2, to: many(101, i => `r${i}@example.net`) };
+    const later = { ...m, v: 9, to: many(101, i => `r${i}@example.net`) };
     assert.equal(
       code(() => checkMessage(later)),
       '400 invalid to',
@@ -164,7 +164,7 @@ describe('the message', () => {
       code(() => checkMessage(later, { ...MINIMUM_LIMITS, recipients: 101 })),
       'accepted',
     );
-    const big = { ...m, v: 2, pad: 'x'.repeat(MINIMUM_LIMITS.messageBytes) };
+    const big = { ...m, v: 9, pad: 'x'.repeat(MINIMUM_LIMITS.messageBytes) };
     assert.equal(
       code(() => checkMessage(big)),
       '400 invalid message',
@@ -175,10 +175,10 @@ describe('the message', () => {
     );
   });
 
-  it('version 1 has exactly its eight fields, each as section 5 says', () => {
+  it('this version has exactly its eight fields, each as section 5 says', () => {
     assert.equal(code(variant({})), 'accepted');
     assert.equal(code(variant({ id: 'x' })), '400 invalid id');
-    assert.equal(code(variant({ from: 'josé@example.com' })), '400 invalid from', 'ASCII in version 1');
+    assert.equal(code(variant({ from: 'josé@example.com' })), '400 invalid from', 'ASCII in this version');
     assert.equal(code(variant({ from: '.ada@example.com' })), '400 invalid from');
     assert.equal(code(variant({ to: ['bob@example.net', 'bob@example.net'] })), '400 invalid to');
     assert.equal(code(variant({ to: ['BOB@example.net'] })), '400 invalid to', 'addresses are lower case on the wire');
@@ -188,10 +188,22 @@ describe('the message', () => {
     assert.equal(code(variant({ headers: { Subject: 'x' } })), '400 invalid headers');
     assert.equal(code(variant({ headers: { subject: 1 } })), '400 invalid headers');
     assert.equal(code(variant({ headers: [] })), '400 invalid headers');
-    for (const name of ['-x', 'x-', 'x--y', 'x_y', 'h'.repeat(65)]) {
+    for (const name of ['-x', 'x-', 'x--y', 'x_y', 'h'.repeat(129), '.x', 'x.', 'x..y', 'x.Y', 'x.-y']) {
       assert.equal(code(variant({ headers: { [name]: 'y' } })), '400 invalid headers', name);
     }
-    assert.equal(code(variant({ headers: { ['h'.repeat(64)]: 'y', 'x-1-2': 'z' } })), 'accepted');
+    assert.equal(
+      code(variant({ headers: { ['h'.repeat(128)]: 'y', 'x-1-2': 'z', 'com.example.x-1': 'w' } })),
+      'accepted',
+    );
+    // One encoding per type: a JSON value for a JSON type, the text for text/*, base64 for anything else.
+    const part = (p: Json) => variant({ parts: [p] });
+    assert.equal(code(part({ type: 'application/json', data: { a: [1, 'b', null] } })), 'accepted');
+    assert.equal(
+      code(part({ type: 'application/simon-ui+json; schema=x', data: 'a string is a JSON value' })),
+      'accepted',
+    );
+    assert.equal(code(part({ type: 'application/pdf', data: { a: 1 } })), '400 invalid parts');
+    assert.equal(code(part({ type: 'text/plain', data: 1 })), '400 invalid parts');
     for (const sentAt of [
       '2026-10-14 21:00:00',
       '2026-10-14T21:00:00+02:00',
@@ -310,10 +322,10 @@ describe('the message', () => {
     for (const body of [
       'not JSON',
       '[]',
-      '{"v":1,"v":1,"parts":[' + file + ']}',
-      '{"v":1,"extra":1.5,"parts":[' + file + ']}',
+      '{"v":2,"v":2,"parts":[' + file + ']}',
+      '{"v":2,"extra":1.5,"parts":[' + file + ']}',
       '{"v":true,"parts":[' + file + ']}',
-      Buffer.concat([Buffer.from('{"v":1,"extra":"'), Buffer.from([0xff]), Buffer.from('","parts":[' + file + ']}')]),
+      Buffer.concat([Buffer.from('{"v":2,"extra":"'), Buffer.from([0xff]), Buffer.from('","parts":[' + file + ']}')]),
     ]) {
       const m = carried(body);
       assert.equal(
@@ -462,7 +474,7 @@ describe('the message', () => {
 
   it('a message of any version is signed and verified the same way', () => {
     const later = signMessage<AnyMessage>(
-      { v: 3, from: 'ada@example.com', to: [], sentAt: question.sentAt, extra: true } as Omit<AnyMessage, 'signature'>,
+      { v: 9, from: 'ada@example.com', to: [], sentAt: question.sentAt, extra: true } as Omit<AnyMessage, 'signature'>,
       ada.privateKey,
     );
     assert.equal(verifyMessage(later, [keyEntry(ada.key)]), true);

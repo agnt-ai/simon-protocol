@@ -8,7 +8,7 @@
       "type": "string",
       "maxLength": 318,
       "pattern": "^(?=[^@]{1,64}@[^@]{1,253}$)[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$",
-      "description": "A version 1 address, local@domain, in lower case (PROTOCOL.md 2.1). The local part is at most 64 bytes, the domain at most 253, and the domain's last label is not all digits."
+      "description": "A version 2 address, local@domain, in lower case (PROTOCOL.md 2.1). The local part is at most 64 bytes, the domain at most 253, and the domain's last label is not all digits."
     },
     "domain": {
       "type": "string",
@@ -52,8 +52,9 @@
     },
     "headerName": {
       "type": "string",
-      "maxLength": 64,
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      "maxLength": 128,
+      "description": "A name: hyphen-joined lower-case labels, several joined by dots for a private reverse-domain name (PROTOCOL.md 5.4).",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$"
     },
     "mediaType": {
       "type": "string",

@@ -25,6 +25,7 @@ import {
   normalizeDomain,
   serverOrigin,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import type { Arrival, Decision } from '@agnt-sdk/simon-server';
 import type { Ctx } from '../../context.ts';
@@ -83,7 +84,7 @@ export class Policy {
     // Counted once per recipient and message, however often it arrives.
     const expires = new Date(now.getTime() + 30 * DAY_MS).toISOString();
     if (await this.#ctx.api.store.mark('held', `${a.recipient}\n${a.id}`, expires, now.toISOString())) {
-      const forValue = a.message.v === 1 ? header(a.message as Message, 'for') : null;
+      const forValue = a.message.v === VERSION ? header(a.message as Message, 'for') : null;
       await this.store.bumpHeld({ agent: a.recipient, sender: a.message.from, for: forValue }, now);
     }
     return 'refuse';
@@ -195,7 +196,7 @@ function matchKeys(from: string, carrier: string): { kind: EntryKind; value: str
 /** A principal stands verified behind the sender: a trusted server's acts-for claim, or a key's own pairing. */
 function verifiedPrincipal(a: Arrival): boolean {
   if (a.claims.some(c => c.type === 'acts-for')) return true;
-  if (a.message.v !== 1) return false;
+  if (a.message.v !== VERSION) return false;
   const m = a.message as Message;
   const forValue = header(m, 'for');
   return forValue !== null && verifyPairing(m.from, forValue, header(m, 'pairing'));

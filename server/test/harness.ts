@@ -29,6 +29,7 @@ import {
   type Message,
   type Part,
   type Unsigned,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig, type ConfigInput } from '../src/config.ts';
 import type { Extension } from '../src/extensions.ts';
@@ -274,11 +275,11 @@ export class TestAgent {
     });
   }
 
-  /** A signed version 1 message from this agent. */
+  /** A signed version 2 message from this agent. */
   message(to: string[], text: string, extra: Partial<Unsigned<Message>> & { parts?: Part[] } = {}): Message {
     return signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: this.address,
         to,
         inReplyTo: null,
@@ -421,7 +422,7 @@ export class Peer {
   message(from: string, to: string[], text: string, extra: Record<string, unknown> = {}): Message {
     return signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from,
         to,
         inReplyTo: null,

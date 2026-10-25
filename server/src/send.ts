@@ -36,6 +36,7 @@ import {
   type Claim,
   type Hints,
   type Json,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { authenticateAgent } from './auth.ts';
 import { iso, later, type Context } from './context.ts';
@@ -154,7 +155,7 @@ async function notedServing(ctx: Context, domain: string, now: Date): Promise<vo
 function checkCarriedAudience(m: AnyMessage): void {
   for (const inner of carriedMessages(m)) {
     const headers = inner.headers;
-    if (inner.v === 1 && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
+    if (inner.v === VERSION && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
       throw invalid('A message with an audience is never forwarded or quoted whole (spec section 5.4).', {
         field: 'parts',
       });
@@ -180,7 +181,7 @@ async function holds(ctx: Context, address: string, p: { sha256: string; size: n
 }
 
 /**
- * The files a version 1 message names by content address: its own, and those of every message it carries
+ * The files a version 2 message names by content address: its own, and those of every message it carries
  * whole, which count as its own (spec section 5.3). A later version's are not known here.
  */
 export function contentParts(m: AnyMessage): { sha256: string; size: number }[] {

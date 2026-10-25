@@ -545,7 +545,7 @@ describe('envelopes', () => {
       claimsAbout({ ...signedQuestion, headers } as Message, [actsFor, { ...actsFor, for: undefined }], 'paired'),
       [],
     );
-    const later = { ...signedQuestion, v: 2 } as AnyMessage;
+    const later = { ...signedQuestion, v: 9 } as AnyMessage;
     assert.deepEqual(claimsAbout(later, [actsFor], 'paired'), [], "a later version's headers are not read");
     assert.deepEqual(claimsAbout(signedQuestion, [actsFor], 'solo'), [], 'a solo agent speaks for no one');
     assert.deepEqual(claimsAbout(signedQuestion, [], 'paired'), []);
@@ -621,7 +621,7 @@ describe('paired and solo agents', () => {
     assert.equal(check(signedQuestion, solo), '400 invalid headers');
     assert.equal(check(fromBob({ pairing }), solo), '400 invalid headers');
     assert.equal(check(fromBob({}), solo), 'accepted');
-    assert.equal(check({ ...signedQuestion, v: 2 } as AnyMessage, solo), 'accepted', "a later version's headers");
+    assert.equal(check({ ...signedQuestion, v: 9 } as AnyMessage, solo), 'accepted', "a later version's headers");
   });
 
   it('a routing server checks that pairing is present exactly with a key for, and its grammar, not its signature', () => {
@@ -669,7 +669,7 @@ describe('documents', () => {
     );
   });
 
-  it('a server document lists the algorithms it verifies, both of version 1 among them', () => {
+  it('a server document lists the algorithms it verifies, both of version 2 among them', () => {
     const doc = serverDocument('https://simon.example.com', serverKeys);
     assert.deepEqual(doc.algorithms, ['ed25519', 'ml-dsa-65']);
     const read = (algorithms: unknown) =>

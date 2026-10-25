@@ -39,6 +39,7 @@ import {
   type Claim,
   type Hints,
   type SignedClaims,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import type {
   Agent,
@@ -247,8 +248,9 @@ const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) =>
   ...new Map(sources.map(s => [`${'uploader' in s ? 'u' : 'c'} ${sourceKey(s)} ${s.size}`, s])).values(),
 ];
 
-/** A version 1 message's `inReplyTo`. Other versions point at nothing the server can see. */
-const inReplyTo = (m: AnyMessage) => (m.v === 1 ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null);
+/** A version 2 message's `inReplyTo`. Other versions point at nothing the server can see. */
+const inReplyTo = (m: AnyMessage) =>
+  m.v === VERSION ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null;
 
 /**
  * Where a page continues: below `position`, the place of the record whose id is `before`; everywhere for
@@ -263,7 +265,7 @@ const page = (messages: StoredMessage[], limit: number): Page => ({
   more: messages.length > limit,
 });
 
-/** The files a version 1 message names by content address, its own and those of messages it carries whole. */
+/** The files a version 2 message names by content address, its own and those of messages it carries whole. */
 const namedParts = (m: AnyMessage) => namedFiles(m);
 
 const deliveryDoc = (d: Delivery): DeliveryDoc => ({
@@ -1335,7 +1337,7 @@ export class MongoStore implements Store {
   #retractionsOf(record: StoredMessage) {
     const m = record.message;
     const target = inReplyTo(m);
-    if (m.v !== 1 || header(m as never, 'rel') !== 'retract' || !target) return [];
+    if (m.v !== VERSION || header(m as never, 'rel') !== 'retract' || !target) return [];
     return (m.to.length ? m.to : ['*']).map(owner => ({ owner, target, author: m.from, retraction: record.id }));
   }
 

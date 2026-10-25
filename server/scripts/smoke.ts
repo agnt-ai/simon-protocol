@@ -14,6 +14,7 @@ import {
   signRequest,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 
 const main = path.resolve(import.meta.dirname, '../src/main.ts');
@@ -127,7 +128,7 @@ async function agent(domain: keyof typeof servers, name: string) {
     send: async (to: string, text: string) => {
       const m = signMessage<Message>(
         {
-          v: 1,
+          v: VERSION,
           from: res.json.address,
           to: [to],
           inReplyTo: null,

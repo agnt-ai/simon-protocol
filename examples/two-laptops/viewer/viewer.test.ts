@@ -13,7 +13,7 @@ after(() => rmSync(dir, { recursive: true, force: true }));
 
 const hex = (c: string) => c.repeat(64);
 const msg = (from: string, to: string, text: string, extra: object = {}) => ({
-  v: 1,
+  v: 2,
   from,
   to: [to],
   inReplyTo: null,

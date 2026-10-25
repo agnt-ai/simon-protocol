@@ -126,7 +126,7 @@ def normalize_domain(value: object) -> str | None:
 
 
 def normalize_address(value: object) -> str | None:
-    """A version 1 address in its wire form (ASCII, lower case), from any case, or None."""
+    """A version 2 address in its wire form (ASCII, lower case), from any case, or None."""
     if not isinstance(value, str) or not _PRINTABLE_ASCII.fullmatch(value):
         return None
     local, at, domain = value.lower().rpartition("@")
@@ -137,7 +137,7 @@ def normalize_address(value: object) -> str | None:
 
 
 def is_v1_address(value: object) -> bool:
-    """Whether a value is an address exactly as a version 1 message writes it."""
+    """Whether a value is an address exactly as a version 2 message writes it."""
     return isinstance(value, str) and normalize_address(value) == value
 
 
@@ -172,5 +172,5 @@ _PCHAR = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 def address_segment(address: str) -> str:
     """An address as one path segment (section 8): every byte of its UTF-8 that is not an RFC 3986
     ``pchar`` percent-encoded with upper-case hex digits, and nothing else, so ``@`` stays literal and an
-    address has one form in a path. In a version 1 address those are ``# % / ? ^ ` { | }``."""
+    address has one form in a path. In a version 2 address those are ``# % / ? ^ ` { | }``."""
     return "".join(chr(b) if b in _PCHAR else f"%{b:02X}" for b in address.encode("utf-8"))

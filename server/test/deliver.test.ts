@@ -182,7 +182,7 @@ describe('deliver (spec section 6.3)', async () => {
 
   it('routes a message of a version it does not know, on its invariants alone (spec section 1)', async () => {
     const m = signMessage(
-      { v: 2, from: zed, to: [bob.address], sentAt: timestamp(fed.clock.t), body: { anything: 'new' } } as never,
+      { v: 9, from: zed, to: [bob.address], sentAt: timestamp(fed.clock.t), body: { anything: 'new' } } as never,
       peer.agents.get(zed)!,
     );
     assert.deepEqual(await answer(peer.envelope(m)), [202, { accepted: true }, undefined]);

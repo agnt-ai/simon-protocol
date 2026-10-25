@@ -2,7 +2,7 @@
  * The message: the protocol's only object (spec sections 1 and 5).
  *
  * Every version has `v`, `from`, `to`, `sentAt` and `signature`. Those, the canonical form and the size are
- * all a server checks of a version it does not know, so it routes later versions unchanged. Version 1 has
+ * all a server checks of a version it does not know, so it routes later versions unchanged. Version 2 has
  * exactly eight fields:
  *
  *   { v, from, to, inReplyTo, parts, headers, sentAt, signature }
@@ -39,7 +39,8 @@ import {
 } from './limits.ts';
 import { parseTimestamp } from './time.ts';
 
-export const VERSION = 1;
+/** The wire version this library implements (spec section 5.2): one counter for every incompatible revision. */
+export const VERSION = 2;
 
 /** A message of any version, as far as the invariants say. A later version's other fields ride along unread. */
 export interface AnyMessage {
@@ -53,9 +54,13 @@ export interface AnyMessage {
 /** A block's optional members (spec section 5.3): the file name its author suggests, and a one-line text version. */
 type PartLabels = { name?: string; alt?: string };
 
-export type Part = ({ type: string; data: string } | { type: string; sha256: string; size: number }) & PartLabels;
+/**
+ * A block: inline `data` (a JSON value for a JSON media type, the text itself for `text/*`, base64 for any
+ * other type), or bytes named by `sha256` and `size`.
+ */
+export type Part = ({ type: string; data: Json } | { type: string; sha256: string; size: number }) & PartLabels;
 
-/** A version 1 message. */
+/** A message of the version this library implements. */
 export interface Message extends AnyMessage {
   inReplyTo: string | null;
   parts: Part[];
@@ -64,7 +69,7 @@ export interface Message extends AnyMessage {
 
 export type Unsigned<M extends AnyMessage> = Omit<M, 'signature'>;
 
-const V1_FIELDS = ['v', 'from', 'to', 'inReplyTo', 'parts', 'headers', 'sentAt', 'signature'];
+const FIELDS = ['v', 'from', 'to', 'inReplyTo', 'parts', 'headers', 'sentAt', 'signature'];
 const HEX64 = /^[0-9a-f]{64}$/;
 /** An RFC 6838 restricted name, in lower case. */
 const NAME = '[a-z0-9][a-z0-9!#$&^_.+-]{0,126}';
@@ -74,7 +79,13 @@ const NAME = '[a-z0-9][a-z0-9!#$&^_.+-]{0,126}';
  * quoted string of printable ASCII without `"` or `\`.
  */
 const MEDIA_TYPE = new RegExp(`^${NAME}/${NAME}(; ?${NAME}=([A-Za-z0-9!#$&^_.+-]+|"[ !#-[\\]-~]*"))*$`);
-const HEADER_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+/**
+ * A name (spec section 5.4): lower-case letters and digits in groups joined by single hyphens, and for a
+ * private name, several such labels joined by dots, reverse-domain (`com.example.approve`).
+ */
+const NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+(-[a-z0-9]+)*)*$/;
+/** The longest name, header, relation, feed or signal type. */
+export const MAX_NAME_LENGTH = 128;
 /** The headers the protocol names (spec section 5.4); every other header is a registry convention. */
 export const PROTOCOL_HEADERS: readonly string[] = ['for', 'pairing', 'critical', 'rel', 'feed', 'audience', 'listed'];
 
@@ -150,7 +161,7 @@ export function parseMessage(body: Uint8Array, limits: Limits = MINIMUM_LIMITS):
 
 /**
  * Step 4 of spec section 6.3, for a message already known to be canonical: the invariants hold, the size is
- * within `messageBytes`, `to` is within `recipients`, and a version 1 message keeps version 1's rules. A
+ * within `messageBytes`, `to` is within `recipients`, and a version 2 message keeps version 2's rules. A
  * later version passes on its invariants alone.
  */
 export function checkMessage(value: unknown, limits: Limits = MINIMUM_LIMITS): AnyMessage {
@@ -162,7 +173,7 @@ export function checkMessage(value: unknown, limits: Limits = MINIMUM_LIMITS): A
     });
   }
   if (m.to.length > limits.recipients) throw invalid(`At most ${limits.recipients} recipients here.`, { field: 'to' });
-  if (m.v === VERSION) checkVersion1(value as Record<string, Json>, limits);
+  if (m.v === VERSION) checkVersionRules(value as Record<string, Json>, limits);
   return m;
 }
 
@@ -185,13 +196,13 @@ export function checkInvariants(value: unknown): AnyMessage {
   return value as unknown as AnyMessage;
 }
 
-/** Version 1's own rules (spec section 5), beyond the invariants. */
-function checkVersion1(m: Record<string, Json>, limits: Limits) {
-  const extra = Object.keys(m).find(k => !V1_FIELDS.includes(k));
-  if (extra !== undefined) throw invalid(`A version 1 message has no field ${extra}.`, { field: extra });
-  if (!isV1Address(m.from)) throw invalid('from must be an ASCII address in version 1.', { field: 'from' });
+/** This version's own rules (spec section 5), beyond the invariants. */
+function checkVersionRules(m: Record<string, Json>, limits: Limits) {
+  const extra = Object.keys(m).find(k => !FIELDS.includes(k));
+  if (extra !== undefined) throw invalid(`A version ${VERSION} message has no field ${extra}.`, { field: extra });
+  if (!isV1Address(m.from)) throw invalid(`from must be an ASCII address in version ${VERSION}.`, { field: 'from' });
   const to = m.to as string[];
-  if (!to.every(isV1Address)) throw invalid('to must hold ASCII addresses in version 1.', { field: 'to' });
+  if (!to.every(isV1Address)) throw invalid(`to must hold ASCII addresses in version ${VERSION}.`, { field: 'to' });
   if (new Set(to).size !== to.length) throw invalid('An address appears twice in to.', { field: 'to' });
   if (m.inReplyTo !== null && !(typeof m.inReplyTo === 'string' && HEX64.test(m.inReplyTo))) {
     throw invalid('inReplyTo must be null or a message id (64 lower-case hex).', { field: 'inReplyTo' });
@@ -208,9 +219,12 @@ function checkVersion1(m: Record<string, Json>, limits: Limits) {
   }
   for (const [name, value] of Object.entries(m.headers)) {
     if (!isHeaderName(name)) {
-      throw invalid(`Header names are lower-case letters and digits joined by single hyphens, at most 64: ${name}`, {
-        field: 'headers',
-      });
+      throw invalid(
+        `Header names are lower-case letters and digits joined by single hyphens, or such labels joined by dots, at most ${MAX_NAME_LENGTH}: ${name}`,
+        {
+          field: 'headers',
+        },
+      );
     }
     if (typeof value !== 'string') throw invalid(`Header ${name} must be a string.`, { field: 'headers' });
   }
@@ -276,9 +290,14 @@ function checkPart(value: Json, i: number, limits: Limits) {
   // Other members are ignored, so a later one needs no flag day; the content is one of exactly two shapes.
   const content = [data, sha256, size].map(x => (x === undefined ? '-' : '+')).join('');
   if (content === '+--') {
-    if (typeof value.data !== 'string') throw invalid(`Part ${i}: data must be a string.`, { field: 'parts' });
-    if (!value.type.startsWith('text/') && !isBase64(value.data)) {
-      throw invalid(`Part ${i}: data of a non-text part is padded, canonical base64.`, { field: 'parts' });
+    // One encoding per type: a JSON value for a JSON type, the text for text/*, base64 for anything else.
+    if (!isJsonType(value.type)) {
+      if (typeof value.data !== 'string') throw invalid(`Part ${i}: data must be a string.`, { field: 'parts' });
+      if (!value.type.startsWith('text/') && !isBase64(value.data)) {
+        throw invalid(`Part ${i}: data of a part that is neither JSON nor text is padded, canonical base64.`, {
+          field: 'parts',
+        });
+      }
     }
   } else if (content === '-++') {
     if (typeof value.sha256 !== 'string' || !HEX64.test(value.sha256)) {
@@ -318,9 +337,21 @@ const between = (n: number, min: number, max: number) => n >= min && n <= max;
 const isBase64 = (s: string) =>
   /^[A-Za-z0-9+/]*={0,2}$/.test(s) && s.length % 4 === 0 && Buffer.from(s, 'base64').toString('base64') === s;
 
-/** Whether a value is a header name: lower-case letters and digits in groups joined by single hyphens, at most 64. */
+/**
+ * Whether a value is a name (a header, relation, feed or signal type): lower-case letters and digits in
+ * groups joined by single hyphens, or several such labels joined by dots for a private name, at most 128.
+ */
 export const isHeaderName = (value: unknown): value is string =>
-  typeof value === 'string' && value.length <= 64 && HEADER_NAME.test(value);
+  typeof value === 'string' && value.length <= MAX_NAME_LENGTH && NAME_RE.test(value);
+
+/**
+ * Whether a media type is a JSON type (spec section 5.3), whose inline `data` is a JSON value:
+ * `application/json`, or any type with the `+json` suffix, whatever its parameters.
+ */
+export function isJsonType(type: string): boolean {
+  const base = type.split(';', 1)[0].trim();
+  return base === 'application/json' || base.endsWith('+json');
+}
 
 /** Whether a value is a `listed` header: exactly `yes` (spec section 5.4). */
 export const isListedValue = (value: unknown): value is 'yes' => value === 'yes';
@@ -334,7 +365,7 @@ export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
 
 /**
  * What an agent's own server checks on `send`, beyond the message's validity (CLIENT.md). A paired agent's
- * version 1 message carries its principal as `for`; with a key principal it also carries a `pairing` that
+ * version 2 message carries its principal as `for`; with a key principal it also carries a `pairing` that
  * verifies, and with any other it carries none. A solo agent's message carries neither. Refused as
  * `400 invalid` on `headers`. A later version's headers are not known here, so its messages pass.
  */
@@ -363,13 +394,15 @@ export function isFresh(m: Pick<AnyMessage, 'sentAt'>, now: Date, pastMs: number
   return t !== null && t >= now.getTime() - pastMs && t <= now.getTime() + SENT_AT_FUTURE_MS;
 }
 
-/** A version 1 header's value, or null. Names are lower case on the wire. */
+/** A version 2 header's value, or null. Names are lower case on the wire. */
 export const header = (m: Pick<Message, 'headers'>, name: string): string | null =>
   Object.hasOwn(m.headers, name) ? m.headers[name] : null;
 
 /** The text of a message's text parts (any `text/*` type), joined by `separator`. */
 export const textOf = (m: Pick<Message, 'parts'>, separator = '\n') =>
-  m.parts.flatMap(p => ('data' in p && p.type.startsWith('text/') ? [p.data] : [])).join(separator);
+  m.parts
+    .flatMap(p => ('data' in p && p.type.startsWith('text/') && typeof p.data === 'string' ? [p.data] : []))
+    .join(separator);
 
 /** The media type of a part that carries another message whole (spec section 5.3). */
 export const CARRIED_MESSAGE_TYPE = 'application/simon-message';
@@ -398,12 +431,12 @@ function readCarried(data: string): Record<string, Json> | null {
 }
 
 /**
- * The parts of every message a version 1 message carries whole inline, at every depth up to MAX_CARRIED_DEPTH.
+ * The parts of every message a version 2 message carries whole inline, at every depth up to MAX_CARRIED_DEPTH.
  * With `strict`, a carried message that `readCarried` refuses, or one carried deeper, makes the carrying
  * message invalid; without it, such a message names nothing.
  */
 function carriedParts(m: AnyMessage | Record<string, Json>, strict: boolean, depth = 0): Json[] {
-  const parts = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const parts = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(parts)) return [];
   const found: Json[] = [];
   for (const p of parts as Json[]) {
@@ -428,7 +461,7 @@ function carriedParts(m: AnyMessage | Record<string, Json>, strict: boolean, dep
         { field: 'parts' },
       );
     }
-    if (inner.v === 1 && Array.isArray(inner.parts)) found.push(...inner.parts);
+    if (inner.v === VERSION && Array.isArray(inner.parts)) found.push(...inner.parts);
     found.push(...carriedParts(inner, strict, depth + 1));
   }
   return found;
@@ -488,13 +521,13 @@ function checkCarriedFiles(m: Record<string, Json>, limits: Limits) {
 }
 
 /**
- * The files a version 1 message names by content address (spec sections 5.3 and 7.2): its own, and those of
+ * The files a version 2 message names by content address (spec sections 5.3 and 7.2): its own, and those of
  * every message it carries whole inline, which count as named by the message that carries it. A carried
  * message the checks above would refuse names nothing, and neither does one carried by content address. Only well-formed
  * entries are returned, so a message that skipped the checks above still names nothing unsafe.
  */
 export function namedFiles(m: AnyMessage): { sha256: string; size: number }[] {
-  const own = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const own = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(own)) return [];
   return [...(own as Json[]), ...carriedParts(m, false)]
     .filter(isFileEntry)
@@ -504,12 +537,12 @@ export function namedFiles(m: AnyMessage): { sha256: string; size: number }[] {
 }
 
 /**
- * Every message a version 1 message carries whole inline (spec section 5.3), at every depth up to
+ * Every message a version 2 message carries whole inline (spec section 5.3), at every depth up to
  * MAX_CARRIED_DEPTH, as the JSON objects they are. A carried part that does not hold a readable message, or
  * one carried by content address, is not among them: its bytes are not in the message.
  */
 export function carriedMessages(m: AnyMessage | Record<string, Json>, depth = 0): Record<string, Json>[] {
-  const parts = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const parts = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(parts) || depth >= MAX_CARRIED_DEPTH) return [];
   const found: Record<string, Json>[] = [];
   for (const p of parts as Json[]) {

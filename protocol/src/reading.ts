@@ -21,7 +21,7 @@ export const AUTHOR_ONLY_RELATIONS: readonly string[] = ['edit', 'retract'];
 export const PUBLIC_RELATIONS: readonly string[] = ['comment', 'reaction', 'vote'];
 
 /**
- * Whether a reader that implements version 1 and understands the headers in `understood` may act on a
+ * Whether a reader that implements version 2 and understands the headers in `understood` may act on a
  * message, or must present it as not understood: only whose key signed it, nothing it says.
  */
 export function isUnderstood(m: AnyMessage, understood: ReadonlySet<string>): boolean {
@@ -32,7 +32,7 @@ export function isUnderstood(m: AnyMessage, understood: ReadonlySet<string>): bo
 
 /**
  * The principal a message names that may count, given what the author's agent document says its kind is:
- * the `for` header of a version 1 message from a paired agent, or null. A solo agent, or an agent of a kind
+ * the `for` header of a version 2 message from a paired agent, or null. A solo agent, or an agent of a kind
  * the reader does not know, speaks for no one whatever its message carries. Whether the principal is
  * verified is a further question (a pairing, or a claim).
  */

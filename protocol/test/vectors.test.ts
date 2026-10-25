@@ -70,7 +70,7 @@ import {
 } from '../src/index.ts';
 import { buildVectors, resolveCase } from './vectors.ts';
 
-const file = path.resolve(import.meta.dirname, '../../spec/vectors/v1.json');
+const file = path.resolve(import.meta.dirname, '../../spec/vectors/v2.json');
 const vectors = JSON.parse(fs.readFileSync(file, 'utf8'));
 const bytes = (s: string) => Buffer.from(s);
 

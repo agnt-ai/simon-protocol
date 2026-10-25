@@ -1,6 +1,6 @@
 # SIMON in one page
 
-SIMON delivers one signed message to `name@domain`. A domain names its server in DNS, servers deliver to each other, and every message carries its author's signature. This page is an overview; [spec/PROTOCOL.md](../spec/PROTOCOL.md) and [spec/CLIENT.md](../spec/CLIENT.md) are the rules, [spec/schemas/](../spec/schemas) the shapes, and [spec/vectors/v1.json](../spec/vectors/v1.json) the exact bytes. The examples below illustrate the message, envelope and signal shapes; the vectors provide executable byte cases.
+SIMON delivers one signed message to `name@domain`. A domain names its server in DNS, servers deliver to each other, and every message carries its author's signature. This page is an overview; [spec/PROTOCOL.md](../spec/PROTOCOL.md) and [spec/CLIENT.md](../spec/CLIENT.md) are the rules, [spec/schemas/](../spec/schemas) the shapes, and [spec/vectors/v2.json](../spec/vectors/v2.json) the exact bytes. The examples below illustrate the message, envelope and signal shapes; the vectors provide executable byte cases.
 
 ## Your first message, in fifteen minutes
 
@@ -39,7 +39,7 @@ A key is a **key token**, `ed25519:<32-byte public key, base64url>` (or `ml-dsa-
 ## A message
 
 ```json
-{ "v": 1, "from": "ada@example.com", "to": ["bob@example.net"], "inReplyTo": null,
+{ "v": 2, "from": "ada@example.com", "to": ["bob@example.net"], "inReplyTo": null,
   "parts": [ { "type": "text/plain", "data": "Does 3pm work?" } ],
   "headers": { "for": "mailto:alice@example.org", "subject": "Thursday" },
   "sentAt": "2026-10-14T21:00:00Z",

@@ -4,7 +4,7 @@ Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLI
 
 | File | Object |
 | --- | --- |
-| `message.json` | Version 1 message; unsupported versions require the protocol's separate reading rules |
+| `message.json` | Version 2 message; unsupported versions require the protocol's separate reading rules |
 | `envelope.json`, `signal.json` | Server-to-server delivery and transient signal |
 | `server-document.json`, `agent-document.json` | Documents, including optional sync/history advertisement and retirement evidence |
 | `published.json`, `listing.json` | Published message and feed/related listing |
@@ -14,7 +14,7 @@ Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLI
 
 Important client definitions include `registerRequest` / `registerAnswer`, `recoveryRequest` / `recoveryAnswer` / `recoveryStatusAnswer`, `accountAnswer`, `addKeyRequest`, `cancelRecoveryRequest`, `unpairRequest`, `endGrantAnswer`, `syncAnswer` / `syncEntry`, `sendSignalRequest`, `webhookNotification`, and optional `historyAnswer`, `conversationsAnswer`, `marksRequest`, `grantTokenAnswer`. Registration creates or pairs; it does not silently recover. Successful registration, recovery and key changes return the account. Sync carries sent and received messages with an opaque token; the removed numeric inbox cursor is not a current API. Listing cursors are separate opaque values.
 
-Objects remain open to unknown extension members wherever the protocol permits them. A version 1 message still has exactly its eight top-level members. A passing shape never means an unknown present header named in `critical` is understood, a missing `binding` is consent, or an absent `listed` opts a reply into public listing. A critical name whose header is absent is ignored. Only exact writer-signed `listed: yes`, on a valid non-published relation, gives that consent; principal consent for `acts-for` is separate.
+Objects remain open to unknown extension members wherever the protocol permits them. A version 2 message still has exactly its eight top-level members. A passing shape never means an unknown present header named in `critical` is understood, a missing `binding` is consent, or an absent `listed` opts a reply into public listing. A critical name whose header is absent is ignored. Only exact writer-signed `listed: yes`, on a valid non-published relation, gives that consent; principal consent for `acts-for` is separate.
 
 Schema validation alone cannot establish:
 

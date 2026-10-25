@@ -148,7 +148,7 @@ describe('readers', () => {
 
   it('present an unknown version, or an unknown critical header, as not understood', () => {
     assert.equal(isUnderstood(signedQuestion, understood), true);
-    assert.equal(isUnderstood({ ...signedQuestion, v: 2 }, understood), false);
+    assert.equal(isUnderstood({ ...signedQuestion, v: 9 }, understood), false);
     const critical = (c: string) => ({ ...signedQuestion, headers: { ...signedQuestion.headers, critical: c } });
     assert.equal(isUnderstood(critical('for,subject'), understood), true);
     assert.equal(isUnderstood(critical('binding'), understood), true, 'an absent critical header is ignored');
@@ -165,7 +165,7 @@ describe('readers', () => {
     assert.equal(claimedPrincipal(signedQuestion, 'paired'), 'mailto:alice@example.org');
     assert.equal(claimedPrincipal(signedQuestion, 'solo'), null, 'a solo agent speaks for no one');
     assert.equal(claimedPrincipal(signedQuestion, 'robot'), null, 'nor an agent of a kind the reader does not know');
-    assert.equal(claimedPrincipal({ ...signedQuestion, v: 2 }, 'paired'), null);
+    assert.equal(claimedPrincipal({ ...signedQuestion, v: 9 }, 'paired'), null);
   });
 
   it('show an unknown relation as a reply, and apply an author-only one only from the author', () => {

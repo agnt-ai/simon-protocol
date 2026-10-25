@@ -19,6 +19,7 @@ import {
   type KeyEntry,
   type Message,
   type Unsigned,
+  VERSION,
 } from '../src/index.ts';
 
 export interface FixedKey {
@@ -73,7 +74,7 @@ export const keyEntry = (key: string, added = '2026-10-01T00:00:00Z', revoked: s
 });
 
 export const question: Unsigned<Message> = {
-  v: 1,
+  v: VERSION,
   from: 'ada@example.com',
   to: ['bob@example.net'],
   inReplyTo: null,

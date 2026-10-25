@@ -1,6 +1,6 @@
 # A second independent implementation
 
-The spec becomes version 1 only when two independent implementations reproduce every vector and pass the conformance suite against each other (PROTOCOL.md, "Status"). This page says what that second implementation is, what it needs from us, and how we will know it is independent.
+The spec becomes version 1.0 only when two independent implementations reproduce every vector and pass the conformance suite against each other (PROTOCOL.md, "Status"). This page says what that second implementation is, what it needs from us, and how we will know it is independent.
 
 ## Why it matters
 
@@ -17,7 +17,7 @@ A port of the reference by its own author is a useful cross-check of bytes (the 
 
 ## What it must pass
 
-1. **Every vector** in `spec/vectors/v1.json`, and the reader cases once they exist (PROTOCOL.md section 15).
+1. **Every vector** in `spec/vectors/v2.json`, and the reader cases once they exist (PROTOCOL.md section 15).
 2. **The server suite** in network mode, for the *SIMON Core Server* profile at least.
 3. **Federation with the reference, both ways:** messages, parts, retries, and refusals, between the two servers on real domains.
 4. **The suite run by each against the other:** the suite plays a peer server, and so does each implementation, so each one's outbound behaviour is tested by the other.

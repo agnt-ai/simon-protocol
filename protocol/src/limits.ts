@@ -19,7 +19,7 @@ export const MINIMUM_LIMITS: Readonly<Limits> = Object.freeze({
   partBytes: 26_214_400,
 });
 
-/** A version 1 message's parts and headers, and a part's optional name and alt, in UTF-8 bytes. */
+/** A version 2 message's parts and headers, and a part's optional name and alt, in UTF-8 bytes. */
 export const MAX_PARTS = 32;
 /** Files one message names by content address in all: its own and those of the messages it carries inline. */
 export const MAX_NAMED_FILES = 1024;

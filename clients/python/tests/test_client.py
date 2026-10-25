@@ -531,7 +531,7 @@ class ClientTest(unittest.TestCase):
         agent = self.agent()
         agent.register()
         reader = Reader(resolver=self.server.resolve)
-        later = {"v": 2, "from": agent.address, "to": [], "sentAt": timestamp(), "headers": {"for": "x"}}
+        later = {"v": 9, "from": agent.address, "to": [], "sentAt": timestamp(), "headers": {"for": "x"}}
         trust = reader.verify_author(sign_message(later, agent.key))
         self.assertEqual((trust.verified, trust.understood, trust.principal), (True, False, None))
         binding = agent.compose([], "Only an option.", headers={"binding": "no", "critical": "binding"})
@@ -718,7 +718,7 @@ class ClientTest(unittest.TestCase):
     def test_a_version_the_server_does_not_implement(self):
         agent = self.agent()
         agent.register()
-        later = {"v": 2, "from": agent.address, "to": [], "sentAt": timestamp(), "signature": "AA"}
+        later = {"v": 9, "from": agent.address, "to": [], "sentAt": timestamp(), "signature": "AA"}
         later = sign_message(later, agent.key)
         with self.assertRaises(SimonError) as caught:
             agent.send_message(later)

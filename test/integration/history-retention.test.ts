@@ -10,6 +10,7 @@ import {
   type KeyEntry,
   type Message,
   type ResolverIO,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { listedKeys } from '../../server/src/public.ts';
 import type { Agent } from '../../server/src/store/store.ts';
@@ -38,7 +39,7 @@ it('distinguishes a local check with retained validated keys from a cold reader 
   };
   const m = signMessage<Message>(
     {
-      v: 1,
+      v: VERSION,
       from: address,
       to: ['bob@elsewhere.test'],
       sentAt: '2026-10-20T12:00:00.000Z',

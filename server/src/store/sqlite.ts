@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
-import { canonicalize, header, namedFiles, type AnyMessage } from '@agnt-sdk/simon-protocol';
+import { canonicalize, header, namedFiles, VERSION, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from './store.ts';
 import type {
   Agent,
@@ -99,8 +99,9 @@ const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) =>
   ...new Map(sources.map(s => [`${'uploader' in s ? 'u' : 'c'} ${sourceKey(s)} ${s.size}`, s])).values(),
 ];
 
-/** A version 1 message's `inReplyTo`. Other versions point at nothing the server can see. */
-const inReplyTo = (m: AnyMessage) => (m.v === 1 ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null);
+/** A version 2 message's `inReplyTo`. Other versions point at nothing the server can see. */
+const inReplyTo = (m: AnyMessage) =>
+  m.v === VERSION ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null;
 
 /** A page of rows, newest first, fetched one beyond `limit` to tell whether there are more. */
 const page = (rows: Row[], limit: number, record: (r: Row) => StoredMessage): Page => ({
@@ -109,7 +110,7 @@ const page = (rows: Row[], limit: number, record: (r: Row) => StoredMessage): Pa
 });
 
 /**
- * The files a version 1 message names by content address, its own and those of messages it carries whole
+ * The files a version 2 message names by content address, its own and those of messages it carries whole
  * (`namedFiles`). Other versions name none the server can see.
  */
 const namedParts = (m: AnyMessage) => namedFiles(m);
@@ -553,7 +554,7 @@ export class SqliteStore implements Store {
 
   #isRetraction(record: StoredMessage) {
     return (
-      record.message.v === 1 &&
+      record.message.v === VERSION &&
       header(record.message as never, 'rel') === 'retract' &&
       inReplyTo(record.message) !== null
     );

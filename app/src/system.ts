@@ -16,8 +16,10 @@ import {
   privateKeyFromSeed,
   signMessage,
   timestamp,
+  type Json,
   type Message,
   type Part,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import type { ServerApi } from '@agnt-sdk/simon-server';
 
@@ -94,12 +96,11 @@ export class SystemAgents {
   async send(name: SystemName, draft: Draft): Promise<string> {
     const api = this.#api();
     const parts: Part[] = [{ type: 'text/plain', data: draft.text }];
-    // A part that is not text carries its bytes in base64 (spec section 5.3).
-    if (draft.data)
-      parts.push({ type: 'application/json', data: Buffer.from(JSON.stringify(draft.data)).toString('base64') });
+    // A JSON part carries its JSON value as data (spec section 5.3).
+    if (draft.data) parts.push({ type: 'application/json', data: draft.data as Json });
     const message = signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: this.address(name),
         to: draft.to,
         inReplyTo: draft.inReplyTo ?? null,

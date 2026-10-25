@@ -43,6 +43,7 @@ from .limits import (
     SERVER_DOCUMENT_REFETCH_SECONDS,
 )
 from .messages import (
+    is_header_name,
     PROTOCOL_HEADERS,
     VERSION,
     check_message,
@@ -587,7 +588,7 @@ class Agent(Reader):
         headers: Mapping[str, str] | None = None,
         in_reply_to: str | None = None,
     ) -> dict[str, Any]:
-        """A signed version 1 message, written now, and checked as this agent's server will check it.
+        """A signed version 2 message, written now, and checked as this agent's server will check it.
 
         ``text``, when given, becomes the first part (``text/plain``), ahead of ``parts``; a message may
         carry any parts, or none. An empty ``to`` is a public message. The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
@@ -673,8 +674,8 @@ class Agent(Reader):
 
     def send_signal(self, type: str, about: str, to: Iterable[str]) -> dict[str, Any]:
         """Ask the server to send a signal. Read/typing sharing is always opt-in."""
-        if not isinstance(type, str) or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", type) is None:
-            raise _invalid("type", "type is a registry name.")
+        if not is_header_name(type):
+            raise _invalid("type", "A signal type is a name: a registry name, or a private reverse-domain one.")
         body = {"type": type, "about": _hex64_arg("about", about),
                 "to": [_address_arg(f"to[{i}]", a) for i, a in enumerate(to)]}
         return self.call("POST", "/simon/send-signal", canonical_bytes(body))

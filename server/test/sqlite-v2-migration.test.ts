@@ -20,6 +20,7 @@ import {
   type AnyMessage,
   type Message,
   type Part,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer } from '../src/server.ts';
@@ -64,7 +65,7 @@ function fixture() {
   function message(parts: Part[], headers: Record<string, string> = {}, inReplyTo: string | null = null) {
     const signed = signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: 'author@remote.example',
         to: [address],
         sentAt: T,
@@ -565,11 +566,34 @@ for (const { name, mutate, code } of corruptions)
     }
   });
 
+it('refuses a legacy store holding a wire version 1 message, which this server cannot read as it was', async () => {
+  const f = fixture();
+  try {
+    const message = signMessage<Message>(
+      {
+        v: 1,
+        from: 'author@remote.example',
+        to: [f.address],
+        sentAt: T,
+        inReplyTo: null,
+        parts: [{ type: 'text/plain', data: 'written under wire version 1' }],
+        headers: {},
+      } as never,
+      f.foreign.privateKey,
+    );
+    f.keep(message, 78);
+    await assert.rejects(createSqliteV2Candidate(f.options), refused('legacy_wire_version'));
+    assert.equal(fs.existsSync(path.join(f.options.directory, '004-VERIFIED.json')), false);
+  } finally {
+    f.close();
+  }
+});
+
 it('refuses a corrupt private flag on a genuinely signed public message', async () => {
   const f = fixture();
   try {
     const message = signMessage<Message>(
-      { v: 1, from: 'author@remote.example', to: [], sentAt: T, inReplyTo: null, parts: [], headers: {} },
+      { v: VERSION, from: 'author@remote.example', to: [], sentAt: T, inReplyTo: null, parts: [], headers: {} },
       f.foreign.privateKey,
     );
     assert.ok(verifyMessage(message, [{ key: f.foreign.key, added: T, revoked: null }]));
@@ -739,7 +763,7 @@ it('keeps unknown-version interiors opaque instead of inventing file grants or r
   try {
     const unknown = signMessage<FutureMessage>(
       {
-        v: 2,
+        v: 9,
         from: 'author@remote.example',
         to: [f.address],
         sentAt: T,

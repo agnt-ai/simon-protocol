@@ -406,10 +406,10 @@ export async function notices(agent: Agent, kind: string): Promise<{ text: strin
     .filter(m => m.message.headers?.notice === kind)
     .map(m => {
       const part = (type: string) =>
-        m.message.parts.find(p => p.type === type && 'data' in p) as { data: string } | undefined;
+        m.message.parts.find(p => p.type === type && 'data' in p) as { data: unknown } | undefined;
       return {
-        text: part('text/plain')?.data ?? '',
-        data: JSON.parse(Buffer.from(part('application/json')?.data ?? '', 'base64').toString() || '{}'),
+        text: (part('text/plain')?.data as string | undefined) ?? '',
+        data: (part('application/json')?.data as Record<string, any> | undefined) ?? {},
       };
     });
 }

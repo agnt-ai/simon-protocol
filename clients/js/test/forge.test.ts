@@ -17,6 +17,7 @@ import {
   timestamp,
   type Message,
   type ResolverIO,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, fetchAgentDocument, verifyAuthor } from '../src/index.ts';
 
@@ -28,7 +29,7 @@ const forId = `simon-key:${principal.key}`;
 const pairing = sign(principal.privateKey, `SIMON-PAIR\n${from}\n${forId}`);
 const forged = signMessage<Message>(
   {
-    v: 1,
+    v: VERSION,
     from,
     to: ['victim@example.org'],
     inReplyTo: null,
