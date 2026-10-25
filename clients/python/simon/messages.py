@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import re
+import time
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -29,7 +30,7 @@ from .limits import (
     MINIMUM_LIMITS,
     SENT_AT_AHEAD_MS,
 )
-from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex
+from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex, timestamp
 
 # The wire version this port implements (spec section 5.2): one counter for every incompatible revision.
 VERSION = 2
@@ -365,8 +366,10 @@ def _check_headers(m: dict[str, Any]) -> None:
             "The for header is a principal: mailto:<address>, tel:<E.164 number> or simon-key:<key token>.",
             field="headers",
         )
-    if pairing is not None and not is_b64url(pairing):
-        raise invalid("The pairing header is a signature in canonical base64url.", field="headers")
+    if pairing is not None and parse_pairing(pairing) is None:
+        raise invalid(
+            "The pairing header is a timestamp, one space, and a signature in canonical base64url.", field="headers"
+        )
     if (pairing is not None) != (principal_key(principal) is not None):
         raise invalid(
             "The pairing header is present exactly when the for header is a simon-key: principal.",
@@ -481,9 +484,17 @@ def principal_key(principal: object) -> str | None:
     return None
 
 
-def pairing_bytes(agent: str, principal: str) -> bytes:
-    """What a key principal signs to pair with an agent: ``SIMON-PAIR``, the address and the identifier."""
-    return f"SIMON-PAIR\n{agent}\n{principal}".encode()
+#: The longest a pairing may last from any moment it counts at: 366 days, so no pairing is for good.
+PAIRING_MAX_MS = 366 * 24 * 60 * 60 * 1000
+
+#: How long ``sign_pairing`` makes a pairing last when given no ``until``: 365 days.
+PAIRING_DEFAULT_MS = 365 * 24 * 60 * 60 * 1000
+
+
+def pairing_bytes(agent: str, principal: str, until: str) -> bytes:
+    """What a key principal signs to pair with an agent until ``until``, a wire timestamp: ``SIMON-PAIR``,
+    the address, the identifier and ``until``."""
+    return f"SIMON-PAIR\n{agent}\n{principal}\n{until}".encode()
 
 
 def unpairing_bytes(agent: str, principal: str) -> bytes:
@@ -492,15 +503,37 @@ def unpairing_bytes(agent: str, principal: str) -> bytes:
     return f"SIMON-UNPAIR\n{agent}\n{principal}".encode()
 
 
-def sign_pairing(key: SigningKey, agent: str) -> str:
-    """The ``pairing`` a key principal gives the agent at ``agent``; its ``for`` is ``key.identifier``."""
-    return key.sign(pairing_bytes(agent, key.identifier))
+def sign_pairing(key: SigningKey, agent: str, until: str | None = None) -> str:
+    """The ``pairing`` a key principal gives the agent at ``agent``, ``<until> <signature>``, lasting until
+    ``until`` (a year from now by default); its ``for`` is ``key.identifier``."""
+    until = timestamp(int(time.time() * 1000) + PAIRING_DEFAULT_MS) if until is None else until
+    return f"{until} {key.sign(pairing_bytes(agent, key.identifier, until))}"
 
 
-def verify_pairing(agent: str, principal: str, pairing: object) -> bool:
-    """Whether ``pairing`` is the signature of the key ``principal`` names over its pairing with ``agent``."""
-    key = principal_key(principal)
-    return key is not None and verify(key, pairing_bytes(agent, principal), pairing)
+def parse_pairing(pairing: object) -> tuple[str, str] | None:
+    """A ``pairing`` value's ``(until, signature)``: a wire timestamp, one space and canonical base64url;
+    otherwise None."""
+    if not isinstance(pairing, str):
+        return None
+    parts = pairing.split(" ")
+    if len(parts) != 2 or parse_timestamp(parts[0]) is None or not is_b64url(parts[1]):
+        return None
+    return parts[0], parts[1]
+
+
+def verify_pairing(agent: str, principal: str, pairing: object, at_ms: int | None = None) -> bool:
+    """Whether ``pairing`` pairs ``agent`` with the key ``principal`` names at ``at_ms`` (now by default):
+    its signature verifies, and the moment is before its ``until`` by at most ``PAIRING_MAX_MS``. A
+    reader acting on a message asks for now; one showing an old message may ask for its ``sentAt``."""
+    key, parsed = principal_key(principal), parse_pairing(pairing)
+    if key is None or parsed is None:
+        return False
+    until, signature = parsed
+    end = parse_timestamp(until)
+    t = int(time.time() * 1000) if at_ms is None else at_ms
+    if not (end is not None and t < end and end - t <= PAIRING_MAX_MS):
+        return False
+    return verify(key, pairing_bytes(agent, principal, until), signature)
 
 
 def recover_bytes(agent: str, new_key: str, at: str) -> bytes:
@@ -557,9 +590,14 @@ def check_principal(message: Mapping[str, Any], kind: str, principal: str | None
             raise invalid(
                 "Only a key principal pairs by signature: this message carries no pairing.", field="headers"
             )
-    elif not verify_pairing(message["from"], principal, pairing):
-        expected = pairing_bytes(message["from"], principal).decode("utf-8")
+    elif (sent := parse_timestamp(message["sentAt"])) is None or not verify_pairing(
+        message["from"], principal, pairing, sent
+    ):
+        until = (parse_pairing(pairing) or ("<until>", ""))[0]
+        expected = pairing_bytes(message["from"], principal, until).decode("utf-8")
         raise invalid(
-            f"The pairing header must be the principal's signature over {canonical(expected)}.",
+            f"The pairing header must be <until> <signature>: the principal's signature over "
+            f"{canonical(expected)}, valid at sentAt: before until, by at most 366 days. The principal "
+            "renews a lapsed pairing by signing a later until.",
             field="headers",
         )

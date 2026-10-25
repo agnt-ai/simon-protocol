@@ -184,8 +184,20 @@ export class Agent {
     return this.#for;
   }
 
+  /** The pairing every message carries, `<until> <signature>`; `parsePairing` reads when it lapses. */
   get pairing(): string | undefined {
     return this.#pairing;
+  }
+
+  /**
+   * Carry a renewed pairing from now on: the principal's signature over a later `until` (spec section 2.2).
+   * The server holds no pairing, so renewing needs no call to it; this checks the pairing counts now.
+   */
+  renewPairing(pairing: string): void {
+    const address = this.#requireAddress();
+    if (this.#for === undefined || !verifyPairing(address, this.#for, pairing, this.#transport.now()))
+      throw invalid('pairing', "A renewed pairing must be the principal's, for this address, and count now.");
+    this.#pairing = pairing;
   }
 
   /** Create or pair an address. Use recover for an existing address. An account answer binds this agent. */
@@ -218,7 +230,8 @@ export class Agent {
     if (pairing !== undefined && principal === undefined) throw invalid('for', 'Pairing needs its principal.');
     if (
       principal !== undefined &&
-      (!isPrincipal(principal) || (principal.startsWith('simon-key:') && !verifyPairing(address, principal, pairing)))
+      (!isPrincipal(principal) ||
+        (principal.startsWith('simon-key:') && !verifyPairing(address, principal, pairing, this.#transport.now())))
     )
       throw invalid(
         'pairing',

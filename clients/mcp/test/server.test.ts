@@ -113,6 +113,7 @@ describe('JSON-RPC', () => {
         'revoke_key',
         'end_grant',
         'cancel_recovery',
+        'renew_pairing',
         'unpair',
         'send_signal',
         'webhook_create',

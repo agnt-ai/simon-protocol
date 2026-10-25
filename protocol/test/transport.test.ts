@@ -48,6 +48,9 @@ import {
   isPrincipal,
   NonceCache,
   pairingBytes,
+  parsePairing,
+  PAIRING_DEFAULT_MS,
+  PAIRING_MAX_MS,
   principalKey,
   signPairing,
   verifyPairing,
@@ -77,7 +80,7 @@ import {
   type Message,
   type ResolverIO,
 } from '../src/index.ts';
-import { ada, bob, carol, erin, exampleCom, frank, keyEntry, signedQuestion } from './fixtures.ts';
+import { ada, bob, carol, erin, exampleCom, frank, keyEntry, PAIRED_UNTIL, signedQuestion } from './fixtures.ts';
 
 const actsFor: ActsForClaim = {
   type: 'acts-for',
@@ -555,7 +558,8 @@ describe('paired and solo agents', () => {
   const erinPrincipal = `simon-key:${erin.key}`;
   const fromBob = (headers: Record<string, string>) =>
     ({ ...signedQuestion, from: 'bob@example.net', headers }) as Message;
-  const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal);
+  // The fixtures' messages were sent long ago: their pairings lapse a year after.
+  const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal, PAIRED_UNTIL);
 
   it('a principal is mailto:, tel: or simon-key:, written exactly, nothing percent-encoded', () => {
     for (const ok of [
@@ -586,14 +590,32 @@ describe('paired and solo agents', () => {
     assert.equal(principalKey('mailto:alice@example.org'), null);
   });
 
-  it('a key principal pairs by signing SIMON-PAIR, the agent and itself, with either algorithm', () => {
-    assert.equal(pairingBytes('bob@example.net', erinPrincipal), `SIMON-PAIR\nbob@example.net\n${erinPrincipal}`);
-    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing), true);
-    assert.equal(verifyPairing('ada@example.com', erinPrincipal, pairing), false, 'another agent');
-    assert.equal(verifyPairing('bob@example.net', `simon-key:${frank.key}`, pairing), false, 'another principal');
-    assert.equal(verifyPairing('bob@example.net', 'mailto:erin@example.org', pairing), false, 'not a key principal');
+  it('a key principal pairs by signing SIMON-PAIR, the agent, itself and until, with either algorithm', () => {
+    const until = parsePairing(pairing)!.until;
+    assert.equal(
+      pairingBytes('bob@example.net', erinPrincipal, until),
+      `SIMON-PAIR\nbob@example.net\n${erinPrincipal}\n${until}`,
+    );
+    const sent = Date.parse(signedQuestion.sentAt);
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, sent), true);
+    assert.equal(verifyPairing('ada@example.com', erinPrincipal, pairing, sent), false, 'another agent');
+    assert.equal(verifyPairing('bob@example.net', `simon-key:${frank.key}`, pairing, sent), false, 'another principal');
+    assert.equal(verifyPairing('bob@example.net', 'mailto:erin@example.org', pairing, sent), false, 'not a key');
     const pq = `simon-key:${frank.key}`;
     assert.equal(verifyPairing('bob@example.net', pq, signPairing(frank.privateKey, 'bob@example.net', pq)), true);
+  });
+
+  it('a pairing lasts a year by default, counts only before its until, and never for more than 366 days', () => {
+    const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal);
+    const until = Date.parse(parsePairing(pairing)!.until);
+    assert.ok(Math.abs(until - Date.now() - PAIRING_DEFAULT_MS) < 60_000, 'a year from now');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - 1), true, 'just before');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until), false, 'at until');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - PAIRING_MAX_MS), true, '366 days');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - PAIRING_MAX_MS - 1), false, 'longer');
+    const signature = parsePairing(pairing)!.signature;
+    const later = timestamp(until + 1000);
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, `${later} ${signature}`), false, 'until is signed');
   });
 
   it("a paired agent's messages carry its principal, and a pairing exactly when it is a key; a solo agent's carry neither", () => {
@@ -612,7 +634,10 @@ describe('paired and solo agents', () => {
     assert.equal(check(fromBob({ for: erinPrincipal }), byKey), '400 invalid headers');
     assert.equal(
       check(
-        fromBob({ for: erinPrincipal, pairing: signPairing(erin.privateKey, 'ada@example.com', erinPrincipal) }),
+        fromBob({
+          for: erinPrincipal,
+          pairing: signPairing(erin.privateKey, 'ada@example.com', erinPrincipal, PAIRED_UNTIL),
+        }),
         byKey,
       ),
       '400 invalid headers',
@@ -625,8 +650,9 @@ describe('paired and solo agents', () => {
 
   it('a routing server checks that pairing is present exactly with a key for, and its grammar, not its signature', () => {
     const m = (headers: Record<string, string>) => code(() => checkMessage({ ...signedQuestion, headers }));
-    assert.equal(m({ for: erinPrincipal, pairing: 'AAAA' }), 'accepted');
-    assert.equal(m({ for: erinPrincipal, pairing: 'AA==' }), '400 invalid headers');
+    assert.equal(m({ for: erinPrincipal, pairing: `${PAIRED_UNTIL} AAAA` }), 'accepted');
+    assert.equal(m({ for: erinPrincipal, pairing: 'AAAA' }), '400 invalid headers', 'no until');
+    assert.equal(m({ for: erinPrincipal, pairing: `${PAIRED_UNTIL} AA==` }), '400 invalid headers');
     assert.equal(m({ for: erinPrincipal }), '400 invalid headers');
     assert.equal(m({ pairing }), '400 invalid headers');
     assert.equal(m({ for: 'mailto:alice@example.org', pairing }), '400 invalid headers');

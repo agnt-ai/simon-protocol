@@ -4,6 +4,7 @@ import {
   addKeyProofString,
   isV1Address,
   keyToken,
+  parsePairing,
   parseTimestamp,
   sign,
   signPairing,
@@ -353,7 +354,7 @@ async function pairByLease(t: T, ctx: Ctx): Promise<{ first: Res; second?: Res; 
   const forValue = `simon-key:${keyToken(principal)}`;
   const first = await agent.register(t, { for: forValue }, {}, 'register with for, no pairing');
   if (first.status !== 202 || typeof first.json?.address !== 'string') return { first };
-  const pairing = signPairing(principal, first.json.address, forValue);
+  const pairing = signPairing(principal, first.json.address, forValue, ctx.until());
   const second = await agent.register(t, { for: forValue, pairing }, {}, 'the same call with the pairing');
   if (second.status === 200) agent.address = second.json.address;
   return { first, second, paired: second.status === 200 ? { agent, principal, for: forValue } : undefined };
@@ -371,7 +372,11 @@ async function registerPaired(t: T, ctx: Ctx, name: string): Promise<Paired> {
   const principal = crypto.generateKeyPairSync('ed25519').privateKey;
   const forValue = `simon-key:${keyToken(principal)}`;
   const address = `${ctx.runId}-${name}@${domain}`;
-  const res = await agent.register(t, { address, for: forValue, pairing: signPairing(principal, address, forValue) });
+  const res = await agent.register(t, {
+    address,
+    for: forValue,
+    pairing: signPairing(principal, address, forValue, ctx.until()),
+  });
   if (res.status !== 200) throw new Prerequisite(`registering a paired agent answered ${res.status}`);
   agent.address = address;
   return { agent, principal, for: forValue };
@@ -387,7 +392,7 @@ def(
     level: 'must',
     title: 'Pairing a leased address goes through pairing_required',
     expected:
-      'register {"key","for"} with a simon-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", the principal\'s signature over SIMON-PAIR\\n<address>\\n<for>, answers 200 account at that address',
+      'register {"key","for"} with a simon-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", <until> and the principal\'s signature over SIMON-PAIR\\n<address>\\n<for>\\n<until>, answers 200 account at that address',
   },
   async (t: T, ctx: Ctx) => {
     await requireLeasing(ctx);
@@ -428,20 +433,32 @@ def(
     id: 'register.pairing-bad-proof',
     section: `${S}, CLIENT errors`,
     level: 'must',
-    title: 'A pairing that does not verify is 401 bad_proof',
-    expected: '401 bad_proof for register with for and a pairing signed for another address',
+    title: 'A pairing that does not count now is 401 bad_proof',
+    expected:
+      '401 bad_proof for register with for and a pairing signed for another address, one that lapsed a minute ago, and one lasting more than 366 days',
   },
   async (t: T, ctx: Ctx) => {
     const agent = TargetAgent.fresh(ctx.server);
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
     const forValue = `simon-key:${keyToken(principal)}`;
-    const body: Record<string, unknown> = {
-      for: forValue,
-      pairing: signPairing(principal, 'someone@else.example', forValue),
-    };
-    if (ctx.opts.hostedDomain) body.address = `${ctx.runId}-badpair@${ctx.opts.hostedDomain}`;
-    else await requireLeasing(ctx);
-    t.error(await agent.register(t, body), 401, 'bad_proof');
+    const body: Record<string, unknown> = { for: forValue };
+    let address: unknown;
+    if (ctx.opts.hostedDomain) address = body.address = `${ctx.runId}-badpair@${ctx.opts.hostedDomain}`;
+    else {
+      await requireLeasing(ctx);
+      const first = await agent.register(t, body, {}, 'register with for, no pairing');
+      address = first.json?.address;
+      if (first.status !== 202 || typeof address !== 'string')
+        throw new Prerequisite(`register with for answered ${first.status}`);
+    }
+    const cases: [string, string][] = [
+      ['signed for another address', signPairing(principal, 'someone@else.example', forValue, ctx.until())],
+      ['lapsed', signPairing(principal, address as string, forValue, ctx.until(-60_000))],
+      ['lasting more than 366 days', signPairing(principal, address as string, forValue, ctx.until(367 * 86_400_000))],
+    ];
+    for (const [what, pairing] of cases) {
+      t.error(await agent.register(t, { ...body, pairing }, {}, what), 401, 'bad_proof', what);
+    }
   },
 );
 
@@ -462,7 +479,11 @@ def(
     const address = `${ctx.runId}-pairedhosted@${domain}`;
     accountAnswer(
       t,
-      await agent.register(t, { address, for: forValue, pairing: signPairing(principal, address, forValue) }),
+      await agent.register(t, {
+        address,
+        for: forValue,
+        pairing: signPairing(principal, address, forValue, ctx.until()),
+      }),
       agent.token,
       address,
     );
@@ -976,7 +997,7 @@ def(
     const other = crypto.generateKeyPairSync('ed25519').privateKey;
     for (const [what, unpair] of [
       ['an unpairing by another key', signUnpairing(other, p.agent.address, p.for)],
-      ['the pairing signature', signPairing(p.principal, p.agent.address, p.for)],
+      ['the pairing signature', parsePairing(signPairing(p.principal, p.agent.address, p.for, ctx.until()))!.signature],
     ] as const) {
       t.error(
         await stranger.call(

@@ -4,7 +4,8 @@ No server test can show a reader obeys them, so they live here as functions, wit
 
 - A message of a version the reader does not implement, or listing in ``critical`` a header it does not
   understand, is presented as not understood (sections 1 and 5.4).
-- A principal counts only for a message that names one in `for`, on its evidence (section 2.2).
+- A principal counts only for a message that names one in ``for``, on its evidence (section 2.2); a key
+  principal's pairing counts while it has not lapsed.
 - A relation the reader does not know is shown as a reply, and an author-only relation from anyone but the
   original's author is shown as a reply and never applied (section 5.5).
 """
@@ -14,7 +15,8 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from typing import Any
 
-from .messages import VERSION, header
+from .messages import VERSION, header, parse_pairing, principal_key, verify_pairing
+from .wire import parse_timestamp
 
 #: The relations the registry marks author-only: they change or withdraw the message they name.
 AUTHOR_ONLY_RELATIONS = frozenset({"edit", "retract"})
@@ -58,3 +60,20 @@ def reads_as(
     if rel in AUTHOR_ONLY_RELATIONS and target["from"] != message["from"]:
         return "reply"
     return "relation"
+
+
+def pairing_standing(message: Mapping[str, Any], now_ms: int) -> str | None:
+    """Where a key principal's pairing stands for a reader at ``now_ms`` (section 2.2), or None when the
+    message names no key principal: ``counts`` (it counted when sent and has not lapsed), ``lapsed`` (it
+    counted when sent, but ``now_ms`` is at or past its ``until``: act on nothing in it for the principal
+    now), or ``refused`` (it did not count at ``sentAt``, so the message names its principal falsely). A
+    reader whose clock runs behind the sender's may find a pairing reaching more than 366 days past its own
+    now; that is the clocks' disagreement, not a lapse, so it counts."""
+    principal = claimed_principal(message)
+    if principal is None or principal_key(principal) is None:
+        return None
+    pairing, sent = header(message, "pairing"), parse_timestamp(message["sentAt"])
+    if sent is None or not verify_pairing(message["from"], principal, pairing, sent):
+        return "refused"
+    until = parse_timestamp(parse_pairing(pairing)[0])  # type: ignore[index]
+    return "lapsed" if now_ms >= until else "counts"  # type: ignore[operator]

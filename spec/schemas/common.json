@@ -35,6 +35,11 @@
       "pattern": "^[A-Za-z0-9_-]+$",
       "description": "Unpadded, canonical base64url (PROTOCOL.md 2.5)."
     },
+    "pairing": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z [A-Za-z0-9_-]+$",
+      "description": "A key principal's pairing, <until> <signature>: a timestamp, one space, and the principal's canonical base64url signature over SIMON-PAIR, the address, the principal and until, joined by newlines (PROTOCOL.md 2.2, 5.4). It counts before until, by at most 366 days."
+    },
     "keyToken": {
       "type": "string",
       "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+$",

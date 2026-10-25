@@ -513,6 +513,15 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Why:* `kind` added no protection. A key principal's pairing proves consent by itself. For an email or phone principal, `kind` was the same server's word as its claim, so a server that would lie in one would lie in the other. And `kind` told anyone who asked which addresses speak for a person.
 - *Cost:* an agent's being paired is no longer checkable apart from its messages.
 
+## Pairings lapse within a year (2026-10-25)
+
+**Choice (B6).** Every key pairing signs an `until`, and counts only before it, by at most 366 days. The principal sets it; an agent may propose one, but cannot set or extend it alone. The principal renews by signing a later `until`; the agent carries the new pairing, and since its server checks each message's pairing against `for`, renewal needs no call. A reader acting on a message judges the pairing now; one showing an old message may judge it at `sentAt`, the sender's word.
+
+- *Why:* a pairing used to bind an address to a principal for good, and whoever later controlled the domain could present it. A year bounds that, and bounds a compromised agent the principal never unpaired.
+- *The cap stands in for an issue time,* which a reader cannot check: judged against the reader's own clock, no `until` reaches more than 366 days ahead.
+- *Precedent:* TLS certificate lifetimes (398 days until 2026, 200 now, 47 by 2029, made bearable by ACME's automatic renewal), OAuth refresh, UCAN's `exp`; PGP's optional expiry is the cautionary tale, since an optional expiry is set by no one.
+- *Default start untouched:* email and phone principals and solo agents sign no pairing, so the person who starts with one link has nothing to renew. A host holding a key for its principal renews it as their policy allows.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").

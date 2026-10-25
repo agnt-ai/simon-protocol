@@ -37,13 +37,13 @@ function unconsultedId(m: Message): string {
   return messageId({ ...m, headers });
 }
 
-/** Whether `signature` is the author's key principal's, over the message, its pairing carried and verifying. */
-function signedByPrincipal(m: Message, signature: string): boolean {
+/** Whether `signature` is the author's key principal's, over the message, its pairing carried and counting now. */
+function signedByPrincipal(m: Message, signature: string, now: Date): boolean {
   const principal = header(m, 'for');
   const key = principal && principalKey(principal);
   return (
     !!key &&
-    verifyPairing(m.from, principal, header(m, 'pairing')) &&
+    verifyPairing(m.from, principal, header(m, 'pairing'), now) &&
     verify(key, consultedBytes(m.from, unconsultedId(m)), signature)
   );
 }
@@ -58,7 +58,7 @@ export function nudgeModule(ctx: Ctx): { module: Module } {
     const m = record.message as Message;
     const claim = header(m, 'human-consulted');
     if (!claim) return false;
-    if (signedByPrincipal(m, claim)) return true;
+    if (signedByPrincipal(m, claim, ctx.api.now())) return true;
     const { api } = ctx;
     return (
       !!m.inReplyTo &&

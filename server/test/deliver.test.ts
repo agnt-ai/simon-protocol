@@ -17,7 +17,7 @@ import {
   verifyClaims,
   type Message,
 } from '@agnt-sdk/simon-protocol';
-import { Federation, Peer, toRequest } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, Peer, toRequest } from './harness.ts';
 
 const HOUR = 3_600_000;
 
@@ -297,7 +297,7 @@ describe('deliver (spec section 6.3)', async () => {
     const principal = generateKey();
     const forValue = `simon-key:${principal.key}`;
     const known = identifier(kai, 'principal', `mailto:kim@${peer.domain}`);
-    const pairing = signPairing(principal.privateKey, kai, forValue);
+    const pairing = signPairing(principal.privateKey, kai, forValue, CLOCK_PAIRING_UNTIL);
     await post(
       peer.envelope(peer.message(kai, [bob.address], 'for a key', { headers: { for: forValue, pairing } }), {
         claims: [known, identifier(kai, 'principal', 'mailto:kim@else.test')],

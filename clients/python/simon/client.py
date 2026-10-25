@@ -44,6 +44,7 @@ from .limits import (
 )
 from .messages import (
     is_header_name,
+    PAIRING_DEFAULT_MS,
     PROTOCOL_HEADERS,
     VERSION,
     check_message,
@@ -52,6 +53,7 @@ from .messages import (
     is_principal,
     message_id,
     message_verdict,
+    parse_pairing,
     principal_key,
     sign_message,
     sign_pairing,
@@ -59,7 +61,7 @@ from .messages import (
     verify_recovery,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood
+from .reading import claimed_principal, is_understood, pairing_standing
 from .request import add_key_proof, sign_request
 from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .transport import HostNotFound, Response, fetch
@@ -134,11 +136,20 @@ class PrincipalTrust:
     #: For ``key-pairing``: True when the address's retired document carries this principal's unpairing,
     #: which verifies with its key, so the pairing has ended for good (spec sections 2.2 and 4).
     ended: bool = False
+    #: For ``key-pairing``: when the pairing lapses, unless the principal renews it (spec section 2.2).
+    until: str | None = None
+    #: For ``key-pairing``: True when the pairing counted when the message was sent but has lapsed since.
+    #: The message spoke for the principal then; act on nothing in it for the principal now.
+    lapsed: bool = False
 
     def to_json(self) -> dict[str, Any]:
         out: dict[str, Any] = {"id": self.id, "basis": self.basis}
         if self.basis == "server-claim":
             out.update(claimant=self.claimant, authoritative=self.authoritative, scope=list(self.scope or ()))
+        if self.basis == "key-pairing":
+            out["until"] = self.until
+        if self.lapsed:
+            out["lapsed"] = True
         if self.ended:
             out["ended"] = True
         out["proves"] = self.proves
@@ -297,11 +308,15 @@ class Reader:
         if principal is None:
             return trust
         if principal_key(principal) is not None:
-            if not verify_pairing(m["from"], principal, header(m, "pairing")):
+            standing = pairing_standing(m, self._now_ms())
+            if standing == "refused":
                 return NotVerified(id, "bad_pairing")
+            lapsed = standing == "lapsed"
             unpairing = author.get("unpairing")
             ended = unpairing is not None and verify_unpairing(m["from"], principal, unpairing)
-            return _with(trust, PrincipalTrust(principal, "key-pairing", _PROVES["key-pairing"], ended=ended))
+            until = parse_pairing(header(m, "pairing"))[0]  # type: ignore[index]
+            proves = _PROVES["key-pairing"]
+            return _with(trust, PrincipalTrust(principal, "key-pairing", proves, ended=ended, until=until, lapsed=lapsed))
         considered = claims_about(m, claims or ())
         claim = next((c for c in considered if c["type"] == "acts-for"), None)
         if claim is None:
@@ -504,7 +519,7 @@ class Agent(Reader):
             if principal is not None and principal != principal_key.identifier:
                 raise _invalid("principal", "The recovery principal must match its signing key.")
             principal = principal_key.identifier
-            pairing = sign_pairing(principal_key, address) if pairing is None else pairing
+            pairing = sign_pairing(principal_key, address, timestamp(self._now_ms() + PAIRING_DEFAULT_MS)) if pairing is None else pairing
             at = timestamp(self._now_ms()) if at is None else at
             recover = principal_key.sign(f"SIMON-RECOVER\n{address}\n{self._key().token}\n{at}".encode())
         if principal is None and self.principal is not None and self.address != address:
@@ -513,7 +528,7 @@ class Agent(Reader):
         effective_pairing = (self.pairing if pairing is None else pairing) if principal is None else pairing
         if effective_pairing is not None and effective_principal is None:
             raise _invalid("principal", "Pairing needs its principal.")
-        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("simon-key:") and not verify_pairing(address, effective_principal, effective_pairing))):
+        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("simon-key:") and not verify_pairing(address, effective_principal, effective_pairing, self._now_ms()))):
             raise _invalid("pairing", "Effective recovery principal must be valid; its key pairing must verify for the target address.")
         if recover is not None and (effective_principal is None or not effective_principal.startswith("simon-key:") or not isinstance(at, str) or not verify_recovery(address, effective_principal, self._key().token, at, recover)):
             raise _invalid("recover", "Recovery proof must verify for this same principal, target address, new key and timestamp.")
@@ -575,6 +590,15 @@ class Agent(Reader):
     def unpair(self, address: str, unpairing: str) -> dict[str, Any]:
         address = _address_arg("address", address)
         return self.call("POST", "/simon/unpair", canonical_bytes({"address": address, "unpairing": unpairing}), agent=address)
+
+    def renew_pairing(self, pairing: str) -> None:
+        """Carry a renewed pairing from now on: the principal's signature over a later ``until`` (spec
+        section 2.2). The server holds no pairing, so renewing needs no call to it; this checks the pairing
+        counts now."""
+        address = self._address()
+        if self.principal is None or not verify_pairing(address, self.principal, pairing, self._now_ms()):
+            raise _invalid("pairing", "A renewed pairing must be the principal's, for this address, and count now.")
+        self.pairing = pairing
 
     def compose(
         self,

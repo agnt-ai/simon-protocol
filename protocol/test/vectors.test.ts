@@ -36,9 +36,10 @@ import {
   isAddress,
   isCriticalValue,
   isListedValue,
-  isB64url,
   isPrincipal,
   pairingBytes,
+  pairingStanding,
+  parsePairing,
   verifyPairing,
   verifyRecovery,
   isFresh,
@@ -149,14 +150,17 @@ describe('the published vectors', () => {
 
   it('header values and pairings', () => {
     for (const c of vectors.headerValues.cases) {
-      const check = { for: isPrincipal, critical: isCriticalValue, pairing: isB64url, listed: isListedValue }[
-        c.header as string
-      ]!;
+      const check = {
+        for: isPrincipal,
+        critical: isCriticalValue,
+        pairing: (v: unknown) => parsePairing(v) !== null,
+        listed: isListedValue,
+      }[c.header as string]!;
       assert.equal(check(c.value), c.valid, `${c.header}: ${c.value}`);
     }
     for (const c of vectors.pairings.cases) {
-      assert.equal(pairingBytes(c.agent, c.principal), c.bytes, c.why);
-      assert.equal(verifyPairing(c.agent, c.principal, c.pairing), c.verifies, c.why);
+      assert.equal(pairingBytes(c.agent, c.principal, parsePairing(c.pairing)!.until), c.bytes, c.why);
+      assert.equal(verifyPairing(c.agent, c.principal, c.pairing, Date.parse(c.at)), c.verifies, c.why);
     }
   });
 
@@ -346,6 +350,7 @@ describe('the published vectors', () => {
     for (const c of r.understood)
       assert.equal(isUnderstood(c.message, new Set(r.understoodHeaders)), c.understood, c.name);
     for (const c of r.principals) assert.equal(claimedPrincipal(c.message), c.principal, c.name);
+    for (const c of r.pairings) assert.equal(pairingStanding(c.message, Date.parse(c.now)), c.standing, c.name);
     for (const c of r.relations)
       assert.equal(readsAs(c.message, c.target, new Set(r.knownRelations)), c.readsAs, c.name);
   });

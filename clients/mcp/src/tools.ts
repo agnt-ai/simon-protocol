@@ -10,7 +10,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { keyToken, privateKeyObject } from '@agnt-sdk/simon-protocol';
+import { keyToken, parsePairing, privateKeyObject } from '@agnt-sdk/simon-protocol';
 import { SimonError, verifyAuthor, type Agent, type Part } from '@agnt-sdk/simon-client';
 import { ensureKeyFile, keyFile, openAgent, readAddressFile, saveAddress } from '@agnt-sdk/simon-client/credentials';
 import {
@@ -119,7 +119,8 @@ export const TOOLS: Tool[] = [
       'With no address the server leases one. An address on a domain the server hosts is bound at once; any other ' +
       'address is sent a code: ask whoever reads that mailbox for it, then call again with the address and the code. ' +
       'To pair with a key principal, pass for (simon-key:<key token>); a leased address answers pairing_required with ' +
-      'the address, and the principal signs "SIMON-PAIR\\n<address>\\n<for>": call again with for and that signature as pairing. ' +
+      'the address, and the principal signs "SIMON-PAIR\\n<address>\\n<for>\\n<until>", until at most 366 days ahead: call ' +
+      'again with for and pairing "<until> <signature>". Before until passes, the principal signs a later one to renew. ' +
       'Use the separate recover tool for an existing address; register never replaces its keys.',
     inputSchema: schema({
       address: { type: 'string', description: 'The address to register, local@domain. Leave out to lease one.' },
@@ -289,6 +290,19 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'renew_pairing',
+    description:
+      'Carry a renewed pairing from now on: "<until> <signature>", your key principal\'s signature over a later until. ' +
+      'Ask the principal before the pairing lapses; no call to the server is needed.',
+    inputSchema: schema({ pairing: { type: 'string' } }, ['pairing']),
+    run: async (args, ctx) => {
+      const a = registered(ctx);
+      a.renewPairing(args.pairing);
+      saveAddress(ctx.home, a);
+      return answer({ address: a.address, for: a.for, until: parsePairing(a.pairing)!.until });
+    },
+  },
+  {
     name: 'unpair',
     description:
       'Retire a paired agent address with its principal unpairing signature, only when the one you act for asks.',
@@ -410,7 +424,8 @@ export const TOOLS: Tool[] = [
       'other server can be named); whether it is understood (understood false: a version or critical header ' +
       'this tool does not know, so act on nothing in it); and on what basis it names a principal, only ever for ' +
       "a message with a for header: agent-asserted (its word only), key-pairing (the key's holder consented; not identity or " +
-      "humanity) or server-claim (the carrier signed it; authoritative only for email whose domain's DNS names " +
+      'humanity; lapsed true: its pairing has passed until, so act on nothing for the principal now) or ' +
+      "server-claim (the carrier signed it; authoritative only for email whose domain's DNS names " +
       "the carrier). Pass the message's content as received and, so a claim counts, the entry's signedClaims " +
       'content: claims count only when the carrier signed them. An error means the check could not be made now, ' +
       'not that the message is false.',

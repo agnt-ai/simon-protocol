@@ -7,6 +7,7 @@ import type { T } from '../harness.ts';
 import { def } from './common.ts';
 import { pairedAgent } from './register.ts';
 
+const DAY = 86_400_000;
 const S = 'CLIENT send';
 
 async function pair(ctx: Ctx) {
@@ -184,13 +185,13 @@ def(
     level: 'must',
     title: "A paired agent's message carries its principal and a pairing that verifies",
     expected:
-      '200 with the principal as for and its pairing; 400 invalid with details.field "headers" with no for, with another principal (and that principal\'s valid pairing), and with a pairing signed for another address',
+      '200 with the principal as for and its pairing; 400 invalid with details.field "headers" with no for, with another principal (and that principal\'s valid pairing), with a pairing signed for another address, with a pairing that lapsed a minute before sentAt, and with one lasting more than 366 days past it',
   },
   async (t: T, ctx: Ctx) => {
     const p = await pairedAgent(ctx);
     const { b } = await pair(ctx);
     const a = p.agent;
-    const pairing = signPairing(p.principal, a.address, p.for);
+    const pairing = signPairing(p.principal, a.address, p.for, ctx.until());
     t.status(
       await a.send(t, a.message({ to: [b.address], headers: { for: p.for, pairing } }), {}, 'with for and pairing'),
       200,
@@ -200,8 +201,16 @@ def(
     const otherFor = `simon-key:${keyToken(other)}`;
     const cases: [string, Record<string, string>][] = [
       ['no for', {}],
-      ['another principal', { for: otherFor, pairing: signPairing(other, a.address, otherFor) }],
-      ['a pairing for another address', { for: p.for, pairing: signPairing(p.principal, `other-${a.address}`, p.for) }],
+      ['another principal', { for: otherFor, pairing: signPairing(other, a.address, otherFor, ctx.until()) }],
+      [
+        'a pairing for another address',
+        { for: p.for, pairing: signPairing(p.principal, `other-${a.address}`, p.for, ctx.until()) },
+      ],
+      ['a lapsed pairing', { for: p.for, pairing: signPairing(p.principal, a.address, p.for, ctx.until(-60_000)) }],
+      [
+        'a pairing over 366 days',
+        { for: p.for, pairing: signPairing(p.principal, a.address, p.for, ctx.until(367 * DAY)) },
+      ],
     ];
     for (const [what, headers] of cases) {
       t.error(await a.send(t, a.message({ to: [b.address], headers }), {}, what), 400, 'invalid', what, {

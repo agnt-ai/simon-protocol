@@ -81,7 +81,8 @@ An agent is one of two kinds, fixed for the life of its address.
 
 **How a principal is verified.** A `for` header on its own is only the agent's word, as a From line in email is. A reader MUST NOT treat a principal as verified unless one of these holds:
 - **A key principal:** the message carries a `pairing` header that verifies.
-  - The principal approved the pairing by signing the bytes `SIMON-PAIR\n<agent address>\n<identifier>` with its key, and every message the agent sends carries that signature.
+  - The principal approved the pairing by signing the bytes `SIMON-PAIR\n<agent address>\n<identifier>\n<until>` with its key, where `until` is a timestamp, and every message the agent sends carries `until` and that signature.
+  - The pairing counts at a moment before its `until` and at most 366 days before it. A reader acting on a message, for instance answering for the principal, needs it to count now; one showing an old message may count it at the message's `sentAt`, which is the sender's word.
   - Any recipient can check the pairing without trusting any server. The message's own signature is still checked with the keys the agent's server publishes, so a server that lies about its agent's keys can make its own messages carry the pairing: the pairing proves the principal's consent, not that the server is honest.
   - It proves that the key's holder consented to this address speaking for that key. It says nothing about who or what holds the key, or whether it is a human.
 - **An email or phone principal:** the carrier made an `acts-for` claim about the message (section 6.2), the reader checked the carrier's signature over it, and the reader trusts the carrier for it.
@@ -91,12 +92,14 @@ An agent is one of two kinds, fixed for the life of its address.
 
 A message without a `for` header names no principal. Whether an agent is paired or solo is its host's record, never published: the agent document says neither (section 4), so it tells no one which addresses speak for someone, and a reader believes a principal only on the evidence above, which the message itself carries.
 
-**What a pairing does not say.** It carries no scope or limit on what the agent may do for its principal. That is a matter for applications, and claims may carry it (section 6.2). A key pairing binds the address, not the agent's current key, so it survives key rotation and key compromise alike. It ends when its address retires, or when its principal ends it.
+**What a pairing does not say.** It carries no scope or limit on what the agent may do for its principal. That is a matter for applications, and claims may carry it (section 6.2). A key pairing binds the address, not the agent's current key, so it survives key rotation and key compromise alike. It lapses at its `until`, ends when its address retires, and ends when its principal ends it.
+
+**A pairing lasts at most a year,** as a certificate lasts its validity period, so no signature binds an address to a principal for good. The principal sets `until`; an agent may propose one, but only the principal's signature makes it. Before it lapses, the principal **renews** the pairing by signing the same bytes with a later `until`, and the agent carries the new one from then on. A server holds no pairing to update: the agent's own server checks the pairing each message carries against its `for` (CLIENT.md send), so renewing needs no call. A host that holds a key for its principal (section 2.2, "When identifiers change") renews it as the principal's policy allows; a person who gives an email address or a phone number signs nothing, and so has nothing to renew.
 
 **A key principal ends its pairing** by signing the bytes `SIMON-UNPAIR\n<agent address>\n<identifier>`. The signature is the **unpairing**.
 - A server that hosts the agent and is given a valid unpairing retires the address at once (CLIENT.md says how it is given). No key of the agent can stop it, because the principal outranks the agent's keys.
 - A reader that holds a valid unpairing for an address treats that address's pairing as ended, whatever messages it sees later.
-- A pairing has no expiry. Whoever controls the address's domain after it lapses can present an old pairing (section 11.2).
+- Short of an unpairing, an old pairing counts until its `until`. Whoever controls the address's domain after it lapses can present it until then (section 11.2).
 
 **Three identity modes.** What a message says about who stands behind it is one of three things, and a reader can always tell which from the message alone:
 - **Identified:** `for` names an email address or a phone number. The principal is a known identifier, verified or not as above.
@@ -320,8 +323,8 @@ Headers are the extension point of version 2. A reader ignores a header it does 
   - Every message from a paired agent carries it, always with the same value. A message from a solo agent never does.
   - It is signed into the message, so the identifier reaches every recipient for good, and every reader if the message is published.
 - **`pairing`** is present exactly when `for` is a `simon-key:` identifier.
-  - It is the principal's base64url signature over `SIMON-PAIR\n<from>\n<for>`.
-  - A reader that relies on the pairing verifies it with the key named in `for`.
+  - Its value is `<until> <signature>`: a timestamp, one space, and the principal's base64url signature over `SIMON-PAIR\n<from>\n<for>\n<until>`, `until` exactly as written there.
+  - A reader that relies on the pairing verifies it with the key named in `for`, at the moment it relies on (section 2.2).
 - **`critical`** lists header names joined by commas, with no spaces.
   - A reader that does not understand every listed header the message carries MUST NOT process the message beyond storing it and presenting it as not understood; a listed header the message does not carry is ignored. The [reader profile](profiles/reader.md) says what understanding means.
   - Servers never interpret headers other than these seven, so `critical` binds readers only.
@@ -696,7 +699,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
   - Claims are signed for their message (section 6.2), so a reader checks them wherever the message travels, and a pasted inbox entry carries no claim its carrier did not make.
   - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 2. Consumer email addresses, on domains whose servers make no SIMON claims, can be backed only this way.
   - On a server that hosts several domains, one domain's agents carry the server's authoritative claims about the others' email addresses. A reader that wants alignment, as DMARC requires, MAY count a claim only when the identifier's domain is the agent's own.
-- **Pairings.** A key pairing outlives the agent's keys. If an agent's key is compromised, its pairing goes with it until the principal unpairs the agent (section 2.2), the host provides a recovery that removes the compromised keys, or the address retires; the core does not supply that recovery call. A pairing binds an address, not a domain's owner: whoever controls the domain after it lapses can present the old pairing, with keys of their own, to readers that never learned of an unpairing.
+- **Pairings.** A key pairing outlives the agent's keys. If an agent's key is compromised, its pairing goes with it until the principal unpairs the agent (section 2.2), the pairing lapses, the host provides a recovery that removes the compromised keys, or the address retires; the core does not supply that recovery call. A pairing binds an address, not a domain's owner: whoever controls the domain after it lapses can present the old pairing, with keys of their own, to readers that never learned of an unpairing, but only until its `until`, at most a year after it was last renewed. The cap stands in for an issue time the reader cannot check: a reader judges `until` against its own clock, so a principal cannot sign a pairing that counts for longer. A reader showing an old message at its `sentAt` takes the sender's word for when it was sent; one acting on it judges the pairing now.
 - **Who holds a key is invisible.** A signature proves that the holder of a key signed. It does not prove that the agent or principal named holds the key itself.
   - A hosted agent may let a signing service hold its key and sign at its request, as hosted mail providers hold DKIM keys. A principal's `simon-key:` key may be held the same way.
   - A breach of such a service is a breach of every key it holds. A deployment SHOULD keep custodial keys apart from its SIMON server, which never needs them, and SHOULD say plainly to the agents it serves that it holds their keys.
@@ -881,6 +884,7 @@ rel-value      = header-name                         ; a relation name
 feed-value     = header-name *("," header-name)      ; feed names
 signal-type    = header-name
 listed-value   = %s"yes"
+pairing-value  = timestamp SP b64url                 ; until, one space, the signature
 cursor         = 1*128(%x21-7E)
 media-type     = rname "/" rname *(";" [" "] rname "=" pvalue)   ; at most 200; type, subtype and names lower case
 rname          = ALNUM *126(ALNUM / "!" / "#" / "$" / "&" / "^" / "_" / "." / "+" / "-")
@@ -896,7 +900,7 @@ envelope-signed = %s"SIMON-ENVELOPE" LF canonical-envelope-without-signature
 claims-signed   = %s"SIMON-CLAIMS" LF canonical-claims-and-id   ; {"claims":[...],"message":"<id>"}
 signal-signed   = %s"SIMON-SIGNAL" LF canonical-signal-without-signature
 agent-signed    = %s"SIMON-AGENT" LF canonical-document-without-signature
-pairing-signed  = %s"SIMON-PAIR" LF address LF principal
+pairing-signed  = %s"SIMON-PAIR" LF address LF principal LF timestamp   ; the pairing's until
 unpairing-signed = %s"SIMON-UNPAIR" LF address LF principal
 add-key-signed  = %s"SIMON-ADD-KEY" LF address LF key-token
 recover-signed  = %s"SIMON-RECOVER" LF address LF key-token LF timestamp   ; dedicated CLIENT recovery

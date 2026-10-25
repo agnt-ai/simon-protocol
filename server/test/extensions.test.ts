@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
 import {
   generateKey,
-  pairingBytes,
   readServerDocument,
   verifyClaims,
   sha256Hex,
@@ -23,7 +22,7 @@ import { json } from '../src/http.ts';
 import { defineConfig } from '../src/config.ts';
 import { createServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
-import { Federation } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation } from './harness.ts';
 
 describe('extensions', async () => {
   const seen: { event: keyof Events; payload: unknown }[] = [];
@@ -297,7 +296,7 @@ describe('extensions acting for an application', async () => {
     await old.register({
       address: 'kp@gamma.test',
       for: forValue,
-      pairing: signPairing(principal.privateKey, 'kp@gamma.test', forValue),
+      pairing: signPairing(principal.privateKey, 'kp@gamma.test', forValue, CLOCK_PAIRING_UNTIL),
     });
     const fresh = gamma.newAgent();
     const at = new Date(fed.clock.t).toISOString();
@@ -381,7 +380,7 @@ describe('a host deciding who takes names', async () => {
     const before = asked.length;
     const first = await ann.register({ ...body, 'delta.test:proof': proof('ann@delta.test', ann.token) });
     assert.deepEqual([first.status, first.json.status], [202, 'pairing_required']);
-    const pairing = sign(principal.privateKey, pairingBytes('ann@delta.test', body.for));
+    const pairing = signPairing(principal.privateKey, 'ann@delta.test', body.for, CLOCK_PAIRING_UNTIL);
     assert.equal((await ann.register({ ...body, pairing })).status, 409, 'without the proof the second time');
     const done = await ann.register({ ...body, pairing, 'delta.test:proof': proof('ann@delta.test', ann.token) });
     assert.equal(done.status, 200);

@@ -40,7 +40,10 @@ from .messages import (
     is_principal,
     message_id,
     message_verdict,
+    PAIRING_DEFAULT_MS,
+    PAIRING_MAX_MS,
     pairing_bytes,
+    parse_pairing,
     parse_message,
     sign_message,
     sign_pairing,
@@ -51,7 +54,7 @@ from .messages import (
     verify_pairing,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood, reads_as
+from .reading import claimed_principal, is_understood, pairing_standing, reads_as
 from .provenance import RULE, invisible_in, present_delivery, present_entry, untrusted, unwrap_entry
 from .request import (
     add_key_proof,
@@ -108,7 +111,11 @@ __all__ = [
     "message_verdict",
     "nonce_expiry",
     "normalize_address",
+    "PAIRING_DEFAULT_MS",
+    "PAIRING_MAX_MS",
     "pairing_bytes",
+    "pairing_standing",
+    "parse_pairing",
     "parse",
     "parse_envelope",
     "check_envelope_beside",

@@ -143,7 +143,9 @@ Hints travel only to that recipient's server, are not signed by you, and are not
 4. If the message's version or a header its `critical` lists is one you do not understand, stop: it is
    not understood, and names no principal.
 5. `for` is only the agent's word until evidence backs it. For a `simon-key:` principal, check the
-   `pairing` header: a signature by the key in `for` over `SIMON-PAIR\n<from>\n<for>`.
+   `pairing` header, `<until> <signature>`: a signature by the key in `for` over
+   `SIMON-PAIR\n<from>\n<for>\n<until>`. It counts before `until`, by at most 366 days: judge it now to act
+   on the message, at `sentAt` to show what it said then.
 6. For an email or phone principal, check the entry's `signedClaims`: the carrier's signature, over
    `SIMON-CLAIMS\n` and the canonical `{"claims","message":<id>}`, by a key of the server from step 2
    valid at some moment from `sentAt` to 144 hours after. An `acts-for` claim is authoritative only for
@@ -215,7 +217,10 @@ All of them make the same calls, keep the key on the agent's machine, and treat 
 - **JavaScript** (`clients/js`): `new Agent({server, key})` with `register`, `recover`, `account`, `compose`, `send`, `sync`,
   `sent`, `uploadPart`, `fetchPart` and `call`, and `verifyAuthor` and `fetchAgentDocument`.
 - **Python** (`clients/python`): the same, standard library only; its command line is `simon`, and
-  `simon pair --address <address> --key principal.pem` signs a pairing as a key principal.
+  `simon pair --address <address> --key principal.pem` signs a pairing, lasting a year, as a key principal.
+- **Renewing a pairing:** `simon renew-pairing --pairing "<until> <signature>"` (both CLIs; MCP
+  `renew_pairing`; JavaScript `renewPairing`, Python `renew_pairing`) checks the principal's later
+  pairing and carries it from then on. The server needs no call.
 
 ## Server features beyond the protocol
 

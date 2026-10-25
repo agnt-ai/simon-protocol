@@ -419,6 +419,31 @@ class ClientTest(unittest.TestCase):
             agent.compose([], "x", headers={"audience": "public", "for": "mailto:alice@example.org"})
         self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "headers"}))
 
+    def test_a_pairing_lapses_and_renews(self):
+        """A pairing valid when sent but lapsed now reads as lapsed; the agent carries a renewed one from
+        then on, with no call to the server."""
+        principal = SigningKey.generate()
+        agent = self.agent()
+        address = agent.register(principal=principal.identifier)["address"]
+        until = timestamp(int(time.time() * 1000) + 3_600_000)
+        agent.register(principal=principal.identifier, pairing=sign_pairing(principal, address, until))
+        message = agent.compose([], "Within the hour.", headers={"audience": "public"})
+        reader = Reader(resolver=self.server.resolve)
+        now = reader.verify_author(message)
+        self.assertEqual((now.principal.until, now.principal.lapsed), (until, False))
+        reader._skew = 3_601
+        later = reader.verify_author(message)
+        self.assertEqual((later.verified, later.principal.lapsed), (True, True))
+        self.assertTrue(later.principal.to_json()["lapsed"])
+
+        with self.assertRaises(SimonError):
+            agent.renew_pairing(sign_pairing(SigningKey.generate(), address))
+        with self.assertRaises(SimonError):
+            agent.renew_pairing(sign_pairing(principal, address, timestamp(int(time.time() * 1000) - 1)))
+        renewed = sign_pairing(principal, address)
+        agent.renew_pairing(renewed)
+        self.assertEqual(agent.compose([], "Renewed.", headers={"audience": "public"})["headers"]["pairing"], renewed)
+
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends
         the pairing, nothing dated after verifies, and one with a key still valid is unreadable."""
@@ -584,7 +609,8 @@ class ClientTest(unittest.TestCase):
 
     def test_a_pairing_signed_for_another_address_is_refused(self):
         principal = SigningKey.generate()
-        pairing = principal.sign(pairing_bytes("someone@example.com", principal.identifier))
+        until = timestamp(int(time.time() * 1000) + 86_400_000)
+        pairing = f"{until} {principal.sign(pairing_bytes('someone@example.com', principal.identifier, until))}"
         with self.assertRaises(SimonError) as caught:
             self.agent().register("ada@example.com", principal=principal.identifier, pairing=pairing)
         self.assertEqual((caught.exception.status, caught.exception.code), (401, "bad_proof"))
@@ -987,12 +1013,13 @@ class CommandLine(unittest.TestCase):
         self.assertFalse((self.home / "wait.lock").exists())
 
     def leading_dash_pairing(self, local_prefix):
-        """A real fixed-seed signature; bounded fixture construction, never a skipped regression."""
+        """A real fixed-seed pairing whose signature starts with a dash, after its until and a space, so it
+        needs quoting twice over; bounded fixture construction, never a skipped regression."""
         principal = SigningKey(bytes(reversed(range(32))), allow_pure_python_signing=True)
         for suffix in range(1024):
             address = f"{local_prefix}{suffix}@example.com"
             pairing = sign_pairing(principal, address)
-            if pairing.startswith("-"):
+            if pairing.split(" ")[1].startswith("-"):
                 self.assertTrue(verify_pairing(address, principal.identifier, pairing))
                 return principal, address, pairing
         self.fail("No leading-dash pairing in the 1024 fixed synthetic address fixtures")
@@ -1016,7 +1043,7 @@ class CommandLine(unittest.TestCase):
         self.home.mkdir(parents=True, exist_ok=True)
         (self.home / "key.pem").write_text(fresh.to_pem())
         at, proof = self.leading_dash_recovery(principal, address, fresh)
-        self.assertTrue(pairing.startswith("-"))
+        self.assertTrue(pairing.split(" ")[1].startswith("-"))
         self.assertTrue(proof.startswith("-"))
         status, recovered = self.run_cli("register", "--server", self.server.origin, "--address", address,
             f"--principal-recovery={proof}", "--at", at, "--for", principal.identifier, f"--pairing={pairing}")
@@ -1029,7 +1056,7 @@ class CommandLine(unittest.TestCase):
 
     def test_mailbox_creation_and_recovery_next_commands_preserve_quoted_pairing_across_processes(self):
         principal, address, pairing = self.leading_dash_pairing("a#b%c/d?e^f`g{h|i}j'k")
-        self.assertTrue(pairing.startswith("-"))
+        self.assertTrue(pairing.split(" ")[1].startswith("-"))
         self.server.mailbox_addresses.add(address)
         original = self.workspace / "original-creation"
         fresh = self.workspace / "fresh-recovery"

@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   keyToken,
+  pairingBytes,
   privateKeyFromSeed,
   sha256Hex,
   sign,
@@ -62,6 +63,13 @@ export function saveFixedSignatures() {
   const sorted = Object.fromEntries(Object.entries(used).sort(([a], [b]) => (a < b ? -1 : 1)));
   fs.writeFileSync(SIGNATURES_FILE, `${JSON.stringify(sorted, null, 2)}\n`);
 }
+
+/** When the fixtures' pairings lapse: 365 days after the question's sentAt. */
+export const PAIRED_UNTIL = '2027-10-14T21:00:00Z';
+
+/** A `pairing` value that is the same on every run: `<until> <signature>` by `k` over the pairing bytes. */
+export const fixedPairing = (k: FixedKey, agent: string, principal: string, until = PAIRED_UNTIL) =>
+  `${until} ${fixedSign(k, pairingBytes(agent, principal, until))}`;
 
 export function fixedSignMessage<M extends AnyMessage>(m: Unsigned<M>, k: FixedKey): M {
   return { ...m, signature: fixedSign(k, signingBytes('SIMON-MESSAGE', m)) } as M;

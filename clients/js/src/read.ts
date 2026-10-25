@@ -27,13 +27,14 @@ import {
   messageId,
   messageVerdict,
   normalizeAddress,
+  pairingStanding,
+  parsePairing,
   principalKey,
   PROTOCOL_HEADERS,
   readAgentDocument,
   readServerDocument,
   resolveDomain,
   verifyClaims,
-  verifyPairing,
   verifyUnpairing,
   type ActsForClaim,
   type AnyMessage,
@@ -108,6 +109,13 @@ export interface PrincipalTrust {
   authoritative?: boolean;
   /** For `server-claim`: the scope the claim lists, keeping only registry-shaped names. */
   scope?: string[];
+  /** For `key-pairing`: when the pairing lapses, unless the principal renews it (spec section 2.2). */
+  until?: string;
+  /**
+   * For `key-pairing`: true when the pairing counted when the message was sent but has lapsed since. The
+   * message spoke for the principal then; act on nothing in it for the principal now.
+   */
+  lapsed?: true;
   /**
    * For `key-pairing`: true when the address's retired document carries this principal's unpairing, which
    * verifies with its key, so the pairing has ended for good (spec sections 2.2 and 4).
@@ -254,13 +262,20 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
   const forValue = understood ? claimedPrincipal(m) : null;
   if (forValue === null) return { ...trust, principal: null };
   if (principalKey(forValue) !== null) {
-    if (!verifyPairing(m.from, forValue, header(m as Message, 'pairing'))) {
-      return { verified: false, id, reason: 'bad_pairing' };
-    }
+    const standing = pairingStanding(m, (opts.now ?? (() => new Date()))());
+    if (standing === 'refused') return { verified: false, id, reason: 'bad_pairing' };
+    const lapsed = standing === 'lapsed';
     const ended = author.unpairing !== undefined && verifyUnpairing(m.from, forValue, author.unpairing);
     return {
       ...trust,
-      principal: { id: forValue, basis: 'key-pairing', proves: PROVES['key-pairing'], ...(ended && { ended: true }) },
+      principal: {
+        id: forValue,
+        basis: 'key-pairing',
+        until: parsePairing(header(m as Message, 'pairing'))!.until,
+        proves: PROVES['key-pairing'],
+        ...(lapsed && { lapsed: true }),
+        ...(ended && { ended: true }),
+      },
     };
   }
   return { ...trust, principal: await claimedFor(m, forValue, author, claims ?? [], opts) };

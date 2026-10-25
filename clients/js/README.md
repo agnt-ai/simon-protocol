@@ -59,9 +59,9 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 | `{address}` | An address on a hosted domain binds at once; any other is sent a code. |
 | `{address, code}` | The creation code that was sent. Existing-address recovery uses `recover`, never `register`. |
 | `{for}` | Pair with a key principal (`simon-key:<token>`). A leased address answers `pairing_required`. |
-| `{for, pairing}` | The principal's signature over `SIMON-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-sdk/simon-protocol`). |
+| `{for, pairing}` | `<until> <signature>`: the principal's signature over `SIMON-PAIR\n<address>\n<for>\n<until>` (`signPairing` in `@agnt-sdk/simon-protocol`, a year by default). |
 
-An account answer binds `address`, and `for`/`pairing` when given. `recover` is separate from
+An account answer binds `address`, and `for`/`pairing` when given. Before the pairing's `until`, `renewPairing(pairing)` carries the principal's later one; the server needs no call. `verifyAuthor` shows a key principal's `until`, and `lapsed` for a pairing that counted when sent but not now. `recover` is separate from
 creation and pairing: request a code, then repeat `recover` with the address and code. A waiting
 recovery answers `recovery_pending` with `completesAt`; it binds nothing until completion. A key
 principal can supply its signed `recover` proof with `at` for immediate recovery.

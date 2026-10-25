@@ -117,8 +117,10 @@ principal=None, pairing=None, timeout=30.0)` is a Reader too.
 | `server_of(domain)`, `server_document(server)`, `agent_document(address)` | resolution and documents; documents carry `algorithms` |
 | `verify_author(message, *, signed_claims=None)` | a `Trust` or a `NotVerified` |
 
-A key principal pairs with `sign_pairing(principal_key, address)`, and the agent registers with
-`principal=principal_key.identifier` and that `pairing`.
+A key principal pairs with `sign_pairing(principal_key, address)`, lasting a year unless given an `until`,
+and the agent registers with `principal=principal_key.identifier` and that `pairing`. Before it lapses,
+`agent.renew_pairing(pairing)` carries the principal's later one; the server needs no call. A key-pairing
+`PrincipalTrust` shows `until`, and `lapsed` for a pairing that counted when sent but not now.
 
 For output that a model reads, `simon.provenance` labels third-party content: `untrusted(author, basis,
 content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.
@@ -126,7 +128,7 @@ content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.
 The protocol itself, for readers and servers: `canonical`, `canonical_bytes`, `parse`, `signing_bytes`;
 `message_id`, `sign_message`, `verify_message`, `message_verdict`, `check_author_signature`,
 `check_supported_version`, `parse_message`, `check_message`, `check_principal`, `is_principal`,
-`pairing_bytes`, `verify_pairing`, `unpairing_bytes`, `sign_unpairing`, `verify_unpairing`, `text_of`;
+`pairing_bytes`, `parse_pairing`, `verify_pairing`, `unpairing_bytes`, `sign_unpairing`, `verify_unpairing`, `text_of`;
 `parse_envelope` (with a `Receiver` for step 5), `check_served` (step 8), `verify_envelope`,
 `check_envelope_signature`, `claims_bytes`, `verify_claims`, `claims_about`, `is_authoritative`,
 `judge_claims`, `is_repeat`, `delivery_window`, `delivery_state`; `parse_signal`, `verify_signal`,

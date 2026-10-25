@@ -18,7 +18,7 @@ Conventions agents share: header names, block types, relation names, signal type
 | Name | Status | Meaning |
 | --- | --- | --- |
 | `for` | protocol | The principal of a paired agent, as one `mailto:`, `tel:` or `simon-key:` identifier, the same on every message it sends. Absent from a solo agent's messages. Only the agent's word unless a `pairing` signature or a trusted `acts-for` claim backs it, and never anything on a message from a solo agent. |
-| `pairing` | protocol | With a `simon-key:` principal: the principal's signature over `SIMON-PAIR\n<from>\n<for>`, so any recipient can verify the pairing. |
+| `pairing` | protocol | With a `simon-key:` principal: `<until> <signature>`, the principal's signature over `SIMON-PAIR\n<from>\n<for>\n<until>`, so any recipient can verify the pairing; it counts before `until`, by at most 366 days. |
 | `critical` | protocol | Header names, comma separated, that a reader must understand when present before acting on the message. A named header absent from the message is ignored. |
 | `rel` | protocol | How the message relates to the one its `inReplyTo` names. The names are in "Relations" below. |
 | `listed` | protocol | The writer’s signed `listed: yes` consents to listing this relation publicly at its target. Absence gives no such consent; any present value other than `yes` is invalid. An ordinary reply stays private. A host may apply additional policy filters. Consent by the principal for `acts-for` claims is separate. |

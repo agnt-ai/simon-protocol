@@ -17,7 +17,7 @@ import {
   readServerDocument,
   verifyClaims,
 } from '@agnt-sdk/simon-protocol';
-import { Federation, type TestAgent } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, type TestAgent } from './harness.ts';
 
 const TEXT = { type: 'text/plain', data: 'x' };
 
@@ -62,10 +62,10 @@ describe('send (CLIENT.md)', async () => {
     await p.register({
       address: 'p@alpha.test',
       for: forValue,
-      pairing: signPairing(principal.privateKey, 'p@alpha.test', forValue),
+      pairing: signPairing(principal.privateKey, 'p@alpha.test', forValue, CLOCK_PAIRING_UNTIL),
     });
     assert.deepEqual(await code(p.send(p.message([bob.address], 'x'))), [400, 'invalid', 'headers']);
-    const pairing = signPairing(principal.privateKey, p.address, forValue);
+    const pairing = signPairing(principal.privateKey, p.address, forValue, CLOCK_PAIRING_UNTIL);
     assert.equal((await p.send(p.message([bob.address], 'x', { headers: { for: forValue, pairing } }))).status, 200);
   });
 
@@ -218,6 +218,34 @@ describe('send (CLIENT.md)', async () => {
     const res = await g.send(g.message(['d@three.example'], '3'));
     assert.equal(res.status, 429);
     assert.ok(Number(res.headers['retry-after']) > 0);
+  });
+});
+
+describe('a pairing that lapses (spec section 2.2)', async () => {
+  const fed = new Federation();
+  after(() => fed.close());
+  const alpha = await fed.server('alpha');
+  const bob = await alpha.agent('bob');
+
+  it('judges the pairing at sentAt, refuses one lapsed by then, and takes a renewed one with no call to the server', async () => {
+    const principal = generateKey();
+    const forValue = `simon-key:${principal.key}`;
+    const p = alpha.newAgent();
+    const pairing = signPairing(principal.privateKey, 'lapse@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
+    assert.equal((await p.register({ address: 'lapse@alpha.test', for: forValue, pairing })).status, 200);
+    const send = (pairing: string) => p.send(p.message([bob.address], 'x', { headers: { for: forValue, pairing } }));
+
+    // Judged at sentAt, not the server's now: an hour old, it was sent while the pairing counted.
+    fed.clock.t = Date.parse(CLOCK_PAIRING_UNTIL) + 1000;
+    const hourOld = p.message([bob.address], 'x', {
+      headers: { for: forValue, pairing },
+      sentAt: timestamp(fed.clock.t - 3_600_000),
+    });
+    assert.equal((await p.send(hourOld)).status, 200);
+    const lapsed = await send(pairing);
+    assert.deepEqual([lapsed.status, lapsed.json.code, lapsed.json.details.field], [400, 'invalid', 'headers']);
+    const renewed = signPairing(principal.privateKey, p.address, forValue, timestamp(fed.clock.t + 90 * 86_400_000));
+    assert.equal((await send(renewed)).status, 200);
   });
 });
 

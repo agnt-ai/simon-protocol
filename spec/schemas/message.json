@@ -53,7 +53,7 @@
           "$ref": "common.json#/$defs/principal"
         },
         "pairing": {
-          "$ref": "common.json#/$defs/base64url"
+          "$ref": "common.json#/$defs/pairing"
         },
         "critical": {
           "type": "string",

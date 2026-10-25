@@ -15,10 +15,11 @@ import {
   signRecovery,
   signRequest,
   signUnpairing,
+  timestamp,
   verifyUnpairing,
 } from '@agnt-sdk/simon-protocol';
 import { replyBody } from '../src/testing.ts';
-import { Federation, toRequest, type TestAgent } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, toRequest, type TestAgent } from './harness.ts';
 
 describe('register (CLIENT.md)', async () => {
   const fed = new Federation();
@@ -746,7 +747,7 @@ describe('register (CLIENT.md)', async () => {
 
     it('gives the address a new key at once, ending every old key, whatever they say', async () => {
       const old = alpha.newAgent();
-      const pairing = signPairing(principal.privateKey, 'kp@alpha.test', forValue);
+      const pairing = signPairing(principal.privateKey, 'kp@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address: 'kp@alpha.test', for: forValue, pairing });
       const fresh = alpha.newAgent();
       const res = await recover(fresh, 'kp@alpha.test');
@@ -767,7 +768,7 @@ describe('register (CLIENT.md)', async () => {
     it('ends a pending recovery by the mailbox, which no key could cancel', async () => {
       const old = alpha.newAgent();
       await old.register({ address: 'kpm@mail.example' });
-      const pairing = signPairing(principal.privateKey, 'kpm@mail.example', forValue);
+      const pairing = signPairing(principal.privateKey, 'kpm@mail.example', forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address: 'kpm@mail.example', code: alpha.code('kpm@mail.example'), for: forValue, pairing });
       const thief = alpha.newAgent();
       await thief.recover({ address: 'kpm@mail.example' });
@@ -783,7 +784,7 @@ describe('register (CLIENT.md)', async () => {
 
     it('takes a signature at most 24 hours old and 5 minutes ahead', async () => {
       const old = alpha.newAgent();
-      const pairing = signPairing(principal.privateKey, 'kpt@alpha.test', forValue);
+      const pairing = signPairing(principal.privateKey, 'kpt@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address: 'kpt@alpha.test', for: forValue, pairing });
       const at = (ms: number) => new Date(fed.clock.t + ms).toISOString();
       for (const when of [at(-24 * 3600_000 - 1000), at(5 * 60_000 + 1000), 'yesterday']) {
@@ -795,11 +796,11 @@ describe('register (CLIENT.md)', async () => {
 
     it('refuses every recovery the principal did not sign with one answer', async () => {
       const old = alpha.newAgent();
-      const pairing = signPairing(principal.privateKey, 'kpb@alpha.test', forValue);
+      const pairing = signPairing(principal.privateKey, 'kpb@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address: 'kpb@alpha.test', for: forValue, pairing });
       const solo = await alpha.agent('kps');
       const retired = alpha.newAgent();
-      const retiredPairing = signPairing(principal.privateKey, 'kpr@alpha.test', forValue);
+      const retiredPairing = signPairing(principal.privateKey, 'kpr@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
       await retired.register({ address: 'kpr@alpha.test', for: forValue, pairing: retiredPairing });
       await alpha.server.api.retire(retired.address);
       const answers = [
@@ -823,7 +824,7 @@ describe('register (CLIENT.md)', async () => {
       const res = await a.register({
         address: 'paired@alpha.test',
         for: forValue,
-        pairing: signPairing(principal.privateKey, 'paired@alpha.test', forValue),
+        pairing: signPairing(principal.privateKey, 'paired@alpha.test', forValue, CLOCK_PAIRING_UNTIL),
       });
       assert.equal(res.status, 200);
       const doc = await a.request('GET', '/simon/agents/paired@alpha.test', { sign: false });
@@ -838,10 +839,27 @@ describe('register (CLIENT.md)', async () => {
       const first = await a.register({ for: forValue });
       assert.equal(first.status, 202);
       assert.equal(first.json.status, 'pairing_required');
-      const pairing = sign(principal.privateKey, pairingBytes(first.json.address, forValue));
-      const done = await a.register({ for: forValue, pairing });
+      const until = timestamp(fed.clock.t + 30 * 24 * 60 * 60 * 1000);
+      const signature = sign(principal.privateKey, pairingBytes(first.json.address, forValue, until));
+      const done = await a.register({ for: forValue, pairing: `${until} ${signature}` });
       assert.equal(done.status, 200);
       assert.equal(done.json.address, first.json.address);
+    });
+
+    it('refuses a pairing that has lapsed or lasts more than 366 days, naming the string to sign', async () => {
+      const principal = generateKey();
+      const forValue = `simon-key:${principal.key}`;
+      const a = alpha.newAgent();
+      const { address } = (await a.register({ for: forValue })).json;
+      for (const until of [timestamp(fed.clock.t - 1000), timestamp(fed.clock.t + 367 * 24 * 60 * 60 * 1000)]) {
+        const res = await a.register({
+          for: forValue,
+          pairing: signPairing(principal.privateKey, address, forValue, until),
+        });
+        assert.equal(res.status, 401, until);
+        assert.equal(res.json.code, 'bad_proof');
+        assert.equal(res.json.details.pairingString, pairingBytes(address, forValue, until));
+      }
     });
 
     it('refuses a held or retired address before asking for a pairing', async () => {
@@ -863,7 +881,7 @@ describe('register (CLIENT.md)', async () => {
       const paired = await a.register({
         address,
         for: forValue,
-        pairing: signPairing(principal.privateKey, address, forValue),
+        pairing: signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL),
       });
       assert.equal(paired.status, 200);
       const before = await a.request('GET', `/simon/agents/${address}`, { sign: false });
@@ -912,7 +930,7 @@ describe('register (CLIENT.md)', async () => {
       const forValue = `simon-key:${principal.key}`;
       const address = 'rescued@mail.example';
       const old = alpha.newAgent();
-      const pairing = signPairing(principal.privateKey, address, forValue);
+      const pairing = signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address, for: forValue, pairing });
       assert.equal(
         (await old.register({ address, code: alpha.codes.get(address)!, for: forValue, pairing })).status,
@@ -982,7 +1000,7 @@ describe('register (CLIENT.md)', async () => {
       const principal = generateKey();
       const forValue = `simon-key:${principal.key}`;
       const address = 'pat@gmail.example';
-      const pairing = signPairing(principal.privateKey, address, forValue);
+      const pairing = signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL);
       const old = gamma.newAgent();
       await old.register({ address, for: forValue, pairing });
       await old.register({ address, code: gamma.codes.get(address)!, for: forValue, pairing });
@@ -1005,7 +1023,7 @@ describe('register (CLIENT.md)', async () => {
       const forValue = `simon-key:${principal.key}`;
       const address = 'kept@mail.example';
       const old = alpha.newAgent();
-      const pairing = signPairing(principal.privateKey, address, forValue);
+      const pairing = signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL);
       await old.register({ address, for: forValue, pairing });
       await old.register({ address, code: alpha.codes.get(address)!, for: forValue, pairing });
       const second = generateKey();

@@ -51,6 +51,7 @@ from simon.messages import (
     is_principal,
     message_id,
     pairing_bytes,
+    parse_pairing,
     parse_message,
     recover_bytes,
     sign_message,
@@ -65,6 +66,7 @@ from simon.messages import (
 )
 from simon.reading import (
     claimed_principal,
+    pairing_standing,
     is_understood,
     reads_as,
 )
@@ -84,7 +86,6 @@ from simon.wire import (
     address_segment,
     b64url,
     is_address,
-    is_b64url,
     normalize_address,
     parse_timestamp,
     timestamp,
@@ -248,7 +249,7 @@ class HeaderValues(VectorCase):
     GRAMMAR = {
         "for": is_principal,
         "critical": is_critical_value,
-        "pairing": is_b64url,
+        "pairing": lambda v: parse_pairing(v) is not None,
         "listed": is_listed_value,
     }
 
@@ -264,13 +265,15 @@ class Pairings(VectorCase):
     def test_cases(self):
         for c in V["pairings"]["cases"]:
             with self.case(c["why"]):
-                self.assertEqual(pairing_bytes(c["agent"], c["principal"]).decode(), c["bytes"])
-                self.assertEqual(verify_pairing(c["agent"], c["principal"], c["pairing"]), c["verifies"])
+                until = parse_pairing(c["pairing"])[0]
+                self.assertEqual(pairing_bytes(c["agent"], c["principal"], until).decode(), c["bytes"])
+                at = parse_timestamp(c["at"])
+                self.assertEqual(verify_pairing(c["agent"], c["principal"], c["pairing"], at), c["verifies"])
                 token = c["principal"].removeprefix("simon-key:")
                 if c["verifies"] and token.startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
-                            self.assertEqual(sign_pairing(signer(token), c["agent"]), c["pairing"])
+                            self.assertEqual(sign_pairing(signer(token), c["agent"], until), c["pairing"])
 
 
 class Signatures(VectorCase):
@@ -657,7 +660,7 @@ class Recoveries(VectorCase):
 
 class Reading(VectorCase):
     section = "reading"
-    members = ("understoodHeaders", "understood", "principals", "knownRelations", "relations")
+    members = ("understoodHeaders", "understood", "principals", "pairings", "knownRelations", "relations")
 
     def test_understood(self):
         headers = set(V["reading"]["understoodHeaders"])
@@ -669,6 +672,11 @@ class Reading(VectorCase):
         for c in V["reading"]["principals"]:
             with self.case(c["name"]):
                 self.assertEqual(claimed_principal(c["message"]), c["principal"])
+
+    def test_pairings(self):
+        for c in V["reading"]["pairings"]:
+            with self.case(c["name"]):
+                self.assertEqual(pairing_standing(c["message"], parse_timestamp(c["now"])), c["standing"])
 
     def test_relations(self):
         known = set(V["reading"]["knownRelations"])

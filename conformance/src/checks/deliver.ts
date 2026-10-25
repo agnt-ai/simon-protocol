@@ -855,13 +855,17 @@ def(
     const forValue = `simon-key:${keyToken(principal)}`;
     const p = ctx.peer.agent('paired');
     const good = (
-      await valid(ctx, { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue) } }, p)
+      await valid(
+        ctx,
+        { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue, ctx.until()) } },
+        p,
+      )
     ).m;
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(good), 'a valid pairing'), 'a valid pairing');
     const forged = (
       await valid(
         ctx,
-        { headers: { for: forValue, pairing: signPairing(principal, 'someone@else.example', forValue) } },
+        { headers: { for: forValue, pairing: signPairing(principal, 'someone@else.example', forValue, ctx.until()) } },
         p,
       )
     ).m;

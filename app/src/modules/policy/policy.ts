@@ -61,7 +61,7 @@ export class Policy {
     const { wrote, heard } = await this.store.corresponded(a.recipient, from);
     if (wrote || (await this.store.listed([a.recipient], 'allow', keys))) return this.#limit(a, wrote || heard);
     const settings = await this.store.settings(a.recipient);
-    if (settings.requireVerifiedHuman && !verifiedPrincipal(a)) return this.#refuse(a);
+    if (settings.requireVerifiedHuman && !verifiedPrincipal(a, this.#ctx.now())) return this.#refuse(a);
     if (settings.accept === 'known') return this.#refuse(a);
     if (this.#directory && !(await this.#directory.contactAllows(a))) return this.#refuse(a);
     return this.#limit(a, heard);
@@ -193,13 +193,13 @@ function matchKeys(from: string, carrier: string): { kind: EntryKind; value: str
   ];
 }
 
-/** A principal stands verified behind the sender: a trusted server's acts-for claim, or a key's own pairing. */
-function verifiedPrincipal(a: Arrival): boolean {
+/** A principal stands verified behind the sender: a trusted server's acts-for claim, or a key's pairing counting now. */
+function verifiedPrincipal(a: Arrival, now: Date): boolean {
   if (a.claims.some(c => c.type === 'acts-for')) return true;
   if (a.message.v !== VERSION) return false;
   const m = a.message as Message;
   const forValue = header(m, 'for');
-  return forValue !== null && verifyPairing(m.from, forValue, header(m, 'pairing'));
+  return forValue !== null && verifyPairing(m.from, forValue, header(m, 'pairing'), now);
 }
 
 function normalizeEntry(kind: EntryKind, value: string): string {

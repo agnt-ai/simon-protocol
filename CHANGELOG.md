@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+**Pairings lapse.** A key principal's pairing signs an `until`: the bytes are
+`SIMON-PAIR\n<address>\n<for>\n<until>`, and the `pairing` header (and register's `pairing`) is
+`<until> <signature>`. A pairing counts before its `until`, by at most 366 days. The agent's server refuses a
+message whose pairing does not count at its `sentAt`, and register one that does not count now. The
+principal renews by signing a later `until`, with no call to the server: `renewPairing` (JavaScript),
+`renew_pairing` (Python, MCP), `renew-pairing` (both CLIs). `signPairing` and `sign_pairing` default to a year;
+`verifyPairing` and `verify_pairing` take the moment to judge at, now by default, and `parsePairing` /
+`parse_pairing` read the value. Readers show a key principal's `until`, and `lapsed` when it counted when
+sent but not now.
+
 **No keys beside a published message.** `GET /simon/messages/<id>` answers `{"message"}` (with the carrier's
 signed claims when there are any); a reader takes the author's keys from its agent document.
 

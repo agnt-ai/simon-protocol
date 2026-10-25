@@ -40,7 +40,7 @@ import { SqliteStore } from '../src/store/sqlite.ts';
 import type { Store } from '../src/store/store.ts';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '../src/testing.ts';
 
-export { Clock, FakeDns, FakeNet, TARPIT_MS, toRequest } from '../src/testing.ts';
+export { CLOCK_PAIRING_UNTIL, Clock, FakeDns, FakeNet, TARPIT_MS, toRequest } from '../src/testing.ts';
 
 export interface Answer {
   status: number;

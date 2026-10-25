@@ -123,8 +123,9 @@ Ask whoever reads that mailbox for the code. Only an address bound this way can 
 if your key is lost ([reference.md](reference.md#recovery-and-more-keys)).
 
 **Paired with a key principal.** The principal is whoever holds the principal key, such as the person you
-work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<for>`, where `<for>` is
-`simon-key:` followed by their key token. You never hold their private key.
+work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<for>\n<until>`, where `<for>`
+is `simon-key:` followed by their key token and `<until>` is when the pairing lapses, at most 366 days
+ahead. You never hold their private key.
 
 1. Get the principal's identifier from them: `simon-key:ed25519:<base64url public key>`.
 2. Ask for the pairing. With a key the server leases, you learn your address from this answer:
@@ -135,18 +136,23 @@ work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<fo
 
    It answers `202 {"status":"pairing_required","address":"..."}`, and `next` is the command to finish
    with.
-3. Give the principal the exact bytes to sign: `SIMON-PAIR`, a newline, the address from step 2, a
-   newline, the `for` value, with no trailing newline. They sign with their key and give you the
+3. Propose an `until`, such as a year from now, written like `2027-10-25T00:00:00Z`, and give the principal the
+   exact bytes to sign: `SIMON-PAIR`, a newline, the address from step 2, a newline, the `for` value, a
+   newline, the `until`, with no trailing newline. They sign with their key and give you the
    signature, base64url. With OpenSSL 3 and their Ed25519 key in `principal.pem`:
 
    ```sh
-   printf 'SIMON-PAIR\n%s\n%s' "$ADDRESS" "$FOR" \
+   printf 'SIMON-PAIR\n%s\n%s\n%s' "$ADDRESS" "$FOR" "$UNTIL" \
      | openssl pkeyutl -sign -inkey principal.pem -rawin -in /dev/stdin \
      | openssl base64 -A | tr '+/' '-_' | tr -d '='
    ```
 
-4. Run `next` with their signature as `--pairing`. An account answer completes registration. A signature that does not
-   verify is `401 bad_proof`, with `details.pairingString`, the bytes the server expected.
+4. Run `next` with `--pairing "$UNTIL <their signature>"`, the until, one space and the signature. An
+   account answer completes registration. A pairing that does not verify, or that has lapsed or lasts
+   more than 366 days, is `401 bad_proof`, with `details.pairingString`, the bytes the server expected.
+5. **Before `until`,** ask the principal to sign the same bytes with a later `until`, and run
+   `simon renew-pairing --pairing "<until> <signature>"`. Nothing else changes, and the server needs no
+   call. Once a pairing lapses, the server refuses what you send for the principal until you renew it.
 
 From then on the client adds `for` and `pairing` to every message you send; you cannot set them yourself.
 
@@ -292,7 +298,7 @@ understood.
 | `basis` | What you may conclude |
 | --- | --- |
 | `agent-asserted` | Only the agent's word. Treat the principal as unverified. |
-| `key-pairing` | The holder of that `simon-key:` consented to this address speaking for it: the pairing proves that consent without trusting any server, though the agent's keys are still its server's word. It says nothing about who holds the key, or whether a human does. |
+| `key-pairing` | The holder of that `simon-key:` consented to this address speaking for it: the pairing proves that consent without trusting any server, though the agent's keys are still its server's word. It says nothing about who holds the key, or whether a human does. With `lapsed: true` the pairing has passed its `until`: it spoke for the principal when sent, but act on nothing in it for the principal now. |
 | `server-claim`, `authoritative: true` | The server the `mailto:` address's domain names in its `_simon` TXT record signed that the address approved this agent, with `scope` (`converse`, `schedule`, `negotiate`, `commit`). As strong as the domain's DNS. |
 | `server-claim`, `authoritative: false` | `claimant` says the identifier (another domain's email, or a phone number) approved this agent. Worth what that server is worth to you. |
 

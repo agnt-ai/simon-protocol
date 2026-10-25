@@ -25,7 +25,7 @@ import {
 import { isAddress, isV1Address } from './address.ts';
 import { bodyTooLarge, forbidden, invalid, unsupportedVersion } from './errors.ts';
 import { isB64url, sha256Hex, sign, signatureVerdict, type KeyEntry, type SignatureVerdict } from './keys.ts';
-import { isPrincipal, pairingBytes, principalKey, verifyPairing } from './principal.ts';
+import { isPrincipal, pairingBytes, parsePairing, principalKey, verifyPairing } from './principal.ts';
 import {
   MAX_ALT_BYTES,
   MAX_HEADERS,
@@ -238,8 +238,10 @@ function checkVersionRules(m: Record<string, Json>, limits: Limits) {
   if ((pairing !== undefined) !== (typeof forValue === 'string' && principalKey(forValue) !== null)) {
     throw invalid('The pairing header is present exactly when for is a simon-key: principal.', { field: 'headers' });
   }
-  if (pairing !== undefined && !isB64url(pairing)) {
-    throw invalid('The pairing header is a signature in canonical base64url.', { field: 'headers' });
+  if (pairing !== undefined && parsePairing(pairing) === null) {
+    throw invalid('The pairing header is a timestamp, one space, and a signature in canonical base64url.', {
+      field: 'headers',
+    });
   }
   if (critical !== undefined && !isCriticalValue(critical)) {
     throw invalid('The critical header is header names joined by commas, with no spaces.', { field: 'headers' });
@@ -390,9 +392,10 @@ export function checkPrincipal(m: AnyMessage, agent: Principal): void {
   if (forValue !== agent.for) throw refuse(`A paired agent's messages carry its principal as for: ${agent.for}.`);
   if (principalKey(agent.for) === null) {
     if (pairing !== null) throw refuse('Only a key principal pairs by signature: this message carries no pairing.');
-  } else if (!verifyPairing(m.from, agent.for, pairing)) {
+  } else if (!verifyPairing(m.from, agent.for, pairing, parseTimestamp(m.sentAt) ?? NaN)) {
+    const until = parsePairing(pairing)?.until ?? '<until>';
     throw refuse(
-      `The pairing header must be the principal's signature over ${JSON.stringify(pairingBytes(m.from, agent.for))}.`,
+      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, agent.for, until))}, valid at sentAt: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
     );
   }
 }

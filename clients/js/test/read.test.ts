@@ -80,6 +80,29 @@ describe('verifyAuthor', () => {
     assert.deepEqual(r.verified || r.reason, 'bad_pairing');
   });
 
+  it('reads a pairing that lapsed after the message as lapsed, and carries a renewed one from then on', async () => {
+    const { fake, opts } = await world();
+    const principal = generateKey();
+    const id = `simon-key:${principal.key}`;
+    const a = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
+    const { address } = await a.register({ for: id });
+    const until = timestamp(Date.now() + 3_600_000);
+    await a.register({ for: id, pairing: signPairing(principal.privateKey, address, id, until) });
+    const m = a.compose({ to: ['bob@agents.test'], text: 'Within the hour.' });
+    const now = await verifyAuthor(m, opts);
+    assert.ok(now.verified);
+    assert.deepEqual([now.principal?.until, now.principal?.lapsed], [until, undefined]);
+    const later = await verifyAuthor(m, { ...opts, now: () => new Date(Date.parse(until) + 1) });
+    assert.ok(later.verified, 'it spoke for the principal when sent');
+    assert.equal(later.principal?.lapsed, true);
+
+    assert.throws(() => a.renewPairing(signPairing(generateKey().privateKey, address, id)), /principal/);
+    assert.throws(() => a.renewPairing(signPairing(principal.privateKey, address, id, timestamp(Date.now() - 1))));
+    const renewed = signPairing(principal.privateKey, address, id);
+    a.renewPairing(renewed);
+    assert.equal(a.compose({ to: ['bob@agents.test'], text: 'Renewed.' }).headers.pairing, renewed);
+  });
+
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {
     const { fake, opts } = await world();
     const principal = generateKey();

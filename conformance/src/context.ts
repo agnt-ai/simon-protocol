@@ -12,9 +12,11 @@ import {
   generateKey,
   isJsonObject,
   MINIMUM_LIMITS,
+  PAIRING_DEFAULT_MS,
   parseStrict,
   readKeys,
   serverOrigin,
+  timestamp,
   type Json,
   type Envelope,
   type Limits,
@@ -137,6 +139,9 @@ export class Ctx {
 
   /** The server's clock, as far as the suite can tell, in milliseconds. */
   now = () => Date.now() + this.clockOffsetMs;
+
+  /** A pairing's until `ms` from the server's clock, a year by default, so it counts at the server's time. */
+  until = (ms = PAIRING_DEFAULT_MS) => timestamp(this.now() + ms);
 
   get server() {
     return { origin: this.origin, now: this.now };
