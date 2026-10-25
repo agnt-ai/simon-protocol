@@ -43,7 +43,7 @@ type Row = Record<string, any>;
 
 /** How many bytes a part's inline data holds: a JSON value's text, or what base64 decodes to. */
 const inlineBytes = (p: Row) =>
-  typeof p.data === 'string' && !/(^application\/json|\+json)(;|$)/.test(p.type)
+  typeof p.data === 'string' && !/^\s*(application\/json|[^;\s/]+\/[^;\s]*\+json)\s*(;|$)/.test(p.type)
     ? Buffer.byteLength(p.data, 'base64')
     : Buffer.byteLength(JSON.stringify(p.data ?? null));
 

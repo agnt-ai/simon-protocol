@@ -35,7 +35,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Independent review.**
 - A cryptography review by people outside the team.
-- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 2 is frozen.
+- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 1.0 is frozen.
 - Review by models of other families, since models of one family share blind spots.
 
 **Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in PROTOCOL.md 2.2:

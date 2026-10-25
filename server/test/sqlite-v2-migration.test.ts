@@ -242,7 +242,7 @@ it('copies actual schema2 raw state, WAL cohort, row order, tombstones, null sen
     const candidateFile = path.join(f.options.directory, result.candidate.core);
     const destination = new DatabaseSync(candidateFile);
     try {
-      assert.equal(destination.prepare('PRAGMA user_version').get()!.user_version, 9);
+      assert.equal(destination.prepare('PRAGMA user_version').get()!.user_version, 10);
       const copied = destination
         .prepare(
           'SELECT rowid,id,json,from_address,public,carrier,claims,received_at,expires,kept FROM messages ORDER BY rowid',
@@ -312,7 +312,7 @@ it('keeps schema2 refused by the normal Store and gives every legacy device an e
   let server: ReturnType<typeof createServer> | undefined;
   let otherOrigin: ReturnType<typeof createServer> | undefined;
   try {
-    assert.throws(() => new SqliteStore(f.source), /schema 2, not 9/);
+    assert.throws(() => new SqliteStore(f.source), /schema 2, not 10/);
     const secondDevice = generateKey();
     f.core.prepare('INSERT INTO agent_keys VALUES(?,?,?,?,?)').run(secondDevice.key, f.address, T, null, 2);
     const otherKey = generateKey();
