@@ -4,6 +4,16 @@
 
 Several processes may share one store. Where a bound must hold for all of them, it is kept in the store; where it bounds one process's own work, it is kept in that process, and this note says which.
 
+## Running several copies
+
+Several processes may serve requests from one shared store (a `MongoStore` on one database, for instance) behind a load balancer: every request is answered from the store, and every rule that must hold across them is a unique key or an atomic write there. The background work is another matter. Each process runs the worker loop unless it is made with `createServer({ ..., worker: false })`, and today only part of that loop is safe to run in several processes at once:
+
+- **Safe in several processes: claimed through store leases.** Outbound deliveries (`claimDeliveries`), part fetches (`claimFetch`, with the per-carrier slots and hourly budget kept in the store) and webhook posts (`claimWebhooks`) are each leased to one worker by an atomic claim; a lease that lapses, because its process stopped, is taken over later, and settling one needs its token, so a stale worker cannot overwrite a newer claim.
+- **Not yet safe: read, not claimed.** Arrivals (offering a received message to its recipients through the `admit` chain) and inbox events (telling the `on.inbox` listeners) are read from the store and settled after the work, without a lease. Two processes running the loop can each take the same arrival or the same inbox event, so an extension's `admit` or `on.inbox` may run twice for one message and recipient. The Store contract allows repeats after a crash ("a crash at worst repeats work"), but several live workers turn the rare repeat into a routine one.
+- **Per process: rate limits and pools.** The rate limits marked "in the process" above, the lookup pools and the fetch concurrency are counted in each process, so N processes allow N times as much. Bounds kept in the store (`lookupDomain`, the fetch budget, the fetch slots per carrier) are shared.
+
+Until arrivals and inbox events are claimed too, a deployment of several copies elects one worker: every process serves requests with `worker: false`, and exactly one runs the worker loop (the default `worker: true`, or the `simon-server` binary as is). A replacement worker may start before the old one has stopped; overlapping briefly costs at most the repeats described above. Size the per-process rate limits for the number of processes serving requests.
+
 ## Deliveries and signals from other servers
 
 - **Core requires** checking the carrier's signature before recipient-dependent work and bounding lookups caused by unauthenticated requests (PROTOCOL.md sections 6.3 and 11.2). The pools, limits and keys below are how it meets the second; their values are its own.
