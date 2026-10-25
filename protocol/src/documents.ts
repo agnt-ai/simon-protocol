@@ -2,7 +2,7 @@
  * The two documents a server publishes, fetched without authentication and cacheable (spec section 4):
  *
  *   GET /simon/server              { server, keys, algorithms, limits }
- *   GET /simon/agents/<address>    { address, kind, keys, signature }   signed by the server, over SIMON-AGENT
+ *   GET /simon/agents/<address>    { address, keys, signature }         signed by the server, over SIMON-AGENT
  *                                 a retired address's adds `retired`, and `unpairing` when one retired it
  *
  * A reader takes a document's bytes: at most 131072 of them, JSON under the canonical rules (it need not be
@@ -38,15 +38,14 @@ export interface ServerDocument {
 export const V1_ALGORITHMS: readonly string[] = Object.freeze(['ed25519', 'ml-dsa-65']);
 
 /**
- * What an agent is (spec section 2.2), fixed for the life of its address: `paired` speaks for one principal,
- * whom its messages name in their `for` header; `solo` speaks for no one. A reader records a kind it does
- * not know as `unknown`, rather than refusing the document.
+ * What an agent is (spec section 2.2), fixed for the life of its address, as its own server records it:
+ * `paired` speaks for one principal, whom its messages name in their `for` header; `solo` speaks for no one.
+ * The agent document never says which: only the agent's messages do, with the evidence that backs them.
  */
 export type AgentKind = 'paired' | 'solo';
 
 export interface UnsignedAgentDocument {
   address: string;
-  kind: AgentKind;
   keys: KeyEntry[];
   /** Members this version does not define: ignored by readers, and signed. */
   [member: string]: unknown;
@@ -134,7 +133,6 @@ function readLimits(value: { [key: string]: Json }): Limits | null {
 /** An agent document as a reader reads it; `retired` and `unpairing` only on a retired document. */
 export interface ReadAgentDocument {
   address: string;
-  kind: AgentKind | 'unknown';
   keys: KeyEntry[];
   /** When the address retired (spec section 4): it is ended for good, and no key is valid at or after this. */
   retired?: string;
@@ -143,9 +141,9 @@ export interface ReadAgentDocument {
 }
 
 /**
- * A fetched agent document, or null unless it is readable, its `address` is the address asked for, its
- * `kind` is a string, and its signature verifies with one of the server's keys valid at `now`, the time of
- * reading.
+ * A fetched agent document, or null unless it is readable, its `address` is the address asked for, and its
+ * signature verifies with one of the server's keys valid at `now`, the time of reading. It says nothing about
+ * whom the agent speaks for: only its messages do, with the evidence that backs them (spec section 2.2).
  *
  * A **retired document** (spec section 4) also carries `retired`, a timestamp, and when an unpairing retired
  * the address, `unpairing`, a base64url string; every key in it is revoked, at or before `retired`. One that
@@ -159,17 +157,15 @@ export function readAgentDocument(
   now: Date,
 ): ReadAgentDocument | null {
   const doc = readObject(body);
-  if (!doc || !isAddress(address) || doc.address !== address || typeof doc.kind !== 'string') return null;
+  if (!doc || !isAddress(address) || doc.address !== address) return null;
   const keys = readKeys(doc.keys, now);
   if (!keys || !signedByAny(serverKeys, now, signingBytes('SIMON-AGENT', doc), doc.signature)) return null;
-  const kind = doc.kind === 'paired' || doc.kind === 'solo' ? doc.kind : 'unknown';
-  if (doc.retired === undefined) return { address, kind, keys };
+  if (doc.retired === undefined) return { address, keys };
   const retired = parseTimestamp(doc.retired);
   if (retired === null || (doc.unpairing !== undefined && !isB64url(doc.unpairing))) return null;
   if (!keys.every(k => k.revoked !== null && parseTimestamp(k.revoked)! <= retired)) return null;
   return {
     address,
-    kind,
     keys,
     retired: doc.retired as string,
     ...(doc.unpairing !== undefined && { unpairing: doc.unpairing as string }),

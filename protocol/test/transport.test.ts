@@ -411,20 +411,20 @@ describe('envelopes', () => {
     assert.equal(await judge('mailto:alice@flaky.example'), false);
     assert.equal(await judge('tel:+14155550100'), false, 'never for a phone number');
     assert.equal(await judge(`simon-key:${erin.key}`), false);
-    assert.deepEqual(await judgeClaims(signedQuestion, [actsFor, { type: 'x-other' }], 'paired', carrier, resolve), [
+    assert.deepEqual(await judgeClaims(signedQuestion, [actsFor, { type: 'x-other' }], carrier, resolve), [
       { ...actsFor, authoritative: true },
       { type: 'x-other' },
     ]);
     const unknown = ['custom', 'toString', 'constructor', '__proto__', 'hasOwnProperty'].map(type => ({ type }));
     assert.deepEqual(
-      await judgeClaims(signedQuestion, unknown, 'paired', carrier, async () => {
+      await judgeClaims(signedQuestion, unknown, carrier, async () => {
         throw new Error('unknown types must not resolve');
       }),
       unknown,
     );
     const selfJudged = [{ type: 'operator', agent: 'ada@example.com', operator: 'Big Bank', authoritative: true }];
     assert.deepEqual(
-      await judgeClaims(signedQuestion, selfJudged, 'paired', carrier, resolve),
+      await judgeClaims(signedQuestion, selfJudged, carrier, resolve),
       [{ type: 'operator', agent: 'ada@example.com', operator: 'Big Bank' }],
       "a carrier's own authoritative member means nothing",
     );
@@ -537,18 +537,17 @@ describe('envelopes', () => {
     const undated = { ...actsFor, verifiedAt: '2026-09-01' };
     const unscoped = { ...actsFor, scope: 'converse' };
     assert.deepEqual(
-      claimsAbout(signedQuestion, [actsFor, other, ceo, undated, unscoped, { type: 'something-else' }], 'paired'),
+      claimsAbout(signedQuestion, [actsFor, other, ceo, undated, unscoped, { type: 'something-else' }]),
       [actsFor, { type: 'something-else' }],
     );
     const { for: _, ...headers } = signedQuestion.headers;
     assert.deepEqual(
-      claimsAbout({ ...signedQuestion, headers } as Message, [actsFor, { ...actsFor, for: undefined }], 'paired'),
+      claimsAbout({ ...signedQuestion, headers } as Message, [actsFor, { ...actsFor, for: undefined }]),
       [],
     );
     const later = { ...signedQuestion, v: 9 } as AnyMessage;
-    assert.deepEqual(claimsAbout(later, [actsFor], 'paired'), [], "a later version's headers are not read");
-    assert.deepEqual(claimsAbout(signedQuestion, [actsFor], 'solo'), [], 'a solo agent speaks for no one');
-    assert.deepEqual(claimsAbout(signedQuestion, [], 'paired'), []);
+    assert.deepEqual(claimsAbout(later, [actsFor]), [], "a later version's headers are not read");
+    assert.deepEqual(claimsAbout(signedQuestion, []), []);
   });
 });
 
@@ -638,12 +637,12 @@ describe('paired and solo agents', () => {
 describe('documents', () => {
   const agent = (doc: Record<string, unknown>, k = exampleCom) =>
     Buffer.from(JSON.stringify(signAgentDocument(doc as never, k.privateKey)));
-  const ada1 = { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] };
+  const ada1 = { address: 'ada@example.com', keys: [keyEntry(ada.key)] };
 
   it('agent documents are signed over SIMON-AGENT by a server key valid at the time of reading', () => {
     const read = (b: Buffer, address = 'ada@example.com', keys = serverKeys) =>
       readAgentDocument(b, address, keys, NOW);
-    assert.deepEqual(read(agent(ada1)), { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] });
+    assert.deepEqual(read(agent(ada1)), { address: 'ada@example.com', keys: [keyEntry(ada.key)] });
     assert.equal(read(agent(ada1), 'bob@example.net'), null);
     assert.equal(read(agent(ada1), 'ADA@example.com'), null, 'the address asked for, as written');
     assert.equal(read(agent(ada1, ada)), null);
@@ -656,17 +655,10 @@ describe('documents', () => {
     assert.equal(read(Buffer.from(JSON.stringify({ ...ada1, signature }))), null, 'the context line is signed');
   });
 
-  it('an agent document names its kind; a kind a reader does not know reads as unknown', () => {
-    const kind = (k: unknown) =>
-      readAgentDocument(agent({ ...ada1, kind: k }), 'ada@example.com', serverKeys, NOW)?.kind ?? null;
-    assert.equal(kind('paired'), 'paired');
-    assert.equal(kind('solo'), 'solo');
-    assert.equal(kind('group'), 'unknown');
-    assert.equal(kind(1), null);
-    assert.equal(
-      readAgentDocument(agent({ address: ada1.address, keys: ada1.keys }), 'ada@example.com', serverKeys, NOW),
-      null,
-    );
+  it('an agent document says nothing of whom its agent speaks for; a kind member an earlier draft had is ignored', () => {
+    const read = (doc: object) => readAgentDocument(agent(doc as never), 'ada@example.com', serverKeys, NOW);
+    assert.deepEqual(read({ address: ada1.address, keys: ada1.keys }), { address: ada1.address, keys: ada1.keys });
+    assert.deepEqual(read({ ...ada1, kind: 'paired' }), { address: ada1.address, keys: ada1.keys });
   });
 
   it('a server document lists the algorithms it verifies, both of version 2 among them', () => {

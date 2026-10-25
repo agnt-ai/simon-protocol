@@ -827,7 +827,7 @@ describe('register (CLIENT.md)', async () => {
       });
       assert.equal(res.status, 200);
       const doc = await a.request('GET', '/simon/agents/paired@alpha.test', { sign: false });
-      assert.equal(doc.json.kind, 'paired');
+      assert.equal(doc.json.kind, undefined, 'the document says nothing of whom the agent speaks for');
       assert.equal(JSON.stringify(doc.json).includes(principal.key), false, 'the document never names the principal');
     });
 

@@ -507,14 +507,13 @@ class Principals(VectorCase):
 
 class ClaimsConsidered(VectorCase):
     section = "claimsConsidered"
-    members = ("message", "kind", "claims", "considered")
+    members = ("message", "claims", "considered")
 
     def test_claims(self):
         with self.case(V["claimsConsidered"]["message"]):
             message = MESSAGES[V["claimsConsidered"]["message"]]["message"]
             claims = V["claimsConsidered"]["claims"]
-            kind = V["claimsConsidered"]["kind"]
-            self.assertEqual(claims_about(message, claims, kind), V["claimsConsidered"]["considered"])
+            self.assertEqual(claims_about(message, claims), V["claimsConsidered"]["considered"])
 
 
 class Authority(VectorCase):
@@ -561,9 +560,9 @@ class ClaimsJudged(VectorCase):
             return Resolved(r["outcome"], r.get("server"), r.get("via"))
 
         for c in j["cases"]:
-            with self.case(f"{c['message']}, from a {c['kind']} agent"):
+            with self.case(c["message"]):
                 message = MESSAGES[c["message"]]["message"]
-                judged = judge_claims(message, c["claims"], c["kind"], j["carrier"], resolved)
+                judged = judge_claims(message, c["claims"], j["carrier"], resolved)
                 self.assertEqual(judged, c["judged"])
 
 
@@ -668,7 +667,7 @@ class Reading(VectorCase):
     def test_principals(self):
         for c in V["reading"]["principals"]:
             with self.case(c["name"]):
-                self.assertEqual(claimed_principal(c["message"], c["kind"]), c["principal"])
+                self.assertEqual(claimed_principal(c["message"]), c["principal"])
 
     def test_relations(self):
         known = set(V["reading"]["knownRelations"])

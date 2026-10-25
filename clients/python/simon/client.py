@@ -153,8 +153,6 @@ class Trust:
 
     id: str
     author_server: str
-    #: ``paired``, ``solo``, or ``unknown`` for a kind this reader does not know.
-    kind: str
     #: False for a message of a version this client does not implement, or whose ``critical`` header lists
     #: one it does not understand (spec sections 1 and 5.4): whose key signed it is all it says. Act on
     #: nothing in it; it names no principal.
@@ -162,8 +160,8 @@ class Trust:
     #: Whether ``signed_claims`` were given (``none``), and verified with the carrier's keys (``verified``)
     #: or not (``unverified``, and ignored).
     claims: Literal["none", "verified", "unverified"]
-    #: The principal that counts: None for a message with no ``for`` header, one not understood, or one
-    #: from an agent its document does not call ``paired``: a solo agent speaks for no one.
+    #: The principal it names, with the basis that backs it: None for a message with no ``for`` header,
+    #: or one not understood.
     principal: PrincipalTrust | None = None
     #: When the author's address retired, if it has (spec section 4): the message was signed before then,
     #: but the address is ended for good, and nothing from it dated at or after this verifies.
@@ -177,7 +175,6 @@ class Trust:
             "id": self.id,
             "authorSigned": True,
             "authorServer": self.author_server,
-            "kind": self.kind,
             "understood": self.understood,
             "principal": None if self.principal is None else self.principal.to_json(),
             "claims": self.claims,
@@ -252,7 +249,7 @@ class Reader:
 
     def agent_document(self, address: str, *, refresh: bool = False) -> dict[str, Any] | None:
         """An agent's document, from the server its address's domain resolves to, verified under that
-        server's keys valid now: ``{"address", "server", "kind", "keys", "algorithms"}``, ``algorithms``
+        server's keys valid now: ``{"address", "server", "keys", "algorithms"}``, ``algorithms``
         being those its server verifies. None when the server answers that no such agent exists. Cached for
         ten minutes."""
         wire = address if is_address(address) else _address_arg("address", address)
@@ -262,8 +259,8 @@ class Reader:
     def verify_author(self, message: Any, *, signed_claims: Any = None) -> Verification:
         """Whether a message was signed by its author, with a key the server ``from``'s domain resolves to
         publishes as valid at its ``sentAt``; whether this reader understands it; and if so, on what basis
-        it names its principal. Only a ``paired`` agent has one: a solo agent, or one of a kind this reader
-        does not know, speaks for no one.
+        it names its principal. A message without a ``for`` header speaks for no one; one with it names a
+        principal only as far as a pairing or a trusted claim backs it.
 
         Pass the sync entry's ``signedClaims`` as ``signed_claims`` so an ``acts-for`` claim counts. They
         count only when their signature verifies with a key of the server ``from``'s domain resolves to,
@@ -295,8 +292,8 @@ class Reader:
         claims = None if signed_claims is None else self._carried_claims(signed_claims, m, server)
         understood = is_understood(m, PROTOCOL_HEADERS)
         status = "none" if signed_claims is None else "unverified" if claims is None else "verified"
-        trust = Trust(id, server, author["kind"], understood, status, retired=author.get("retired"))
-        principal = claimed_principal(m, author["kind"]) if understood else None
+        trust = Trust(id, server, understood, status, retired=author.get("retired"))
+        principal = claimed_principal(m) if understood else None
         if principal is None:
             return trust
         if principal_key(principal) is not None:
@@ -305,7 +302,7 @@ class Reader:
             unpairing = author.get("unpairing")
             ended = unpairing is not None and verify_unpairing(m["from"], principal, unpairing)
             return _with(trust, PrincipalTrust(principal, "key-pairing", _PROVES["key-pairing"], ended=ended))
-        considered = claims_about(m, claims or (), author["kind"])
+        considered = claims_about(m, claims or ())
         claim = next((c for c in considered if c["type"] == "acts-for"), None)
         if claim is None:
             return _with(trust, PrincipalTrust(principal, "agent-asserted", _PROVES["agent-asserted"]))

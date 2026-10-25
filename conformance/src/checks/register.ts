@@ -409,14 +409,15 @@ def(
     id: 'register.paired-document',
     section: `${S}, PROTOCOL 4`,
     level: 'must',
-    title: "A paired agent's document says paired, and never who",
-    expected: 'kind is "paired", and nothing in the document names the principal\'s key',
+    title: "A paired agent's document says neither that it is paired nor who its principal is",
+    expected: "the document is readable, has no kind member, and nothing in it names the principal's key",
   },
   async (t: T, ctx: Ctx) => {
     const p = await pairedAgent(ctx);
     const { res, read } = await agentDocument(t, ctx, p.agent.address);
     t.status(res, 200);
-    t.assert(read?.kind === 'paired', `kind is ${JSON.stringify(res.json?.kind)}`);
+    t.assert(read !== null, 'the document is readable');
+    t.assert(res.json?.kind === undefined, `the document says kind ${JSON.stringify(res.json?.kind)}`);
     const principalToken = p.for.slice('simon-key:'.length);
     t.assert(!res.text.includes(principalToken), "the document contains the principal's key");
   },
@@ -451,7 +452,7 @@ def(
     level: 'must',
     title: 'A hosted address pairs in one call',
     expected:
-      'register {"key","address","for","pairing"} on a hosted domain answers 200 account, and the document says paired',
+      'register {"key","address","for","pairing"} on a hosted domain answers 200 account, and the agent document is readable',
   },
   async (t: T, ctx: Ctx) => {
     const domain = requireHosted(ctx);
@@ -466,7 +467,7 @@ def(
       address,
     );
     const { read } = await agentDocument(t, ctx, address);
-    t.assert(read?.kind === 'paired', `kind is ${JSON.stringify(read?.kind)}`);
+    t.assert(read !== null, 'the agent document is readable');
   },
 );
 

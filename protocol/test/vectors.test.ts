@@ -243,7 +243,7 @@ describe('the published vectors', () => {
     }
     const c = vectors.claimsConsidered;
     const message = vectors.messages.cases.find((m: { name: string }) => m.name === c.message).message;
-    assert.deepEqual(claimsAbout(message, c.claims, c.kind), c.considered);
+    assert.deepEqual(claimsAbout(message, c.claims), c.considered);
   });
 
   it('signatures at deliver are 403, and an author with no key to try is unsupported_algorithm', () => {
@@ -344,7 +344,7 @@ describe('the published vectors', () => {
     const r = vectors.reading;
     for (const c of r.understood)
       assert.equal(isUnderstood(c.message, new Set(r.understoodHeaders)), c.understood, c.name);
-    for (const c of r.principals) assert.equal(claimedPrincipal(c.message, c.kind), c.principal, c.name);
+    for (const c of r.principals) assert.equal(claimedPrincipal(c.message), c.principal, c.name);
     for (const c of r.relations)
       assert.equal(readsAs(c.message, c.target, new Set(r.knownRelations)), c.readsAs, c.name);
   });

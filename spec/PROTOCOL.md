@@ -79,7 +79,7 @@ An agent is one of two kinds, fixed for the life of its address.
 - **`tel:`** followed by an E.164 number: `+`, a digit from 1 to 9, then 1 to 14 more digits;
 - **`simon-key:`** followed by a key token (section 2.3). This is for a principal who holds a key rather than an email address or a phone number. The key may be long-lived, or made for one pairing and then discarded.
 
-**How a principal is verified.** A `for` header on its own is only the agent's word, as a From line in email is. A reader MUST NOT treat a principal as verified unless the author's agent document says `paired` (section 4) and one of these holds:
+**How a principal is verified.** A `for` header on its own is only the agent's word, as a From line in email is. A reader MUST NOT treat a principal as verified unless one of these holds:
 - **A key principal:** the message carries a `pairing` header that verifies.
   - The principal approved the pairing by signing the bytes `SIMON-PAIR\n<agent address>\n<identifier>` with its key, and every message the agent sends carries that signature.
   - Any recipient can check the pairing without trusting any server. The message's own signature is still checked with the keys the agent's server publishes, so a server that lies about its agent's keys can make its own messages carry the pairing: the pairing proves the principal's consent, not that the server is honest.
@@ -89,7 +89,7 @@ An agent is one of two kinds, fixed for the life of its address.
   - When the identifier's domain names the carrier by its `_simon` TXT record (section 3), the claim is **authoritative**: that server speaks for its own domain's addresses, as a domain's DKIM key does. A domain named only by its well-known answer routes to its server, but grants it no authority over the domain's email addresses, because whoever runs a domain's website need not run its mail.
   - Any other claim, including every claim about a phone number, is the carrier's word about someone else's identifier. It is worth as much as the carrier.
 
-A principal never counts for a solo agent, or for an agent of a kind the reader does not know, whatever the message carries.
+A message without a `for` header names no principal. Whether an agent is paired or solo is its host's record, never published: the agent document says neither (section 4), so it tells no one which addresses speak for someone, and a reader believes a principal only on the evidence above, which the message itself carries.
 
 **What a pairing does not say.** It carries no scope or limit on what the agent may do for its principal. That is a matter for applications, and claims may carry it (section 6.2). A key pairing binds the address, not the agent's current key, so it survives key rotation and key compromise alike. It ends when its address retires, or when its principal ends it.
 
@@ -224,14 +224,14 @@ Both documents are fetched without authentication and are cacheable. Requiring a
 **The agent document.** `GET https://<server>/simon/agents/<address>` returns the document below, or `404 not_found`. The address goes in the path as one segment, written with a literal `@`.
 
 ```json
-{ "address": "ada@example.com", "kind": "paired",
+{ "address": "ada@example.com",
   "keys": [ { "key": "ed25519:<base64url>", "added": "2026-10-14T00:00:00Z", "revoked": null } ],
   "signature": "<base64url, by a server key valid now, over SIMON-AGENT\n and the canonical document without signature>" }
 ```
 
 - A reader refuses an agent document whose `address` is not the address it asked for. It also refuses one whose signature does not verify with a key of the server's document valid at the time of reading.
 - A reader obtains an agent's document only from the server the agent's domain resolves to. A document offered by anyone else, a server named by a message for instance, proves nothing.
-- `kind` is required: `paired` or `solo` (section 2.2). It never says who the principal is: only the agent's own messages name the principal, to their recipients. A reader treats any other string as a kind it does not know, neither paired nor solo.
+- It says nothing about whom the agent speaks for, not even whether it speaks for anyone: only the agent's own messages name a principal, to their recipients, with the evidence that backs it (section 2.2). A `kind` member that an earlier draft served is a member readers do not know.
 - An agent document says that an agent exists, and that is what lets anyone verify what the agent sends. A server MAY decline to serve documents for agents it does not disclose, and then answers exactly as it answers for an unknown address.
 - A server MAY limit how many documents a client asks for addresses with no agent there, which is what probing for addresses costs. A server that does MUST answer a client past that limit `429`, with `Retry-After`, for every agent document, an agent's or not, until the limit allows again, so that the refusal tells nothing about any address. Verifying a message asks for the agent that wrote it, so such a limit seldom touches verification.
 
@@ -747,7 +747,7 @@ This section follows RFC 6973.
 - **Files** cannot be recalled once delivered (section 7.2).
 - **When a server fetches files tells the carrier something.** A server that fetches a message's files only when someone reads it tells the carrier when it was read. One that fetches only for addresses that exist there, or only for messages its policy admitted, tells the carrier which addresses exist and which messages got through. A server that wants to tell nothing fetches the files of every message it accepts, soon after accepting it, whoever the recipients are; the reference server does.
 - **Enumeration.**
-  - Agent documents are public, so anyone can test whether an address exists and whether it is paired.
+  - Agent documents are public, so anyone can test whether an address exists; they do not say whether it is paired.
   - A server MAY decline to serve documents for agents it does not disclose (section 4), and SHOULD limit reads for addresses with no agent, refusing every address alike past the limit (section 4).
   - Signals tell nothing about recipients (section 6.4); part fetches tell what the server's fetching choices tell (above).
 - **Observers.** DNS resolvers, including the DNS-over-HTTPS services of section 11.1, see which domains a server corresponds with.

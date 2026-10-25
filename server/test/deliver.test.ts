@@ -243,7 +243,7 @@ describe('deliver (spec section 6.3)', async () => {
     assert.deepEqual(box.at(-1).claims, [{ ...claim(t, tFor), authoritative: false }, other]);
   });
 
-  it("carries the carrier's signed claims into the inbox, checkable there, and never a principal for a solo agent", async () => {
+  it("carries the carrier's signed claims into the inbox, judged and checkable there", async () => {
     const solo = peer.agent('solo');
     const forValue = `mailto:solo@${peer.domain}`;
     const actsFor = {
@@ -258,7 +258,8 @@ describe('deliver (spec section 6.3)', async () => {
     await fed.work();
     const entry = (await bob.received()).at(-1);
     assert.deepEqual(entry.message, m);
-    assert.deepEqual(entry.claims, [], 'a solo agent speaks for no one, whatever its carrier claims');
+    // No agent document says paired or solo: the carrier's signed claim is its word, judged by DNS here.
+    assert.deepEqual(entry.claims, [{ ...actsFor, authoritative: true }]);
     const carrierKeys = [{ key: keyToken(peer.key), added: '2026-01-01T00:00:00Z', revoked: null }];
     assert.equal(verifyClaims(entry.signedClaims, m, carrierKeys), true);
     assert.equal(

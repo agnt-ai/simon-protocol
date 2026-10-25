@@ -36,7 +36,6 @@ import {
   verifyPairing,
   verifyUnpairing,
   type ActsForClaim,
-  type AgentKind,
   type AnyMessage,
   type Claim,
   type KeyEntry,
@@ -73,7 +72,6 @@ export interface VerifyOptions extends ReadOptions {
 export interface AgentRecord {
   address: string;
   server: string;
-  kind: AgentKind | 'unknown';
   keys: KeyEntry[];
   /** The signature algorithms its server verifies, from the server document. */
   algorithms: string[];
@@ -127,7 +125,6 @@ export interface Trust {
   authorSigned: true;
   /** The server `from`'s domain resolves to, which published that key and carried the message. */
   authorServer: string;
-  kind: AgentKind | 'unknown';
   /**
    * False for a message of a version this client does not implement, or whose `critical` header lists one
    * it does not understand (spec sections 1 and 5.4): whose key signed it is all it says. Act on nothing in
@@ -135,8 +132,8 @@ export interface Trust {
    */
   understood: boolean;
   /**
-   * The principal that counts: null for a message with no `for` header, one not understood, or one from an
-   * agent its document does not call `paired`, since a solo agent speaks for no one whatever it carries.
+   * The principal that counts: null for a message with no `for` header or one not understood, since a
+   * message that names no principal speaks for no one whatever claims it carries.
    */
   principal: PrincipalTrust | null;
   /** Whether `signedClaims` were given, and verified with the carrier's keys. Claims that do not are ignored. */
@@ -250,12 +247,11 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
     id,
     authorSigned: true,
     authorServer: author.server,
-    kind: author.kind,
     understood,
     claims: opts.signedClaims === undefined ? 'none' : claims ? 'verified' : 'unverified',
     ...(author.retired !== undefined && { retired: author.retired }),
   } as const;
-  const forValue = understood ? claimedPrincipal(m, author.kind) : null;
+  const forValue = understood ? claimedPrincipal(m) : null;
   if (forValue === null) return { ...trust, principal: null };
   if (principalKey(forValue) !== null) {
     if (!verifyPairing(m.from, forValue, header(m as Message, 'pairing'))) {
@@ -303,7 +299,7 @@ async function claimedFor(
   claims: readonly Claim[],
   opts: ReadOptions,
 ): Promise<PrincipalTrust> {
-  const claim = claimsAbout(m, claims, author.kind).find(c => c.type === 'acts-for') as ActsForClaim | undefined;
+  const claim = claimsAbout(m, claims).find(c => c.type === 'acts-for') as ActsForClaim | undefined;
   if (!claim) return { id: forValue, basis: 'agent-asserted', proves: PROVES['agent-asserted'] };
   // Aligned with the author, as whoever judges authority SHOULD require (spec sections 6.2 and 11.2).
   const authoritative = await isAuthoritative(claim, author.server, domain => resolution(domain, opts), m.from);

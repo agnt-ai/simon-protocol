@@ -2265,6 +2265,30 @@
         "transmitted": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"subject\":\"Hello, SIMON\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"First post.\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"TnWWpZmZP5j9YcHD9PROF2W8rNKOuRZpucp63wCAeneOEm-Qr_03St0OjQb4c-A1czdME4bTZ2s1M5TRLzioCQ\",\"to\":[],\"v\":2}"
       },
       {
+        "name": "a message with no for header, which speaks for no one",
+        "signer": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
+        "signingBytes": "SIMON-MESSAGE\n{\"from\":\"ada@example.com\",\"headers\":{},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[\"bob@example.net\"],\"v\":2}",
+        "id": "f5d13f35acf40246302ad6f1627baa0bb30f8f5fe16490eb247d43afb87ac4ca",
+        "message": {
+          "v": 2,
+          "from": "ada@example.com",
+          "to": [
+            "bob@example.net"
+          ],
+          "inReplyTo": null,
+          "parts": [
+            {
+              "type": "text/plain",
+              "data": "Does 3pm work?"
+            }
+          ],
+          "headers": {},
+          "sentAt": "2026-10-14T21:00:00Z",
+          "signature": "n-a1Eyw6Q29Jb5pPKaGBFKzHWMrXoyurv_7OnEp2vkOLqggo-9Ctvd0yN4D-3vNXcDxRO506PASxv5r0UlalDA"
+        },
+        "transmitted": "{\"from\":\"ada@example.com\",\"headers\":{},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"n-a1Eyw6Q29Jb5pPKaGBFKzHWMrXoyurv_7OnEp2vkOLqggo-9Ctvd0yN4D-3vNXcDxRO506PASxv5r0UlalDA\",\"to\":[\"bob@example.net\"],\"v\":2}"
+      },
+      {
         "name": "media type parameters, one quoted",
         "signer": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
         "signingBytes": "SIMON-MESSAGE\n{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"See the attached.\",\"type\":\"text/plain; charset=utf-8\"},{\"data\":\"AAEC\",\"type\":\"application/octet-stream; name=\\\"a b.bin\\\"\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"to\":[\"bob@example.net\"],\"v\":2}",
@@ -5123,7 +5147,7 @@
     ]
   },
   "documents": {
-    "about": "Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 2 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A kind the reader does not know reads as \"unknown\". A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.",
+    "about": "Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 2 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.",
     "now": "2026-10-14T21:00:00Z",
     "server": [
       {
@@ -5454,7 +5478,7 @@
     ],
     "agent": [
       {
-        "name": "as served: a paired agent",
+        "name": "as served",
         "address": "ada@example.com",
         "serverKeys": [
           {
@@ -5463,11 +5487,10 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\"}",
-        "signingBytes": "SIMON-AGENT\n{\"address\":\"ada@example.com\",\"keys\":[{\"added\":\"2026-10-01T00:00:00Z\",\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"revoked\":null}],\"kind\":\"paired\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\"}",
+        "signingBytes": "SIMON-AGENT\n{\"address\":\"ada@example.com\",\"keys\":[{\"added\":\"2026-10-01T00:00:00Z\",\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"revoked\":null}]}",
         "read": {
           "address": "ada@example.com",
-          "kind": "paired",
           "keys": [
             {
               "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
@@ -5478,7 +5501,7 @@
         }
       },
       {
-        "name": "a solo agent with an ML-DSA-65 key",
+        "name": "an agent with an ML-DSA-65 key",
         "address": "carol@example.org",
         "serverKeys": [
           {
@@ -5487,10 +5510,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"carol@example.org\",\"kind\":\"solo\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"UCZhXw1TSJDuQEh4BF6cU0ANaMEXlYD-VCZFVG7R8yyhgiXVNrhgXyUEuENHO-EmNR3NVKAcPnYO0Jdbg3w9AQ\"}",
+        "body": "{\"address\":\"carol@example.org\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"eWaluWCnMSbdwuub-WrBc0ehgHYcEBaCyKHOzHLX6uDd8lLpYw7X3qyWBwPjaTyQ0QJ_WwcqayQE4JP5fjgdCA\"}",
         "read": {
           "address": "carol@example.org",
-          "kind": "solo",
           "keys": [
             {
               "key": "ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8",
@@ -5501,7 +5523,7 @@
         }
       },
       {
-        "name": "of a kind readers do not know",
+        "name": "with the kind member an earlier draft had: a member readers do not know",
         "address": "ada@example.com",
         "serverKeys": [
           {
@@ -5510,10 +5532,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"group\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"Qgx25jA77p_g5v-OwL7jQjDVgazPoOi9jtkYiyVRBkshY3tD-ltRB9aWljQNESF2PPhJXA3UTFdSgrt8XgAmCA\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"kind\":\"paired\",\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\"}",
         "read": {
           "address": "ada@example.com",
-          "kind": "unknown",
           "keys": [
             {
               "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
@@ -5533,10 +5554,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"avatar\":\"https://example.com/a.png\",\"signature\":\"ZaFYeoq1d2YaC7pOCG5nK_CI9Fh3E6z0WR2bHAHKveZUDisCgBvRlPSZSHOnoYIM7Xfj0WrI4-sw6GrORZy4DQ\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"avatar\":\"https://example.com/a.png\",\"signature\":\"B25s9Pl1p5GzFIgi99bMYtyV9EOvalLTFxLWfTnwvYb8YkmPRVLFimaFPUB29Je1cwLT0T8b7047kpsJCDKFCg\"}",
         "read": {
           "address": "ada@example.com",
-          "kind": "paired",
           "keys": [
             {
               "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
@@ -5545,32 +5565,6 @@
             }
           ]
         }
-      },
-      {
-        "name": "with no kind",
-        "address": "ada@example.com",
-        "serverKeys": [
-          {
-            "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
-            "added": "2026-10-01T00:00:00Z",
-            "revoked": null
-          }
-        ],
-        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\"}",
-        "read": null
-      },
-      {
-        "name": "with a kind that is not a string",
-        "address": "ada@example.com",
-        "serverKeys": [
-          {
-            "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
-            "added": "2026-10-01T00:00:00Z",
-            "revoked": null
-          }
-        ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":1,\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"oYsSgwFvHAA-L76LIQPJFPzCq7Kz9zmPBC6OjzMa19PlbjTSfkHa_a9HaArlcoy47PxZkLG7iZz5X2g3tUciCA\"}",
-        "read": null
       },
       {
         "name": "naming another address",
@@ -5582,7 +5576,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\"}",
         "read": null
       },
       {
@@ -5595,7 +5589,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\"}",
         "read": null
       },
       {
@@ -5608,7 +5602,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\",\"note\":\"x\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\",\"note\":\"x\"}",
         "read": null
       },
       {
@@ -5621,7 +5615,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"QuEUVrWHO4WsjuB17fblljhYaMBEGZdgag2FOTPxe3VYyk3N3T0jL4xvKqpMogw2u2JQy_zXeimuWzksh4TdBA\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"9QZNgR1_BACOgbpy7Dp9JuTn0gvkH_RyMf5cq3sibJW4BZFeNUps_2Zhjoy9yeILb9px6GIwrpo_yNi0M1xZDQ\"}",
         "read": null
       },
       {
@@ -5634,7 +5628,7 @@
             "revoked": "2026-10-14T00:00:00Z"
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"OQZ_nbTwTjjPTlrDeHDbtzeTXN0oJBxu54RpCmSC94U9QXeEO_9sS6o3fY4ZNDsuaSKpBpCYrSOWZNkT39GNBw\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}],\"signature\":\"srtALI5TyrHJ67QQWdkmheFTvrviraBX7pfuwd3Y9ji4ruQ8yOZWTGcofaoBn0GMrsFFhJ_7c4Grz9s_a91ABA\"}",
         "read": null
       },
       {
@@ -5647,7 +5641,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}]}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null}]}",
         "read": null
       },
       {
@@ -5660,10 +5654,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"UVTSq1XgM4gCaOiKaXXv-F8q75keEJoeGIwWxGSiSWKqx-PfYLu8nhdt_lsFifVAHkb4_T04pKQ5NdFM-kPeCw\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"fyZ2Z6EOy6_RerhugmfQ0dJiw2x1amrBpu3qkQeBh9T_e9uuZlZqmzvVWD2tzDxc_t9UWDxosTXWiWon2aEgBQ\"}",
         "read": {
           "address": "ada@example.com",
-          "kind": "paired",
           "keys": [
             {
               "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
@@ -5684,10 +5677,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":\"wCPmQ-_I3nr6cVJsB6i2D8OwcqqLndfSiAd-aR3m7r_INl8d-rYkDMlcDO8KeDy_rF6rN8izmvlA1xnR_nITBQ\",\"signature\":\"yJA8vFyiv-gx-cuZaI2BzXp9G1-bnh-hHvmmWGpsIYuRbSZs1AfFLcEDMSDj9BzcZGs_GL3jgz3FuQ7W_7MwCg\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":\"wCPmQ-_I3nr6cVJsB6i2D8OwcqqLndfSiAd-aR3m7r_INl8d-rYkDMlcDO8KeDy_rF6rN8izmvlA1xnR_nITBQ\",\"signature\":\"c5I1IOtSK4rbxlWZsn_P8qjze--AvhfFzrRFkfM-Yl_-MbxAX2kyYJtXBY5dR1nwQzioF8kCTjo8FYqvjhngDQ\"}",
         "read": {
           "address": "ada@example.com",
-          "kind": "paired",
           "keys": [
             {
               "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
@@ -5709,10 +5701,9 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-05T00:00:00Z\"},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"5gerp4SWwc7WorWggjuZWgIoj1xj0Nd0UZ0VoAQV1UXuVxQlXPGmDCHS1obv4HsfpB12wHNEq9IAOjLXuRMYDg\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-05T00:00:00Z\"},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"ycaS3Y_DEjqGduKQbQeQbE0gP7DCMK3zV7HaNV9JyhzU9OHcTCLIIB0iuJVayYc7BHGZWZxsUuH8ATGQgcWDAQ\"}",
         "read": {
           "address": "ada@example.com",
-          "kind": "paired",
           "keys": [
             {
               "key": "ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8",
@@ -5738,7 +5729,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"NRBYI0wUKYtMWEWfD7r42DRM60qskIBA4ON3pNnCb0-r2_WdYLNOlixWJvBonDEVV7QFE7ng5gzxteBT60fCDw\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":null},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"z0TiFBKsjO18eoCDTOCROnp85G0CPXC4otRE8cnmykZIuEzdYHXHbeutlfQ2Yoyt5VNNbVybC7FrrHgVHEQuAw\"}",
         "read": null
       },
       {
@@ -5751,7 +5742,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:01.000Z\"},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"V5ddMgBwsE-I-uxovDfpE-gbii5jU-Hx7oS6g0_jqXL5ulJ6qtCUnut-wlA6LXRkvxJq-4JwwqQSIU1qPKt-Cg\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ml-dsa-65:dG5i4jGnYfCTPzKI6k7F95DcIUdMM_Sy1qO9znFjp5DS6ZI1204s-D_cf4u7L4J5phGwvclzrPCA2kPncIZKttjibz8iLDQ0gFfPio1HpWcgbnQ_3nXsWG9nWg6VoolKNaH9HVoA2MMd3R58f67cnJ7g1zd8frNQ_fn1DSJyCgpfDdJLoj7haceEC96UFCd2Am0A5Rof1XCJhL295d90DfAHR1F66ctYuw9QxbvE1xTaWQA_wZCE8J0myualmC9hK5Hlsee5XBvBlAi-W6ZkZoOidGuMQn7FGOdvchHDCoRKN7WyGEM4gIjFBs2VtK0_y-_-ZerjPwPLCuJsGQoEiTaGvDdprgstrpj1mUo4YigXtWdgiSKldBKZiBWhwDOCi2sZKsPNdWOTZnnznCYMRCfvEUjbbkg6IzV166QVzSCcK6eCSUOQ-12DK6MlGAw1wAUUraK8fXmW2sPmys3unkBYAbc_6vo9dXy_rirk2edjnGZqOMasSWMbfn9JGWIU89gzB1Dj3ghTPQ_QCes3y4yoPb3FNZxfRjvuDk-nc9k4_4WQ7eQE0oxgTsh0hWx129OU04LS5FyPAsSBaVQm3Ugm6k1XGD9UBpmw_yzopp_nvuEEmOQuq2gcJry4oYUSji_N_voXV-xbYoDsT_wlv7gafUuRDuDDGNrD3AWn6HfrKc6MbVnTBHb5W6aovZZujJeb39MlG0yXiNCdkJepLgs0UEDhszhi106HLSHnIhYcwKcFN8dFpeE4aKbtCPWrlXjpijIRFJQ4LqOArG4Ymsym9EKtilmO-kJswzS4j4ke-cIV73ynTdsjovNefl90ZvKzmwwB7fXoqBHQdkBnuij2PHbJgbe3MJRlYUpVijHCZ2P4G3V5LGHD9bf-fSL-WF0u7zMgVQrtgNHKDKgjSrFCJPw0Avda7TiRPo2zY0YzTn2EkEidlEgTjVjxbbPUJhJiRaqoAqYKTsv61IjmCpmT9gpwbno7nEqUmwUmSTuNCN4aQdVCwpRYCKsMtjad2lxCp63RSvPJp1-IlYhISfuNH9UJeNmohVCpSkR3Co4XDu8xKHXBD8Qbk-XOt34UTbQqd9xeTGllQh3BAIgeey_wIjFjU1BN9tLbRjWHvlvAhttzX5QWiCvUgJRM044Hl1tkXWpf34Bz1jH14cc6tYF-toeNY0jBB3NTGoIgIQVFoW7xL5hjCwG3xYbMgyZ6sdGfhhjvefhQhFSu78m42uS8HGiazOKmiE7S7zou8u1pwb3HlfMRRJtrn6Xfvdrriq5u8WXfN96sHW0BbOLdeQFa7wUNd-2As59ibkCJ83fJXPnVuVx0C5HCJCr3PiWsx3HP17L-pKYCNS8FFl_g-1zDwlz9NGmZ45Y_xWJ3XNUYjLnZ9nXsaShU5zhSW4ufytUon6Xh8gwEw_UyxoBUERY_81noOQseI5jy1ZQp4k8262XPOXdUJbpfNlL1meZrJp-IfzvSSM3I2BK63Cbe5lHLiKqbYOn3LWa1bJSD6VRnnAExjeBBS7Owh2BtId4P7XA4HzPk3pH7GxYW7v3iKeq86m5Xi0S5_9cFF_sfKTt6eLbklo8uf1aH8gQo75L-rgmBQSGG1gFE5imwwYW4nzhe0MAXYfrF2NSOaye40a0pGLjTDAHojMCRAdefYre8sl7QHo9rWcIeB4DQKHAvB1ZjhjBK-yHSg5wn9gAav_Miwhv8GcHMW7XTb5hCc_lxBdgEiYQroiInT31EecPNBClw4z2_2bajOeln1j6UVaGmEdHS6HGMHKMWn9Cz1EyLxVML0KpfCaUOniWYFWmEoY55mZcbVdyWW-nb2RBETwrDwysqTfdt-UAIHyvGDhqbfwHbjna9k_Qu-termfuvph3HBRuFxjb_TpRSGy4Q68Q9IBxgsu1OWf6HB5Mf-gFTFWcCpPvqkm8ziGk5_-LKjt8lhh84m39yMHpyA0wS4rAK7fXP4hpmsBqWhhvz1TJb_z4ranSIrUXFw3nM6L74IFnuI4D9DaeOSw8cVA9qH9Ir86T1NDeuXpFvpcpyBVkBfpbaOSuY7VnWtdAYmixxAGHOxcq2AOUj7DgRxqzPz1IvwcDhPk1_vlu1GtGpew-LTubvlHDeGwn2s3TVq2mAlJfanlPtcQOvfMIT7O1LJH5jpngMGfR1hSbEzmvV5qC4T2m3q4Zb2Jwb7y-7SGC5lRCZZdvmgWLVDflS9JYiqBUpG6TE0ht2SfANdY-yKODCbZ1PsDNI4P5wWwPGxoeYAX36bxdi2QmkmBN5K7fF9ttqLpzMWuetVkMqSpl9kwu6LdExdS5obtSp14yV94ig9pNs3aO5lB-ndlKTzK7JFdQU4hcce_pnXXBmksnNaAaNAQ2x6Y4ggmM63H3ZrB2q_sIlWJSZzfq4wswmC6Mil1P1_-dxE_8v7cn12-BytPRCRdDg3MqPwPK7fWlHDPZtLZlJNYsX7vDtFC0c3E03HEqKPKG4j67YTqsILaQxkamBV14DGcLjH6pY2HJuCGuqg2UZA7mz2zsYI3l5TBcN4ftBIPhIkNRdGRNOKJK2tkYngzka5lUCFW4LGjtwcNqj68f9zQfI5sF6ddIdgaIZmR8\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:01.000Z\"},{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"signature\":\"oT8Tif26ruoV5dv-HDljdMBKrQCbHGER1HVSrKP-5RyytODzpLMifvp23vMBN_8WMwOdg5H5NSjzp_6yVM_6Bg\"}",
         "read": null
       },
       {
@@ -5764,7 +5755,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14\",\"signature\":\"BV0QmVYMSb1PTJda2y4sq5qbak8CMmaVke9eGA4P718maB8_vlLBf6QkftOjN2r9kC6ld6M25sjK48k1pKXTAA\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14\",\"signature\":\"XELOhZwhmdPCBZsPJQPtYXEerKh6SJnVqektDM7L9ZlEHbLmYid8yJtxhFRc41kowxorzH8D95K_HzNGZ5mPBg\"}",
         "read": null
       },
       {
@@ -5777,7 +5768,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":1,\"signature\":\"oHqEtUohoLWu_sd9m-f0oLS6Kheqm3_cCDDg85WBpbshiY8iHiVO2hSUdkSyYl5cGbKf1clNYGkOmquqMkuiAg\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":1,\"signature\":\"TF87uP7lh-Jl5r44LBc6o1kOJsOogMxsF2RDjK_nDhRCumxBvv1yECxwq6pdJ3OI_K1oL-zPnouT8psEgxbdCQ\"}",
         "read": null
       },
       {
@@ -5790,7 +5781,7 @@
             "revoked": null
           }
         ],
-        "body": "{\"address\":\"ada@example.com\",\"kind\":\"paired\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":\"not base64url\",\"signature\":\"KcOCR_FC4M6Go-j_kYoLFxDxgJ7dbA47fJt8GH5vjBLn2H2QoTGBX7yle5YrkMfJe8NKxnYHv4tMzE0RNsgIAg\"}",
+        "body": "{\"address\":\"ada@example.com\",\"keys\":[{\"key\":\"ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw\",\"added\":\"2026-10-01T00:00:00Z\",\"revoked\":\"2026-10-14T09:00:00Z\"}],\"retired\":\"2026-10-14T09:00:00Z\",\"unpairing\":\"not base64url\",\"signature\":\"G_NuxtuGI0bxS5K8YuclYgNYZqNvjm1-wbNbvCwag9VhjtUuMLzEm0fDZycQPIWnoteDYYHSakv00OUuXBIyDQ\"}",
         "read": null
       }
     ]
@@ -6672,7 +6663,6 @@
   "claimsConsidered": {
     "about": "Which claims a receiver considers for the message named (section 6.2, and the registry's identifier): an acts-for claim only for the author and the message's for header, with a timestamp verifiedAt and a scope that is an array of strings; an identifier claim only for the author, of agent, or of principal on a message whose for header names a key (this message's names an email address, so none), with a mailto: or tel: identifier in the version 2 form, exactly as written, and a timestamp verifiedAt; other types pass through.",
     "message": "question with a for header",
-    "kind": "paired",
     "claims": [
       {
         "type": "acts-for",
@@ -6949,7 +6939,7 @@
     ]
   },
   "claimsJudged": {
-    "about": "The claims a receiving server considers for each message named, from an author of the kind given (its agent document says paired or solo; a solo agent has no acts-for or principal claim that counts, whatever its message carries), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.",
+    "about": "The claims a receiving server considers for each message named (a message with no for header has no acts-for or principal claim that counts), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.",
     "carrier": "https://simon.example.com",
     "resolutions": {
       "example.com": {
@@ -6966,7 +6956,6 @@
     "cases": [
       {
         "message": "question with a for header",
-        "kind": "paired",
         "claims": [
           {
             "type": "acts-for",
@@ -7059,7 +7048,6 @@
       },
       {
         "message": "from an agent paired with a key principal",
-        "kind": "paired",
         "claims": [
           {
             "type": "identifier",
@@ -7096,8 +7084,7 @@
         ]
       },
       {
-        "message": "question with a for header",
-        "kind": "solo",
+        "message": "a message with no for header, which speaks for no one",
         "claims": [
           {
             "type": "acts-for",
@@ -7642,7 +7629,7 @@
     ]
   },
   "reading": {
-    "about": "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal that may count, given the kind the author's agent document states: the for header of a version 2 message from a paired agent, else null; whether it is verified is a further question. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+    "about": "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     "understoodHeaders": [
       "for",
       "pairing",
@@ -7793,7 +7780,7 @@
     ],
     "principals": [
       {
-        "name": "a paired agent",
+        "name": "a message naming its principal in for",
         "message": {
           "v": 2,
           "from": "ada@example.com",
@@ -7814,11 +7801,10 @@
           "sentAt": "2026-10-14T21:00:00Z",
           "signature": "eVq-YMxZrvP2T2P_f6zh78jzq-5GZKUS_rgIRtuAAwy_7BFdiirBzU81C90Kw4TGaAzsIZdy_sUyS8yly_4aCw"
         },
-        "kind": "paired",
         "principal": "mailto:alice@example.org"
       },
       {
-        "name": "a solo agent carrying a for header",
+        "name": "a message with no for header",
         "message": {
           "v": 2,
           "from": "ada@example.com",
@@ -7832,43 +7818,14 @@
               "data": "Does 3pm work?"
             }
           ],
-          "headers": {
-            "for": "mailto:alice@example.org",
-            "subject": "Thursday"
-          },
+          "headers": {},
           "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "eVq-YMxZrvP2T2P_f6zh78jzq-5GZKUS_rgIRtuAAwy_7BFdiirBzU81C90Kw4TGaAzsIZdy_sUyS8yly_4aCw"
+          "signature": "n-a1Eyw6Q29Jb5pPKaGBFKzHWMrXoyurv_7OnEp2vkOLqggo-9Ctvd0yN4D-3vNXcDxRO506PASxv5r0UlalDA"
         },
-        "kind": "solo",
         "principal": null
       },
       {
-        "name": "an agent of a kind the reader does not know",
-        "message": {
-          "v": 2,
-          "from": "ada@example.com",
-          "to": [
-            "bob@example.net"
-          ],
-          "inReplyTo": null,
-          "parts": [
-            {
-              "type": "text/plain",
-              "data": "Does 3pm work?"
-            }
-          ],
-          "headers": {
-            "for": "mailto:alice@example.org",
-            "subject": "Thursday"
-          },
-          "sentAt": "2026-10-14T21:00:00Z",
-          "signature": "eVq-YMxZrvP2T2P_f6zh78jzq-5GZKUS_rgIRtuAAwy_7BFdiirBzU81C90Kw4TGaAzsIZdy_sUyS8yly_4aCw"
-        },
-        "kind": "robot",
-        "principal": null
-      },
-      {
-        "name": "a paired agent writing a version the reader does not implement",
+        "name": "a version the reader does not implement",
         "message": {
           "v": 7,
           "from": "ada@example.com",
@@ -7882,7 +7839,6 @@
           "priority": 3,
           "signature": "6FrfxiFjZaX09R5EwvG3q97m-DYLmWNB7eYLEjUnbbWbZKUg3NloDBlBIF9cOPyAD9XxpbWtapnc7oqctYUCAQ"
         },
-        "kind": "paired",
         "principal": null
       }
     ],

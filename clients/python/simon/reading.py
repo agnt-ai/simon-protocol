@@ -4,7 +4,7 @@ No server test can show a reader obeys them, so they live here as functions, wit
 
 - A message of a version the reader does not implement, or listing in ``critical`` a header it does not
   understand, is presented as not understood (sections 1 and 5.4).
-- A principal counts only for a paired agent (section 2.2).
+- A principal counts only for a message that names one in `for`, on its evidence (section 2.2).
 - A relation the reader does not know is shown as a reply, and an author-only relation from anyone but the
   original's author is shown as a reply and never applied (section 5.5).
 """
@@ -29,12 +29,11 @@ def is_understood(message: Mapping[str, Any], understood: Collection[str]) -> bo
     return critical is None or all(header(message, name) is None or name in understood for name in critical.split(","))
 
 
-def claimed_principal(message: Mapping[str, Any], kind: str) -> str | None:
-    """The principal a message names that may count, given what the author's agent document says its kind
-    is: the ``for`` header of a version 2 message from a ``paired`` agent, or None. A solo agent, or an
-    agent of a kind the reader does not know, speaks for no one whatever its message carries. Whether the
-    principal is verified is a further question (a pairing, or a claim)."""
-    if message["v"] != VERSION or kind != "paired":
+def claimed_principal(message: Mapping[str, Any]) -> str | None:
+    """The principal a message names: the ``for`` header of a message of this version, or None. It is only
+    the agent's word until evidence backs it, a pairing that verifies or a claim the reader trusts (section
+    2.2); a message without ``for`` speaks for no one."""
+    if message["v"] != VERSION:
         return None
     return header(message, "for")
 

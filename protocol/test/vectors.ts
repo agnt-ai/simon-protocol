@@ -339,6 +339,9 @@ const version7 = fixedSignMessage<AnyMessage>(
   ada,
 );
 
+/** A message that names no principal: no for header. */
+const noPrincipal = fixedSignMessage<Message>({ ...question, headers: {} }, ada);
+
 /** A version 1 message, the first draft's: members this version shares, but a version it does not know. */
 const version1 = fixedSignMessage<AnyMessage>({ ...question, v: 1 } as unknown as Unsigned<AnyMessage>, ada);
 
@@ -424,6 +427,7 @@ const messages = {
       parts: [{ type: 'text/markdown; variant=GFM', data: 'Landed in *Lisbon*.' }],
     }),
     messageCase('public post (empty to)', post),
+    messageCase('a message with no for header, which speaks for no one', { ...question, headers: {} }),
     messageCase('media type parameters, one quoted', {
       ...question,
       parts: [
@@ -1315,9 +1319,9 @@ function documents() {
 
   const signedBy = (d: Record<string, unknown>, k: FixedKey = exampleCom) =>
     signAgentDocument(d as unknown as UnsignedAgentDocument, k.privateKey);
-  const ada1 = { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] };
+  const ada1 = { address: 'ada@example.com', keys: [keyEntry(ada.key)] };
   const agent = signedBy(ada1);
-  const solo = { address: 'carol@example.org', kind: 'solo', keys: [keyEntry(carol.key)] };
+  const solo = { address: 'carol@example.org', keys: [keyEntry(carol.key)] };
   const revoked = [keyEntry(exampleCom.key, '2026-10-01T00:00:00Z', '2026-10-14T00:00:00Z')];
   const RETIRED = '2026-10-14T09:00:00Z';
   const retired = (extra: KeyEntry[] = []) => ({
@@ -1327,16 +1331,18 @@ function documents() {
   });
   const retiredUnpairing = fixedSign(erin, unpairingBytes('ada@example.com', erinPrincipal));
   const agentCases: [string, string, string, KeyEntry[]?][] = [
-    ['as served: a paired agent', text(agent), 'ada@example.com'],
-    ['a solo agent with an ML-DSA-65 key', text(signedBy(solo)), 'carol@example.org'],
-    ['of a kind readers do not know', text(signedBy({ ...ada1, kind: 'group' })), 'ada@example.com'],
+    ['as served', text(agent), 'ada@example.com'],
+    ['an agent with an ML-DSA-65 key', text(signedBy(solo)), 'carol@example.org'],
+    [
+      'with the kind member an earlier draft had: a member readers do not know',
+      text(signedBy({ ...ada1, kind: 'paired' })),
+      'ada@example.com',
+    ],
     [
       'with a member readers do not know, under the signature',
       text(signedBy({ ...ada1, avatar: 'https://example.com/a.png' })),
       'ada@example.com',
     ],
-    ['with no kind', text(signedBy({ address: ada1.address, keys: ada1.keys })), 'ada@example.com'],
-    ['with a kind that is not a string', text(signedBy({ ...ada1, kind: 1 })), 'ada@example.com'],
     ['naming another address', text(agent), 'bob@example.net'],
     ['asked for in another case', text(agent), 'Ada@example.com'],
     ['with a member added after signing', text({ ...agent, note: 'x' }), 'ada@example.com'],
@@ -1378,7 +1384,7 @@ function documents() {
   ];
   return {
     about:
-      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 2 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A kind the reader does not know reads as "unknown". A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
+      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 2 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
     now: NOW,
     server: server.map(([name, body, origin = ORIGIN]) => ({
       name,
@@ -1707,9 +1713,8 @@ const claimsConsidered = {
   about:
     "Which claims a receiver considers for the message named (section 6.2, and the registry's identifier): an acts-for claim only for the author and the message's for header, with a timestamp verifiedAt and a scope that is an array of strings; an identifier claim only for the author, of agent, or of principal on a message whose for header names a key (this message's names an email address, so none), with a mailto: or tel: identifier in the version 2 form, exactly as written, and a timestamp verifiedAt; other types pass through.",
   message: 'question with a for header',
-  kind: 'paired',
   claims: consideredClaims,
-  considered: claimsAbout(signedQuestion, consideredClaims, 'paired'),
+  considered: claimsAbout(signedQuestion, consideredClaims),
 };
 
 /** Which acts-for claims a receiving server marks authoritative under its local policy (sections 2.2 and 6.2). */
@@ -1776,11 +1781,10 @@ async function claimsJudged() {
     'example.org': { outcome: 'server', server: 'https://simon.example.org', via: 'dns' },
   };
   const resolve: Resolve = async d => resolutions[d] ?? { outcome: 'not_found' };
-  const cases: [string, AnyMessage, string, Claim[]][] = [
+  const cases: [string, AnyMessage, Claim[]][] = [
     [
       'question with a for header',
       signedQuestion,
-      'paired',
       [
         actsFor,
         identifierOf('agent', 'mailto:ada.mail@example.com'),
@@ -1793,30 +1797,27 @@ async function claimsJudged() {
     [
       'from an agent paired with a key principal',
       keyPaired,
-      'paired',
       [
         identifierOf('principal', 'mailto:erin@example.com', keyPaired.from),
         identifierOf('principal', 'mailto:erin@example.org', keyPaired.from),
       ],
     ],
     [
-      'question with a for header',
-      signedQuestion,
-      'solo',
+      'a message with no for header, which speaks for no one',
+      noPrincipal,
       [actsFor, identifierOf('agent', 'mailto:ada.mail@example.com')],
     ],
   ];
   return {
     about:
-      'The claims a receiving server considers for each message named, from an author of the kind given (its agent document says paired or solo; a solo agent has no acts-for or principal claim that counts, whatever its message carries), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
+      'The claims a receiving server considers for each message named (a message with no for header has no acts-for or principal claim that counts), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
     carrier,
     resolutions,
     cases: await Promise.all(
-      cases.map(async ([message, m, kind, claims]) => ({
+      cases.map(async ([message, m, claims]) => ({
         message,
-        kind,
         claims,
-        judged: await judgeClaims(m, claims, kind, carrier, resolve),
+        judged: await judgeClaims(m, claims, carrier, resolve),
       })),
     ),
   };
@@ -2021,11 +2022,10 @@ function reading() {
     ['a version it does not implement', version7],
     ['the first draft, version 1, though its members look like this version', version1],
   ];
-  const principalCases: [string, AnyMessage, string][] = [
-    ['a paired agent', signedQuestion, 'paired'],
-    ['a solo agent carrying a for header', signedQuestion, 'solo'],
-    ['an agent of a kind the reader does not know', signedQuestion, 'robot'],
-    ['a paired agent writing a version the reader does not implement', version7, 'paired'],
+  const principalCases: [string, AnyMessage][] = [
+    ['a message naming its principal in for', signedQuestion],
+    ['a message with no for header', noPrincipal],
+    ['a version the reader does not implement', version7],
   ];
   const known = ['reaction', 'edit', 'retract', 'pin', 'comment'];
   const rel = (from: string, name: string | null): Message => ({
@@ -2050,18 +2050,17 @@ function reading() {
   ];
   return {
     about:
-      "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal that may count, given the kind the author's agent document states: the for header of a version 2 message from a paired agent, else null; whether it is verified is a further question. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+      "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     understoodHeaders: understood,
     understood: understoodCases.map(([name, message]) => ({
       name,
       message,
       understood: isUnderstood(message, new Set(understood)),
     })),
-    principals: principalCases.map(([name, message, kind]) => ({
+    principals: principalCases.map(([name, message]) => ({
       name,
       message,
-      kind,
-      principal: claimedPrincipal(message, kind),
+      principal: claimedPrincipal(message),
     })),
     knownRelations: known,
     relations: relationCases.map(([name, message, target]) => ({

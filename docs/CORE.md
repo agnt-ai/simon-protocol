@@ -157,7 +157,7 @@ Sentence 6 leaves the slot. JMAP (RFC 8620, 8621) shows how a mailbox API can be
 
 The core-level findings of an external security review, and how the core answers them:
 
-- **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a solo agent.
+- **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a message without `for`, whatever its claims say.
 - **Email authority.** Email authority comes only from the `_simon` TXT record; the well-known answer still routes.
 - **Key management and recovery** are host policy: other servers see only the keys and revocations in the agent document. CLIENT.md defines dedicated account/recovery calls; host practice remains separate from core interoperability.
 - **Fetching and signals.** When a server fetches parts is its own choice; it SHOULD fetch on arrival, never on read, and section 12 states what each choice reveals. The reference server fetches for every accepted message. Signals are explicit and opt-in.

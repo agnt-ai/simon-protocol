@@ -167,7 +167,7 @@ RFC 9421 (HTTP Message Signatures) is general: components are selected per reque
 - An agent is paired, speaking for exactly one principal named by one identifier, or solo, speaking for no one.
 - One agent and one identifier make one address. The same assistant for someone's work and personal email is two addresses, and so are two assistants for one person, and a switch to another assistant.
 - A retired pair's address is never reused.
-- The agent document says `paired` or `solo`, never who.
+- The agent document says `paired` or `solo`, never who. (Superseded 2026-10-25: the document says neither; see "The agent document no longer says paired or solo".)
 
 **Alternatives.**
 - *One agent serving many people from one inbox, with each message saying whom it is for.* The first draft did this.
@@ -188,7 +188,7 @@ The `for` header alone is the agent's word, as a From line in email is. A reader
 - **A key principal's own signature.** The `pairing` header travels on every message, and needs no server. It proves that the key's holder consented. It says nothing about identity or humanity, and it binds the address rather than the agent's current key, so it outlives a compromised agent key until the address retires.
 - **An `acts-for` claim.** This covers email and phone principals.
   - The claim is **authoritative** when the email's domain names the carrier by its `_simon` TXT record, the reasoning that makes DKIM trustworthy: the domain's DNS speaks for its mail. Until 2026-10-21 the well-known answer counted too; that handed a domain's mail identities to whoever runs its website.
-  - A principal never counts for a solo agent, whatever its message carries.
+  - A principal never counts for a solo agent, whatever its message carries. (Since 2026-10-25: for a message without `for`, whatever its claims say.)
   - Otherwise it is the carrier's word about someone else's identifier. Trusting a carrier's claims is a list of trusted carriers, as a browser keeps certificate authorities, without a transparency log.
 
 **Key principals** let people with no email or phone be principals too, pseudonymously, with a key held on a device or made for one pairing.
@@ -501,6 +501,13 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Precedent:* ActivityPub addresses `Public` explicitly; Mastodon marks visibility on every post.
 
 **Choice (B13.4).** A server no longer refuses a misplaced `rel` (on a message whose `inReplyTo` is null) or `feed` (on a message with recipients): each then means nothing and is ignored. It still refuses an `audience` on a message with recipients, because audience is security metadata and placement is what makes it mean something. "Never widen an audience" applies to every label but `public`.
+
+## The agent document no longer says paired or solo (2026-10-25)
+
+**Choice (B13.3).** The agent document carries an agent's address and keys, and nothing about whom it speaks for, not even whether it speaks for anyone. A reader believes a principal only on the evidence its message carries: a key principal's pairing, or a carrier's signed claim it trusts. A message without `for` names no one. Whether an agent is paired or solo stays its host's own record, enforced when the agent sends.
+
+- *Why:* `kind` added no protection. A key principal's pairing proves consent by itself. For an email or phone principal, `kind` was the same server's word as its claim, so a server that would lie in one would lie in the other. And `kind` told anyone who asked which addresses speak for a person.
+- *Cost:* an agent's being paired is no longer checkable apart from its messages.
 
 ## Revisions and reconciliation (2026-10-22)
 

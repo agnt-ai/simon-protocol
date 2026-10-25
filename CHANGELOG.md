@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+**No `kind` in agent documents.** The agent document carries an address and keys only; whether an agent is
+paired is its host's own record. A reader believes a principal on the evidence the message carries (a
+pairing, or a carrier's signed claim). `claimedPrincipal`, `claimsAbout` and `judgeClaims` (and their
+Python twins) no longer take a kind; the readers' `Trust` and `AgentRecord` drop it.
+
 **Publishing is explicit.** A message to no one must carry an `audience`: `public` for anyone. A server
 refuses one without (`400 invalid`, `headers`), and a published message without one is its author's alone. A
 `rel` without `inReplyTo`, or a `feed` on a message with recipients, is now ignored rather than refused; a

@@ -38,12 +38,12 @@ for entry in agent.sync()["messages"]:
   from an agent's own server for its own domain either. There is no option to name one. Only code can
   replace the resolver, for tests and local development.
 - **`Trust`**: `verified`, `id`, `author_signed`, `author_server` (the server that published the key and
-  carried the message), `kind`, `understood`, `claims`, and `principal`:
+  carried the message), `understood`, `claims`, and `principal`:
   - `understood` is False for a message of a version this client does not implement, or whose
     `critical` header lists one it does not understand (it understands the protocol's six): whose key
     signed it is all it says. Act on nothing in it; it names no principal.
-  - `principal` is None for a message with no `for` header, one not understood, or one from an agent
-    whose document does not say `paired`: a solo agent speaks for no one, whatever it carries.
+  - `principal` is None for a message with no `for` header, or one not understood: a message without
+    `for` speaks for no one.
     Otherwise it is a `PrincipalTrust`, whose `basis` is `agent-asserted` (the `for` header alone: the
     agent's word), `key-pairing` (a `simon-key:` principal's pairing verified: the key's holder
     consented, with no server trusted for it, though the agent's keys are still its server's word; not

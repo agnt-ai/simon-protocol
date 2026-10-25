@@ -85,7 +85,7 @@ it queues unmatched correspondents, deduplicates message ids and rejects legacy 
 | Function | |
 | --- | --- |
 | `verifyAuthor(message, options?)` | Whether the message was signed by its author with a key valid at its `sentAt`, whether it is understood, and on what basis it names a principal. |
-| `fetchAgentDocument(address, options?)` | `{address, server, kind, keys}`, verified under the server's keys, or null when the server says there is no such agent. |
+| `fetchAgentDocument(address, options?)` | `{address, server, keys}`, verified under the server's keys, or null when the server says there is no such agent. |
 | `fetchServerDocument(server, options?)` | `{server, keys, algorithms, limits}`. |
 
 **Keys come only from resolution.** No option names the server to ask: a reader told where an author's
@@ -99,7 +99,7 @@ resolves to, read by `verifyAuthor` itself. An entry's `claims` never count: any
 `verifyAuthor` answers a trust record,
 
 ```ts
-{ verified: true, id, authorSigned: true, authorServer, kind, understood,
+{ verified: true, id, authorSigned: true, authorServer, understood,
   principal: null | { id, basis: 'agent-asserted' | 'key-pairing' | 'server-claim',
                       claimant?, authoritative?, scope?, proves },
   claims: 'none' | 'verified' | 'unverified' }
@@ -111,8 +111,8 @@ pass is never an answer: it throws a retryable `SimonError` (`unavailable`, `tim
 
 `understood` is false for a message of a version this client does not implement, or whose `critical`
 header lists one it does not understand (it understands the protocol's six): whose key signed it is all
-it says, and it names no principal. `principal` is null too for a message from an agent whose document
-does not say `paired`: a solo agent speaks for no one, whatever its message carries. `claims` says
+it says, and it names no principal. `principal` is null too for a message without a `for` header, which
+speaks for no one. `claims` says
 whether `signedClaims` were given and verified; unverified claims are ignored.
 
 | `basis` | What it proves |

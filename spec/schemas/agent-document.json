@@ -4,13 +4,10 @@
   "title": "SIMON agent document",
   "description": "GET /simon/agents/<address>, signed over SIMON-AGENT\\n and the canonical document without signature. The final signed document is at most 131072 bytes and keys has at most 32 TOTAL entries, retained revoked keys included. Optional public retirement evidence is host policy; a private host answers as for unknown. Pruning keys can prevent fresh verification of older messages.",
   "type": "object",
-  "required": ["address", "kind", "keys", "signature"],
+  "required": ["address", "keys", "signature"],
   "properties": {
     "address": {
       "$ref": "common.json#/$defs/address"
-    },
-    "kind": {
-      "type": "string"
     },
     "keys": {
       "type": "array",

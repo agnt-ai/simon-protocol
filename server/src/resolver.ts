@@ -33,7 +33,6 @@ import {
   resolveDomain,
   SERVER_DOCUMENT_REFETCH_MS,
   TEMPORARY_CACHE_MS,
-  type AgentKind,
   type KeyEntry,
   type Resolution,
   type ServerDocument,
@@ -92,7 +91,6 @@ export type Peer =
   | { outcome: Exclude<Resolution['outcome'], 'server'> };
 
 export interface AgentKeys {
-  kind: AgentKind | 'unknown';
   keys: KeyEntry[];
 }
 

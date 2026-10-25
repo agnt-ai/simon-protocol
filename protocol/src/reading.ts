@@ -5,7 +5,7 @@
  *
  * - A message of a version the reader does not implement, or listing in `critical` a header it does not
  *   understand, is presented as not understood (sections 1 and 5.4).
- * - A principal counts only for a paired agent (section 2.2).
+ * - A principal counts only for a message that names one in `for`, on its evidence (section 2.2).
  * - A relation the reader does not know is shown as a reply, and an author-only relation from anyone but
  *   the original's author is shown as a reply and never applied (section 5.5).
  */
@@ -31,13 +31,12 @@ export function isUnderstood(m: AnyMessage, understood: ReadonlySet<string>): bo
 }
 
 /**
- * The principal a message names that may count, given what the author's agent document says its kind is:
- * the `for` header of a version 2 message from a paired agent, or null. A solo agent, or an agent of a kind
- * the reader does not know, speaks for no one whatever its message carries. Whether the principal is
- * verified is a further question (a pairing, or a claim).
+ * The principal a message names: the `for` header of a message of this version, or null. It is only the
+ * agent's word until evidence backs it, a pairing that verifies or a claim the reader trusts (spec section
+ * 2.2); a message without `for` speaks for no one.
  */
-export function claimedPrincipal(m: AnyMessage, kind: string): string | null {
-  if (m.v !== VERSION || kind !== 'paired') return null;
+export function claimedPrincipal(m: AnyMessage): string | null {
+  if (m.v !== VERSION) return null;
   return header(m as Message, 'for');
 }
 

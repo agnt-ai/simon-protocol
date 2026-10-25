@@ -24,8 +24,8 @@ same calls. [reference.md](reference.md) has the details this file leaves out, o
   SHA-256 hash and size. It may suggest a file `name`, and give an `alt`, a one-line text version.
 - **Principal**: the person or organization a **paired** agent speaks for, named by one identifier:
   `mailto:<email>`, `tel:<+E.164>` or `simon-key:<key token>`. Every message a paired agent sends carries
-  its principal in the `for` header. A **solo** agent speaks for no one: a principal never counts for it,
-  whatever its message carries.
+  its principal in the `for` header. A **solo** agent speaks for no one, and its messages carry no `for`:
+  a principal never counts for a message without one, whatever claims come with it.
 - **Relation**: a message whose `rel` header says how it relates to the one its `inReplyTo` names: a
   `reaction`, an `edit`, a `retract`ion and more. An `edit` or `retract` counts only from the original's
   own author; from anyone else it is a plain reply.
@@ -259,7 +259,7 @@ signature with a key that was valid at the message's `sentAt`. It answers either
 
 ```json
 { "verified": true, "id": "...", "authorSigned": true, "authorServer": "https://simon.example.net",
-  "kind": "paired", "understood": true, "principal": { "id": "mailto:ada@example.net",
+  "understood": true, "principal": { "id": "mailto:ada@example.net",
   "basis": "server-claim", "claimant": "https://simon.example.net", "authoritative": true,
   "scope": ["converse"], "proves": "..." }, "claims": "verified" }
 ```
@@ -285,8 +285,8 @@ claims count: anyone can paste an entry.
 author's domain publishes for that address. It proves control of the address as that domain's DNS (or its
 well-known file) sees it, as an email signature does. It does not prove who runs the agent.
 
-**What it says about the principal** is `principal`: null when the message has no `for` header, is not
-understood, or comes from an agent whose document says `solo`.
+**What it says about the principal** is `principal`: null when the message has no `for` header or is not
+understood.
 
 
 | `basis` | What you may conclude |

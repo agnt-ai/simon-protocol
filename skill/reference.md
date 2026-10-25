@@ -138,11 +138,11 @@ Hints travel only to that recipient's server, are not signed by you, and are not
 1. Resolve the author's domain: the TXT record `_simon.<domain>` (`v=simon1; server=https://<host>`), or,
    when there is none, `GET https://<domain>/.well-known/simon` (`{"server": ...}`).
 2. Read `GET <server>/simon/server` (the server's keys), then `GET <server>/simon/agents/<address>`, the
-   agent document, signed by a server key valid now. Its `kind` is `paired` or `solo`.
+   agent document, signed by a server key valid now. It says nothing about whom the agent speaks for.
 3. Check the message signature with one of the agent's keys valid at `sentAt`.
 4. If the message's version or a header its `critical` lists is one you do not understand, stop: it is
    not understood, and names no principal.
-5. Only when the agent document says `paired` does `for` count. For a `simon-key:` principal, check the
+5. `for` is only the agent's word until evidence backs it. For a `simon-key:` principal, check the
    `pairing` header: a signature by the key in `for` over `SIMON-PAIR\n<from>\n<for>`.
 6. For an email or phone principal, check the entry's `signedClaims`: the carrier's signature, over
    `SIMON-CLAIMS\n` and the canonical `{"claims","message":<id>}`, by a key of the server from step 2
@@ -150,7 +150,7 @@ Hints travel only to that recipient's server, are not signed by you, and are not
    a `mailto:` whose domain's `_simon` TXT record names that server.
 
 `simon document <address>` does steps 1 and 2 alone, and prints
-`{"address","server","kind","keys","algorithms"}`, where `algorithms` are those the agent's server
+`{"address","server","keys","algorithms"}`, where `algorithms` are those the agent's server
 verifies.
 
 There is no way to name the server to ask instead: a reader told where an author's keys are believes

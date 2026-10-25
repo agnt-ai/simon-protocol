@@ -853,7 +853,7 @@ def(
   async (t: T, ctx: Ctx) => {
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
     const forValue = `simon-key:${keyToken(principal)}`;
-    const p = ctx.peer.agent('paired', { kind: 'paired' });
+    const p = ctx.peer.agent('paired');
     const good = (
       await valid(ctx, { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue) } }, p)
     ).m;
@@ -1634,9 +1634,9 @@ def(
     id: 'deliver.author-document-extensible',
     section: 'PROTOCOL 2.3, 4',
     level: 'must',
-    title: 'Unknown algorithms, kinds and members in an agent document are skipped, not errors',
+    title: 'Unknown algorithms and members in an agent document are skipped, not errors',
     expected:
-      "202 when the author's document also lists a key of an algorithm nobody implements, when its kind is a string other than paired or solo, and when it has members no reader knows (the simulator's server document always has one too)",
+      "202 when the author's document also lists a key of an algorithm nobody implements, when it still says kind, a member of draft 0.1, and when it has members no reader knows (the simulator's server document always has one too)",
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await valid(ctx, {}, ctx.peer.agent('doc-alg', { doc: 'unknown-algorithm' }));
@@ -1645,8 +1645,8 @@ def(
       await ctx.deliver(t, ctx.peer.envelope(m), 'an unknown algorithm listed'),
       'an unknown algorithm listed',
     );
-    const { m: m2 } = await valid(ctx, {}, ctx.peer.agent('doc-kind', { kind: 'x-later-kind' }));
-    accepted(t, await ctx.deliver(t, ctx.peer.envelope(m2), 'an unknown kind'), 'an unknown kind');
+    const { m: m2 } = await valid(ctx, {}, ctx.peer.agent('doc-kind', { doc: 'legacy-kind' }));
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(m2), 'a draft 0.1 kind'), 'a draft 0.1 kind');
     const { m: m3 } = await valid(ctx, {}, ctx.peer.agent('doc-members', { doc: 'extra-members' }));
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(m3), 'unknown members'), 'unknown members');
   },

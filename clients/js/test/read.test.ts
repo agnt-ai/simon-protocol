@@ -44,7 +44,6 @@ describe('verifyAuthor', () => {
       id: messageId(message),
       authorSigned: true,
       authorServer: fake.origin,
-      kind: 'solo',
       understood: true,
       principal: null,
       claims: 'none',
@@ -71,7 +70,6 @@ describe('verifyAuthor', () => {
     await a.register({ for: id, pairing: signPairing(principal.privateKey, address, id) });
     const v = await verifyAuthor(a.compose({ to: ['bob@agents.test'], text: 'For my principal.' }), opts);
     assert.ok(v.verified);
-    assert.equal(v.kind, 'paired');
     assert.deepEqual([v.principal?.id, v.principal?.basis], [id, 'key-pairing']);
     assert.match(v.principal!.proves, /consented/);
     assert.match(v.principal!.proves, /nothing about who holds the key/);
@@ -303,7 +301,7 @@ describe('the basis of a principal', () => {
     }
   });
 
-  it("never gives a solo agent a principal, even with its carrier's authoritative claim pasted beside it", async () => {
+  it("takes a carrier's claim it really signed as that carrier's word, since no document says paired or solo", async () => {
     const fake = fakeServer();
     const key = generateKey().privateKeyPem;
     const solo = new Agent({ server: fake.origin, key, fetch: fake.fetch });
@@ -325,7 +323,7 @@ describe('the basis of a principal', () => {
       signedClaims: forged.signedClaims,
     });
     assert.ok(v.verified);
-    assert.deepEqual([v.kind, v.claims, v.principal], ['solo', 'verified', null]);
+    assert.deepEqual([v.claims, v.principal?.id, v.principal?.basis], ['verified', ceo, 'server-claim']);
   });
 });
 
@@ -346,9 +344,9 @@ describe('documents', () => {
     const ada = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
     await ada.register();
     const record = await fetchAgentDocument(ada.address!.toUpperCase(), opts);
-    assert.deepEqual(record && [record.address, record.kind, record.keys.map(k => k.key)], [
+    assert.deepEqual(record && [record.address, 'kind' in record, record.keys.map(k => k.key)], [
       ada.address,
-      'solo',
+      false,
       [ada.key],
     ]);
   });

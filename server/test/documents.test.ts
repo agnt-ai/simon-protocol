@@ -79,7 +79,8 @@ describe('documents (spec section 4)', async () => {
     )!;
     const res = await ada.request('GET', `/simon/agents/${ada.address}`, { sign: false });
     const doc = readAgentDocument(res.bytes, ada.address, server.keys, fed.clock.now());
-    assert.deepEqual(doc && { kind: doc.kind, keys: doc.keys.map(k => k.key) }, { kind: 'solo', keys: [ada.token] });
+    assert.deepEqual(doc && { keys: doc.keys.map(k => k.key) }, { keys: [ada.token] });
+    assert.equal(res.json.kind, undefined, 'the document says nothing of whom the agent speaks for');
     const unknown = await ada.request('GET', '/simon/agents/nobody@alpha.test', { sign: false });
     assert.equal(unknown.status, 404);
     assert.equal(unknown.json.code, 'not_found');

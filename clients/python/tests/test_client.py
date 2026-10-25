@@ -140,7 +140,7 @@ class FakeServer:
             agent = self.agents.get(address)
             if agent is None:
                 raise SimonError("not_found", "No such agent.", 404)
-            doc = {"address": address, "kind": agent["kind"], "keys": [entry(k) for k in agent["keys"]]}
+            doc = {"address": address, "keys": [entry(k) for k in agent["keys"]]}
             if "retired" in agent:  # a retired document (spec section 4)
                 doc["keys"] = [{**k, "revoked": agent.get("revoked", agent["retired"])} for k in doc["keys"]]
                 doc = {**doc, "retired": agent["retired"], **agent.get("extra", {})}
@@ -229,8 +229,7 @@ class FakeServer:
     def deliver(self, message: dict) -> None:
         """Each recipient here gets an inbox entry, its claims judged as a receiving server judges them,
         beside the claims as this server, their carrier, signed them."""
-        kind = self.agents[message["from"]]["kind"]
-        claims = judge_claims(message, self.claims, kind, self.origin, self.resolve)
+        claims = judge_claims(message, self.claims, self.origin, self.resolve)
         signed = {"signedClaims": self.sign_claims(self.claims, message)} if self.claims else {}
         for recipient in set([message["from"], *message["to"]]):
             inbox = self.inboxes.setdefault(recipient, [])
@@ -342,7 +341,7 @@ class ClientTest(unittest.TestCase):
         trust = bob.verify_author(delivered["message"])
         self.assertIsInstance(trust, Trust)
         self.assertEqual(
-            (trust.author_server, trust.kind, trust.principal), (self.server.origin, "solo", None)
+            (trust.author_server, trust.principal), (self.server.origin, None)
         )
         self.assertEqual(
             trust.to_json(),
@@ -351,7 +350,6 @@ class ClientTest(unittest.TestCase):
                 "id": sent["id"],
                 "authorSigned": True,
                 "authorServer": self.server.origin,
-                "kind": "solo",
                 "understood": True,
                 "principal": None,
                 "claims": "none",
@@ -509,9 +507,10 @@ class ClientTest(unittest.TestCase):
                 trust = reader.verify_author(m, signed_claims=s)
                 self.assertEqual((trust.claims, trust.principal.basis), ("unverified", "agent-asserted"))
 
-    def test_a_forged_entry_gives_a_solo_agent_no_principal(self):
-        """A solo agent's message pasted beside its carrier's authoritative acts-for claim,
-        even one the carrier really signed, names no principal."""
+    def test_a_carriers_signed_claim_is_its_word_whatever_its_agent_registered_as(self):
+        """No agent document says paired or solo any more (spec 2.2): a message names its principal, and a
+        claim its carrier really signed backs it as that carrier's word, which an honest carrier never
+        gives for an agent that speaks for no one."""
         solo = self.agent()
         solo.register()
         posing = Agent(self.server.origin, solo.key, solo.address, principal="mailto:ceo@example.com")
@@ -525,7 +524,7 @@ class ClientTest(unittest.TestCase):
         }
         signed = self.server.sign_claims([claim], message)
         trust = Reader(resolver=self.server.resolve).verify_author(message, signed_claims=signed)
-        self.assertEqual((trust.kind, trust.claims, trust.principal), ("solo", "verified", None))
+        self.assertEqual((trust.claims, trust.principal.id, trust.principal.basis), ("verified", "mailto:ceo@example.com", "server-claim"))
 
     def test_a_message_not_understood(self):
         agent = self.agent()
@@ -576,14 +575,12 @@ class ClientTest(unittest.TestCase):
                 trust = Reader(resolver=resolved).verify_author(message, signed_claims=signed)
                 self.assertEqual(trust.principal.authoritative, authoritative)
 
-    def test_a_solo_agent_speaks_for_no_one(self):
-        agent = self.server.pair("ada@example.com", "mailto:alice@example.com")
+    def test_a_message_without_for_speaks_for_no_one(self):
+        agent = self.agent()
+        agent.register()
         message = agent.compose([], "Hello", headers={"audience": "public"})
-        self.server.agents[agent.address]["kind"] = "solo"
         trust = Reader(resolver=self.server.resolve).verify_author(message)
-        self.assertEqual((trust.kind, trust.principal), ("solo", None))
-        self.server.agents[agent.address]["kind"] = "x-later"
-        self.assertIsNone(Reader(resolver=self.server.resolve).verify_author(message).principal)
+        self.assertIsNone(trust.principal)
 
     def test_a_pairing_signed_for_another_address_is_refused(self):
         principal = SigningKey.generate()

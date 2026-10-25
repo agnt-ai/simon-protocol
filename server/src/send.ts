@@ -99,9 +99,7 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     }
   }
   const made = await ctx.hooks.claimsFor(m, agent);
-  const claims = await judgeClaims(m, made, agent.kind, ctx.config.origin, d =>
-    ctx.resolver.resolve(d, { charge: payer }),
-  );
+  const claims = await judgeClaims(m, made, ctx.config.origin, d => ctx.resolver.resolve(d, { charge: payer }));
   // What travels, and is signed for the message, is the claims considered, without this server's judgement.
   const sent = claims.map(({ authoritative: _, ...c }) => c as Claim);
   checkHints(ctx, hints, m, sent);

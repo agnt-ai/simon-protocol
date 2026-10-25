@@ -214,17 +214,16 @@ def is_repeat(envelope: Mapping[str, Any], accepted_for: Iterable[str], now_ms: 
 
 
 def claims_about(
-    message: Mapping[str, Any], claims: Iterable[Mapping[str, Any]], kind: str
+    message: Mapping[str, Any], claims: Iterable[Mapping[str, Any]]
 ) -> list[Mapping[str, Any]]:
     """The claims a receiver may consider (section 6.2, and the registry's ``identifier``): an ``acts-for``
     claim counts only when its ``agent`` is the message's ``from``, its ``for`` is the message's ``for``
     header, its ``verifiedAt`` a timestamp and its ``scope`` an array of strings; so never for a message
-    without a ``for`` header, of a version whose headers this reader does not know, or from an agent whose
-    document does not say ``paired`` (``kind``), whose principal never counts. An ``identifier``
+    without a ``for`` header, or of a version whose headers this reader does not know. An ``identifier``
     claim counts only when its ``agent`` is the message's ``from``, its ``identifier`` a ``mailto:`` or
     ``tel:`` identifier, its ``verifiedAt`` a timestamp, and its ``of`` is ``agent``, or ``principal`` on a
     message whose ``for`` header names a key. Other types pass through, opaque."""
-    principal = claimed_principal(message, kind)
+    principal = claimed_principal(message)
 
     def acts_for(c: Mapping[str, Any]) -> bool:
         scope = c.get("scope")
@@ -284,19 +283,17 @@ def is_authoritative(
 def judge_claims(
     message: Mapping[str, Any],
     claims: Iterable[Mapping[str, Any]] | None,
-    kind: str,
     carrier: str,
     resolve: Callable[[str], Resolution],
 ) -> list[dict[str, Any]]:
     """The claims a receiver considers, each ``acts-for`` claim marked with ``authoritative``, the
     receiving server's judgement, which it passes to its agents with the claim (CLIENT.md, inbox), and each
-    ``identifier`` claim judged the same way by its ``identifier``; ``kind`` is what the author's agent
-    document says it is, as ``claims_about`` takes it. A received claim's own
+    ``identifier`` claim judged the same way by its ``identifier``. A received claim's own
     ``authoritative`` member means nothing (the carrier cannot judge itself), so it is dropped from every
     claim, and only the judged types get one back."""
     judged = {"acts-for": "for", "identifier": "identifier"}
     out = []
-    for claim in claims_about(message, claims or (), kind):
+    for claim in claims_about(message, claims or ()):
         c = {k: v for k, v in claim.items() if k != "authoritative"}
         if isinstance(c.get("type"), str) and c["type"] in judged:
             c["authoritative"] = is_authoritative(
