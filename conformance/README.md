@@ -501,7 +501,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
-| `public.served` | must | publishing profile, section 1 | 200 {"message","keys"} for an unsigned GET /simon/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author) |
+| `public.served` | must | publishing profile, section 1 | 200 {"message"} for an unsigned GET /simon/messages/<id>: the message byte for byte, which verifies with a key of its author's agent document valid at its sentAt, and no replies member (replies are ordinary messages to the author) |
 | `public.not-found` | must | publishing profile, section 1, PROTOCOL 9 | 404 not_found for the id of a message with recipients, and for an id nobody sent |
 | `public.retired` | must | publishing profile, section 1, PROTOCOL 2.2, 7.2 | after the operator's --retire-command retires an agent that posted a public message naming a part: 404 not_found for the public message and the part, each of which answered 200 before, and its agent document either 404 or an optional readable retired document (PROTOCOL 4), every key revoked by retirement |
 | `public.audience-refused` | must | publishing profile, section 1, PROTOCOL 11.2 | 404 not_found for an unsigned GET /simon/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent |

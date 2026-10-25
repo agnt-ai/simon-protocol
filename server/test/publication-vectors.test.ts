@@ -15,7 +15,7 @@ it('returns the published signed claims and follows every opaque feed page', asy
       address: r.message.from,
       kind: 'paired',
       principal: r.message.headers.for,
-      keys: r.keys,
+      keys: v.post.authorKeys,
       mailbox: false,
       createdAt: r.message.sentAt,
       retiredAt: null,

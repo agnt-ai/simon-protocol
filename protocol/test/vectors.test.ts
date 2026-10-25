@@ -314,7 +314,8 @@ describe('the published vectors', () => {
     const { post, carrierKeys } = vectors.publications;
     const r = post.response;
     assert.equal(post.id, messageId(r.message));
-    assert.equal(verifyMessage(r.message, r.keys), true);
+    assert.equal(verifyMessage(r.message, post.authorKeys), true);
+    assert.equal('keys' in r, false, 'a published message is served without unsigned keys');
     assert.equal(verifyClaims({ claims: r.claims, signature: r.claimsSignature }, r.message, carrierKeys), true);
     assert.equal(
       verifyClaims(

@@ -8,9 +8,7 @@ import {
   isJsonObject,
   messageId,
   sha256Hex,
-  validAt,
   verifyMessage,
-  type KeyEntry,
   type Message,
 } from '@agnt-sdk/simon-protocol';
 import { buildFrom, Prerequisite, type Ctx } from '../context.ts';
@@ -38,9 +36,9 @@ def(
     id: 'public.served',
     section: S,
     level: 'must',
-    title: "A public message is served to anyone, with its author's keys",
+    title: 'A public message is served to anyone, verifiable with its author document',
     expected:
-      '200 {"message","keys"} for an unsigned GET /simon/messages/<id>: the message byte for byte, and keys valid at its sentAt that verify it; no replies member (replies are ordinary messages to the author)',
+      '200 {"message"} for an unsigned GET /simon/messages/<id>: the message byte for byte, which verifies with a key of its author\'s agent document valid at its sentAt, and no replies member (replies are ordinary messages to the author)',
   },
   async (t: T, ctx: Ctx) => {
     const { m, id } = await post(ctx);
@@ -48,14 +46,8 @@ def(
     t.status(res, 200);
     const b = res.json;
     t.assert(isJsonObject(b?.message) && canonicalize(b.message) === canonicalize(m), 'message is not the one sent');
-    t.assert(Array.isArray(b.keys), 'keys is not an array');
-    const keys = b.keys as KeyEntry[];
-    const at = new Date(Date.parse(m.sentAt));
-    t.assert(
-      keys.every(k => validAt(k, at)),
-      `keys lists an entry not valid at sentAt: ${JSON.stringify(keys)}`,
-    );
-    t.assert(verifyMessage(m, keys), 'no listed key verifies the message');
+    const { read } = await agentDocument(t, ctx, m.from, "the author's document");
+    t.assert(read !== null && verifyMessage(m, read.keys), "no key of the author's document verifies the message");
     t.assert(!('replies' in b), `the answer still lists replies: ${JSON.stringify(b.replies)}`);
   },
 );

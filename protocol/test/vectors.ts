@@ -2339,9 +2339,10 @@ function publications() {
     carrierKeys: [keyEntry(exampleCom.key)],
     post: {
       id: messageId(post),
+      // The author's keys, from its agent document: the response carries none.
+      authorKeys: [keyEntry(ada.key)],
       response: {
         message: post,
-        keys: [keyEntry(ada.key)],
         claims,
         claimsSignature: fixedSign(exampleCom, claimsBytes(claims, messageId(post))),
       },

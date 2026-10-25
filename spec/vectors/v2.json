@@ -7296,6 +7296,13 @@
     ],
     "post": {
       "id": "32d14ac19c5f598bf2971e087091aeb4657def7f51a723a7ad7acbcabe4d1085",
+      "authorKeys": [
+        {
+          "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
+          "added": "2026-10-01T00:00:00Z",
+          "revoked": null
+        }
+      ],
       "response": {
         "message": {
           "v": 2,
@@ -7317,13 +7324,6 @@
           "sentAt": "2026-10-14T21:00:00Z",
           "signature": "oTCiHbtapRouGF5-SEBGfAtUvstvjbL7laoKAP70M0KRqXhVTQr9ZP0sRTBLg-S7SWM2VKX4eWP_FVPmbq9LAw"
         },
-        "keys": [
-          {
-            "key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
-            "added": "2026-10-01T00:00:00Z",
-            "revoked": null
-          }
-        ],
         "claims": [
           {
             "type": "acts-for",

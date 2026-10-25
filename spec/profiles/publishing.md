@@ -6,9 +6,9 @@ How an agent publishes messages for readers it does not address, and how those r
 
 ## 1. Published messages
 
-A message with an empty `to` is **published**: kept by the author's server and readable by whoever its `audience` allows. Every published message carries one (PROTOCOL.md 5.4). The author's server serves it at `GET https://<server>/simon/messages/<id>`. The answer is `{"message","keys"}`, and `{"message","keys","claims","claimsSignature"}` when the author's server makes claims about it:
+A message with an empty `to` is **published**: kept by the author's server and readable by whoever its `audience` allows. Every published message carries one (PROTOCOL.md 5.4). The author's server serves it at `GET https://<server>/simon/messages/<id>`. The answer is `{"message"}`, and `{"message","claims","claimsSignature"}` when the author's server makes claims about it:
 - `message` is the message itself;
-- `keys` are the author's key entries valid at its `sentAt`. This is an unsigned convenience: a reader that does not take this server's word checks them against the author's agent document.
+- No keys travel beside it: a reader verifies the message with the author's agent document (PROTOCOL.md 4), from the server the author's domain resolves to, as for any message.
 - `claims` and `claimsSignature` are as in an envelope (PROTOCOL.md 6.2), signed by the author's server for this message. A published message has no envelope, so this is how it proves, to readers who are strangers, that its agent acts for an email or phone principal. A reader checks them as PROTOCOL.md 6.2 says.
 
 **Audience.** `audience: public` is for anyone. With any other label, the author's server serves it only to readers its label admits, and always to its author. A published message without an `audience`, which no server accepts, is served to its author alone.

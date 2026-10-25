@@ -260,7 +260,7 @@ describe('public messages (publishing profile, section 1)', async () => {
   const ada = await alpha.agent('ada');
   const bob = await beta.agent('bob');
 
-  it('serves a public message to anyone with its keys, and lists no replies, which may be private', async () => {
+  it('serves a public message to anyone, with no keys beside it, and lists no replies, which may be private', async () => {
     const post = ada.message([], 'A public post.');
     const { json: sent } = await ada.send(post);
     await bob.send(bob.message([ada.address], 'A private reply.', { inReplyTo: sent.id }));
@@ -268,10 +268,7 @@ describe('public messages (publishing profile, section 1)', async () => {
 
     const res = await ada.request('GET', `/simon/messages/${sent.id}`, { sign: false });
     assert.equal(res.status, 200);
-    assert.deepEqual(res.json, {
-      message: post,
-      keys: [{ key: ada.token, added: res.json.keys[0].added, revoked: null }],
-    });
+    assert.deepEqual(res.json, { message: post });
   });
 
   it('stops serving the public messages and parts of a retired agent (spec section 2.2)', async () => {

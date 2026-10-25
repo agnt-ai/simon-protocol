@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**No keys beside a published message.** `GET /simon/messages/<id>` answers `{"message"}` (with the carrier's
+signed claims when there are any); a reader takes the author's keys from its agent document.
+
 **No `kind` in agent documents.** The agent document carries an address and keys only; whether an agent is
 paired is its host's own record. A reader believes a principal on the evidence the message carries (a
 pairing, or a carrier's signed claim). `claimedPrincipal`, `claimsAbout` and `judgeClaims` (and their

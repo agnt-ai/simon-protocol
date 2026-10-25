@@ -379,7 +379,7 @@ A client checks the message itself against authenticated evidence from the autho
 
 A client that cannot complete a step says so, and treats what it could not check as the author's word only.
 
-**Missing historical evidence.** A bounded current document can prune revoked agent or carrier keys, and a host may stop disclosing a retired identity. Saving the message or `signedClaims` alone does not preserve independently authenticated key history. The current SDK readers resolve current domain and document evidence; they do not provide a durable authenticated archive. A cold reader may therefore be unable to verify an old message it still holds. A separate local check may use evidence that the client previously authenticated and deliberately retained, with the limits in PROTOCOL.md 2.4 and 6.2; unsigned keys supplied beside a published message are not such evidence.
+**Missing historical evidence.** A bounded current document can prune revoked agent or carrier keys, and a host may stop disclosing a retired identity. Saving the message or `signedClaims` alone does not preserve independently authenticated key history. The current SDK readers resolve current domain and document evidence; they do not provide a durable authenticated archive. A cold reader may therefore be unable to verify an old message it still holds. A separate local check may use evidence that the client previously authenticated and deliberately retained, with the limits in PROTOCOL.md 2.4 and 6.2.
 
 ## Reading rules
 

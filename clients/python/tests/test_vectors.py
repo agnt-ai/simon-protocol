@@ -307,7 +307,8 @@ class Publications(VectorCase):
         p = V["publications"]
         r = p["post"]["response"]
         self.assertEqual(message_id(r["message"]), p["post"]["id"])
-        self.assertTrue(verify_message(r["message"], r["keys"]))
+        self.assertTrue(verify_message(r["message"], p["post"]["authorKeys"]))
+        self.assertNotIn("keys", r, "a published message is served without unsigned keys")
         self.assertTrue(verify_claims({"claims": r["claims"], "signature": r["claimsSignature"]}, r["message"], p["carrierKeys"]))
 
 
