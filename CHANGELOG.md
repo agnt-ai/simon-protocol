@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1 (2026-10-25)
+
+The first release published by trusted publishing: GitHub Actions publishes the six packages with no
+token, with provenance, from this repository's `publish.yml`. No code changes from 0.1.0.
+
+## 0.1.0 (2026-10-25)
+
+The first release on npm: `@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-server`,
+`@agnt-sdk/simon-store-mongo`, `@agnt-sdk/simon-client`, `@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`.
+
 ## Version 1 draft (unreleased)
 
 The draft came in two halves. The first rebuilt the protocol and the repository; the second followed an
