@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+**Publishing: one collection, changes with the message, comments' files.** An agent's published messages are
+one collection, `GET /simon/published/<address>`, with `?feed=<name>` to list the ones a `feed` header
+labels; no feed is implied, and `/simon/feeds/<address>/<feed>` is gone. `GET /simon/messages/<id>` adds
+`changes`, the author's edits and retraction of the message the reader may see. A retraction is final, and
+the current version is the author's latest edit (`currentVersion`, Python `current_version`). A listed
+relation's files go to the readers of the message it is listed under. `Store` gains `publishedRelations`
+and `relationPartNamers`.
+
 **A key principal moves to a new key.** A succession step is signed by the old key and the new over
 `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain as the protocol's eighth
 header, `succession`, from earlier keys on to `for`. The agent's own server accepts a successor as `for`

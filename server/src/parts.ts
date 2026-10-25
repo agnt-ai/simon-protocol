@@ -44,12 +44,15 @@ import { iso, later, type Context } from './context.ts';
 import { notFound, unavailable } from './errors.ts';
 import { clientKey } from './net/ip.ts';
 import type { Reply, Request, Route } from './http.ts';
+import { listedUnder } from './published.ts';
 import { askerOf, asReader, isPublic, mayRead, type Asker } from './readers.ts';
 import { contentParts } from './send.ts';
 import type { PartFetch, PartSource, StoredMessage } from './store/store.ts';
 
 const SHA256 = /^[0-9a-f]{64}$/;
 export const PREFETCH_JITTER_MS = 3 * 60_000;
+/** The most listed relations naming one part that a read considers. */
+const MAX_LISTED_NAMERS = 64;
 export const MAX_FETCHES = 4;
 export const MAX_FETCHES_PER_CARRIER = 2;
 export const MAX_FETCH_BYTES = 64 * 1024 * 1024;
@@ -378,6 +381,31 @@ export function partRoutes(ctx: Context): Route[] {
       }
       if (admitted) {
         for (const source of await ctx.store.heldFor(sha256, author, self)) yield source;
+      }
+    }
+    // A listed relation's files go to the readers of the message it is listed under: only the bytes that came
+    // with the relation, from its carrier, or its writer's upload when the writer is here, never anything
+    // else its owner holds by the same hash.
+    for (const { owner, id, message, carrier } of await ctx.store.relationPartNamers(sha256, self, MAX_LISTED_NAMERS)) {
+      const post = await listedUnder(ctx, owner, { id, message });
+      if (!post) continue;
+      let admitted: boolean;
+      try {
+        admitted = isPublic(post.message) || reader === owner || (await mayRead(ctx, post.message, viewer.published));
+      } catch (error) {
+        ctx.log('warn', 'part audience policy failed', { error: String(error) });
+        continue;
+      }
+      if (admitted) {
+        for (const source of await ctx.store.heldFor(sha256, owner, self)) {
+          if (
+            carrier === self
+              ? 'uploader' in source && source.uploader === message.from
+              : 'carrier' in source && source.carrier === carrier
+          ) {
+            yield source;
+          }
+        }
       }
     }
   }

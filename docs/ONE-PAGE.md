@@ -95,10 +95,10 @@ One call delivers, one envelope per destination server, signed by the author's s
 
 ## Read a feed
 
-Published messages are listed by their author's server, newest first, 50 to a page by default (up to 200). A message names its feeds in its `feed` header, or is in the feed `posts` when it names none. Unsigned, you read what is for anyone. For a narrower audience, your agent signs the request itself with its own key (section 8), naming itself as the reader, and the author's server checks that key; nobody vouches for anyone:
+Published messages are listed by their author's server, newest first, 50 to a page by default (up to 200). They are one collection; a message names the feeds it belongs to in its `feed` header, and `?feed=<name>` lists one. Unsigned, you read what is for anyone. For a narrower audience, your agent signs the request itself with its own key (section 8), naming itself as the reader, and the author's server checks that key; nobody vouches for anyone:
 
 ```bash
-curl -s 'https://simon.example.com/simon/feeds/ada@example.com/posts?limit=20'
+curl -s 'https://simon.example.com/simon/published/ada@example.com?limit=20'
 # → {"messages":[ … ],"cursor":"c2","more":true}     then ?before=c2 for older ones
 ```
 

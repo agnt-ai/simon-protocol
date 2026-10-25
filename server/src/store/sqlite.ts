@@ -41,6 +41,7 @@ CREATE INDEX messages_expires ON messages (expires);
 CREATE INDEX messages_written ON messages (from_address, cursor) WHERE cursor IS NOT NULL;
 CREATE INDEX messages_published ON messages (from_address) WHERE public = 1;
 CREATE INDEX messages_in_reply_to ON messages (in_reply_to);
+CREATE INDEX messages_relations ON messages (in_reply_to, from_address) WHERE public = 1;
 CREATE TABLE message_parts (id TEXT NOT NULL, sha256 TEXT NOT NULL, size INTEGER NOT NULL, PRIMARY KEY (id, sha256));
 CREATE INDEX message_parts_sha ON message_parts (sha256);
 CREATE TABLE retraction_admission(singleton INTEGER PRIMARY KEY CHECK(singleton=1),body TEXT NOT NULL);
@@ -162,6 +163,9 @@ export class SqliteStore implements Store {
             `${path} holds messages of wire version 1, which this server does not read; keep it on a wire version 1 release.`,
           );
         }
+        this.#db.exec(
+          'CREATE INDEX IF NOT EXISTS messages_relations ON messages (in_reply_to, from_address) WHERE public = 1;',
+        );
         const columns = (table: string) => this.#all(`PRAGMA table_info(${table})`).map(c => c.name);
         if (!columns('agents').includes('unpairing')) this.#db.exec('ALTER TABLE agents ADD COLUMN unpairing TEXT;');
         if (!columns('agents').includes('authority_version'))
@@ -810,6 +814,18 @@ export class SqliteStore implements Store {
     return page(rows, limit, r => this.#message(r));
   }
 
+  async publishedRelations(author: string, id: string, rel: string, limit: number) {
+    const rows = this.#all(
+      `SELECT * FROM messages WHERE in_reply_to = ? AND from_address = ? AND public = 1
+       AND json_extract(json, '$.headers.rel') = ? ORDER BY rowid DESC LIMIT ?`,
+      id,
+      author,
+      rel,
+      limit,
+    );
+    return rows.reverse().map(r => this.#message(r));
+  }
+
   async repliesTo(address: string, id: string, before: string | null, limit: number) {
     const after = this.#get('SELECT cursor FROM inbox WHERE address = ? AND id = ?', address, before);
     const rows = this.#all(
@@ -1236,6 +1252,27 @@ export class SqliteStore implements Store {
       ...('server' in viewer ? [viewer.server] : []),
     );
     return rows.map(r => ({ author: r.from_address as string, message: JSON.parse(r.json as string) as AnyMessage }));
+  }
+
+  async relationPartNamers(sha256: string, self: string, limit: number) {
+    const rows = this.#all(
+      `SELECT DISTINCT i.address AS owner, m.id, m.json, m.carrier, i.cursor FROM message_parts mp
+       JOIN messages m ON m.id = mp.id
+       JOIN inbox i ON i.id = m.id
+       JOIN messages p ON p.id = m.in_reply_to
+       WHERE mp.sha256 = ? AND p.from_address = i.address AND p.public = 1 AND p.carrier = ?
+       AND json_extract(m.json, '$.headers.listed') = 'yes'
+       AND i.address IN (SELECT address FROM agents WHERE retired_at IS NULL) ORDER BY i.cursor DESC LIMIT ?`,
+      sha256,
+      self,
+      limit,
+    );
+    return rows.map(r => ({
+      owner: r.owner as string,
+      id: r.id as string,
+      message: JSON.parse(r.json as string) as AnyMessage,
+      carrier: r.carrier as string,
+    }));
   }
 
   // Part fetches

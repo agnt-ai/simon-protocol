@@ -171,7 +171,7 @@ def(
     const res = await t.http({ method: 'GET', origin: ctx.origin, target: `/simon/agents/${segment}` });
     t.status(res, 200);
     t.assert(res.json?.address === address, `address is ${JSON.stringify(res.json?.address)}, asked for ${address}`);
-    const feed = await a.call(t, 'GET', `/simon/feeds/${segment}/posts`, undefined, {}, 'its own feed, signed');
+    const feed = await a.call(t, 'GET', `/simon/published/${segment}`, undefined, {}, 'its own feed, signed');
     t.status(feed, 200, 'its own feed, signed by it');
   },
 );

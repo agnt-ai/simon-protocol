@@ -217,7 +217,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 <!-- checks:start -->
 
-236 checks: 218 must, 18 should.
+238 checks: 220 must, 18 should.
 
 ### Documents (PROTOCOL 4)
 
@@ -503,12 +503,14 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | Check | Level | Section | Expected |
 | --- | --- | --- | --- |
 | `public.served` | must | publishing profile, section 1 | 200 {"message"} for an unsigned GET /simon/messages/<id>: the message byte for byte, which verifies with a key of its author's agent document valid at its sentAt, and no replies member (replies are ordinary messages to the author) |
+| `public.changes` | must | publishing profile, section 1, 4 | 200 with changes holding the author's published edit naming the message, and not another of its published messages |
 | `public.not-found` | must | publishing profile, section 1, PROTOCOL 9 | 404 not_found for the id of a message with recipients, and for an id nobody sent |
 | `public.retired` | must | publishing profile, section 1, PROTOCOL 2.2, 7.2 | after the operator's --retire-command retires an agent that posted a public message naming a part: 404 not_found for the public message and the part, each of which answered 200 before, and its agent document either 404 or an optional readable retired document (PROTOCOL 4), every key revoked by retirement |
 | `public.audience-refused` | must | publishing profile, section 1, PROTOCOL 11.2 | 404 not_found for an unsigned GET /simon/messages/<id> of a post with an audience header, byte-identical to the answer for an id nobody sent |
 | `public.audience-signed-refused` | must | publishing profile, section 1, PROTOCOL 8 | 404 not_found, byte-identical to the answer for an id nobody sent, for a GET /simon/messages/<id> of a post with an audience signed by the author's key but naming another agent in simon-agent, and for one signed by another agent's key naming the author |
 | `public.audience-author` | should | publishing profile, section 1, PROTOCOL 8 | 200 {"message"} for a GET /simon/messages/<id> of a post with an audience, signed with the author's key and naming the author in simon-agent: the reader is identified by its agent key, with no server vouching for it |
-| `public.feed` | must | publishing profile, section 3 | GET /simon/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end |
+| `public.feed` | must | publishing profile, section 3 | GET /simon/published/<address>?feed=<feed>&limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end |
+| `public.collection` | must | publishing profile, section 3 | GET /simon/published/<address>?limit=200 lists the posts in a feed and the post in no feed, never the post with an audience; 400 invalid with details.field "feed" for a feed outside the header-name grammar |
 | `public.feed-empty` | must | publishing profile, section 3 | byte-identical 200 {"messages":[],"cursor":null,"more":false} for a feed name nobody used and for an address nobody holds; 400 invalid for limit=0 and limit=201 |
 | `public.related-only-listed` | must | publishing profile, section 4; PROTOCOL 5.4 | once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /simon/messages/<id>/related holds neither; a server that lists no relations (404) skips |
 | `public.related` | should | publishing profile, section 4 | once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /simon/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does |

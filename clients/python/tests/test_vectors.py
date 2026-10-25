@@ -68,6 +68,7 @@ from simon.messages import (
 )
 from simon.reading import (
     claimed_principal,
+    current_version,
     pairing_standing,
     predecessors,
     is_understood,
@@ -673,7 +674,7 @@ class Recoveries(VectorCase):
 
 class Reading(VectorCase):
     section = "reading"
-    members = ("understoodHeaders", "understood", "principals", "pairings", "predecessors", "knownRelations", "relations")
+    members = ("understoodHeaders", "understood", "principals", "pairings", "predecessors", "versionsOf", "versions", "knownRelations", "relations")
 
     def test_understood(self):
         headers = set(V["reading"]["understoodHeaders"])
@@ -695,6 +696,12 @@ class Reading(VectorCase):
         for c in V["reading"]["predecessors"]:
             with self.case(c["name"]):
                 self.assertEqual(predecessors(c["message"]), c["predecessors"])
+
+    def test_versions(self):
+        for c in V["reading"]["versions"]:
+            with self.case(c["name"]):
+                message, retracted = current_version(V["reading"]["versionsOf"], c["relations"])
+                self.assertEqual((message_id(message), retracted), (c["current"], c["retracted"]))
 
     def test_relations(self):
         known = set(V["reading"]["knownRelations"])

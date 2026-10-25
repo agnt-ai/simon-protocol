@@ -84,6 +84,10 @@ interface MessageDoc {
   /** Distinguishes actual sent history from public listing cursor backfill. */
   written?: boolean;
   inReplyTo: string | null;
+  /** A version 2 message's `rel`, so an author's own changes to a message are found by an index. */
+  rel?: string | null;
+  /** Whether a version 2 relation carries `listed: yes`, so the relations a post's readers may see are found. */
+  listed?: boolean;
   carrier: string;
   claims: string;
   signedClaims: string | null;
@@ -247,6 +251,17 @@ const sourceKey = (s: PartSource) => ('uploader' in s ? s.uploader : s.carrier);
 const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) => [
   ...new Map(sources.map(s => [`${'uploader' in s ? 'u' : 'c'} ${sourceKey(s)} ${s.size}`, s])).values(),
 ];
+
+/** The most messages naming one part that a search for its listed relations reads. */
+const MAX_SCAN = 1000;
+
+/** A version 2 message's `rel` header, or null. */
+const relOf = (m: AnyMessage) =>
+  m.v === VERSION ? ((m as unknown as { headers: Record<string, string> }).headers.rel ?? null) : null;
+
+/** Whether a version 2 message carries `listed: yes`. */
+const listedOf = (m: AnyMessage) =>
+  m.v === VERSION && (m as unknown as { headers: Record<string, string> }).headers.listed === 'yes';
 
 /** A version 2 message's `inReplyTo`. Other versions point at nothing the server can see. */
 const inReplyTo = (m: AnyMessage) =>
@@ -413,6 +428,7 @@ export class MongoStore implements Store {
       [this.#messages, { from: 1, cursor: -1 }, { partialFilterExpression: { public: true } }],
       [this.#messages, { from: 1, to: 1 }],
       [this.#messages, { inReplyTo: 1 }],
+      [this.#messages, { inReplyTo: 1, from: 1, rel: 1, cursor: -1 }, { partialFilterExpression: { public: true } }],
       [this.#messages, { from: 1, cursor: 1 }, { partialFilterExpression: { cursor: { $exists: true } } }],
       [this.#inbox, { address: 1, cursor: 1 }],
       [this.#inbox, { address: 1, parts: 1 }],
@@ -469,6 +485,17 @@ export class MongoStore implements Store {
           { _id: e._id, parts: { $exists: false } },
           { $set: { parts: named.get(e.id) ?? [] } },
         );
+    }
+    // Relations an earlier version wrote learn their rel and listed, by which changes and listings are found.
+    for await (const m of this.#messages.find(
+      { inReplyTo: { $ne: null }, rel: { $exists: false } },
+      { projection: { _id: 1, json: 1 } },
+    )) {
+      const message = JSON.parse(m.json) as AnyMessage;
+      await this.#messages.updateOne(
+        { _id: m._id, rel: { $exists: false } },
+        { $set: { rel: relOf(message), listed: listedOf(message) } },
+      );
     }
     for await (const s of this.#signals.find({ cursor: { $exists: false } }))
       await this.#signals.updateOne({ _id: s._id, cursor: { $exists: false } }, { $set: { cursor: s._id as never } });
@@ -1076,6 +1103,8 @@ export class MongoStore implements Store {
         to: m.message.to,
         public: m.message.to.length === 0,
         inReplyTo: inReplyTo(m.message),
+        rel: relOf(m.message),
+        listed: listedOf(m.message),
         carrier: m.carrier,
         claims: JSON.stringify(m.claims),
         signedClaims: m.signedClaims && JSON.stringify(m.signedClaims),
@@ -1165,6 +1194,8 @@ export class MongoStore implements Store {
       to: m.message.to,
       public: m.message.to.length === 0,
       inReplyTo: inReplyTo(m.message),
+      rel: relOf(m.message),
+      listed: listedOf(m.message),
       carrier: m.carrier,
       claims: JSON.stringify(m.claims),
       signedClaims: m.signedClaims && JSON.stringify(m.signedClaims),
@@ -1289,6 +1320,16 @@ export class MongoStore implements Store {
       docs.map(d => this.#message(d)),
       limit,
     );
+  }
+
+  async publishedRelations(author: string, id: string, rel: string, limit: number) {
+    const { top, committed } = await this.#watermark();
+    const docs = await this.#messages
+      .find({ inReplyTo: id, from: author, rel, public: true, cursor: { $lte: top }, ...this.#visible(committed) })
+      .sort({ cursor: -1 })
+      .limit(limit)
+      .toArray();
+    return docs.reverse().map(d => this.#message(d));
   }
 
   /**
@@ -2067,6 +2108,52 @@ export class MongoStore implements Store {
       ).map(a => a._id),
     );
     return seen.filter(m => live.has(m.from)).map(m => ({ author: m.from, message: JSON.parse(m.json) as AnyMessage }));
+  }
+
+  async relationPartNamers(sha256: string, self: string, limit: number) {
+    const { top, committed } = await this.#watermark();
+    // Newest first, so a flood of older messages naming the part never hides a newer relation.
+    const naming = await this.#messages
+      .find(
+        { 'parts.sha256': sha256, inReplyTo: { $ne: null }, listed: true },
+        { projection: { _id: 1, inReplyTo: 1 } },
+      )
+      .sort({ receivedAt: -1 })
+      .limit(MAX_SCAN)
+      .toArray();
+    if (naming.length === 0) return [];
+    const posts = await this.#messages
+      .find(
+        { _id: { $in: [...new Set(naming.map(m => m.inReplyTo!))] }, public: true, carrier: self },
+        { projection: { _id: 1, from: 1 } },
+      )
+      .toArray();
+    const authorOf = new Map(posts.map(p => [p._id, p.from]));
+    const live = new Set(
+      (
+        await this.#agents
+          .find({ _id: { $in: [...new Set(authorOf.values())] }, retiredAt: null }, { projection: { _id: 1 } })
+          .toArray()
+      ).map(a => a._id),
+    );
+    const candidates = naming.filter(m => live.has(authorOf.get(m.inReplyTo!) ?? ''));
+    // Live inbox entries only, in the generation of their message, as the relations listing reads them.
+    const entries = await this.#liveChildren(
+      this.#inbox,
+      {
+        address: { $in: [...live] },
+        id: { $in: candidates.map(m => m._id) },
+        cursor: { $lte: top },
+        ...this.#visible(committed),
+      },
+      { cursor: -1 },
+      limit,
+    );
+    return entries.flatMap(e => {
+      const record = this.#message(e.authority[0]);
+      const owner = authorOf.get(e.authority[0].inReplyTo!);
+      return owner === e.address ? [{ owner, id: record.id, message: record.message, carrier: record.carrier }] : [];
+    });
   }
 
   // Part fetches

@@ -54,6 +54,38 @@ def(
 
 def(
   {
+    id: 'public.changes',
+    section: `${S}, 4`,
+    level: 'must',
+    title: "A published message's answer carries its author's edits of it",
+    expected:
+      "200 with changes holding the author's published edit naming the message, and not another of its published messages",
+  },
+  async (t: T, ctx: Ctx) => {
+    const a = await ctx.agent('a');
+    const original = a.message({ to: [], text: 'before the edit' });
+    const id = messageId(original);
+    const edit = a.message({ to: [], text: 'after the edit', inReplyTo: id, headers: { rel: 'edit' } });
+    for (const [m, what] of [
+      [original, 'the original'],
+      [edit, 'its edit'],
+      [a.message({ to: [], text: 'unrelated' }), 'another post'],
+    ] as const) {
+      const res = await a.send(t, m, {}, `publish ${what}`);
+      if (res.status !== 200) throw new Prerequisite(`publishing ${what} answered ${res.status}`);
+    }
+    const res = await fetchPublic(t, ctx, id);
+    t.status(res, 200);
+    const changes = Array.isArray(res.json?.changes) ? res.json.changes : [];
+    t.assert(
+      changes.length === 1 && canonicalize(changes[0]) === canonicalize(edit),
+      `changes is ${JSON.stringify(res.json?.changes)?.slice(0, 200)}`,
+    );
+  },
+);
+
+def(
+  {
     id: 'public.not-found',
     section: `${S}, PROTOCOL 9`,
     level: 'must',
@@ -232,13 +264,13 @@ def(
     id: 'public.feed',
     section: 'publishing profile, section 3',
     level: 'must',
-    title: "An agent's feed lists its published messages in it, newest first, by cursor",
+    title: "A feed of an agent's published messages lists those it labels, newest first, by cursor",
     expected:
-      'GET /simon/feeds/<address>/<feed>?limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end',
+      'GET /simon/published/<address>?feed=<feed>&limit=1 answers {"messages","cursor","more"} holding the newest post in the feed; passing its cursor as before gives the one before it; never the post with an audience or the post in no feed, and more false with cursor null at the end',
   },
   async (t: T, ctx: Ctx) => {
     const { a, feed, posts } = await feedPosts(ctx);
-    const target = (q: string) => `/simon/feeds/${a.address}/${feed}?${q}`;
+    const target = (q: string) => `/simon/published/${a.address}?feed=${feed}&${q}`;
     const first = await get(t, ctx, target('limit=1'), 'the newest');
     t.status(first, 200, 'the newest');
     const page1 = first.json;
@@ -264,6 +296,33 @@ def(
 
 def(
   {
+    id: 'public.collection',
+    section: 'publishing profile, section 3',
+    level: 'must',
+    title: "Without a feed, the listing is all of an agent's published messages the reader may see",
+    expected:
+      'GET /simon/published/<address>?limit=200 lists the posts in a feed and the post in no feed, never the post with an audience; 400 invalid with details.field "feed" for a feed outside the header-name grammar',
+  },
+  async (t: T, ctx: Ctx) => {
+    const { a, posts } = await feedPosts(ctx);
+    const res = await get(t, ctx, `/simon/published/${a.address}?limit=200`, 'the collection');
+    t.status(res, 200, 'the collection');
+    const ids: string[] = (res.json?.messages ?? []).map((m: Record<string, unknown>) => messageId(m));
+    for (const [i, what] of [
+      [0, 'the first post in the feed'],
+      [3, 'the post in no feed'],
+    ] as const) {
+      t.assert(ids.includes(messageId(posts[i])), `${what} is missing from the collection`);
+    }
+    t.assert(!ids.includes(messageId(posts[1])), 'the collection lists the post with an audience');
+    t.error(await get(t, ctx, `/simon/published/${a.address}?feed=Not%20A%20Name`, 'a bad feed'), 400, 'invalid', '', {
+      field: 'feed',
+    });
+  },
+);
+
+def(
+  {
     id: 'public.feed-empty',
     section: 'publishing profile, section 3',
     level: 'must',
@@ -274,8 +333,8 @@ def(
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
     const answers: Res[] = [
-      await get(t, ctx, `/simon/feeds/${a.address}/${ctx.runId}-nothing`, 'a feed nobody used'),
-      await get(t, ctx, `/simon/feeds/${ctx.runId}-nobody@${await ctx.domain()}/${feedName(ctx)}`, 'nobody'),
+      await get(t, ctx, `/simon/published/${a.address}?feed=${ctx.runId}-nothing`, 'a feed nobody used'),
+      await get(t, ctx, `/simon/published/${ctx.runId}-nobody@${await ctx.domain()}`, 'nobody'),
     ];
     for (const res of answers) {
       t.status(res, 200);
@@ -286,7 +345,7 @@ def(
       t.assert(res.text === answers[0].text, `the answers differ: ${answers[0].text} and ${res.text}`);
     }
     for (const q of ['limit=0', 'limit=201']) {
-      t.error(await get(t, ctx, `/simon/feeds/${a.address}/${feedName(ctx)}?${q}`, q), 400, 'invalid', q);
+      t.error(await get(t, ctx, `/simon/published/${a.address}?feed=${feedName(ctx)}&${q}`, q), 400, 'invalid', q);
     }
   },
 );

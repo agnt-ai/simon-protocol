@@ -10,7 +10,7 @@
  * - A relation the reader does not know is shown as a reply, and an author-only relation from anyone but
  *   the original's author is shown as a reply and never applied (section 5.5).
  */
-import { header, VERSION, type AnyMessage, type Message } from './message.ts';
+import { header, messageId, VERSION, type AnyMessage, type Message } from './message.ts';
 import { parsePairing, principalKey, readSuccession, verifyPairing } from './principal.ts';
 import { parseTimestamp } from './time.ts';
 
@@ -41,6 +41,31 @@ export function isUnderstood(m: AnyMessage, understood: ReadonlySet<string>): bo
 export function claimedPrincipal(m: AnyMessage): string | null {
   if (m.v !== VERSION) return null;
   return header(m as Message, 'for');
+}
+
+/**
+ * What a reader shows for a message, given relations to it it holds (reader profile, section 4): its
+ * author's latest edit naming it, by `sentAt` then id, or the message itself; and whether its author
+ * retracted it. A retraction is final: nothing restores the message, and a relation naming an edit or a
+ * retraction, rather than the original, changes nothing. Relations from anyone else change nothing here.
+ */
+export function currentVersion(
+  original: Message,
+  relations: readonly AnyMessage[],
+): { message: Message; retracted: boolean } {
+  const id = messageId(original);
+  const own = relations.filter(
+    (r): r is Message => r.v === VERSION && r.from === original.from && (r as Message).inReplyTo === id,
+  );
+  const retracted = own.some(r => header(r, 'rel') === 'retract');
+  const edits = own.filter(r => header(r, 'rel') === 'edit');
+  const latest = edits.reduce<Message | null>((best, r) => {
+    if (best === null) return r;
+    // A sentAt that is not a timestamp sorts first, so it never wins.
+    const [a, b] = [parseTimestamp(r.sentAt) ?? -Infinity, parseTimestamp(best.sentAt) ?? -Infinity];
+    return a > b || (a === b && messageId(r) > messageId(best)) ? r : best;
+  }, null);
+  return { message: latest ?? original, retracted };
 }
 
 /**

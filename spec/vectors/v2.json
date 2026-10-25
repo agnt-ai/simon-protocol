@@ -4168,16 +4168,16 @@
         "method": "GET",
         "origin": "https://simon.example.com",
         "actor": "ada@example.com",
-        "target": "/simon/feeds/a%23b%25c%2Fd%3Fe%5Ef%60g%7Bh%7Ci%7Dj@example.com/posts",
+        "target": "/simon/published/a%23b%25c%2Fd%3Fe%5Ef%60g%7Bh%7Ci%7Dj@example.com",
         "timestamp": "1792011600",
         "nonce": "n0nce-0123456789",
         "body": "",
-        "signingString": "SIMON-REQUEST\nGET\nhttps://simon.example.com\nada@example.com\n/simon/feeds/a%23b%25c%2Fd%3Fe%5Ef%60g%7Bh%7Ci%7Dj@example.com/posts\n1792011600\nn0nce-0123456789\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "signingString": "SIMON-REQUEST\nGET\nhttps://simon.example.com\nada@example.com\n/simon/published/a%23b%25c%2Fd%3Fe%5Ef%60g%7Bh%7Ci%7Dj@example.com\n1792011600\nn0nce-0123456789\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         "headers": {
           "simon-key": "ed25519:Ur6vVepthqRiX7AupFCbJ1RGNZz4yRB3bcicLfas-Gw",
           "simon-timestamp": "1792011600",
           "simon-nonce": "n0nce-0123456789",
-          "simon-signature": "VAwQG-OcJDgQXNw9vVk0Zh2P03EAXvVPb7acD-naIkBtlWUfMQuZC1ez-N34IYoJUx24SBBt8APZXLji_prKAg",
+          "simon-signature": "LkidNXNfqOIIkhqZRNX-A2F1ha2ehKiW7yFqpvhDpSzYWjClPCnwtUYYd4Eb5OvucA_wjfBVWC5C48236uPYDQ",
           "simon-agent": "ada@example.com"
         }
       }
@@ -7673,7 +7673,7 @@
     ]
   },
   "publications": {
-    "about": "Published response and paged feed fixtures (publishing profile, sections 1 and 3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.",
+    "about": "Published response and paged listing fixtures (publishing profile, sections 1 and 3): feed is the listing GET /simon/published/<address>?feed=<name> answers. stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.",
     "carrierKeys": [
       {
         "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
@@ -8016,7 +8016,7 @@
     ]
   },
   "reading": {
-    "about": "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+    "about": "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. versions: what a reader shows for versionsOf, given the relations it holds: current is the id of its author's latest edit naming it (by sentAt, then id) or its own, and retracted whether its author retracted it; a retraction is final, and relations naming an edit or a retraction change nothing. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     "understoodHeaders": [
       "for",
       "pairing",
@@ -8456,6 +8456,364 @@
           "signature": "eVq-YMxZrvP2T2P_f6zh78jzq-5GZKUS_rgIRtuAAwy_7BFdiirBzU81C90Kw4TGaAzsIZdy_sUyS8yly_4aCw"
         },
         "predecessors": []
+      }
+    ],
+    "versionsOf": {
+      "v": 2,
+      "from": "ada@example.com",
+      "to": [],
+      "inReplyTo": null,
+      "parts": [
+        {
+          "type": "text/plain",
+          "data": "Does 3pm work?"
+        }
+      ],
+      "headers": {
+        "audience": "public"
+      },
+      "sentAt": "2026-10-14T21:00:00Z",
+      "signature": "35lTX_zr2zovwflPdabFwZGkocRhcvHjH8M7j518BEzWdr2Lr1hHc3ZGHVhKHvmkap2RxmXDpr5iKR9pkrvfAQ"
+    },
+    "versions": [
+      {
+        "name": "no relations",
+        "relations": [],
+        "current": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+        "retracted": false
+      },
+      {
+        "name": "an edit by its author",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 1"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:01:00.000Z",
+            "signature": "1alguVKmbLwKdtUTK_nojxPcd9962vSBQW3YJCorZ0PPbKUPXX1Fm67GjK4lkgM5niwajox0SbsNYYDtd8miCg"
+          }
+        ],
+        "current": "3c8ebc92c77371b939c77954a8a229bcad22f3e22603b3b194c3a7df048f85c6",
+        "retracted": false
+      },
+      {
+        "name": "two edits: the later sentAt wins, whatever order they arrive in",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 2"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:02:00.000Z",
+            "signature": "XMUGsxmLtwV47DloU12uk1FelS-DQkbB0wXphiBc8At_Jzc33pkfLvRlozGGyGxK34eMm848b7ltSM5KBthvBg"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 1"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:01:00.000Z",
+            "signature": "1alguVKmbLwKdtUTK_nojxPcd9962vSBQW3YJCorZ0PPbKUPXX1Fm67GjK4lkgM5niwajox0SbsNYYDtd8miCg"
+          }
+        ],
+        "current": "e1c774f130d889940bc3773b25adcde7f13f729fd0cb4a77b39177ea47160ea5",
+        "retracted": false
+      },
+      {
+        "name": "two edits at one moment: the greater id wins",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "tie a"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:05:00.000Z",
+            "signature": "7h2ZoyXX79njOqGDiu5UxqeILL0YOHMAb8g7a1f14ew1DKQNj45gS5PTMBc6RcuAb7zGH5IK830myno_DqXOAQ"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "tie b"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:05:00.000Z",
+            "signature": "ccodN856nN-vRfe83EeV7ZkkfTQ5_YfwiH10TdYBLvGUQhcAUIKHjpB4iJKqQv1yzICobfnAcqfp9UcmJu_gDg"
+          }
+        ],
+        "current": "d3a9576c82a01cf369724fb8c03fd628b79f85b04336105fbf9eb9b2739f4786",
+        "retracted": false
+      },
+      {
+        "name": "two edits at one moment, the other way round: still the greater id",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "tie b"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:05:00.000Z",
+            "signature": "ccodN856nN-vRfe83EeV7ZkkfTQ5_YfwiH10TdYBLvGUQhcAUIKHjpB4iJKqQv1yzICobfnAcqfp9UcmJu_gDg"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "tie a"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:05:00.000Z",
+            "signature": "7h2ZoyXX79njOqGDiu5UxqeILL0YOHMAb8g7a1f14ew1DKQNj45gS5PTMBc6RcuAb7zGH5IK830myno_DqXOAQ"
+          }
+        ],
+        "current": "d3a9576c82a01cf369724fb8c03fd628b79f85b04336105fbf9eb9b2739f4786",
+        "retracted": false
+      },
+      {
+        "name": "an edit by anyone else changes nothing",
+        "relations": [
+          {
+            "v": 2,
+            "from": "bob@example.net",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 4"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:04:00.000Z",
+            "signature": "F6OiRL29w4HQQ_cqpBgxPFPQzL_z5DfaZymuP6b74oI3zXVp53p00FAWj9-205_NIbx8Nub46mZEWPXuladQCA"
+          }
+        ],
+        "current": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+        "retracted": false
+      },
+      {
+        "name": "an edit of an edit names no original",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "3c8ebc92c77371b939c77954a8a229bcad22f3e22603b3b194c3a7df048f85c6",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 4"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:04:00.000Z",
+            "signature": "lYxTqDBwWsJRHx5Y06l2pDu8n9TmSyVBA1woPmQLXCsUupcSg6sHemBU9e_xgZE0tCaj6_Midpof6vGS_NZrDg"
+          }
+        ],
+        "current": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+        "retracted": false
+      },
+      {
+        "name": "a retraction",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 1"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:01:00.000Z",
+            "signature": "1alguVKmbLwKdtUTK_nojxPcd9962vSBQW3YJCorZ0PPbKUPXX1Fm67GjK4lkgM5niwajox0SbsNYYDtd8miCg"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "retract 3"
+              }
+            ],
+            "headers": {
+              "rel": "retract",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:03:00.000Z",
+            "signature": "lENr-jnuXehXU4e23YaetfjOCngR2ZnX0CUqHHeyVv_tzc_jpsMdVHHtM1uxz3SdmuVnjqmU0Gl__UQZ1wsPDw"
+          }
+        ],
+        "current": "3c8ebc92c77371b939c77954a8a229bcad22f3e22603b3b194c3a7df048f85c6",
+        "retracted": true
+      },
+      {
+        "name": "an edit after a retraction: still retracted",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "retract 3"
+              }
+            ],
+            "headers": {
+              "rel": "retract",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:03:00.000Z",
+            "signature": "lENr-jnuXehXU4e23YaetfjOCngR2ZnX0CUqHHeyVv_tzc_jpsMdVHHtM1uxz3SdmuVnjqmU0Gl__UQZ1wsPDw"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "edit 6"
+              }
+            ],
+            "headers": {
+              "rel": "edit",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:06:00.000Z",
+            "signature": "ZaohMOho3wAqCoR048nGdw0mODe-ujhf3xDteHX1WcULjvaedjh9BZ7dMe-8FUXO4r5w_DM-6I12UbctrY_tAA"
+          }
+        ],
+        "current": "53eb96001d235722fabb78a84602c1266bad18193cf4ea251686bc233060f31e",
+        "retracted": true
+      },
+      {
+        "name": "a retraction of the retraction does nothing",
+        "relations": [
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "retract 3"
+              }
+            ],
+            "headers": {
+              "rel": "retract",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:03:00.000Z",
+            "signature": "lENr-jnuXehXU4e23YaetfjOCngR2ZnX0CUqHHeyVv_tzc_jpsMdVHHtM1uxz3SdmuVnjqmU0Gl__UQZ1wsPDw"
+          },
+          {
+            "v": 2,
+            "from": "ada@example.com",
+            "to": [],
+            "inReplyTo": "dbaee9cc8e97e7399f8a39e6a37322fdee6593565075500d7a8cb7f2aab3db27",
+            "parts": [
+              {
+                "type": "text/plain",
+                "data": "retract 7"
+              }
+            ],
+            "headers": {
+              "rel": "retract",
+              "audience": "public"
+            },
+            "sentAt": "2026-10-14T21:07:00.000Z",
+            "signature": "ykaMKwS0QGQj7rLYJQ2wiXsIbDncszR-8CnXHkJh8KbJjOYc_T13m_56J6ThN4zeF8RlHDwPU7Sa0GJrY4XzDg"
+          }
+        ],
+        "current": "cb2d0cb2887df01a13f54b32c13bbc0f7366399878aeeb0f0e3d486c21dc5de7",
+        "retracted": true
       }
     ],
     "knownRelations": [

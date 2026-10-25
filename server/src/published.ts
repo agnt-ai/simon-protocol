@@ -2,8 +2,9 @@
  * Published messages: messages written here with an empty `to` (spec section 7), served to whoever their
  * audience admits (readers.ts):
  *
- *   GET /simon/messages/<id>                  the message, and its carrier's signed claims when it made any
- *   GET /simon/feeds/<address>/<feed>         the author's published messages in that feed, newest first
+ *   GET /simon/messages/<id>                  the message, its author's later changes to it, and its carrier's
+ *                                             signed claims when it made any
+ *   GET /simon/published/<address>            the author's published messages, newest first; `feed` filters
  *   GET /simon/messages/<id>/related          the relations to it marked listed that this server shows, newest first
  *
  * A message a reader may not see, an unknown one and a retired author's are answered alike: `404` for a
@@ -12,6 +13,7 @@
 import {
   header,
   invalid,
+  isHeaderName,
   MAX_CURSOR_LENGTH,
   MAX_LISTING_LIMIT,
   DEFAULT_LISTING_LIMIT,
@@ -31,8 +33,8 @@ import type { Page, StoredMessage } from './store/store.ts';
  * scan that ends there ends the listing too: its next cursor would be a hidden message's.
  */
 const MAX_SCANNED = 5000;
-/** The feed of a published message that names none (publishing profile, section 3). */
-const DEFAULT_FEED = 'posts';
+/** The most edits of one message an answer carries: its latest, oldest first. */
+const MAX_EDITS = 100;
 const CURSOR = new RegExp(`^[\\x21-\\x7e]{1,${MAX_CURSOR_LENGTH}}$`);
 const EMPTY = { messages: [], cursor: null, more: false };
 
@@ -94,11 +96,25 @@ async function listing(
  * marked it `listed`, a plain reply never is; of those, the relations this server shows (PUBLIC_RELATIONS);
  * and not retracted by its writer since.
  */
-async function listable(ctx: Context, author: string, record: StoredMessage): Promise<boolean> {
+async function listable(ctx: Context, author: string, record: Pick<StoredMessage, 'id' | 'message'>): Promise<boolean> {
   const rel = v1Header(record.message, 'rel');
   if (v1Header(record.message, 'listed') !== 'yes') return false;
   if (rel === null || !PUBLIC_RELATIONS.includes(rel)) return false;
   return !(await ctx.store.listingRetracted(author, record.id, record.message.from));
+}
+
+/**
+ * The published message a relation in `owner`'s inbox is listed under, when this server lists it there
+ * (publishing profile, sections 2 and 4); otherwise null. Its files then go to that message's readers.
+ */
+export async function listedUnder(
+  ctx: Context,
+  owner: string,
+  relation: Pick<StoredMessage, 'id' | 'message'>,
+): Promise<StoredMessage | null> {
+  const target = relation.message.v === VERSION ? (relation.message as Message).inReplyTo : null;
+  const post = target === null ? null : await published(ctx, target);
+  return post && post.message.from === owner && (await listable(ctx, owner, relation)) ? post : null;
 }
 
 export function publishedRoutes(ctx: Context): Route[] {
@@ -112,25 +128,41 @@ export function publishedRoutes(ctx: Context): Route[] {
       method: 'GET',
       path: '/simon/messages/:id',
       async handle(req) {
-        const record = await readable(req.params.id, await askerOf(ctx, req));
+        const asker = await askerOf(ctx, req);
+        const record = await readable(req.params.id, asker);
         if (!record) throw notFound('No published message has this id here.');
         const claims = record.signedClaims
           ? { claims: record.signedClaims.claims, claimsSignature: record.signedClaims.signature }
           : {};
+        // Its edits and retraction, so whoever follows a link to it sees what became of it (section 4).
+        const author = record.message.from;
+        const changes: AnyMessage[] = [];
+        // The retraction after the edits, and never crowded out by them: a retraction is final.
+        for (const r of [
+          ...(await ctx.store.publishedRelations(author, record.id, 'edit', MAX_EDITS)),
+          ...(await ctx.store.publishedRelations(author, record.id, 'retract', 1)),
+        ]) {
+          if (await mayRead(ctx, r.message, asker)) changes.push(r.message);
+        }
         // No keys beside it: a reader takes them from the author's agent document, where they are signed.
-        return json({ message: record.message, ...claims });
+        return json({ message: record.message, ...(changes.length > 0 && { changes }), ...claims });
       },
     },
     {
       method: 'GET',
-      path: '/simon/feeds/:address/:feed',
+      path: '/simon/published/:address',
       async handle(req) {
         const { before, limit } = paging(req);
-        const { address, feed } = req.params;
+        const feed = req.query.get('feed');
+        if (feed !== null && !isHeaderName(feed)) {
+          throw invalid('feed is a feed name, in the grammar of a header name.', { field: 'feed' });
+        }
+        const { address } = req.params;
         const asker = await askerOf(ctx, req);
         const author = await ctx.store.agentByAddress(address);
         if (!author || author.retiredAt) return json(EMPTY);
-        const inFeed = (m: AnyMessage) => (v1Header(m, 'feed') ?? DEFAULT_FEED).split(',').includes(feed);
+        // One collection per author; a feed is a label some of its messages carry (publishing profile, section 3).
+        const inFeed = (m: AnyMessage) => feed === null || (v1Header(m, 'feed')?.split(',') ?? []).includes(feed);
         const shows = async (r: StoredMessage) => inFeed(r.message) && (await mayRead(ctx, r.message, asker));
         return json(await listing((b, n) => ctx.store.published(address, b, n), shows, before, limit));
       },

@@ -1038,6 +1038,44 @@ export function storeContract(name: string, make: () => Store | Promise<Store>) 
         assert.deepEqual((await store.repliesTo('cat@a.test', post.id, null, 5)).records, []);
       });
 
+      it("lists an agent's own published relations of one rel to its message, oldest first, keeping the latest", async () => {
+        const post = message('ada@a.test', []);
+        const edit = { inReplyTo: post.id, headers: { rel: 'edit' } };
+        const own = [1, 2, 3].map(() => message('ada@a.test', [], edit));
+        const comment = message('ada@a.test', [], { inReplyTo: post.id, headers: { rel: 'comment' } });
+        const theirs = message('bob@b.test', ['ada@a.test'], edit);
+        const sent = message('ada@a.test', ['bob@b.test'], edit);
+        for (const m of [post, ...own, comment, theirs, sent]) await store.putMessage(m);
+        const ids = (rs: StoredMessage[]) => rs.map(r => r.id);
+        const of = (author: string, rel: string, limit: number) =>
+          store.publishedRelations(author, post.id, rel, limit);
+        assert.deepEqual(
+          ids(await of('ada@a.test', 'edit', 10)),
+          own.map(m => m.id),
+        );
+        assert.deepEqual(ids(await of('ada@a.test', 'edit', 2)), [own[1].id, own[2].id]);
+        assert.deepEqual(ids(await of('ada@a.test', 'comment', 10)), [comment.id]);
+        assert.deepEqual(await of('bob@b.test', 'edit', 10), []);
+      });
+
+      it('names the relations in an inbox here that name a part and point at a message their owner published here', async () => {
+        await store.createAgent(agent('ada@a.test', 'k1'));
+        const part = { type: 'application/octet-stream', sha256: sha('e'), size: 3 };
+        const post = message('ada@a.test', []);
+        const from = (inReplyTo: string, headers: Record<string, string> = { rel: 'comment', listed: 'yes' }) => ({
+          ...message('bob@b.test', ['ada@a.test'], { inReplyTo, parts: [part], headers }),
+          carrier: 'https://b.test',
+        });
+        const [comment, stray, unlisted] = [from(post.id), from(sha('9')), from(post.id, { rel: 'comment' })];
+        for (const m of [post, comment, stray, unlisted]) await store.putMessage(m);
+        for (const m of [comment, stray, unlisted]) await store.addToInbox('ada@a.test', m.id, at());
+        const named = async () =>
+          (await store.relationPartNamers(sha('e'), SELF, 10)).map(r => [r.owner, r.id, r.carrier]);
+        assert.deepEqual(await named(), [['ada@a.test', comment.id, 'https://b.test']]);
+        await store.retireAgent('ada@a.test', at(1));
+        assert.deepEqual(await named(), [], 'not for a retired owner');
+      });
+
       it('says whether a message is in an inbox, and whether an agent here wrote to an address', async () => {
         const sent = message('ada@a.test', ['bob@b.test', 'cat@c.test']);
         const received = { ...message('bob@b.test', ['ada@a.test']), carrier: 'https://b.test' };
