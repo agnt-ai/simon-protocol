@@ -591,7 +591,7 @@ class Agent(Reader):
         """A signed version 2 message, written now, and checked as this agent's server will check it.
 
         ``text``, when given, becomes the first part (``text/plain``), ahead of ``parts``; a message may
-        carry any parts, or none. An empty ``to`` is a public message. The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
+        carry any parts, or none. An empty ``to`` publishes the message, which then needs an ``audience`` header (``public`` for anyone). The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
         """
         headers = dict(headers or {})
         for name in ("for", "pairing"):

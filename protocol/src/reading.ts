@@ -45,8 +45,9 @@ export function claimedPrincipal(m: AnyMessage, kind: string): string | null {
  * How a reader that knows the relations in `known` reads a message, given the message its `inReplyTo`
  * names (`target`, or null when the reader does not hold it):
  *
- * - `reply`: no `rel`, a `rel` the reader does not know, or an author-only relation whose author is not the
- *   target's. Shown by its blocks, as a reply.
+ * - `reply`: no `rel`, a `rel` the reader does not know, a `rel` on a message whose `inReplyTo` is null
+ *   (it names nothing, and is ignored), or an author-only relation whose author is not the target's. Shown
+ *   by its blocks, as a reply.
  * - `relation`: a relation the reader applies to the target.
  * - `pending`: a relation the reader would apply, to a target it does not hold yet.
  */
@@ -56,7 +57,7 @@ export function readsAs(
   known: ReadonlySet<string>,
 ): 'reply' | 'relation' | 'pending' {
   const rel = header(m, 'rel');
-  if (rel === null || !known.has(rel)) return 'reply';
+  if (rel === null || !known.has(rel) || m.inReplyTo === null) return 'reply';
   if (target === null) return 'pending';
   if (AUTHOR_ONLY_RELATIONS.includes(rel) && target.from !== m.from) return 'reply';
   return 'relation';

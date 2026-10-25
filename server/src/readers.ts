@@ -6,8 +6,9 @@
  * fails, asks as nobody in particular, and is answered exactly as one, so a refusal tells nothing about
  * the message.
  *
- * A message with no `audience` header is for anyone. One with a label is for whoever the extensions'
- * `admitsReader` chain admits; with no extension deciding, for no one but its author.
+ * `audience: public` is for anyone. Any other label is for whoever the extensions' `admitsReader` chain
+ * admits, and always its author; with no extension deciding, for no one but its author. A published message
+ * with no audience, which this version refuses, is its author's alone.
  */
 import { header, VERSION, WireError, type AnyMessage, type Message } from '@agnt-sdk/simon-protocol';
 import { authenticateReader, isAgentSigned } from './auth.ts';

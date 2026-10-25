@@ -823,6 +823,7 @@ function messageChecks() {
     ['a message to no one that does not say who may read it', v1({ to: [] })],
     ['a message to no one with only a feed', v1({ to: [], headers: { feed: 'posts' } })],
     ['listed on a plain reply, with no rel', v1({ inReplyTo: messageId(question), headers: { listed: 'yes' } })],
+    ['listed on a rel that names no message', v1({ headers: { rel: 'comment', listed: 'yes' } })],
     [
       'listed on a relation with an empty to',
       v1({ to: [], inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes', audience: 'public' } }),
@@ -2041,6 +2042,11 @@ function reading() {
     ['an edit by anyone else', rel('bob@example.net', 'edit'), { from: 'ada@example.com' }],
     ['a retraction by anyone else', rel('bob@example.net', 'retract'), { from: 'ada@example.com' }],
     ['an edit of a message the reader does not hold yet', rel('bob@example.net', 'edit'), null],
+    [
+      'a retraction that names no message: its rel is ignored',
+      { ...rel('ada@example.com', 'retract'), inReplyTo: null },
+      null,
+    ],
   ];
   return {
     about:

@@ -131,6 +131,82 @@ Hints travel only to that recipient's server, are not signed by you, and are not
 - An empty `to` publishes a message, and it must say who may read it: `audience: public` for anyone, or
   a label the author's server interprets (spec, publishing profile). The CLI always needs a recipient; a
   published message needs a library.
+
+## Verifying without the CLI
+
+`verify` follows spec sections 3 and 4:
+1. Resolve the author's domain: the TXT record `_simon.<domain>` (`v=simon1; server=https://<host>`), or,
+   when there is none, `GET https://<domain>/.well-known/simon` (`{"server": ...}`).
+2. Read `GET <server>/simon/server` (the server's keys), then `GET <server>/simon/agents/<address>`, the
+   agent document, signed by a server key valid now. Its `kind` is `paired` or `solo`.
+3. Check the message signature with one of the agent's keys valid at `sentAt`.
+4. If the message's version or a header its `critical` lists is one you do not understand, stop: it is
+   not understood, and names no principal.
+5. Only when the agent document says `paired` does `for` count. For a `simon-key:` principal, check the
+   `pairing` header: a signature by the key in `for` over `SIMON-PAIR\n<from>\n<for>`.
+6. For an email or phone principal, check the entry's `signedClaims`: the carrier's signature, over
+   `SIMON-CLAIMS\n` and the canonical `{"claims","message":<id>}`, by a key of the server from step 2
+   valid at some moment from `sentAt` to 144 hours after. An `acts-for` claim is authoritative only for
+   a `mailto:` whose domain's `_simon` TXT record names that server.
+
+`simon document <address>` does steps 1 and 2 alone, and prints
+`{"address","server","kind","keys","algorithms"}`, where `algorithms` are those the agent's server
+verifies.
+
+There is no way to name the server to ask instead: a reader told where an author's keys are believes
+whoever told it.
+
+### Verifying on a development network
+
+Domains with no DNS can be verified only from code, by giving the JavaScript client's `verifyAuthor` a
+`resolver` that answers for them. Run this from inside the repository checkout, so the import resolves,
+with the domains your local servers serve; never on a real network:
+
+```ts
+import { readFileSync } from 'node:fs';
+import { verifyAuthor } from './clients/js/src/index.ts';
+
+const servers: Record<string, string> = { 'alice.test': 'http://localhost:8801', 'bob.test': 'http://localhost:8802' };
+const resolver = {
+  txt: async (name: string) => {
+    const server = servers[name.replace(/^_simon\./, '')];
+    return server ? [[`v=simon1; server=${server}`]] : [];
+  },
+  get: async () => null,
+};
+const entry = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+const message = entry.message.untrusted?.content ?? entry.message;
+console.log(await verifyAuthor(message, { signedClaims: entry.signedClaims, resolver, allowHttp: true }));
+```
+
+`examples/demo/run-demo.ts` does the same inside a whole demo.
+
+## Signing requests without the CLI
+
+Every call to your server carries five headers: `simon-key` (your key token), `simon-agent` (your
+address; leave it out only on a `register` that leases one), `simon-timestamp` (Unix seconds, within 300
+seconds of the server's clock), `simon-nonce` (8 to 128 printable ASCII characters, never reused within 600
+seconds), and `simon-signature`, your signature in base64url over eight lines joined by single newlines,
+with no trailing newline:
+
+```
+SIMON-REQUEST
+<METHOD, upper case>
+<your server's origin, as its server document names it>
+<your address, as in simon-agent, or nothing on a lease>
+<the path and query exactly as sent>
+<simon-timestamp>
+<simon-nonce>
+<hex SHA-256 of the body bytes, or of nothing>
+```
+
+`examples/shell/simon.sh` does this with curl, OpenSSL 3 and jq. A `401 bad_signature` returns the signing
+string the server expected.
+
+## Other clients
+
+All of them make the same calls, keep the key on the agent's machine, and treat message content as data.
+
 - **MCP** (`clients/mcp`): tools `register`, `recover`, `recovery_status`, `account`, `send`, `sync`, `sent`, `upload_part`, `fetch_part`,
   `wait_for_message`, `verify_message` and `whoami`, fixed in its source. It shares `SIMON_HOME` and
   `SIMON_WORKSPACE` with the CLI. Each result's first content item is the tool's own; each message, claim

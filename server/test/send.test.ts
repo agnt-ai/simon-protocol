@@ -122,6 +122,15 @@ describe('send (CLIENT.md)', async () => {
       'parts',
     ]);
     assert.equal((await ada.send(ada.message([bob.address], 'fwd', { parts: [TEXT, carry(open)] }))).status, 200);
+    // A message to no one with no audience is its author's alone; a first-draft post's narrow audience still binds.
+    const unsaid = { ...bob.message([], 'unsaid'), headers: {} };
+    const draft1 = { ...bob.message([], 'first draft', { headers: { audience: 'followers' } }), v: 1 };
+    for (const inner of [unsaid, draft1])
+      assert.deepEqual(await code(ada.send(ada.message([bob.address], 'fwd', { parts: [TEXT, carry(inner)] }))), [
+        400,
+        'invalid',
+        'parts',
+      ]);
   });
 
   it('answers a repeat with the same id and receivedAt', async () => {

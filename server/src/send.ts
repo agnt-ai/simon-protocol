@@ -148,20 +148,21 @@ async function notedServing(ctx: Context, domain: string, now: Date): Promise<vo
 }
 
 /**
- * A message whose `audience` is narrower than `public` is never forwarded or quoted whole (spec section
- * 5.4): a message that carries one inline, at any depth, is refused as the message checks refuse a part
- * (`400 invalid`, `parts`). One carried by content address is not seen here; its bytes are the client's to
- * keep to itself.
+ * A message for a narrower audience than `public` is never forwarded or quoted whole (spec section 5.4): a
+ * message that carries one inline, at any depth, is refused as the message checks refuse a part (`400
+ * invalid`, `parts`). Narrower means an `audience` other than `public`, whatever the carried message's
+ * version (one that cannot tell keeps it to itself), or a message of this version to no one with no
+ * audience, which is its author's alone. One carried by content address is not seen here; its bytes are the
+ * client's to keep to itself.
  */
 function checkCarriedAudience(m: AnyMessage): void {
   for (const inner of carriedMessages(m)) {
     const headers = inner.headers;
-    if (
-      inner.v === VERSION &&
-      isJsonObject(headers) &&
-      Object.hasOwn(headers, 'audience') &&
-      headers.audience !== 'public'
-    ) {
+    if (!isJsonObject(headers)) continue;
+    const narrower = Object.hasOwn(headers, 'audience')
+      ? headers.audience !== 'public'
+      : inner.v === VERSION && Array.isArray(inner.to) && inner.to.length === 0;
+    if (narrower) {
       throw invalid(
         'A message for a narrower audience than public is never forwarded or quoted whole (spec section 5.4).',
         {

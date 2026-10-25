@@ -154,7 +154,7 @@ export class TargetAgent {
     return this.call(t, 'GET', `/simon/sync${query ? `?${query}` : ''}`, undefined, {}, label);
   }
 
-  /** A version 1 message from this agent, signed. */
+  /** A message of this version from this agent, signed. */
   message(f: MessageFields = {}): Message {
     return buildMessage({ from: this.address, ...f }, f.signWith ?? this.key, this.server.now());
   }

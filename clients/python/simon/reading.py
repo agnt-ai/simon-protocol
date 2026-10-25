@@ -45,13 +45,14 @@ def reads_as(
     """How a reader that knows the relations in ``known`` reads a message, given the message its
     ``inReplyTo`` names (``target``, or None when the reader does not hold it):
 
-    - ``reply``: no ``rel``, a ``rel`` the reader does not know, or an author-only relation whose author is
-      not the target's. Shown by its parts, as a reply.
+    - ``reply``: no ``rel``, a ``rel`` the reader does not know, a ``rel`` on a message whose ``inReplyTo``
+      is null (it names nothing, and is ignored), or an author-only relation whose author is not the
+      target's. Shown by its parts, as a reply.
     - ``relation``: a relation the reader applies to the target.
     - ``pending``: a relation the reader would apply, to a target it does not hold yet.
     """
     rel = header(message, "rel")
-    if rel is None or rel not in known:
+    if rel is None or rel not in known or message.get("inReplyTo") is None:
         return "reply"
     if target is None:
         return "pending"

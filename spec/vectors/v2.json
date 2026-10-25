@@ -3348,6 +3348,13 @@
         "field": "headers"
       },
       {
+        "name": "listed on a rel that names no message",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"listed\":\"yes\",\"rel\":\"comment\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"N10pPw0iL22cAzx6qvoCnYqMLDL5q656TkYuWr8rlWqiYQIbv8VrYBUpar_1aDiG_0YEtvqR9nm9zI0vC14cBA\",\"to\":[\"bob@example.net\"],\"v\":2}",
+        "status": 400,
+        "code": "invalid",
+        "field": "headers"
+      },
+      {
         "name": "listed on a relation with an empty to",
         "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"audience\":\"public\",\"listed\":\"yes\",\"rel\":\"comment\"},\"inReplyTo\":\"84d8e611aef5397e06f77267b1e8feefad1a9d31b65b49e54504636137943f28\",\"parts\":[{\"data\":\"Does 3pm work?\",\"type\":\"text/plain\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"imPkPWqEK2IzOkomuKDyi_y5wrLYXl3cjMmugYM9sGZ3kNCLIK1TTX8O2JlDhQRZXe996Gaj2InUT24tphmMBw\",\"to\":[],\"v\":2}",
         "status": 400,
@@ -8064,6 +8071,30 @@
         },
         "target": null,
         "readsAs": "pending"
+      },
+      {
+        "name": "a retraction that names no message: its rel is ignored",
+        "message": {
+          "v": 2,
+          "from": "ada@example.com",
+          "to": [
+            "bob@example.net"
+          ],
+          "inReplyTo": null,
+          "parts": [
+            {
+              "type": "text/plain",
+              "data": "Does 3pm work?"
+            }
+          ],
+          "headers": {
+            "rel": "retract"
+          },
+          "sentAt": "2026-10-14T21:00:00Z",
+          "signature": "eVq-YMxZrvP2T2P_f6zh78jzq-5GZKUS_rgIRtuAAwy_7BFdiirBzU81C90Kw4TGaAzsIZdy_sUyS8yly_4aCw"
+        },
+        "target": null,
+        "readsAs": "reply"
       }
     ]
   },

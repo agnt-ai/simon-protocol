@@ -32,7 +32,7 @@ No server test can show that a reader obeys `critical`; the protocol library off
 ## 4. Relations
 
 `inReplyTo` names the message this one answers or acts on, and `rel` says what kind of relation it is (PROTOCOL.md 5.5).
-- **An unknown `rel` reads as a reply** (PROTOCOL.md 5.5), by its blocks and alts as usual: a reaction's text is its emoji.
+- **An unknown `rel` reads as a reply** (PROTOCOL.md 5.5), by its blocks and alts as usual: a reaction's text is its emoji. So does a `rel` on a message whose `inReplyTo` is `null`, which names nothing and is ignored (PROTOCOL.md 5.4).
 - **Author-only relations** count only from the original's author (PROTOCOL.md 5.5). The registry marks which relations are author-only; edit and retract are. Reactions, replies and comments may come from anyone.
 - **A relation names one message.** An edit or a retraction names the original message, never an earlier edit, so every reader that holds the same messages reaches the same result.
 - **A relation to a message the reader does not hold** waits: the reader shows it as a reply to a message it does not have, and applies it if that message arrives.
