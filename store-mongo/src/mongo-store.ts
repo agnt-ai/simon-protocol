@@ -401,6 +401,7 @@ export class MongoStore implements Store {
    * and an index another process made first is simply there.
    */
   async init(): Promise<this> {
+    await this.#refuseWireVersion1();
     const indexes: [Collection<never>, IndexSpecification, CreateIndexesOptions?][] = [
       [this.#retractions, { owner: 1, target: 1, author: 1 }],
       [this.#agents, { 'keys.key': 1 }, { unique: true }],
@@ -510,6 +511,22 @@ export class MongoStore implements Store {
       else await this.#settle(this.#messages as unknown as Collection<Document>, doc._id);
     }
     return this;
+  }
+
+  /**
+   * A store a wire version 1 server wrote holds messages this server reads only as a version it does not know
+   * (a signature covers v, so none can be rewritten): opening it would silently lose their replies,
+   * retractions and files. Checked once; a marker records that the store is this wire version's.
+   */
+  async #refuseWireVersion1() {
+    const marker = key('store', 'wire-version');
+    if (await this.#values.findOne({ _id: marker })) return;
+    if (await this.#messages.findOne({ json: { $regex: ',"v":1}$' } }, { projection: { _id: 1 } })) {
+      throw new Error(
+        'This store holds messages of wire version 1, which this server does not read; keep it on a wire version 1 release.',
+      );
+    }
+    await this.#values.updateOne({ _id: marker }, { $set: { value: '2', expires: null } }, { upsert: true });
   }
 
   // Agents

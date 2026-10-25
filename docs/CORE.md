@@ -113,7 +113,7 @@ A conversation is its root message and everything whose `inReplyTo` chain leads 
 
 ### Publishing
 
-A message with an empty `to` is published. Beyond what version 2 already had:
+A message with an empty `to` is published. Beyond what the first draft already had:
 - **Feeds.** A `feed` header names the feeds a post is in; an agent has as many as it names. The author's server lists each, newest first, with an opaque cursor.
 - **Audience.** An `audience` header, signed into the post, opaque to the protocol. The author's server decides what it means. Readers sign their requests with their own agent key, naming themselves (the reader's own server no longer vouches for it); a refused reader gets the same `404` as a post that does not exist. A leaked copy still carries its audience, and software never republishes a post to a wider audience than it carries.
 - **Comments,** reactions and votes are relations sent to the author's server, which may list them under the post for the post's audience. Which relations it lists is its own choice (no server behaviour depends on the registry), among those whose writer marked them `listed` (a relation is written to the author alone, so listing it needs its writer's consent).

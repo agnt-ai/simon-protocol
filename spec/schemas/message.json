@@ -193,7 +193,7 @@
           "$ref": "common.json#/$defs/mediaType"
         },
         "data": {
-          "description": "A JSON value for a JSON type (application/json or a +json subtype), the text for text/*, padded canonical base64 for any other type (PROTOCOL.md 5.3)."
+          "description": "A JSON value for a JSON type (application/json or any +json subtype, text/*+json included), the text for any other text/*, padded canonical base64 for any other type (PROTOCOL.md 5.3)."
         },
         "sha256": {
           "$ref": "common.json#/$defs/sha256"
