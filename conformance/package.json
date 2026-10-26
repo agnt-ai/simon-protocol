@@ -24,6 +24,6 @@
     "readme": "node scripts/write-readme.ts"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.1.1"
+    "@agnt-sdk/simon-protocol": "0.2.0"
   }
 }

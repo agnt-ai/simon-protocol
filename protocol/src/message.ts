@@ -48,7 +48,7 @@ import {
 } from './limits.ts';
 import { parseTimestamp } from './time.ts';
 
-/** The wire version this library implements (spec section 5.2): one counter for every incompatible revision. */
+/** The wire version this library implements (spec section 5.2): after release, only an incompatible revision takes a new number. */
 export const VERSION = 1;
 
 /** A message of any version, as far as the invariants say. A later version's other fields ride along unread. */

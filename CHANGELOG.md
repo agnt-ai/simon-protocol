@@ -1,58 +1,83 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-25)
 
-**A key principal moves to a new key.** A succession step is signed by the old key and the new over
-`SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain as the protocol's eighth
-header, `succession`, from earlier keys on to `for`. The agent's own server accepts a successor as `for`
-only along a succession from the principal it holds, moves its record on that message (`Store` gains
-`succeedPrincipal`), and holds the agent to the new key from then on. `signSuccession`, `readSuccession`,
-`isSuccessionValue` and `predecessors` (with Python twins); `succeed` in both libraries, MCP and both CLIs;
-`verifyAuthor` shows `succeeds`, and answers `bad_succession` for a chain that does not verify. A reader
-that holds a fork, two steps from one key to different keys, links neither successor to it.
+SIMON 1, wire `v:1`: a smaller core with optional profiles, and the changes below. The six npm packages
+and the Python client move to 0.2.0.
 
-**Pairings lapse.** A key principal's pairing signs an `until`: the bytes are
-`SIMON-PAIR\n<address>\n<for>\n<until>`, and the `pairing` header (and register's `pairing`) is
-`<until> <signature>`. A pairing counts before its `until`, by at most 366 days. The agent's server refuses a
-message whose pairing does not count at its `sentAt`, and register one that does not count now. The
-principal renews by signing a later `until`, with no call to the server: `renewPairing` (JavaScript),
-`renew_pairing` (Python, MCP), `renew-pairing` (both CLIs). `signPairing` and `sign_pairing` default to a year;
-`verifyPairing` and `verify_pairing` take the moment to judge at, now by default, and `parsePairing` /
-`parse_pairing` read the value. Readers show a key principal's `until`, and `lapsed` when it counted when
-sent but not now.
+**Compatibility: a clean break with 0.1.x.** The 0.1.x packages implemented a pre-release draft of this
+same version 1, and its data and peers are not compatible with 0.2.0: JSON blocks were base64 there and are
+JSON values here, key pairings carried no `until`, and published messages carried no `audience`. Messages
+cannot be rewritten, since their signatures cover them. Wipe pre-release stores before upgrading; a
+SQLite or MongoDB store a 0.1.x server wrote opens, but posts it stored without an `audience` become their
+author's alone (closed, never open), JSON parts it holds read as strings of base64, and messages carrying
+a key pairing without an `until` no longer pass the header rules. Upgrade peers together. The 0.1.x packages will be deprecated on npm.
 
-**No keys beside a published message.** `GET /simon/messages/<id>` answers `{"message"}` (with the carrier's
-signed claims when there are any); a reader takes the author's keys from its agent document.
-
-**No `kind` in agent documents.** The agent document carries an address and keys only; whether an agent is
-paired is its host's own record. A reader believes a principal on the evidence the message carries (a
-pairing, or a carrier's signed claim). `claimedPrincipal`, `claimsAbout` and `judgeClaims` (and their
-Python twins) no longer take a kind; the readers' `Trust` and `AgentRecord` drop it.
-
-**Publishing is explicit.** A message to no one must carry an `audience`: `public` for anyone. A server
-refuses one without (`400 invalid`, `headers`), and a published message without one is its author's alone. A
-`rel` without `inReplyTo`, or a `feed` on a message with recipients, is now ignored rather than refused; a
-misplaced `audience` is still refused. Public posts may be forwarded whole.
-
-**Wire version 2.** Messages carry `"v":2`, and `v` now counts incompatible wire revisions, drafts included.
-Version 1 messages are a version this library does not know: routed on their invariants, presented as not
-understood. Names (headers, relations, feeds, signal types) may be private and reverse-domain,
-`com.example.approve`, up to 128 characters. A JSON block (`application/json`, any `+json` type) carries its
-`data` as a JSON value instead of base64. The vectors move to `spec/vectors/v1.json`. A store a wire version 1 server wrote (SQLite before schema 10, any MongoStore
-without this version's marker) refuses to open while it holds a version 1 message, rather than losing its
-replies, retractions and files; the offline schema-2 converter refuses it too (`legacy_wire_version`).
+**One version, numbered once.** `v` counts incompatible wire revisions after release; unreleased drafts
+share version 1 (`docs/DECISIONS.md`, B2). Sending a version the agent's server does not implement is still
+refused (`unsupported_version`); server-to-server delivery still routes unknown versions on their
+invariants. The status no longer promises a "1.0": version 1 is declared stable when two independent
+implementations reproduce every vector and pass the conformance suite against each other.
 
 **A small core and optional profiles.** PROTOCOL.md is now the transport core. Three optional profiles in
 `spec/profiles/` take what only some parties implement: `reader.md` (showing and acting on messages, the
 reading rules CLIENT.md used to list), `conversations.md` and `publishing.md` (published messages, feeds and
-relations listings, moved from PROTOCOL.md section 7). Moved sections keep their numbers as pointers. No
-wire, server or library behaviour changes.
+relations listings, moved from PROTOCOL.md section 7). Moved sections keep their numbers as pointers.
 
 **No roster.** A conversation's membership is each message's `to`, its author's choice; a reply that reaches
 more or fewer people forks the conversation, as email and texting do. The registry's `add`, `leave`,
-`remove` and `rename` relations, the `members` header and the reader's roster rule are gone; none had an
-implementation. A side thread is marked by a new `thread` header naming its anchor, replacing the `thread`
-relation, so `inReplyTo` names the message actually answered.
+`remove` and `rename` relations, the `members` header and the reader's roster rule are gone. A side thread
+is marked by a new `thread` header naming its anchor, replacing the `thread` relation.
+
+**Private names are dotted.** Header, relation and signal-type names without a dot are the registry's;
+anyone else's is private, a domain its author controls in reversed label order (`com.example.approve`), up
+to 128 characters. Claim types and hint names follow the same convention. Feed names are the author's own,
+with or without a dot.
+
+**JSON blocks are JSON.** A JSON block (`application/json`, any `+json` type) carries its `data` as a JSON
+value, `null` included, instead of base64; `text/*` carries text and anything else base64. A JSON value is
+signed as canonical JSON (integers within ±(2^53 − 1), no fractions or exponents, at most 64 levels in the
+message): the JavaScript and Python clients, the MCP tool schema and the application's own agents now refuse
+anything else before signing, saying how to write it (`jsonDataProblem`, `json_data_problem`). The vectors
+are `spec/vectors/v1.json`.
+
+**Publishing is explicit.** A message to no one must carry an `audience`: `public` for anyone, a reserved
+label. A server refuses one without (`400 invalid`, `headers`), and a published message without one, met
+anywhere, is its author's alone. A `rel` without `inReplyTo`, or a `feed` on a message with recipients, is
+now ignored rather than refused; a misplaced `audience` is still refused. Public posts may be forwarded whole.
+
+**Agent documents without `kind`.** The agent document carries an address and keys only; whether an agent is
+paired is its host's own record. A reader believes a principal on the evidence the message carries (a
+pairing, or a carrier's signed claim). `claimedPrincipal`, `claimsAbout` and `judgeClaims` (and their
+Python twins) no longer take a kind; the readers' `Trust` and `AgentRecord` drop it.
+
+**Published messages without unsigned keys.** `GET /simon/messages/<id>` answers `{"message"}` (with the
+carrier's signed claims when there are any); a reader takes the author's keys from its agent document.
+
+**Pairings lapse.** A key principal's pairing signs an `until`: the bytes are
+`SIMON-PAIR\n<address>\n<for>\n<until>`, and the `pairing` header (and register's `pairing`) is
+`<until> <signature>`. A pairing counts before its `until`, by at most 366 days; libraries sign 365 by
+default. Readers verify it at the message's `sentAt`; the agent's own server judges it at both `sentAt` and
+its own clock, so a backdated message cannot carry a lapsed pairing. A lapsed agent keeps its address and
+keeps receiving, and its sends are refused until the principal renews, which it may do at any time by
+signing a later `until`, with no call to the server: `renewPairing` (JavaScript), `renew_pairing` (Python,
+MCP), `renew-pairing` (both CLIs). Readers show a key principal's `until`, and `lapsed` when it counted when
+sent but not now.
+
+**A key principal moves to a new key.** A succession step is signed by the old key and the new over
+`SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain, at most 16 steps, as the
+protocol's eighth header, `succession`. The agent's own server accepts a successor as `for` only along a
+succession from the principal it holds, and moves its record (`Store.succeedPrincipal`) once the message is
+stored. Unpairing always wins: an unpairing signed by a key the principal moved on from retires the agent,
+at its server (`POST /simon/unpair` takes the `succession` from that key; `unpair` in both libraries, MCP
+and both CLIs) and at readers. `signSuccession`, `readSuccession`, `isSuccessionValue` and `predecessors`
+(with Python twins); `succeed` in both libraries, MCP and both CLIs; `verifyAuthor` shows `succeeds`, and
+answers `bad_succession` for a chain that does not verify. A reader that holds a fork, two steps from one key
+to different keys, links neither successor to it.
+
+**Schemas checked.** `npm run test:spec` validates the vectors against `spec/schemas`. It found and fixed:
+`details.serverTime` is an integer; a part's `data` follows its type; an envelope's version 1 message is
+judged by `message.json` (`common.json#/$defs/anyMessage`).
 
 ## 0.1.1 (2026-10-25)
 

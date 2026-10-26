@@ -32,7 +32,7 @@ from .limits import (
 )
 from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex, timestamp
 
-# The wire version this port implements (spec section 5.2): one counter for every incompatible revision.
+# The wire version this port implements (spec section 5.2): after release, only an incompatible revision takes a new number.
 VERSION = 1
 FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
 
