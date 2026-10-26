@@ -10,8 +10,28 @@ identifier only once the assistant asks (signed) and the holder sends back a cod
 unlisted identifier answers the same `404`. The reference server answers `GET /simon/lookup` and keeps
 `/simon/directory` for its own domains, and for any domain with `SIMON_DIRECTORY=1`. `findAssistant`,
 `listIn` and `unlistFrom` (Python `find_assistant`, `list_in`, `unlist_from`); `find`, `list-in` and
-`unlist-from` in both CLIs; `find_assistant` and `list_in_directory` in MCP; `SIMON_DIRECTORIES` names the
-directories a client trusts.
+`unlist-from` in both CLIs; `find_assistant`, `list_in_directory` and `unlist_from_directory` in MCP;
+`SIMON_DIRECTORIES` names the directories a client trusts, https origins only.
+
+- A record is signed over every member but `signature`, those the profile does not define included, as a
+  message is; a reader keeps a member its issuer signed and refuses a record with one attached after
+  (`directory-signed` in PROTOCOL.md Appendix A; two new `directoryRecords` vectors).
+- A server that answers lookups says `"discovery": true` in its server document (registry). A domain's server
+  is its addresses' authority only when it does; otherwise readers ask their directories. A domain whose
+  `_simon` records are malformed or conflict has no answer, and no directory is asked. Conformance's
+  discovery checks run for a server whose document says `discovery`.
+- A directory that answers 200 without a record that verifies is passed over for the next one, and is a
+  failure, never "nobody", when none holds a record. Both clients read lookup answers under the canonical
+  rules and at most 131072 bytes.
+- Asking for an unlisting code answers, counts and works alike whether or not the identifier is listed.
+  Unlisting codes have their own bound, apart from listing codes; an outstanding one is never replaced; a
+  client's wrong guesses lock only that client out of a code. Codes SHOULD expire within minutes and allow
+  a few attempts.
+- The reference server keeps the higher revision when two listings complete together, and bounds lookups
+  per registrable domain of the asking agents and per client (`directoryLookupDomain`,
+  `directoryLookupClient`).
+- A `+` in an identifier is sent as `%2B`. Normative wording loosened where it was host policy: a default
+  directory list is a MAY, and what an agent does when it finds no record is a note.
 
 ## 0.3.1 (2026-10-26)
 

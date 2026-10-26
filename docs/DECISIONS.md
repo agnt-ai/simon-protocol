@@ -555,6 +555,8 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *"Newest claim wins" was dropped:* a revisioned record from one issuer replaces itself; across issuers, authority first, then the reader's own order of trust.
 - *Zero setup holds:* a host that verified the person's email when it set up their assistant may list it with no extra step, with the person's consent.
 - *Precedent:* keys.openpgp.org (verify before listing, after the SKS keyservers' squatting), WebFinger (one identifier, one answer), Bluesky handle verification (the domain speaks for itself).
+- *Every member is signed:* a record is signed over all its members but `signature`, as a message is, so a later draft can add one under the issuer's signature and nobody can attach one unsigned. Signing only the six known members would have frozen the record.
+- *A domain speaks only when its server says so:* a server advertises lookups with `discovery` in its server document. A domain whose server has not taken up this optional profile has not spoken, and directories answer for it; a domain whose `_simon` records are malformed or conflict has spoken badly, and nobody answers for it.
 
 ## Revisions and reconciliation (2026-10-22)
 
