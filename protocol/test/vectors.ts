@@ -57,6 +57,8 @@ import {
   parsePairing,
   isSuccessionValue,
   readSuccession,
+  directoryBytes,
+  readDirectoryRecord,
   verifyPairing,
   verifyRecovery,
   isCriticalValue,
@@ -987,6 +989,63 @@ function pairings() {
       { why: 'lasting 366 days from the moment judged', ...pair('bob@example.net', erin, { until: year(366) }) },
       { why: 'lasting longer than 366 days', ...pair('bob@example.net', erin, { until: at(year(366), 1) }) },
     ],
+  };
+}
+
+/** Directory records (discovery profile, section 1): their signing bytes, and which a reader takes at `now`. */
+function directoryRecords() {
+  const issuer = ORIGIN;
+  const keys = [keyEntry(exampleCom.key)];
+  const base = {
+    identifier: 'mailto:sarah@example.org',
+    address: 'sarah@assistants.example',
+    revision: 3,
+    issued: NOW,
+    expires: at(NOW, 365 * 24 * 60 * 60 * 1000),
+    issuer,
+  };
+  const signed = (fields: Record<string, Json>, signer: FixedKey = exampleCom) => {
+    const record = { ...base, ...fields } as never;
+    return { ...(record as object), signature: fixedSign(signer, directoryBytes(record)) };
+  };
+  const later = at(NOW, 60_000);
+  const cases: [string, Record<string, Json>, string, string?][] = [
+    ['a record for the identifier asked about', signed({}), later],
+    ['a phone number', signed({ identifier: 'tel:+14155550100' }), later, 'tel:+14155550100'],
+    ['a record for another identifier', signed({}), later, 'mailto:someone@example.org'],
+    [
+      'a key principal, which needs no record',
+      signed({ identifier: `simon-key:${erin.key}` }),
+      later,
+      `simon-key:${erin.key}`,
+    ],
+    ['read the moment it expires', signed({}), base.expires],
+    ['issued more than 5 minutes ahead of the reader', signed({}), at(NOW, -5 * 60_000 - 1)],
+    ['lasting more than 366 days', signed({ expires: at(NOW, 367 * 24 * 60 * 60 * 1000) }), later],
+    ['revision 0', signed({ revision: 0 }), later],
+    ['an address that is not one', signed({ address: 'Sarah@Assistants.example' }), later],
+    ["signed by a key that is not the issuer's", signed({}, ada), later],
+    ['a member changed after signing', { ...signed({}), address: 'mallory@assistants.example' }, later],
+    ['lasting exactly 366 days', signed({ expires: at(NOW, 366 * 24 * 60 * 60 * 1000) }), later],
+    ['issued exactly 5 minutes ahead of the reader', signed({}), at(NOW, -5 * 60_000)],
+    ['the largest revision', signed({ revision: Number.MAX_SAFE_INTEGER }), later],
+    ['a member the issuer signed, which no reader knows: signed, so kept', signed({ note: 'signed' }), later],
+    ['a member attached after signing, which no reader knows', { ...signed({}), note: 'unsigned' }, later],
+    ['an issuer that is not an https origin', signed({ issuer: 'http://simon.example.com' }), later],
+    ['an issuer written as resolution would not write it', signed({ issuer: 'https://SIMON.example.com/' }), later],
+  ];
+  return {
+    about:
+      "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature: every member it carries, known or not; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
+    issuerKeys: keys,
+    bytes: directoryBytes(base as never).toString(),
+    cases: cases.map(([why, value, now, identifier = base.identifier]) => ({
+      why,
+      value,
+      identifier,
+      now,
+      record: readDirectoryRecord(value, identifier, keys, new Date(now)),
+    })),
   };
 }
 
@@ -2625,6 +2684,7 @@ export async function buildVectors() {
     headerValues,
     pairings: pairings(),
     successions: successions(),
+    directoryRecords: directoryRecords(),
     signatures: signatures(),
     requests: await requests(),
     documents: documents(),

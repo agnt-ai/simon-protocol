@@ -20,6 +20,7 @@ import './checks/signals.ts';
 import './checks/outbound.ts';
 import './checks/parts.ts';
 import './checks/public.ts';
+import './checks/discovery.ts';
 import './checks/errors.ts';
 import { early, retried } from './checks/outbound.ts';
 import { remoteParts } from './checks/parts.ts';
@@ -160,6 +161,7 @@ export const AREAS: Record<string, string> = {
   sent: 'sent (CLIENT)',
   parts: 'Parts (CLIENT parts, PROTOCOL 7.2)',
   public: 'Published messages, feeds and relations (publishing profile; must for a server that publishes)',
+  discovery: 'Lookups (discovery profile; must for a server that answers them)',
   errors: 'Errors (PROTOCOL 9, CLIENT errors)',
 };
 

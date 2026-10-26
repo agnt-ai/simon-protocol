@@ -3948,6 +3948,340 @@
       }
     ]
   },
+  "directoryRecords": {
+    "about": "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature: every member it carries, known or not; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
+    "issuerKeys": [
+      {
+        "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
+        "added": "2026-10-01T00:00:00Z",
+        "revoked": null
+      }
+    ],
+    "bytes": "SIMON-DIRECTORY\n{\"address\":\"sarah@assistants.example\",\"expires\":\"2027-10-14T21:00:00.000Z\",\"identifier\":\"mailto:sarah@example.org\",\"issued\":\"2026-10-14T21:00:00Z\",\"issuer\":\"https://simon.example.com\",\"revision\":3}",
+    "cases": [
+      {
+        "why": "a record for the identifier asked about",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        }
+      },
+      {
+        "why": "a phone number",
+        "value": {
+          "identifier": "tel:+14155550100",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "FrmmMDUvPNLrnyHCsg5v3EqqWwR4YJeZPGROEcyOlMi_GwXPez2YbJ-XzwrRUUg8r2AQ9D9WANgF0BPO6dXYDw"
+        },
+        "identifier": "tel:+14155550100",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": {
+          "identifier": "tel:+14155550100",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "FrmmMDUvPNLrnyHCsg5v3EqqWwR4YJeZPGROEcyOlMi_GwXPez2YbJ-XzwrRUUg8r2AQ9D9WANgF0BPO6dXYDw"
+        }
+      },
+      {
+        "why": "a record for another identifier",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:someone@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "a key principal, which needs no record",
+        "value": {
+          "identifier": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EqXjLLHREIcrgnluDUl3LDJsvV-ExEPVDDb49XVtPfAnNWT-k2_fLeKswBdTFt29GkbEv1mapGH5V3BePUavDg"
+        },
+        "identifier": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "read the moment it expires",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2027-10-14T21:00:00.000Z",
+        "record": null
+      },
+      {
+        "why": "issued more than 5 minutes ahead of the reader",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T20:54:59.999Z",
+        "record": null
+      },
+      {
+        "why": "lasting more than 366 days",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-16T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "6CHs_yNMNjpouhDIZDlbswWMurdaiPn5P_bv6EMWLTxVEPj9Dmgc8utQgGyjf1UG07bvHvEiZ8I2Q62TzCKjBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "revision 0",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 0,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "o2hEzmvkXOAoXtk43SBecoM2KzDQ5TpiI1INe05D3V84_e0v1DTUtaeHE9oeN-rnAZu_ujlhWcGvHLEf-gxdAA"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "an address that is not one",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "Sarah@Assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "FP65yEqwAJl1Kc6W-dQyjzpmyaShaqateZoOM5kj2oFFWmqAVM1HhUPZh67VNT6RQatIvXu1NeErZLneKJ8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "signed by a key that is not the issuer's",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "CXmvVg-6JcL2XVgVXBN9q5TyLVxpZnzh9f8Gtozi1g1V66QU2oYvmgoy6J1FEf43Y8wvSi6u0npPb2IcxCscDg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "a member changed after signing",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "mallory@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "lasting exactly 366 days",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-15T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "WiEszbbr-M0HVGnrfcVbcTJySJHPwGNYQRkRJXY1hKFjZKE6OfOlcYQrNFd9ZaVDmACyK2FsNbb5dA1oejWHDA"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-15T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "WiEszbbr-M0HVGnrfcVbcTJySJHPwGNYQRkRJXY1hKFjZKE6OfOlcYQrNFd9ZaVDmACyK2FsNbb5dA1oejWHDA"
+        }
+      },
+      {
+        "why": "issued exactly 5 minutes ahead of the reader",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T20:55:00.000Z",
+        "record": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+        }
+      },
+      {
+        "why": "the largest revision",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 9007199254740991,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "i8ztKQf5OR4xWDpYlkXsurSzNjIO9nIyt89-a7PvXq8XoJQAlhVI8xj4WP54bfQfWOANiGd4JHSr8r2M00CiAw"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 9007199254740991,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "i8ztKQf5OR4xWDpYlkXsurSzNjIO9nIyt89-a7PvXq8XoJQAlhVI8xj4WP54bfQfWOANiGd4JHSr8r2M00CiAw"
+        }
+      },
+      {
+        "why": "a member the issuer signed, which no reader knows: signed, so kept",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "note": "signed",
+          "signature": "x5zzS7X7L8SuAn59eCqaS4AmYsZn8SlfokeAG-G_RZCYSzO8-5uQP5ciNv9CUvXNspUu4R007ADftvB-pXyIBg"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "note": "signed",
+          "signature": "x5zzS7X7L8SuAn59eCqaS4AmYsZn8SlfokeAG-G_RZCYSzO8-5uQP5ciNv9CUvXNspUu4R007ADftvB-pXyIBg"
+        }
+      },
+      {
+        "why": "a member attached after signing, which no reader knows",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg",
+          "note": "unsigned"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "an issuer that is not an https origin",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "http://simon.example.com",
+          "signature": "vrI7mJczcj1eRhzbF6qVtYyB7Dg_smhI3_LQG1rUe7v0FjpcVuXKYj7edeH54gb9GZV4k0G2spKInIOPpGV8Dw"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      },
+      {
+        "why": "an issuer written as resolution would not write it",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://SIMON.example.com/",
+          "signature": "qKR-mnfY59OWugvn-C7vIAVYANBcv7vLbvF3nZZkBz3xXSgN28cg3iRTldlv5xV79WJ0JHP8vVkRU29T9s88Bw"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
+      }
+    ]
+  },
   "signatures": {
     "about": "Signature verification (sections 2.3 and 2.4), over the signingBytes of the message named. keyValidAt: the verdict with the key entries given. refused: signatures every verifier refuses with the author key, though [S]B - [k]A = R holds as points or holds after multiplying by the cofactor. mixedOrder: verdicts with a key of mixed order, which must agree across verifiers.",
     "message": "question with a for header",

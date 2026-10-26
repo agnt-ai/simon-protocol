@@ -217,7 +217,8 @@ export class Ctx {
         const n = published[name];
         if (Number.isSafeInteger(n) && (n as number) > 0) limits[name] = n as number;
       }
-      return { res, doc: { server: this.origin, keys, algorithms, limits } };
+      const discovery = value.discovery === true ? { discovery: true as const } : {};
+      return { res, doc: { server: this.origin, keys, algorithms, limits, ...discovery } };
     });
   }
 

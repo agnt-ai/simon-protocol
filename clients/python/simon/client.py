@@ -64,6 +64,7 @@ from .messages import (
     verify_recovery,
     verify_unpairing,
 )
+from .directory import is_listable_identifier, read_directory_record
 from .reading import claimed_principal, is_understood, pairing_standing, predecessors
 from .request import add_key_proof, sign_request
 from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
@@ -644,6 +645,102 @@ class Agent(Reader):
             raise _invalid("pairing", "The new key's pairing must be for this address, and count now.")
         self.principal, self.pairing, self.succession = principal, pairing, chain
 
+    def find_assistant(self, identifier: str, *, directories: Iterable[str] = ()) -> dict[str, Any] | None:
+        """The assistant the holder of ``identifier``, an email address or a phone number, chose (discovery
+        profile): asked of the identifier's own authority when its domain's TXT record names a server that
+        answers lookups (its server document says ``discovery``), whose answer is final, and otherwise of
+        ``directories``, the directory servers this agent trusts, in order, https origins only (an agent on a
+        local http server may name local ones). Answers ``{"address", "record", "authoritative"}``, or None
+        only when every server asked answered that it holds no record. A domain whose ``_simon`` records are
+        malformed or conflict raises ``no_server``, no directory asked; a directory that answers something
+        other than a record or 404, a record that fails its checks included, is passed over, and when no
+        other holds a record its failure is raised, retryable when it may pass: never "nobody"."""
+        if not is_listable_identifier(identifier):
+            raise _invalid("identifier", "An identifier is mailto: or tel:.")
+        local = self.origin.startswith("http:")
+        trusted = [_directory_arg(d, local) for d in directories]
+        authority = None
+        if identifier.startswith("mailto:"):
+            domain = domain_of(identifier[len("mailto:") :])
+            resolution = self._resolution(domain)
+            if resolution.outcome in ("invalid_record", "conflict"):
+                # The domain tried to speak for itself: it has no answer, and no directory speaks for it.
+                why = "conflict" if resolution.outcome == "conflict" else "are malformed"
+                details = {"domain": domain, "outcome": resolution.outcome}
+                raise SimonError("no_server", f"{domain}'s _simon records {why}: it has no answer.", None, False, details)
+            if resolution.outcome == "server" and resolution.via == "dns":
+                authority = resolution.server
+        # A server that does not implement the profile does not end the search: its domain has not spoken.
+        if authority is not None and self.server_document(authority).get("discovery") is not True:
+            authority = None
+        servers = [authority] if authority else trusted
+        failed: SimonError | None = None
+        for server in servers:
+            try:
+                response = self._signed(
+                    "GET",
+                    "/simon/lookup?identifier=" + quote(identifier, safe=""),
+                    origin=server,
+                    max_bytes=MAX_DOCUMENT_BYTES,
+                )
+                record = self._read_lookup(response, server, identifier, local)
+            except SimonError as e:
+                if e.status == 404:
+                    continue
+                # The authority's failure is final; a directory that misbehaves is passed over, its failure
+                # remembered, one that may pass before one that will not.
+                if authority is not None:
+                    raise
+                if failed is None or (e.retryable and not failed.retryable):
+                    failed = e
+                continue
+            return {"address": record["address"], "record": record, "authoritative": authority is not None}
+        if failed is not None:
+            raise failed
+        return None
+
+    def _read_lookup(self, response: Response, server: str, identifier: str, local: bool) -> dict[str, Any]:
+        """The record a lookup answered, from ``server`` alone, or ``bad_response``."""
+
+        def bad(why: str) -> SimonError:
+            details = {"url": response.url}
+            return SimonError("bad_response", f"{response.url} answered {response.status} with {why}.", response.status, False, details)
+
+        if len(response.body) > MAX_DOCUMENT_BYTES:
+            raise bad("more than a lookup answer may hold")
+        try:
+            answer = parse(response.body)
+        except SimonError:
+            raise bad("a body that is not JSON under the canonical rules") from None
+        value = answer.get("record") if isinstance(answer, dict) else None
+        for refresh in (False, True):
+            # A key the issuer added since its document was cached is read once more before giving up.
+            keys = self.server_document(server, refresh=refresh)["keys"]
+            record = read_directory_record(value, identifier, keys, self._now_ms(), allow_local=local)
+            # A record counts only from the server asked: no server answers in another's name.
+            if record is not None and record["issuer"] == server:
+                return record
+        raise bad(f"no record of {identifier} that {server} signed")
+
+    def list_in(self, directory: str, identifier: str, code: str | None = None) -> dict[str, Any]:
+        """Ask ``directory`` to list this agent as the assistant of ``identifier`` (discovery profile,
+        section 4): without a code, it sends one to the identifier; with the code its holder read, it lists
+        this agent and answers ``{"record"}``."""
+        body = {"identifier": identifier, **({} if code is None else {"code": code})}
+        return self._directory_call("POST", directory, body)
+
+    def unlist_from(self, directory: str, identifier: str) -> dict[str, Any]:
+        """Unlist this agent as the assistant of ``identifier`` in ``directory``; the answer is the same either way."""
+        return self._directory_call("DELETE", directory, {"identifier": identifier})
+
+    def _directory_call(self, method: str, directory: str, body: Mapping[str, Any]) -> dict[str, Any]:
+        self._address()
+        origin = _origin_arg("directory", directory)
+        response = self._signed(
+            method, "/simon/directory", canonical_bytes(body), {"content-type": "application/json"}, origin=origin
+        )
+        return parse(response.body)
+
     def compose(
         self,
         to: Iterable[str],
@@ -830,12 +927,14 @@ class Agent(Reader):
         *,
         agent: str | None | object = _OWN_ADDRESS,
         timeout: float | None = None,
+        origin: str | None = None,
+        max_bytes: int | None = None,
     ) -> Response:
-        """A signed request, and its answer when it is a success. A ``stale_request`` refusal teaches this
-        agent the server's clock, and the request is signed again, once."""
+        """A signed request, to this agent's server or ``origin``, and its answer when it is a success. A
+        ``stale_request`` refusal teaches this agent the server's clock, and the request is signed again, once."""
         if not path.startswith("/") or path.startswith("//"):
             raise _invalid("path", f"A path starts with a single /: {path!r}")
-        url = self.origin + path
+        url = (origin or self.origin) + path
         budget = self.timeout if timeout is None else timeout
         deadline = time.monotonic() + budget
 
@@ -849,13 +948,14 @@ class Agent(Reader):
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise SimonError("timeout", f"{method} {url}: no answer within {budget} s.", None, True, {"url": url, "timeout": budget})
-            return self._fetch(method, url, body, {**signature, **(headers or {})}, timeout=remaining)
+            return self._fetch(method, url, body, {**signature, **(headers or {})}, timeout=remaining, max_bytes=max_bytes)
 
         response = attempt()
         if response.status >= 300:
             error = _error(response)
             server_time = error.details.get("serverTime")
-            if error.code != "stale_request" or type(server_time) is not int:
+            # Only this agent's own server teaches it the time: another could set it to whatever suits it.
+            if error.code != "stale_request" or type(server_time) is not int or url != self.origin + path:
                 raise error
             self._skew = server_time - time.time()
             response = attempt()
@@ -933,6 +1033,14 @@ def _origin_arg(field: str, value: str) -> str:
     origin = server_origin(value, allow_local=True)
     if origin is None:
         raise _invalid(field, f"{field} is an origin such as https://simon.example.com, not {value!r}.")
+    return origin
+
+
+def _directory_arg(value: str, local: bool) -> str:
+    """A directory a reader trusts: an https origin; a local http one only for an agent on a local server."""
+    origin = server_origin(value, allow_local=local)
+    if origin is None or (not local and not origin.startswith("https:")):
+        raise _invalid("directories", f"A directory is an https origin such as https://simon.example.com, not {value!r}.")
     return origin
 
 

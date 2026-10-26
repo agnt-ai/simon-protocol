@@ -26,6 +26,7 @@ from simon import cli
 from simon import keys as keys_module
 from simon.canonical import canonical_bytes, parse, signing_bytes
 from simon.client import Agent, NotVerified, Reader, Trust
+from simon.directory import sign_directory_record
 from simon.envelope import claims_bytes, judge_claims
 from simon.errors import SimonError
 from simon.keys import SigningKey
@@ -78,6 +79,10 @@ class FakeServer:
         self.deliveries: dict[str, dict] = {}  # id -> the sent report
         self.claims: list[dict] = []  # claims "carried" with every message sent here
         self.hints: str | None = None  # the last send's simon-hints header, as it arrived
+        self.directory: dict[str, dict] = {}  # identifier -> its directory record
+        self.discovery = True  # whether it answers lookups (its server document says discovery)
+        self.lookup_body: bytes | None = None  # answered with 200 to every lookup, when set
+        self.lookups = 0  # lookups asked
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), self.handler())
         self.origin = f"http://127.0.0.1:{self.httpd.server_address[1]}"
         self.resolve = lambda domain: Resolution("server", self.origin, "dns")
@@ -127,6 +132,40 @@ class FakeServer:
         return Handler
 
     def route(self, method: str, target: str, body: bytes, headers) -> tuple[int, object]:
+        if self.discovery and (target.startswith("/simon/lookup") or target == "/simon/directory"):
+            # The discovery profile, trusting the signer's simon-agent header: a fake, not a server.
+            asker = headers.get("simon-agent")
+            if not asker:
+                raise SimonError("signature_required", "Sign the request.", 401)
+            if method == "GET":
+                self.lookups += 1
+                if self.lookup_body is not None:
+                    return 200, self.lookup_body
+                identifier = unquote(target.split("identifier=", 1)[1])
+                if identifier not in self.directory:
+                    raise SimonError("not_found", "No record for this identifier.", 404)
+                return 200, {"record": self.directory[identifier]}
+            request = json.loads(body)
+            identifier = request["identifier"]
+            if method == "DELETE":
+                if self.directory.get(identifier, {}).get("address") == asker:
+                    del self.directory[identifier]
+                return 200, {"status": "unlisted"}
+            if "code" not in request:
+                return 202, {"status": "code_sent"}
+            if request["code"] != CODE:
+                raise SimonError("bad_proof", "That is not the code sent.", 401)
+            issued = int(self.now() * 1000)
+            record = {
+                "identifier": identifier,
+                "address": asker,
+                "revision": self.directory.get(identifier, {}).get("revision", 0) + 1,
+                "issued": timestamp(issued),
+                "expires": timestamp(issued + 365 * 86_400_000),
+                "issuer": self.origin,
+            }
+            self.directory[identifier] = sign_directory_record(record, self.key)
+            return 200, {"record": self.directory[identifier]}
         if (method, target) == ("GET", "/simon/server"):
             limits = {
                 "messageBytes": 262144,
@@ -135,6 +174,7 @@ class FakeServer:
                 "partBytes": 26214400,
             }
             doc = {"server": self.origin, "keys": [entry(self.key.token)], "limits": limits}
+            doc = {**doc, "discovery": True} if self.discovery else doc
             return 200, {**doc, "algorithms": ["ed25519", "ml-dsa-65"]}
         if method == "GET" and target.startswith("/simon/agents/"):
             address = unquote(target.removeprefix("/simon/agents/"))
@@ -327,7 +367,7 @@ class ClientTest(unittest.TestCase):
         self.addCleanup(self.server.close)
 
     def agent(self, **options) -> Agent:
-        return Agent(self.server.origin, SigningKey.generate(), resolver=self.server.resolve, **options)
+        return Agent(self.server.origin, SigningKey.generate(), **{"resolver": self.server.resolve, **options})
 
     def test_register_send_and_read(self):
         ada, bob = self.agent(), self.agent()
@@ -487,6 +527,75 @@ class ClientTest(unittest.TestCase):
         self.assertTrue(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
         held["extra"] = {"unpairing": sign_unpairing(SigningKey.generate(), address)}
         self.assertFalse(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
+
+    def test_finds_the_assistant_an_identifier_chose(self):
+        """From the identifier's own domain, whose answer is final, or for a phone number from a directory."""
+        bob = self.agent()
+        bob.register()
+        self.assertEqual(bob.list_in(self.server.origin, "mailto:sarah@agents.test"), {"status": "code_sent"})
+        record = bob.list_in(self.server.origin, "mailto:sarah@agents.test", CODE)["record"]
+        ada = self.agent()
+        ada.register()
+        found = ada.find_assistant("mailto:sarah@agents.test")
+        self.assertEqual(found, {"address": bob.address, "record": record, "authoritative": True})
+        self.assertIsNone(ada.find_assistant("mailto:nobody@agents.test", directories=[self.server.origin]))
+        bob.list_in(self.server.origin, "tel:+14155550100", CODE)
+        self.assertIsNone(ada.find_assistant("tel:+14155550100"), "no directory trusted")
+        by_directory = ada.find_assistant("tel:+14155550100", directories=[self.server.origin])
+        self.assertEqual((by_directory["address"], by_directory["authoritative"]), (bob.address, False))
+        bob.unlist_from(self.server.origin, "tel:+14155550100")
+        self.assertIsNone(ada.find_assistant("tel:+14155550100", directories=[self.server.origin]))
+
+    def test_passes_over_a_directory_without_a_readable_record(self):
+        """A 200 that is empty, not canonical JSON, too large, or a record another server signed: the next
+        directory is asked, and alone it is a failure, never "nobody"."""
+        bob, ada = self.agent(), self.agent()
+        bob.register()
+        ada.register()
+        record = bob.list_in(self.server.origin, "tel:+14155550100", CODE)["record"]
+        bad = FakeServer()
+        self.addCleanup(bad.close)
+        for body in (b"", b'{"record":1.0}', b'{"record":"' + b"x" * 200_000 + b'"}', json.dumps({"record": record}).encode()):
+            with self.subTest(body=body[:20]):
+                bad.lookup_body = body
+                found = ada.find_assistant("tel:+14155550100", directories=[bad.origin, self.server.origin])
+                self.assertEqual(found["address"], bob.address)
+                with self.assertRaises(SimonError) as caught:
+                    ada.find_assistant("tel:+14155550100", directories=[bad.origin])
+                self.assertEqual((caught.exception.code, caught.exception.retryable), ("bad_response", False))
+
+    def test_asks_only_https_directories(self):
+        ada = Agent("https://simon.example.com", SigningKey.generate())
+        with self.assertRaises(SimonError) as caught:
+            ada.find_assistant("tel:+14155550100", directories=["http://dir.example"])
+        self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "directories"}))
+
+    def test_a_domain_with_malformed_or_conflicting_records_has_no_answer(self):
+        """No directory is asked about an address whose domain tried to speak for itself."""
+        bob = self.agent()
+        bob.register()
+        bob.list_in(self.server.origin, "mailto:sarah@agents.test", CODE)
+        for outcome in ("conflict", "invalid_record"):
+            with self.subTest(outcome=outcome):
+                ada = self.agent(resolver=lambda domain, o=outcome: Resolution(o))
+                ada.register()
+                with self.assertRaises(SimonError) as caught:
+                    ada.find_assistant("mailto:sarah@agents.test", directories=[self.server.origin])
+                self.assertEqual((caught.exception.code, caught.exception.details["outcome"]), ("no_server", outcome))
+        self.assertEqual(self.server.lookups, 0)
+
+    def test_asks_the_directories_when_a_domain_server_answers_no_lookups(self):
+        plain = FakeServer()
+        self.addCleanup(plain.close)
+        plain.discovery = False
+        bob = self.agent()
+        bob.register()
+        bob.list_in(self.server.origin, "mailto:sarah@plain.test", CODE)
+        resolve = lambda domain: Resolution("server", plain.origin if domain == "plain.test" else self.server.origin, "dns")
+        ada = self.agent(resolver=resolve)
+        ada.register()
+        found = ada.find_assistant("mailto:sarah@plain.test", directories=[self.server.origin])
+        self.assertEqual((found["address"], found["authoritative"]), (bob.address, False))
 
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends

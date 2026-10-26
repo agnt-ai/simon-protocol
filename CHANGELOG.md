@@ -4,6 +4,38 @@
 
 Still SIMON 1, wire `v:1`; no message changes form.
 
+**Discovery profile.** `spec/profiles/discovery.md`: an agent finds the assistant the holder of an email
+address or phone number chose. An identifier's own domain answers for its addresses when its `_simon` TXT
+record names a server; directories the reader trusts answer for everything else. A directory lists an
+identifier only once the assistant asks (signed) and the holder sends back a code; records are signed
+(`SIMON-DIRECTORY`), revisioned and last at most 366 days; lookups are signed by the asker, and every
+unlisted identifier answers the same `404`. The reference server answers `GET /simon/lookup` and keeps
+`/simon/directory` for its own domains, and for any domain with `SIMON_DIRECTORY=1`. `findAssistant`,
+`listIn` and `unlistFrom` (Python `find_assistant`, `list_in`, `unlist_from`); `find`, `list-in` and
+`unlist-from` in both CLIs; `find_assistant`, `list_in_directory` and `unlist_from_directory` in MCP;
+`SIMON_DIRECTORIES` names the directories a client trusts, https origins only.
+
+- A record is signed over every member but `signature`, those the profile does not define included, as a
+  message is; a reader keeps a member its issuer signed and refuses a record with one attached after
+  (`directory-signed` in PROTOCOL.md Appendix A; two new `directoryRecords` vectors).
+- A server that answers lookups says `"discovery": true` in its server document (registry). A domain's server
+  is its addresses' authority only when it does; otherwise readers ask their directories. A domain whose
+  `_simon` records are malformed or conflict has no answer, and no directory is asked. Conformance's
+  discovery checks run for a server whose document says `discovery`.
+- A directory that answers 200 without a record that verifies is passed over for the next one, and is a
+  failure, never "nobody", when none holds a record. Both clients read lookup answers under the canonical
+  rules and at most 131072 bytes.
+- Asking for an unlisting code answers, counts and works alike whether or not the identifier is listed.
+  An unlisting code is a 128-bit secret: guesses count per client and never end it, an outstanding one is
+  never replaced, and a new one is minted at most five times an hour per identifier (`unlistCode`). Codes
+  SHOULD expire within minutes; an unlisting code SHOULD be at least 96 bits. The server document says
+  `discovery` only when the server can send codes.
+- The reference server keeps the higher revision when two listings complete together, and bounds lookups
+  per registrable domain of the asking agents and per client (`directoryLookupDomain`,
+  `directoryLookupClient`).
+- A `+` in an identifier is sent as `%2B`. Normative wording loosened where it was host policy: a default
+  directory list is a MAY, and what an agent does when it finds no record is a note.
+
 **Key words for every rule.** PROTOCOL.md, CLIENT.md and the profiles state each requirement with a BCP 14
 key word (MUST, SHOULD, MAY); the convention that an indicative sentence means MUST is gone. Definitions,
 formats and grammars stay normative as definitions. Appendix B of PROTOCOL.md maps each rule to the vector

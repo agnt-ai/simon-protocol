@@ -32,6 +32,8 @@ export interface ServerDocument {
   /** Every signature algorithm the server verifies, so an author can tell whether a recipient can verify its key. */
   algorithms: string[];
   limits: Limits;
+  /** Present, and true, when the server answers lookups (discovery profile, section 2). */
+  discovery?: true;
 }
 
 /** The algorithms version 1 defines (spec section 2.3). */
@@ -101,7 +103,8 @@ function readObject(body: Uint8Array): { [key: string]: Json } | null {
 
 /**
  * A fetched server document read at `now`, or null unless it is readable, its `server` is the origin it was
- * fetched from, and it has its `algorithms` and four `limits`.
+ * fetched from, and it has its `algorithms` and four `limits`. `discovery` is kept when it is `true`: the
+ * server answers lookups (discovery profile, section 2).
  */
 export function readServerDocument(body: Uint8Array, origin: string, now: Date): ServerDocument | null {
   const doc = readObject(body);
@@ -109,7 +112,9 @@ export function readServerDocument(body: Uint8Array, origin: string, now: Date):
   const keys = readKeys(doc.keys, now);
   const algorithms = readAlgorithms(doc.algorithms);
   const limits = readLimits(doc.limits);
-  return keys && algorithms && limits ? { server: origin, keys, algorithms, limits } : null;
+  if (!keys || !algorithms || !limits) return null;
+  // Members a reader does not know are ignored; `discovery` is read only when it is exactly true.
+  return { server: origin, keys, algorithms, limits, ...(doc.discovery === true ? { discovery: true as const } : {}) };
 }
 
 /**

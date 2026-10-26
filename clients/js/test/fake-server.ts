@@ -31,12 +31,14 @@ import {
   sha256Hex,
   sign,
   signAgentDocument,
+  signDirectoryRecord,
   splitUrl,
   timestamp,
   verify,
   verifyPairing,
   verifyRecovery,
   type Claim,
+  type DirectoryRecord,
   type AnyMessage,
   type KeyEntry,
   type Message,
@@ -78,6 +80,8 @@ export interface FakeOptions {
   now?: () => Date;
   /** The claims this server keeps with a message it delivers, as a receiving server judged them. */
   claims?: (m: Message) => Claim[];
+  /** Whether it answers lookups and keeps a directory (discovery profile); default true. */
+  discovery?: boolean;
 }
 
 export function fakeServer(opts: FakeOptions = {}) {
@@ -97,6 +101,7 @@ export function fakeServer(opts: FakeOptions = {}) {
   const signals: { to: string; cursor: number; type: string; from: string; about: string; at: string }[] = [];
   let sequence = 0;
   const webhooks = new Map<string, { address: string; verified: boolean }>();
+  const directory = new Map<string, DirectoryRecord>();
   const account = (agent: Held) => ({
     address: agent.address,
     keys: agent.keys,
@@ -243,7 +248,40 @@ export function fakeServer(opts: FakeOptions = {}) {
     const [, base, call, arg] = url.pathname.split('/');
     if (base !== 'simon') throw refuse(404, 'not_found', 'No such call.');
     const name = `${req.method} ${call}`;
-    if (name === 'GET server') return { json: serverDocument(origin, serverKeys) };
+    const discovery = opts.discovery ?? true;
+    if (name === 'GET server')
+      return { json: { ...serverDocument(origin, serverKeys), ...(discovery ? { discovery } : {}) } };
+    if (discovery && (name === 'GET lookup' || call === 'directory')) {
+      // The discovery profile, trusting the signer's simon-agent header: a fake, not a server.
+      const asker = req.headers.get('simon-agent');
+      if (!asker) throw refuse(401, 'signature_required', 'Sign the request.');
+      if (name === 'GET lookup') {
+        const record = directory.get(url.searchParams.get('identifier') ?? '');
+        if (!record) throw refuse(404, 'not_found', 'No record for this identifier.');
+        return { json: { record } };
+      }
+      const { identifier, code } = JSON.parse(Buffer.from(raw).toString()) as Record<string, string>;
+      if (req.method === 'DELETE') {
+        if (directory.get(identifier)?.address === asker) directory.delete(identifier);
+        return { json: { status: 'unlisted' } };
+      }
+      if (code === undefined) return { status: 202, json: { status: 'code_sent' } };
+      if (code !== CODE) throw refuse(401, 'bad_proof', 'That is not the code sent.');
+      const issued = now();
+      const record = signDirectoryRecord(
+        {
+          identifier,
+          address: asker,
+          revision: (directory.get(identifier)?.revision ?? 0) + 1,
+          issued: timestamp(issued),
+          expires: timestamp(issued.getTime() + 365 * 86_400_000),
+          issuer: origin,
+        },
+        serverKey.privateKey,
+      );
+      directory.set(identifier, record);
+      return { json: { record } };
+    }
     if (name === 'GET agents') {
       const agent = agents.get(decodeURIComponent(arg));
       if (!agent) throw refuse(404, 'not_found', 'No such agent.');

@@ -217,7 +217,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 <!-- checks:start -->
 
-238 checks: 209 must, 29 should.
+240 checks: 211 must, 29 should.
 
 ### Documents (PROTOCOL 4)
 
@@ -514,6 +514,13 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `public.feed-empty` | must | publishing profile, section 3 | byte-identical 200 {"messages":[],"cursor":null,"more":false} for a feed name nobody used and for an address nobody holds; 400 invalid for limit=0 and limit=201 |
 | `public.related-only-listed` | must | publishing profile, section 4; PROTOCOL 5.4 | once a comment without listed and a plain reply from the simulator to a post are in its author's inbox, GET /simon/messages/<id>/related holds neither; a server that lists no relations (404) skips |
 | `public.related` | should | publishing profile, section 4 | once a comment marked listed: yes from the simulator to a post is in its author's inbox, GET /simon/messages/<id>/related holds it; once the simulator retracts it (rel: retract), the listing no longer does |
+
+### Lookups (discovery profile; must for a server that answers them)
+
+| Check | Level | Section | Expected |
+| --- | --- | --- | --- |
+| `discovery.signed` | must | discovery profile, section 2 | 401 for an unsigned GET /simon/lookup?identifier=<identifier> |
+| `discovery.not-found` | must | discovery profile, section 2 | byte-identical 404 not_found, signed, for an email address on the server's own domain nobody listed and for a phone number; 400 invalid with details.field "identifier" for a value that is not one |
 
 ### Errors (PROTOCOL 9, CLIENT errors)
 

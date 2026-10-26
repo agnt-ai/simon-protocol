@@ -15,11 +15,12 @@ import {
   signUnpairing,
   timestamp,
   type AnyMessage,
+  type DirectoryRecord,
   type Message,
   type ResolverIO,
 } from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
-import { fakeServer } from './fake-server.ts';
+import { CODE, fakeServer } from './fake-server.ts';
 
 const resolvesTo = (server: string, others: Record<string, string> = {}): ResolverIO => ({
   txt: async name => [[`v=simon1; server=${others[name.slice('_simon.'.length)] ?? server}`]],
@@ -158,6 +159,123 @@ describe('verifyAuthor', () => {
     assert.equal(await ended(), true);
     held.unpairing = signUnpairing(generateKey().privateKey, address, oldId);
     assert.equal(await ended(), undefined);
+  });
+
+  it('finds the assistant an identifier chose: from its own domain, whose answer is final, or from a directory', async () => {
+    const { fake, ada, opts } = await world();
+    const bob = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
+    await bob.register();
+    assert.deepEqual(await bob.listIn(fake.origin, 'mailto:sarah@agents.test'), { status: 'code_sent' });
+    const { record } = (await bob.listIn(fake.origin, 'mailto:sarah@agents.test', CODE)) as { record: DirectoryRecord };
+    const found = await ada.findAssistant('mailto:sarah@agents.test', opts);
+    assert.deepEqual(found, { address: bob.address, record, authoritative: true });
+    assert.equal(await ada.findAssistant('mailto:nobody@agents.test', { ...opts, directories: [fake.origin] }), null);
+
+    // A phone number has no domain to speak for it: only a directory this agent trusts can answer.
+    await bob.listIn(fake.origin, 'tel:+14155550100', CODE);
+    assert.equal(await ada.findAssistant('tel:+14155550100', opts), null, 'no directory trusted');
+    const byDirectory = await ada.findAssistant('tel:+14155550100', { ...opts, directories: [fake.origin] });
+    assert.deepEqual([byDirectory?.address, byDirectory?.authoritative], [bob.address, false]);
+    await bob.unlistFrom(fake.origin, 'tel:+14155550100');
+    assert.equal(await ada.findAssistant('tel:+14155550100', { ...opts, directories: [fake.origin] }), null);
+  });
+
+  it("never asks a directory about an address whose own domain answers, even when that answer is 'nobody'", async () => {
+    const { fake, opts } = await world();
+    const dir = fakeServer({ origin: 'https://dir.test' });
+    const fetch: typeof fake.fetch = (url, init) =>
+      String(url).startsWith(dir.origin) ? dir.fetch(url, init) : fake.fetch(url, init);
+    const agent = async () => {
+      const a = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch });
+      await a.register();
+      return a;
+    };
+    const [ada, bob] = [await agent(), await agent()];
+    await bob.listIn(dir.origin, 'mailto:sarah@agents.test', CODE);
+    const found = await ada.findAssistant('mailto:sarah@agents.test', { ...opts, fetch, directories: [dir.origin] });
+    assert.equal(found, null, "agents.test's DNS names a server, whose 404 is final");
+  });
+
+  /** An agent of `fake` asking with `fetch`, and bob, listed in `fake` for a phone number. */
+  async function directoryWorld(wrap: (fetch: Fetch) => Fetch = f => f) {
+    const { fake, opts } = await world();
+    const via = wrap(fake.fetch);
+    const agent = async () => {
+      const a = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: via });
+      await a.register();
+      return a;
+    };
+    const [ada, bob] = [await agent(), await agent()];
+    await bob.listIn(fake.origin, 'tel:+14155550100', CODE);
+    return { fake, ada, bob, opts: { ...opts, fetch: via } };
+  }
+
+  it('passes over a directory that answers 200 without a readable record, and asks the next', async () => {
+    const forged = fakeServer({ origin: 'https://forged.test' });
+    const answers: Record<string, () => string> = {
+      'https://empty.test': () => '',
+      'https://loose.test': () => '{"record":1.0}',
+      'https://huge.test': () => `{"record":"${'x'.repeat(200_000)}"}`,
+      'https://forged.test': () => JSON.stringify({ record: listed }),
+    };
+    let listed: unknown;
+    const { fake, ada, bob, opts } = await directoryWorld(fetch => async (url, init) => {
+      const u = new URL(url);
+      if (u.pathname === '/simon/lookup' && u.origin in answers)
+        return new Response(answers[u.origin](), { status: 200 });
+      return u.origin === forged.origin ? forged.fetch(url, init) : fetch(url, init);
+    });
+    listed = (await ada.findAssistant('tel:+14155550100', { ...opts, directories: [fake.origin] }))!.record;
+    for (const bad of Object.keys(answers)) {
+      const found = await ada.findAssistant('tel:+14155550100', { ...opts, directories: [bad, fake.origin] });
+      assert.equal(found?.address, bob.address, `after ${bad}`);
+      // Alone, it is a failure, never "nobody".
+      const e = await ada.findAssistant('tel:+14155550100', { ...opts, directories: [bad] }).catch(e => e);
+      assert.deepEqual([e instanceof SimonError, e.code, e.retryable], [true, 'bad_response', false], bad);
+    }
+  });
+
+  it('asks only https directories', async () => {
+    const { ada, opts } = await directoryWorld();
+    const e = await ada.findAssistant('tel:+14155550100', { ...opts, directories: ['http://dir.test'] }).catch(e => e);
+    assert.deepEqual([e.code, e.details], ['invalid', { field: 'directories' }]);
+  });
+
+  it('asks no directory about an address whose domain has malformed or conflicting _simon records', async () => {
+    const { fake, ada, bob, opts } = await directoryWorld();
+    await bob.listIn(fake.origin, 'mailto:sarah@agents.test', CODE);
+    let asked = 0;
+    const fetch: Fetch = (url, init) => {
+      if (new URL(url).pathname === '/simon/lookup') asked++;
+      return fake.fetch(url, init);
+    };
+    for (const records of [
+      [['v=simon1; server=https://a.test'], ['v=simon1; server=https://b.test']],
+      [['v=simon1; garbage']],
+    ]) {
+      const resolver: ResolverIO = { txt: async () => records, get: async () => null };
+      const e = await ada
+        .findAssistant('mailto:sarah@agents.test', { ...opts, fetch, resolver, directories: [fake.origin] })
+        .catch(e => e);
+      assert.deepEqual([e instanceof SimonError, e.code], [true, 'no_server'], JSON.stringify(records));
+    }
+    assert.equal(asked, 0, 'no directory asked');
+  });
+
+  it("asks the directories when an address's own server does not answer lookups", async () => {
+    const plain = fakeServer({ origin: 'https://plain.test', discovery: false });
+    const w = await directoryWorld(
+      fetch => (url, init) => (new URL(url).origin === plain.origin ? plain.fetch(url, init) : fetch(url, init)),
+    );
+    const fake = w.fake;
+    await w.bob.listIn(fake.origin, 'mailto:sarah@plain.test', CODE);
+    const resolver = resolvesTo(fake.origin, { 'plain.test': plain.origin });
+    const found = await w.ada.findAssistant('mailto:sarah@plain.test', {
+      ...w.opts,
+      resolver,
+      directories: [fake.origin],
+    });
+    assert.deepEqual([found?.address, found?.authoritative], [w.bob.address, false]);
   });
 
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {

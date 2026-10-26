@@ -13,13 +13,16 @@ import type { Changes } from './sync.ts';
  * What this server sends an address's mailbox (CLIENT.md register and "Recommended host practice"): the
  * code that binds the address to a key; the news of a recovery waiting until `completesAt`, with the code
  * that cancels it; in place of a code asked for while one waits, the news that it is pending, with another
- * code that cancels it; and the news that a key of the agent cancelled one.
+ * code that cancels it; the news that a key of the agent cancelled one; and the code that lists `assistant` as
+ * the assistant of the address, or that unlists it (discovery profile, section 4).
  */
 export type MailboxNote =
   | { type: 'code'; code: string }
   | { type: 'recovery'; key: string; completesAt: string; cancelCode: string }
   | { type: 'recoveryPending'; key: string; completesAt: string; cancelCode: string }
-  | { type: 'recoveryCancelled' };
+  | { type: 'recoveryCancelled' }
+  | { type: 'listing'; assistant: string; code: string }
+  | { type: 'unlisting'; code: string };
 
 /** Sends a note to an address, by whatever channel reaches its mailbox. */
 export type MailboxSender = (address: string, note: MailboxNote) => Promise<void>;

@@ -143,6 +143,19 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--succession", help="the chain from the signing key to the current principal, when it moved on")
     p.add_argument("--server")
     p.set_defaults(run=lambda args: _proof_agent(args).unpair(args.address, args.unpairing, args.succession))
+    p = commands.add_parser("find", help="the assistant an email address or phone number chose")
+    p.add_argument("--identifier", required=True, help="mailto:<email> or tel:<+E.164>")
+    p.add_argument("--directory", action="append", default=[], help="a directory you trust; else SIMON_DIRECTORIES")
+    p.set_defaults(run=_find)
+    p = commands.add_parser("list-in", help="list yourself in a directory as an identifier's assistant, when asked")
+    p.add_argument("--directory", required=True)
+    p.add_argument("--identifier", required=True)
+    p.add_argument("--code", help="the code the directory sent to the identifier")
+    p.set_defaults(run=lambda args: _agent(args).list_in(args.directory, args.identifier, args.code))
+    p = commands.add_parser("unlist-from", help="unlist yourself as an identifier's assistant in a directory")
+    p.add_argument("--directory", required=True)
+    p.add_argument("--identifier", required=True)
+    p.set_defaults(run=lambda args: _agent(args).unlist_from(args.directory, args.identifier))
     p = commands.add_parser("renew-pairing", help="carry a renewed pairing from now on; the server needs no call")
     p.add_argument("--pairing", required=True, help="<until> <signature>, the principal's signature over a later until")
     p.set_defaults(run=_renew_pairing)
@@ -266,6 +279,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(run=_pair)
     return parser
+
+
+def _find(args: argparse.Namespace) -> dict[str, Any] | None:
+    trusted = [d.strip() for d in os.environ.get("SIMON_DIRECTORIES", "").split(",") if d.strip()]
+    return _agent(args).find_assistant(args.identifier, directories=args.directory or trusted)
 
 
 def _renew_pairing(args: argparse.Namespace) -> dict[str, Any]:

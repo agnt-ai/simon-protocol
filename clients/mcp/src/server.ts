@@ -111,6 +111,10 @@ if (import.meta.main) {
   const ctx: Context = {
     home: defaultHome(),
     server: process.env.SIMON_SERVER,
+    directories: (process.env.SIMON_DIRECTORIES ?? '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean),
     timeoutMs: process.env.SIMON_TIMEOUT_MS ? Number(process.env.SIMON_TIMEOUT_MS) : undefined,
   };
   readline.createInterface({ input: process.stdin }).on('line', async line => {

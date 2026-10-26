@@ -49,7 +49,8 @@ def read_server_document(body: bytes, origin: str, now_ms: int) -> dict[str, Any
     """A fetched server document read at ``now_ms``, as ``{"server", "keys", "algorithms", "limits"}``, or
     None unless it is
     readable, its ``server`` names the origin it was fetched from, it lists its ``algorithms``, and it has
-    its four limits. Limits a reader does not know are ignored."""
+    its four limits. Limits a reader does not know are ignored. ``discovery`` is kept when it is ``true``:
+    the server answers lookups (discovery profile, section 2)."""
     doc = _read_object(body)
     if doc is None or server_origin(doc.get("server"), allow_local=True) != origin:
         return None
@@ -57,7 +58,8 @@ def read_server_document(body: bytes, origin: str, now_ms: int) -> dict[str, Any
     algorithms = _read_algorithms(doc.get("algorithms"))
     if keys is None or algorithms is None or limits is None:
         return None
-    return {"server": origin, "keys": keys, "algorithms": algorithms, "limits": limits}
+    read = {"server": origin, "keys": keys, "algorithms": algorithms, "limits": limits}
+    return {**read, "discovery": True} if doc.get("discovery") is True else read
 
 
 def read_agent_document(
