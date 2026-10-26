@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 (unreleased)
+## 0.3.0 (2026-10-26)
 
 Still SIMON 1, wire `v:1`: no message changes form, and every 0.2.0 message and vector reads the same. The
 publishing profile's HTTP answers change, so this release is breaking for readers of published messages.
