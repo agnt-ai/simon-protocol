@@ -7,14 +7,16 @@ const S = 'discovery profile, section 2';
 const target = (identifier: string) => `/simon/lookup?identifier=${encodeURIComponent(identifier)}`;
 
 /**
- * An unsigned lookup, which a server that answers lookups refuses with 401. A plain 404 means it answers none:
- * the profile is optional, so its checks are then skipped.
+ * The profile is optional: a server that answers lookups says so with `discovery` in its server document, and
+ * its checks are skipped for one that does not.
  */
-async function unsignedLookup(t: T, ctx: Ctx) {
-  const res = await t.http({ method: 'GET', origin: ctx.origin, target: target(`mailto:${ctx.runId}@example.org`) });
-  if (res.status === 404) t.skip('the server answers no lookups (the discovery profile is optional)');
-  return res;
+async function answersLookups(t: T, ctx: Ctx) {
+  const { doc } = await ctx.serverDoc();
+  if (!doc.discovery) t.skip('the server document does not say discovery (the discovery profile is optional)');
 }
+
+const unsignedLookup = (t: T, ctx: Ctx) =>
+  t.http({ method: 'GET', origin: ctx.origin, target: target(`mailto:${ctx.runId}@example.org`) });
 
 def(
   {
@@ -25,6 +27,7 @@ def(
     expected: '401 for an unsigned GET /simon/lookup?identifier=<identifier>',
   },
   async (t: T, ctx: Ctx) => {
+    await answersLookups(t, ctx);
     t.status(await unsignedLookup(t, ctx), 401);
   },
 );
@@ -39,7 +42,7 @@ def(
       'byte-identical 404 not_found, signed, for an email address on the server\'s own domain nobody listed and for a phone number; 400 invalid with details.field "identifier" for a value that is not one',
   },
   async (t: T, ctx: Ctx) => {
-    await unsignedLookup(t, ctx);
+    await answersLookups(t, ctx);
     const a = await ctx.agent('a');
     const mail = await a.call(
       t,

@@ -22,6 +22,7 @@ describe('discovery (discovery profile)', async () => {
     target: string,
     signer: TestAgent | null,
     body?: object,
+    ip = '192.0.2.7',
   ): Promise<{ status: number; json: any; bytes: Buffer }> {
     const url = new URL(at.origin + target);
     const bytes = body === undefined ? Buffer.alloc(0) : Buffer.from(JSON.stringify(body));
@@ -29,7 +30,7 @@ describe('discovery (discovery profile)', async () => {
       ? signRequest(signer.key, { method, url: url.href, body: bytes, now: fed.clock.t, agent: signer.address })
       : {};
     if (body !== undefined) headers['content-type'] = 'application/json';
-    const reply: Reply = await at.server.handle(toRequest(method, url, headers, bytes, '192.0.2.7'));
+    const reply: Reply = await at.server.handle(toRequest(method, url, headers, bytes, ip));
     const out = replyBody(reply);
     return { status: reply.status, json: out.length ? JSON.parse(out.toString()) : null, bytes: out };
   }
@@ -112,6 +113,108 @@ describe('discovery (discovery profile)', async () => {
     assert.deepEqual([unlisted.status, unlisted.json], [202, { status: 'code_sent' }], 'answered alike');
     await fed.work();
     assert.equal(dir.mail.length, sent, 'but nothing sent for an identifier with no record');
+  });
+
+  /** An unsigned request for an unlisting code, from `ip`. */
+  const askUnlist = (at: TestServer, identifier: string, ip: string) =>
+    call(at, 'DELETE', '/simon/directory', null, { identifier }, ip);
+  const unlistingCodes = (at: TestServer, identifier: string) =>
+    at.mail.filter(n => n.type === 'unlisting' && n.address === identifier.slice(7));
+
+  it('answers a request for an unlisting code alike, and counts it alike, whether or not the identifier is listed', async () => {
+    // The default bounds on codes: 5 an hour per identifier, 20 per client.
+    const rates = { code: { limit: 5, seconds: 3600 }, codeClient: { limit: 20, seconds: 3600 } };
+    const at = await fed.server('quiet', { config: { directory: true, rates } });
+    await list(at, bob, 'mailto:listed@webmail.example');
+    const probe = async (identifier: string, ip: string) => {
+      const answers = [];
+      for (let i = 0; i < 22; i++) answers.push(await askUnlist(at, identifier, ip));
+      return answers.map(a => `${a.status} ${a.bytes.toString()}`);
+    };
+    const listed = await probe('mailto:listed@webmail.example', '198.51.100.1');
+    const unlisted = await probe('mailto:unlisted@webmail.example', '198.51.100.2');
+    assert.deepEqual(listed, unlisted, 'the same answers, the same bytes, the same limit');
+    assert.equal(listed.filter(a => a.startsWith('202')).length, 20, 'the per-client bound');
+    await fed.work();
+    assert.equal(unlistingCodes(at, 'mailto:listed@webmail.example').length, 1, 'one code outstanding at a time');
+    assert.equal(unlistingCodes(at, 'mailto:unlisted@webmail.example').length, 0);
+  });
+
+  it('never lets anyone else spoil, outnumber or lock the code that lets a holder leave', async () => {
+    const rates = { code: { limit: 5, seconds: 3600 }, codeClient: { limit: 20, seconds: 3600 } };
+    const at = await fed.server('leave', { config: { directory: true, rates } });
+    const identifier = 'mailto:kim@webmail.example';
+    await list(at, bob, identifier);
+    // Listing requests from other agents spend the identifier's listing bound, not its way out.
+    for (let i = 0; i < 6; i++) await call(at, 'POST', '/simon/directory', cat, { identifier }, `203.0.113.${i + 1}`);
+    assert.equal((await askUnlist(at, identifier, '198.51.100.9')).status, 202);
+    await fed.work();
+    const [note] = unlistingCodes(at, identifier);
+    const code = note?.type === 'unlisting' ? note.code : '';
+    // Another request, and wrong guesses from another client, leave the holder's code working.
+    assert.equal((await askUnlist(at, identifier, '203.0.113.50')).status, 202);
+    for (let i = 0; i < 6; i++) {
+      const guess = await call(
+        at,
+        'DELETE',
+        '/simon/directory',
+        null,
+        { identifier, code: '00000000' },
+        '203.0.113.50',
+      );
+      assert.equal(guess.status, 401, 'a wrong code');
+    }
+    await fed.work();
+    assert.equal(unlistingCodes(at, identifier).length, 1, 'no second code replaced the first');
+    const done = await call(at, 'DELETE', '/simon/directory', null, { identifier, code }, '198.51.100.9');
+    assert.deepEqual([done.status, done.json], [200, { status: 'unlisted' }]);
+    assert.equal((await lookup(at, identifier)).status, 404);
+  });
+
+  it('keeps the higher revision when two listings complete together', async () => {
+    let release: () => void = () => {};
+    let first = true;
+    let held = 0;
+    const at = await fed.server('race', {
+      config: { directory: true },
+      wrapStore: store =>
+        new Proxy(store, {
+          get(target, name) {
+            if (name !== 'valueOnce') return Reflect.get(target, name).bind(target);
+            return async (scope: string, ...rest: [string, unknown, string | null, string]) => {
+              // The first listing to store waits until the second has stored: the lower revision writes last.
+              if (scope === 'directory' && first) {
+                first = false;
+                held = (rest[1] as { revision: number }).revision;
+                await new Promise<void>(resolve => (release = resolve));
+              }
+              const stored = await target.valueOnce(scope, ...rest);
+              if (scope === 'directory') release();
+              return stored;
+            };
+          },
+        }),
+    });
+    const identifier = 'mailto:ray@webmail.example';
+    const codeFor = async (agent: TestAgent) => {
+      await call(at, 'POST', '/simon/directory', agent, { identifier });
+      await fed.work();
+      const note = at.mail.filter(n => n.type === 'listing' && n.assistant === agent.address).at(-1)!;
+      return note.type === 'listing' ? note.code : '';
+    };
+    const [bobCode, catCode] = [await codeFor(bob), await codeFor(cat)];
+    const [b, c] = await Promise.all([
+      call(at, 'POST', '/simon/directory', bob, { identifier, code: bobCode }),
+      call(at, 'POST', '/simon/directory', cat, { identifier, code: catCode }),
+    ]);
+    const highest = [b, c].map(r => r.json.record).sort((x, y) => y.revision - x.revision)[0];
+    assert.ok(held > 0 && held < highest.revision, 'the lower revision was held back, to write last');
+    assert.deepEqual((await lookup(at, identifier)).json.record, highest);
+  });
+
+  it('says in its server document that it answers lookups', async () => {
+    const doc = await call(alpha, 'GET', '/simon/server', null);
+    assert.equal(readServerDocument(doc.bytes, alpha.origin, fed.clock.now())?.discovery, true);
   });
 
   it('lets a record lapse after a year', async () => {

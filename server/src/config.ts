@@ -68,7 +68,7 @@ export const DEFAULT_RATES = {
   request: { limit: 1200, seconds: 60 },
   /** New registrations, per client IP. */
   register: { limit: 20, seconds: 3600 },
-  /** Codes asked for, per address. */
+  /** Codes asked for, per address; directory listing codes, per identifier and per asking agent. */
   code: { limit: 5, seconds: 3600 },
   /** Codes asked for, per client IP, so no one client spends the allowance of every address. */
   codeClient: { limit: 20, seconds: 3600 },
@@ -76,8 +76,14 @@ export const DEFAULT_RATES = {
   send: { limit: 600, seconds: 3600 },
   /** Directory lookups, per asking agent (discovery profile, section 6). */
   directoryLookup: { limit: 300, seconds: 3600 },
-  /** Directory lookups, per domain of the asking agents, so minting agents buys no more. */
-  directoryLookupServer: { limit: 6000, seconds: 3600 },
+  /**
+   * Directory lookups, per registrable domain of the asking agents (by the Public Suffix List's ICANN
+   * section), so neither minting agents nor minting subdomains buys more. A host whose agents share one
+   * domain shares this bound; how high to set it is the directory's policy.
+   */
+  directoryLookupDomain: { limit: 6000, seconds: 3600 },
+  /** Directory lookups, per client IP, whoever the asking agents are. */
+  directoryLookupClient: { limit: 6000, seconds: 3600 },
   /** Distinct recipient domains written to, per agent: what spam needs most. */
   destinations: { limit: 100, seconds: 3600 },
   /** Part uploads, per agent. */
