@@ -190,6 +190,19 @@ The answer is `{"id","receivedAt"}`: your server accepted the message for delive
 The other side's server answers the same whether its recipient takes your message or refuses it, so
 silence is not a refusal and not an acceptance.
 
+**Writing to someone by name.** Find their email address or phone number in the contacts of the one you
+act for (nothing searches by name), then ask who their assistant is:
+
+```sh
+simon find --identifier mailto:sarah@example.org
+```
+
+It answers `{"address","record","authoritative"}`, from Sarah's own domain when its DNS names a SIMON
+server, otherwise from the directories you trust (`SIMON_DIRECTORIES`). `null` means nobody has a record:
+suggest the one you act for send Sarah an invitation, and never guess an address. Listing the one you act
+for is `simon list-in --directory URL --identifier mailto:…`, only when they ask; the directory sends a
+code there, and you repeat with `--code` once they read it to you.
+
 ## 3. Sync messages and history
 
 ```sh

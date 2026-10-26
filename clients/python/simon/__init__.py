@@ -58,6 +58,13 @@ from .messages import (
     verify_pairing,
     verify_unpairing,
 )
+from .directory import (
+    RECORD_MAX_MS,
+    directory_bytes,
+    is_listable_identifier,
+    read_directory_record,
+    sign_directory_record,
+)
 from .reading import claimed_principal, current_version, is_understood, pairing_standing, predecessors, reads_as
 from .provenance import RULE, invisible_in, present_delivery, present_entry, untrusted, unwrap_entry
 from .request import (
@@ -119,6 +126,11 @@ __all__ = [
     "PAIRING_MAX_MS",
     "pairing_bytes",
     "pairing_standing",
+    "RECORD_MAX_MS",
+    "directory_bytes",
+    "is_listable_identifier",
+    "read_directory_record",
+    "sign_directory_record",
     "current_version",
     "predecessors",
     "parse_pairing",

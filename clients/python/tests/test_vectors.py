@@ -42,6 +42,7 @@ from simon.envelope import (
 from simon.errors import SimonError, parse_problem
 from simon.keys import SigningKey, is_public_key, verify
 from simon.limits import DELIVERY_WINDOW_MS, MINIMUM_LIMITS, REPEAT_WINDOW_MS, SEND_WINDOW_MS
+from simon.directory import directory_bytes, read_directory_record
 from simon.messages import (
     is_succession_value,
     read_succession,
@@ -288,6 +289,19 @@ class Successions(VectorCase):
         for c in V["successions"]["cases"]:
             with self.case(c["why"]):
                 self.assertEqual(read_succession(c["succession"], c["principal"]), c["steps"])
+
+
+class DirectoryRecords(VectorCase):
+    section = "directoryRecords"
+    members = ("issuerKeys", "bytes", "cases")
+
+    def test_cases(self):
+        d = V["directoryRecords"]
+        self.assertEqual(directory_bytes(d["cases"][0]["value"]).decode(), d["bytes"])
+        for c in d["cases"]:
+            with self.case(c["why"]):
+                got = read_directory_record(c["value"], c["identifier"], d["issuerKeys"], parse_timestamp(c["now"]))
+                self.assertEqual(got, c["record"])
 
 
 class Signatures(VectorCase):

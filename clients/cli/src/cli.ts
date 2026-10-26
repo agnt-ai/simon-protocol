@@ -44,6 +44,11 @@ const NAME = 'simon';
 const RESERVED = new Set(['key.pem', 'address.json', 'wait.json', 'wait.lock']);
 const home = defaultHome();
 const timeoutMs = process.env.SIMON_TIMEOUT_MS ? Number(process.env.SIMON_TIMEOUT_MS) : undefined;
+/** The directories this agent trusts, in order, when a command names none (discovery profile, section 3). */
+const directories = (process.env.SIMON_DIRECTORIES ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
 
 type Values = Record<string, string | boolean | (string | boolean)[] | undefined>;
 
@@ -279,6 +284,39 @@ const VERBS: Record<string, Verb> = {
         });
       }
       return agent().cancelRecovery();
+    },
+  },
+  find: {
+    usage: 'find --identifier mailto:E|tel:+N [--directory URL]...',
+    summary:
+      "The assistant the holder of an email address or phone number chose: from the address's own domain " +
+      'when its DNS names a server, otherwise from the directories you trust (--directory, or SIMON_DIRECTORIES), ' +
+      'in order. null when none has a record: then ask the one you act for to send an invitation.',
+    options: { identifier: { type: 'string' }, directory: { type: 'string', multiple: true } },
+    async run(v) {
+      if (!v.identifier) throw usageError('Give --identifier.');
+      const named = list(v.directory);
+      return agent().findAssistant(String(v.identifier), { directories: named.length ? named : directories });
+    },
+  },
+  'list-in': {
+    usage: 'list-in --directory URL --identifier mailto:E|tel:+N [--code C]',
+    summary:
+      'List yourself in a directory as the assistant of an identifier, only when the one you act for asks: ' +
+      'the directory sends a code there; repeat with --code once they read it to you.',
+    options: { directory: { type: 'string' }, identifier: { type: 'string' }, code: { type: 'string' } },
+    async run(v) {
+      if (!v.directory || !v.identifier) throw usageError('Give --directory and --identifier.');
+      return agent().listIn(String(v.directory), String(v.identifier), str(v.code));
+    },
+  },
+  'unlist-from': {
+    usage: 'unlist-from --directory URL --identifier mailto:E|tel:+N',
+    summary: 'Unlist yourself as the assistant of an identifier in a directory.',
+    options: { directory: { type: 'string' }, identifier: { type: 'string' } },
+    async run(v) {
+      if (!v.directory || !v.identifier) throw usageError('Give --directory and --identifier.');
+      return agent().unlistFrom(String(v.directory), String(v.identifier));
     },
   },
   'renew-pairing': {

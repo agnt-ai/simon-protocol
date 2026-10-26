@@ -221,6 +221,11 @@ All of them make the same calls, keep the key on the agent's machine, and treat 
   `sent`, `uploadPart`, `fetchPart` and `call`, and `verifyAuthor` and `fetchAgentDocument`.
 - **Python** (`clients/python`): the same, standard library only; its command line is `simon`, and
   `simon pair --address <address> --key principal.pem` signs a pairing, lasting a year, as a key principal.
+- **Finding an assistant:** `simon find --identifier mailto:E|tel:+N` (both CLIs; MCP `find_assistant`;
+  JavaScript `findAssistant`, Python `find_assistant`); listing yourself: `list-in`, `unlist-from` (MCP
+  `list_in_directory`). Lookups are signed with your agent key. A directory record is signed by its
+  issuer over `SIMON-DIRECTORY\n` and the canonical record, lasts at most 366 days, and counts only from
+  the identifier's own domain (by TXT record) or a directory you trust (discovery profile).
 - **Renewing a pairing:** `simon renew-pairing --pairing "<until> <signature>"` (both CLIs; MCP
   `renew_pairing`; JavaScript `renewPairing`, Python `renew_pairing`) checks the principal's later
   pairing and carries it from then on. The server needs no call.

@@ -58,7 +58,7 @@ import { clientKey } from './net/ip.ts';
 import { notify, POSTMASTER } from './notice.ts';
 import type { Agent } from './store/store.ts';
 
-const CODE_TTL_MS = 15 * 60_000;
+export const CODE_TTL_MS = 15 * 60_000;
 const CODE_ATTEMPTS = 5;
 /** Role mailboxes of RFC 2142, kept by the server on every domain it serves; it writes notices as postmaster. */
 const RESERVED = new Set([POSTMASTER, 'hostmaster', 'webmaster', 'abuse', 'security', 'noc']);
@@ -430,7 +430,7 @@ const recoveryPending = (address: string, r: Recovery) =>
   json({ status: 'recovery_pending', address, completesAt: r.completesAt }, 202);
 
 /** A code handed back: the one sent, within its attempts, or 410 or 422. */
-async function checkCode(ctx: Context, attempt: string, hash: string, code: string, now: Date): Promise<void> {
+export async function checkCode(ctx: Context, attempt: string, hash: string, code: string, now: Date): Promise<void> {
   // Counted before comparing, so concurrent guesses all count against the same allowance: the fifth wrong
   // guess still reports wrong_code, and every attempt after it is locked, the right code included.
   const expiry = later(now, CODE_TTL_MS);

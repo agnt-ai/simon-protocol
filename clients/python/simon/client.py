@@ -62,6 +62,7 @@ from .messages import (
     verify_recovery,
     verify_unpairing,
 )
+from .directory import is_listable_identifier, read_directory_record
 from .reading import claimed_principal, is_understood, pairing_standing, predecessors
 from .request import add_key_proof, sign_request
 from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
@@ -634,6 +635,69 @@ class Agent(Reader):
             raise _invalid("pairing", "The new key's pairing must be for this address, and count now.")
         self.principal, self.pairing, self.succession = principal, pairing, chain
 
+    def find_assistant(self, identifier: str, *, directories: Iterable[str] = ()) -> dict[str, Any] | None:
+        """The assistant the holder of ``identifier``, an email address or a phone number, chose (discovery
+        profile): asked of the identifier's own authority when its domain's TXT record names a server, whose
+        answer is final, and otherwise of ``directories``, the directory servers this agent trusts, in order.
+        Answers ``{"address", "record", "authoritative"}``, or None when none holds a record. A directory
+        that failed for now, with none holding a record, raises a retryable error, never "nobody"."""
+        if not is_listable_identifier(identifier):
+            raise _invalid("identifier", "An identifier is mailto: or tel:.")
+        authority = None
+        if identifier.startswith("mailto:"):
+            resolution = self._resolution(domain_of(identifier[len("mailto:") :]))
+            if resolution.outcome == "server" and resolution.via == "dns":
+                authority = resolution.server
+        servers = [authority] if authority else [_origin_arg("directories", d) for d in directories]
+        failed: SimonError | None = None
+        local = self.origin.startswith("http:")
+        for server in servers:
+            try:
+                response = self._signed("GET", "/simon/lookup?identifier=" + quote(identifier, safe=""), origin=server)
+                answer = parse(response.body)
+                value = answer.get("record") if isinstance(answer, dict) else None
+                record = None
+                for refresh in (False, True):
+                    # A key the issuer added since its document was cached is read once more before "nobody".
+                    keys = self.server_document(server, refresh=refresh)["keys"]
+                    record = read_directory_record(value, identifier, keys, self._now_ms(), allow_local=local)
+                    if record is not None:
+                        break
+            except SimonError as e:
+                if e.status == 404:
+                    continue
+                # The authority's failure is final; a directory that misbehaves is passed over.
+                if authority is not None and not e.retryable:
+                    raise
+                if e.retryable:
+                    failed = e
+                continue
+            # A record counts only from the server asked: no server answers in another's name.
+            if record is not None and record["issuer"] == server:
+                return {"address": record["address"], "record": record, "authoritative": authority is not None}
+        if failed is not None:
+            raise failed
+        return None
+
+    def list_in(self, directory: str, identifier: str, code: str | None = None) -> dict[str, Any]:
+        """Ask ``directory`` to list this agent as the assistant of ``identifier`` (discovery profile,
+        section 4): without a code, it sends one to the identifier; with the code its holder read, it lists
+        this agent and answers ``{"record"}``."""
+        body = {"identifier": identifier, **({} if code is None else {"code": code})}
+        return self._directory_call("POST", directory, body)
+
+    def unlist_from(self, directory: str, identifier: str) -> dict[str, Any]:
+        """Unlist this agent as the assistant of ``identifier`` in ``directory``; the answer is the same either way."""
+        return self._directory_call("DELETE", directory, {"identifier": identifier})
+
+    def _directory_call(self, method: str, directory: str, body: Mapping[str, Any]) -> dict[str, Any]:
+        self._address()
+        origin = _origin_arg("directory", directory)
+        response = self._signed(
+            method, "/simon/directory", canonical_bytes(body), {"content-type": "application/json"}, origin=origin
+        )
+        return parse(response.body)
+
     def compose(
         self,
         to: Iterable[str],
@@ -813,12 +877,13 @@ class Agent(Reader):
         *,
         agent: str | None | object = _OWN_ADDRESS,
         timeout: float | None = None,
+        origin: str | None = None,
     ) -> Response:
-        """A signed request, and its answer when it is a success. A ``stale_request`` refusal teaches this
-        agent the server's clock, and the request is signed again, once."""
+        """A signed request, to this agent's server or ``origin``, and its answer when it is a success. A
+        ``stale_request`` refusal teaches this agent the server's clock, and the request is signed again, once."""
         if not path.startswith("/") or path.startswith("//"):
             raise _invalid("path", f"A path starts with a single /: {path!r}")
-        url = self.origin + path
+        url = (origin or self.origin) + path
         budget = self.timeout if timeout is None else timeout
         deadline = time.monotonic() + budget
 
@@ -838,7 +903,8 @@ class Agent(Reader):
         if response.status >= 300:
             error = _error(response)
             server_time = error.details.get("serverTime")
-            if error.code != "stale_request" or type(server_time) is not int:
+            # Only this agent's own server teaches it the time: another could set it to whatever suits it.
+            if error.code != "stale_request" or type(server_time) is not int or url != self.origin + path:
                 raise error
             self._skew = server_time - time.time()
             response = attempt()
