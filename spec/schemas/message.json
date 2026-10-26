@@ -53,11 +53,14 @@
           "$ref": "common.json#/$defs/principal"
         },
         "pairing": {
-          "$ref": "common.json#/$defs/base64url"
+          "$ref": "common.json#/$defs/pairing"
+        },
+        "succession": {
+          "$ref": "common.json#/$defs/succession"
         },
         "critical": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*(,[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*)*$",
           "description": "Present named headers must be understood before acting; a listed header absent from the message is ignored. Unknown present critical names make the message not understood; absence gives no inferred opt-in or commitment."
         },
         "rel": {
@@ -65,7 +68,7 @@
         },
         "feed": {
           "type": "string",
-          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(,[a-z0-9]+(-[a-z0-9]+)*)*$"
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*(,[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*)*$"
         },
         "audience": {
           "type": "string"
@@ -118,21 +121,19 @@
     {
       "if": {
         "properties": {
-          "inReplyTo": {
-            "type": "null"
+          "headers": {
+            "required": ["succession"]
           }
         }
       },
       "then": {
         "properties": {
           "headers": {
-            "not": {
-              "required": ["rel"]
-            }
+            "required": ["pairing"]
           }
         }
       },
-      "description": "rel appears only when inReplyTo is not null (5.4)."
+      "description": "succession goes only with a pairing (5.4)."
     },
     {
       "if": {
@@ -146,19 +147,19 @@
         "properties": {
           "headers": {
             "not": {
-              "anyOf": [
-                {
-                  "required": ["feed"]
-                },
-                {
-                  "required": ["audience"]
-                }
-              ]
+              "required": ["audience"]
             }
           }
         }
       },
-      "description": "feed and audience appear only on a published message, with an empty to (5.4)."
+      "else": {
+        "properties": {
+          "headers": {
+            "required": ["audience"]
+          }
+        }
+      },
+      "description": "audience is present exactly on a message to no one: a server refuses one without it, and one with recipients carrying it; a misplaced rel or feed is ignored (5.4)."
     },
     {
       "if": {
@@ -193,7 +194,7 @@
           "$ref": "common.json#/$defs/mediaType"
         },
         "data": {
-          "type": "string"
+          "description": "A JSON value for a JSON type (application/json or any +json subtype, text/*+json included), the text for any other text/*, padded canonical base64 for any other type (PROTOCOL.md 5.3)."
         },
         "sha256": {
           "$ref": "common.json#/$defs/sha256"
@@ -239,7 +240,48 @@
           }
         }
       ],
-      "description": "A block: inline data (the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries."
+      "description": "A block: inline data (a JSON value for a JSON type, the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries.",
+      "allOf": [
+        {
+          "if": {
+            "required": ["data"],
+            "properties": {
+              "type": {
+                "pattern": "^(application/json|[^/;]+/[^;]*\\+json)( *;|$)"
+              }
+            }
+          },
+          "then": {
+            "description": "A JSON type: data is any JSON value, within canonical JSON's limits (PROTOCOL.md 5.1)."
+          },
+          "else": {
+            "if": {
+              "required": ["data"],
+              "properties": {
+                "type": {
+                  "pattern": "^text/"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "type": "string"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "data": {
+                  "type": "string",
+                  "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+                }
+              }
+            }
+          },
+          "description": "One encoding per type (PROTOCOL.md 5.3): a JSON value for a JSON type, the text for text/*, padded base64 for anything else."
+        }
+      ]
     }
   }
 }

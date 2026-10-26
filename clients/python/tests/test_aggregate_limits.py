@@ -5,7 +5,7 @@ import unittest
 from simon.canonical import canonical_bytes
 from simon.errors import SimonError
 from simon.limits import MINIMUM_LIMITS
-from simon.messages import check_message
+from simon.messages import VERSION, check_message
 
 
 def file(size, key):
@@ -13,8 +13,8 @@ def file(size, key):
 
 
 def message(parts):
-    return {"v": 1, "from": "ada@example.com", "to": [], "inReplyTo": None,
-            "parts": parts, "headers": {}, "sentAt": "2026-10-01T00:00:00Z", "signature": "AAAA"}
+    return {"v": VERSION, "from": "ada@example.com", "to": [], "inReplyTo": None,
+            "parts": parts, "headers": {"audience": "public"}, "sentAt": "2026-10-01T00:00:00Z", "signature": "AAAA"}
 
 
 def carry(parts):

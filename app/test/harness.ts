@@ -11,7 +11,7 @@
  *   await world.work();                                // every server's background work, settled
  */
 import type { KeyObject } from 'node:crypto';
-import { generateKey, keyToken, sign, signPairing } from '@agnt-sdk/simon-protocol';
+import { generateKey, keyToken, PAIRING_DEFAULT_MS, sign, signPairing, timestamp } from '@agnt-sdk/simon-protocol';
 import { Agent, type Delivered, SimonError, type Fetch } from '@agnt-sdk/simon-client';
 import { createServer, defineConfig, SqliteStore, type SimonServer, type ConfigInput } from '@agnt-sdk/simon-server';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '@agnt-sdk/simon-server/testing';
@@ -279,7 +279,8 @@ export class TestApp {
     this.#keys.set(principal, principalKey);
     const key = generateKey().privateKey;
     const address = `${local}@${this.domain}`;
-    const pairing = signPairing(principalKey, address, principal);
+    // A year from the world's clock, which some tests advance by years.
+    const pairing = signPairing(principalKey, address, principal, timestamp(this.world.clock.t + PAIRING_DEFAULT_MS));
     const blank = new Agent({ server: this.origin, key, fetch: this.world.fetch, now: this.world.clock.now });
     await blank.register({ address, for: principal, pairing });
     const agent = new Agent({
@@ -406,10 +407,10 @@ export async function notices(agent: Agent, kind: string): Promise<{ text: strin
     .filter(m => m.message.headers?.notice === kind)
     .map(m => {
       const part = (type: string) =>
-        m.message.parts.find(p => p.type === type && 'data' in p) as { data: string } | undefined;
+        m.message.parts.find(p => p.type === type && 'data' in p) as { data: unknown } | undefined;
       return {
-        text: part('text/plain')?.data ?? '',
-        data: JSON.parse(Buffer.from(part('application/json')?.data ?? '', 'base64').toString() || '{}'),
+        text: (part('text/plain')?.data as string | undefined) ?? '',
+        data: (part('application/json')?.data as Record<string, any> | undefined) ?? {},
       };
     });
 }

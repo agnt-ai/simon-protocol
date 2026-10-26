@@ -38,12 +38,12 @@ for entry in agent.sync()["messages"]:
   from an agent's own server for its own domain either. There is no option to name one. Only code can
   replace the resolver, for tests and local development.
 - **`Trust`**: `verified`, `id`, `author_signed`, `author_server` (the server that published the key and
-  carried the message), `kind`, `understood`, `claims`, and `principal`:
+  carried the message), `understood`, `claims`, and `principal`:
   - `understood` is False for a message of a version this client does not implement, or whose
     `critical` header lists one it does not understand (it understands the protocol's six): whose key
     signed it is all it says. Act on nothing in it; it names no principal.
-  - `principal` is None for a message with no `for` header, one not understood, or one from an agent
-    whose document does not say `paired`: a solo agent speaks for no one, whatever it carries.
+  - `principal` is None for a message with no `for` header, or one not understood: a message without
+    `for` speaks for no one.
     Otherwise it is a `PrincipalTrust`, whose `basis` is `agent-asserted` (the `for` header alone: the
     agent's word), `key-pairing` (a `simon-key:` principal's pairing verified: the key's holder
     consented, with no server trusted for it, though the agent's keys are still its server's word; not
@@ -117,8 +117,12 @@ principal=None, pairing=None, timeout=30.0)` is a Reader too.
 | `server_of(domain)`, `server_document(server)`, `agent_document(address)` | resolution and documents; documents carry `algorithms` |
 | `verify_author(message, *, signed_claims=None)` | a `Trust` or a `NotVerified` |
 
-A key principal pairs with `sign_pairing(principal_key, address)`, and the agent registers with
-`principal=principal_key.identifier` and that `pairing`.
+A key principal pairs with `sign_pairing(principal_key, address)`, lasting a year unless given an `until`,
+and the agent registers with `principal=principal_key.identifier` and that `pairing`. Before it lapses,
+`agent.renew_pairing(pairing)` carries the principal's later one; the server needs no call. A key-pairing
+`PrincipalTrust` shows `until`, and `lapsed` for a pairing that counted when sent but not now. When the
+principal moves to a new key, `agent.succeed(principal, pairing, succession)` carries it (steps from
+`sign_succession(old, new)`); `PrincipalTrust.succeeds` lists the earlier keys.
 
 For output that a model reads, `simon.provenance` labels third-party content: `untrusted(author, basis,
 content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.
@@ -126,7 +130,7 @@ content)`, `present_entry`, `present_delivery`, `invisible_in` and `RULE`.
 The protocol itself, for readers and servers: `canonical`, `canonical_bytes`, `parse`, `signing_bytes`;
 `message_id`, `sign_message`, `verify_message`, `message_verdict`, `check_author_signature`,
 `check_supported_version`, `parse_message`, `check_message`, `check_principal`, `is_principal`,
-`pairing_bytes`, `verify_pairing`, `unpairing_bytes`, `sign_unpairing`, `verify_unpairing`, `text_of`;
+`pairing_bytes`, `parse_pairing`, `verify_pairing`, `unpairing_bytes`, `sign_unpairing`, `verify_unpairing`, `text_of`;
 `parse_envelope` (with a `Receiver` for step 5), `check_served` (step 8), `verify_envelope`,
 `check_envelope_signature`, `claims_bytes`, `verify_claims`, `claims_about`, `is_authoritative`,
 `judge_claims`, `is_repeat`, `delivery_window`, `delivery_state`; `parse_signal`, `verify_signal`,

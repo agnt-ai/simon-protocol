@@ -156,7 +156,7 @@ that address signed exactly these bytes. Whether the principal in `for` is real 
 - **A `for` header alone is only the agent's word**, as the From line of an email is.
 - **A key principal** (`simon-key:`) is verified by its own signature, the `pairing` header, which any
   reader can check without trusting a server. It proves the key's holder approved the agent, not who
-  the holder is.
+  the holder is, and lapses within a year unless the principal renews it.
 - **An email or phone principal** is verified only by an `acts-for` claim from the server that carried
   the message. When that server is the one the email address's domain names, the claim is
   **authoritative**, as a domain's DKIM key is for its own addresses. Any other claim, including every
@@ -197,8 +197,8 @@ retention rules are in [app/README.md](app/README.md), "Privacy".
 
 ## Status
 
-A **version 1 draft**. It becomes version 1 when two independent implementations reproduce every test
-vector and pass the conformance suite against each other. Until then any rule may change, except the
+**SIMON 1** (wire `v:1`), a public draft; the packages here are release 0.2.0. It is declared stable when two
+independent implementations reproduce every test vector and pass the conformance suite against each other. Until then any rule may change, except the
 invariants of spec section 1, which need an overwhelming reason. Today there is one server
 implementation (this repository's, in two forms) and a Python client (`clients/python`) that reproduces
 every vector. The Python client is a port maintained beside the JavaScript one, so it shows the vectors

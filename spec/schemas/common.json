@@ -35,6 +35,16 @@
       "pattern": "^[A-Za-z0-9_-]+$",
       "description": "Unpadded, canonical base64url (PROTOCOL.md 2.5)."
     },
+    "pairing": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z [A-Za-z0-9_-]+$",
+      "description": "A key principal's pairing, <until> <signature>: a timestamp, one space, and the principal's canonical base64url signature over SIMON-PAIR, the address, the principal and until, joined by newlines (PROTOCOL.md 2.2, 5.4). It counts before until, by at most 366 days."
+    },
+    "succession": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+ [A-Za-z0-9_-]+ [A-Za-z0-9_-]+(,[a-z0-9-]+:[A-Za-z0-9_-]+ [A-Za-z0-9_-]+ [A-Za-z0-9_-]+){0,15}$",
+      "description": "A key principal's succession: 1 to 16 steps, oldest first, joined by commas; each the old key's token, its signature and the new key's, one space apart, over SIMON-SUCCEED, the old identifier and the new, joined by newlines (PROTOCOL.md 2.2, 5.4). Each step's new key is the next step's old key, the last's the key in for, and no key appears twice."
+    },
     "keyToken": {
       "type": "string",
       "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+$",
@@ -52,8 +62,9 @@
     },
     "headerName": {
       "type": "string",
-      "maxLength": 64,
-      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      "maxLength": 128,
+      "description": "A name: hyphen-joined lower-case labels, several joined by dots for a private reverse-domain name (PROTOCOL.md 5.4).",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$"
     },
     "mediaType": {
       "type": "string",
@@ -94,6 +105,42 @@
         }
       },
       "description": "A statement a carrier makes about a message's author (PROTOCOL.md 6.2). acts-for has agent, for, verifiedAt and scope; other types are the registry's."
+    },
+    "anyMessage": {
+      "type": "object",
+      "required": ["v", "from", "to", "sentAt", "signature"],
+      "properties": {
+        "v": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sentAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "v": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "$ref": "message.json"
+      },
+      "description": "A message of any version: the invariants every version keeps (PROTOCOL.md 1), and message.json for version 1. A server routes a version it does not know on these alone."
     }
   }
 }

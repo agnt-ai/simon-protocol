@@ -22,6 +22,7 @@ import {
   signSignal,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import type { Request } from '../src/http.ts';
@@ -29,7 +30,7 @@ import { createServer, type SimonServer } from '../src/server.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import { StoreCapacityError } from '../src/store/store.ts';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '../src/testing.ts';
-import { Federation, Peer } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, Peer } from './harness.ts';
 
 const DAY = 86_400_000;
 
@@ -350,7 +351,7 @@ describe('lifecycle router handoffs', () => {
       server = createServer({ config, store, dns, http: net, now: clock.now, worker: false });
       const message = signMessage<Message>(
         {
-          v: 1,
+          v: VERSION,
           from: other,
           to: [address],
           inReplyTo: null,
@@ -509,7 +510,12 @@ describe('lifecycle router handoffs', () => {
           [],
           'old history',
           by === 'principal'
-            ? { headers: { for: forValue, pairing: signPairing(principal.privateKey, address, forValue) } }
+            ? {
+                headers: {
+                  for: forValue,
+                  pairing: signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL),
+                },
+              }
             : {},
         );
         assert.equal((await old.request('GET', '/simon/account')).status, 200);

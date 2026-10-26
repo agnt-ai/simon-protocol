@@ -12,7 +12,7 @@ import {
   signRequest,
   signUnpairing,
 } from '@agnt-sdk/simon-protocol';
-import { Federation, toRequest, type TestAgent } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, toRequest, type TestAgent } from './harness.ts';
 
 const DAY = 86_400_000;
 
@@ -378,7 +378,11 @@ describe("the agent's address and keys (CLIENT.md)", async () => {
     async function paired(local: string) {
       const a = alpha.newAgent();
       const address = `${local}@alpha.test`;
-      await a.register({ address, for: forValue, pairing: signPairing(principal.privateKey, address, forValue) });
+      await a.register({
+        address,
+        for: forValue,
+        pairing: signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL),
+      });
       return a;
     }
 

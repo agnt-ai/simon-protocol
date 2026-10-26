@@ -1,6 +1,6 @@
 {
   "name": "@agnt-sdk/simon-cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Command-line client for the SIMON Protocol: register, send, inbox, sent, parts and verification, with JSON output.",
   "license": "Apache-2.0",
   "keywords": [
@@ -42,7 +42,7 @@
     "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.1.1",
-    "@agnt-sdk/simon-client": "0.1.1"
+    "@agnt-sdk/simon-protocol": "0.2.0",
+    "@agnt-sdk/simon-client": "0.2.0"
   }
 }

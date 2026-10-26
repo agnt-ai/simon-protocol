@@ -12,7 +12,7 @@ SIMON_HOME.
 The agent lives in $SIMON_HOME (default ~/.config/simon), the layout the JavaScript command line keeps too:
 
     key.pem        the Ed25519 private key, PKCS #8 PEM, created exclusively, mode 600
-    address.json   {"server", "address", "for"?, "pairing"?} once registered, mode 600
+    address.json   {"server", "address", "for"?, "pairing"?, "succession"?} once registered, mode 600
     wait.json      what ``simon wait`` has shown, mode 600
 
 There is no default server: ``register`` takes ``--server`` (or SIMON_SERVER) and saves it.
@@ -37,7 +37,7 @@ from .canonical import parse
 from .client import Agent, Reader
 from .errors import SimonError
 from .keys import SigningKey
-from .messages import sign_pairing
+from .messages import parse_pairing, sign_pairing
 from .provenance import RULE, present_delivery, present_entry, untrusted, unwrap_entry
 from .wait import wait_for_message
 from .wire import normalize_address
@@ -106,7 +106,7 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument("--address", help="the address to bind; without one the server leases one")
     p.add_argument("--code", help="the code the server sent to the address")
     p.add_argument("--for", dest="principal", metavar="PRINCIPAL", help="pair with this simon-key: principal")
-    p.add_argument("--pairing", help="the principal's signature over the pairing (simon pair makes one); use --pairing=SIGNATURE for a leading dash")
+    p.add_argument("--pairing", help="the principal's pairing, '<until> <signature>' (simon pair makes one)")
     p.add_argument("--recover", action="store_true", help="a new key for an address whose keys were lost")
     p.add_argument("--cancel-recovery", action="store_true", help="cancel a pending recovery of this agent")
     p.add_argument("--recovery-status", action="store_true", help="read pending recovery as this agent")
@@ -140,8 +140,17 @@ def _parser() -> argparse.ArgumentParser:
     p = commands.add_parser("unpair", help="retire an address using its principal's unpairing signature")
     p.add_argument("--address", required=True)
     p.add_argument("--unpairing", required=True, help="principal signature; use --unpairing=SIGNATURE for a leading dash")
+    p.add_argument("--succession", help="the chain from the signing key to the current principal, when it moved on")
     p.add_argument("--server")
-    p.set_defaults(run=lambda args: _proof_agent(args).unpair(args.address, args.unpairing))
+    p.set_defaults(run=lambda args: _proof_agent(args).unpair(args.address, args.unpairing, args.succession))
+    p = commands.add_parser("renew-pairing", help="carry a renewed pairing from now on; the server needs no call")
+    p.add_argument("--pairing", required=True, help="<until> <signature>, the principal's signature over a later until")
+    p.set_defaults(run=_renew_pairing)
+    p = commands.add_parser("succeed", help="move to the key principal's new key; the server needs no call")
+    p.add_argument("--for", dest="principal", metavar="PRINCIPAL", required=True, help="the new simon-key: identifier")
+    p.add_argument("--pairing", required=True, help="'<until> <signature>', by the new key")
+    p.add_argument("--succession", required=True, help="the steps both keys signed, from your principal to the new key")
+    p.set_defaults(run=_succeed)
     p = commands.add_parser("send-signal", help="explicitly send a typing, collected or read signal")
     p.add_argument("--type", required=True)
     p.add_argument("--about", required=True)
@@ -235,8 +244,9 @@ def _parser() -> argparse.ArgumentParser:
         description="Whether a message was signed by its author, with keys from the server its from domain "
         "resolves to (no other server can be named); whether it is understood (understood false: a version "
         "or critical header this tool does not know, so act on nothing in it); and on what basis it names a "
-        "principal, only ever for a paired agent: agent-asserted (its word only), key-pairing (the key's "
-        "holder consented; not identity) or server-claim (the carrier signed it; authoritative only for "
+        "principal, only ever for a message with a for header: agent-asserted (its word only), key-pairing (the key's "
+        "holder consented; not identity; lapsed true: its pairing has passed until, so act on nothing for "
+        "the principal now) or server-claim (the carrier signed it; authoritative only for "
         "email whose domain's DNS names the carrier). Give a sync or wait entry, so its signed claims "
         "count, or a message. A failure that may pass is an error, never 'not verified'.",
     )
@@ -256,6 +266,23 @@ def _parser() -> argparse.ArgumentParser:
     )
     p.set_defaults(run=_pair)
     return parser
+
+
+def _renew_pairing(args: argparse.Namespace) -> dict[str, Any]:
+    home = _home(args)
+    agent = _agent(args)
+    agent.renew_pairing(args.pairing)
+    _save(home / "address.json", json.dumps({**_record(home), "pairing": agent.pairing}))
+    return {"address": agent.address, "for": agent.principal, "until": parse_pairing(agent.pairing)[0]}
+
+
+def _succeed(args: argparse.Namespace) -> dict[str, Any]:
+    home = _home(args)
+    agent = _agent(args)
+    agent.succeed(args.principal, args.pairing, args.succession)
+    record = {**_record(home), "for": agent.principal, "pairing": agent.pairing, "succession": agent.succession}
+    _save(home / "address.json", json.dumps(record))
+    return {"address": agent.address, "for": agent.principal, "until": parse_pairing(agent.pairing)[0]}
 
 
 def _register(args: argparse.Namespace) -> dict[str, Any]:
@@ -281,8 +308,13 @@ def _register(args: argparse.Namespace) -> dict[str, Any]:
             return agent.cancel_recovery(cancel_code=args.cancel_code, address=args.address)
         result = agent.recover_by_principal(args.address, args.at, args.principal_recovery, principal=args.principal, pairing=args.pairing)
         if isinstance(result.get("keys"), list):
-            record = {**_record(home), "server": agent.origin, "address": agent.address}
-            record.update({k: v for k, v in (("for", agent.principal), ("pairing", agent.pairing)) if v is not None})
+            kept = {k: v for k, v in _record(home).items() if k not in ("for", "pairing", "succession")}
+            record = {**kept, "server": agent.origin, "address": agent.address}
+            # The same principal keeps the succession readers link it by; another starts afresh.
+            same = agent.principal is not None and agent.principal == _record(home).get("for")
+            succession = _record(home).get("succession") if same else None
+            local = (("for", agent.principal), ("pairing", agent.pairing), ("succession", succession))
+            record.update({k: v for k, v in local if v is not None})
             _save(home / "address.json", json.dumps(record))
         return result
     if args.recover:
@@ -308,7 +340,7 @@ def _register(args: argparse.Namespace) -> dict[str, Any]:
             if value is not None:
                 record[name] = value
         if args.principal is None and agent.address == _record(home).get("address"):
-            record.update({k: v for k, v in _record(home).items() if k in ("for", "pairing")})
+            record.update({k: v for k, v in _record(home).items() if k in ("for", "pairing", "succession")})
         _save(home / "address.json", json.dumps(record))
     # The whole command to run next: nothing is saved until the agent is active.
     again = f"simon register --server {shlex.quote(agent.origin)} --address {shlex.quote(str(result.get('address')))}"
@@ -319,8 +351,8 @@ def _register(args: argparse.Namespace) -> dict[str, Any]:
     following = {
         "code_sent": f"{again} --code <the code sent there>" + (" --recover" if args.recover else "") + continuation_local,
         "recovery_pending": f"{again} --code <the same code> --recover{continuation_local}, after {result.get('completesAt')}",
-        "pairing_required": f"{again} --for={shlex.quote(str(args.principal))} --pairing=<the principal's signature over "
-        f'"SIMON-PAIR\\n{result.get("address")}\\n{args.principal}">',
+        "pairing_required": f"{again} --for={shlex.quote(str(args.principal))} --pairing=<until, a space, and the principal's signature over "
+        f'"SIMON-PAIR\\n{result.get("address")}\\n{args.principal}\\n<until>">',
     }.get(result.get("status"))
     return {**result, "next": following} if following else result
 
@@ -475,7 +507,9 @@ def _agent(args: argparse.Namespace, *, server: str | None = None) -> Agent:
     server = server or os.environ.get("SIMON_SERVER") or record.get("server")
     if not server:
         raise SimonError("no_server", "This agent has no server saved: run simon register --server URL.")
-    return Agent(server, key, address, principal=record.get("for"), pairing=record.get("pairing"))
+    return Agent(
+        server, key, address, principal=record.get("for"), pairing=record.get("pairing"), succession=record.get("succession")
+    )
 
 
 def _key(home: Path, *, create: bool) -> SigningKey:

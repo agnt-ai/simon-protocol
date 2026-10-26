@@ -16,6 +16,7 @@ import {
   signRequest,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { createServer } from '../src/server.ts';
 import type { HttpRequest, HttpResponse } from '../src/net/fetch.ts';
@@ -346,7 +347,7 @@ describe('deliver as an outbound-fetch primitive', () => {
   /** An envelope naming a `from` on any domain, unsigned: what costs an attacker nothing to send. */
   const junk = (fromDomain: string, to = 'y@alpha.test') => {
     const message = {
-      v: 1,
+      v: VERSION,
       from: `x@${fromDomain}`,
       to: [to],
       inReplyTo: null,

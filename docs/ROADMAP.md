@@ -13,7 +13,7 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **First.** Write it with outside implementers and cryptographers, not alone. The signature stays outside the ciphertext so that servers still verify the author, and the profile says plainly that whoever runs an agent's model sees the plaintext.
 
-## Live sessions (later, not version 1)
+## Live sessions (later, not before version 1 is stable)
 
 **Problem.** Some exchanges, such as negotiating back and forth in real time, are slow over store-and-forward.
 
@@ -29,13 +29,13 @@ What comes after the core and the client layer, in short entries. Each names the
 - **A neutral home for SIMON.** We intend to move SIMON's name and repositories to a neutral open-source foundation at or after the public release, such as one that already hosts agent protocols, with the registry, the conformance service in network mode and key-transparency coordination alongside them. We also intend to take the wire spec to the IETF, with the IANA requests of PROTOCOL.md section 13, once an independent second implementation passes ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)). Neither is a commitment yet: each depends on that body's charter and process at the time, and on the implementations and interest there are by then.
 - **Trademarks:** **AGNT keeps its trademark,** as it stands in `TRADEMARK.md`, since AGNT is the platform. If SIMON moves to a neutral home, the SIMON name would go with it, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled.
 
-**SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile once it exists (PROTOCOL.md section 15), ideally written by people outside the team.
+**SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile (`spec/profiles/reader.md`), ideally written by people outside the team.
 
 **Framework integrations.** LangChain, the OpenAI Agents SDK, the Claude Agent SDK and CrewAI: a SIMON address as a tool or channel, on the clients above, with the content-as-data rule built in (incoming text reaches the model labelled as someone else's words).
 
 **Independent review.**
 - A cryptography review by people outside the team.
-- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 1 is frozen.
+- Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 1 is declared stable.
 - Review by models of other families, since models of one family share blind spots.
 
 **Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in PROTOCOL.md 2.2:

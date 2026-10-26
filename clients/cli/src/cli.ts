@@ -16,7 +16,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
-import { keyToken, privateKeyObject } from '@agnt-sdk/simon-protocol';
+import { keyToken, parsePairing, privateKeyObject } from '@agnt-sdk/simon-protocol';
 import {
   SimonError,
   fetchAgentDocument,
@@ -126,7 +126,8 @@ const VERBS: Record<string, Verb> = {
     summary:
       'Register this key. No --address leases one; an address the server hosts binds at once; any other gets a code, ' +
       'then the same with --code. --for pairs with a key principal: a leased address answers pairing_required, then ' +
-      'repeat with --pairing, the principal\'s signature over "SIMON-PAIR\\n<address>\\n<for>". --recover makes a new key ' +
+      'repeat with --pairing, "<until> <signature>": the principal\'s signature over "SIMON-PAIR\\n<address>\\n<for>\\n<until>", ' +
+      'lapsing within 366 days. --recover makes a new key ' +
       'for an address whose keys are all lost (then --code); while the agent still holds a valid key the server may ' +
       'answer recovery_pending with completesAt, and the same command completes it after then. --cancel-recovery, ' +
       'run with a key held before the recovery started, cancels a recovery someone else started, as the server allows; ' +
@@ -207,7 +208,7 @@ const VERBS: Record<string, Verb> = {
         active: undefined,
         code_sent: `${again} --code <the code sent there>${v.recover ? ' --recover' : ''}${continuationLocal}`,
         recovery_pending: `${again} --code <the same code> --recover${continuationLocal}, after ${'completesAt' in r ? r.completesAt : ''}`,
-        pairing_required: `${again} --for ${shellArg(String(v.for))} --pairing <the principal's signature over "SIMON-PAIR\\n${r.address}\\n${str(v.for)}">`,
+        pairing_required: `${again} --for ${shellArg(String(v.for))} --pairing <until, a space, and the principal's signature over "SIMON-PAIR\\n${r.address}\\n${str(v.for)}\\n<until>">`,
       }[r.status ?? 'active'];
       return { ...r, next };
     },
@@ -280,13 +281,47 @@ const VERBS: Record<string, Verb> = {
       return agent().cancelRecovery();
     },
   },
+  'renew-pairing': {
+    usage: 'renew-pairing --pairing P',
+    summary:
+      'Carry a renewed pairing from now on: "<until> <signature>", the principal\'s signature over a later until. ' +
+      'Checked here and saved; the server needs no call, since it checks each message against its principal.',
+    options: { pairing: { type: 'string' } },
+    async run(v) {
+      if (!v.pairing) throw usageError('Give --pairing.');
+      const a = agent();
+      a.renewPairing(String(v.pairing));
+      saveAddress(home, a);
+      return { address: a.address, for: a.for, until: parsePairing(a.pairing)!.until };
+    },
+  },
+  succeed: {
+    usage: 'succeed --for simon-key:K --pairing P --succession S',
+    summary:
+      "Move to your key principal's new key: --for its identifier, --pairing that key signed, and --succession, " +
+      'the steps both keys signed from your principal to it. Checked here and saved; the server moves its record ' +
+      'on your next message.',
+    options: { for: { type: 'string' }, pairing: { type: 'string' }, succession: { type: 'string' } },
+    async run(v) {
+      if (!v.for || !v.pairing || !v.succession) throw usageError('Give --for, --pairing and --succession.');
+      const a = agent();
+      a.succeed({ for: String(v.for), pairing: String(v.pairing), succession: String(v.succession) });
+      saveAddress(home, a);
+      return { address: a.address, for: a.for, until: parsePairing(a.pairing)!.until };
+    },
+  },
   unpair: {
-    usage: 'unpair --address A --unpairing SIG [--server URL]',
-    summary: 'Retire a paired address using its principal signature.',
-    options: { address: { type: 'string' }, unpairing: { type: 'string' }, server: { type: 'string' } },
+    usage: 'unpair --address A --unpairing SIG [--succession CHAIN] [--server URL]',
+    summary: 'Retire a paired address using its principal signature; --succession when a key it moved on from signed.',
+    options: {
+      address: { type: 'string' },
+      unpairing: { type: 'string' },
+      succession: { type: 'string' },
+      server: { type: 'string' },
+    },
     async run(v) {
       if (!v.address || !v.unpairing) throw usageError('Give --address and --unpairing.');
-      return agent(str(v.server), true).unpair(String(v.address), String(v.unpairing));
+      return agent(str(v.server), true).unpair(String(v.address), String(v.unpairing), str(v.succession));
     },
   },
   sync: {
@@ -399,7 +434,8 @@ const VERBS: Record<string, Verb> = {
       'Whether a message was signed by its author, with keys from the server its from domain resolves to (no ' +
       'other server can be named); whether it is understood (understood false: a version or critical header ' +
       'this tool does not know, so act on nothing in it); and on what basis it names a principal, only ever for ' +
-      "a paired agent: agent-asserted (its word only), key-pairing (the key's holder consented; not identity) or " +
+      "a message with a for header: agent-asserted (its word only), key-pairing (the key's holder consented; not identity; " +
+      'lapsed true: its pairing has passed until, so act on nothing for the principal now) or ' +
       "server-claim (the carrier signed it; authoritative only for email whose domain's DNS names the carrier). " +
       'Give an inbox or wait entry, so its signed claims count, or a message. A failure that may pass is an ' +
       'error, never "not verified".',
@@ -412,7 +448,7 @@ const VERBS: Record<string, Verb> = {
   document: {
     usage: 'document ADDRESS',
     summary:
-      "An agent's document (kind and keys), from the server its domain resolves to, verified under that server's keys.",
+      "An agent's document (its keys), from the server its domain resolves to, verified under that server's keys.",
     positionals: ['address'],
     async run(_, [address]) {
       const record = await fetchAgentDocument(address, { timeoutMs });

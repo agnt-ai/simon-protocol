@@ -48,6 +48,9 @@ import {
   isPrincipal,
   NonceCache,
   pairingBytes,
+  parsePairing,
+  PAIRING_DEFAULT_MS,
+  PAIRING_MAX_MS,
   principalKey,
   signPairing,
   verifyPairing,
@@ -77,7 +80,7 @@ import {
   type Message,
   type ResolverIO,
 } from '../src/index.ts';
-import { ada, bob, carol, erin, exampleCom, frank, keyEntry, signedQuestion } from './fixtures.ts';
+import { ada, bob, carol, erin, exampleCom, frank, keyEntry, PAIRED_UNTIL, signedQuestion } from './fixtures.ts';
 
 const actsFor: ActsForClaim = {
   type: 'acts-for',
@@ -411,20 +414,20 @@ describe('envelopes', () => {
     assert.equal(await judge('mailto:alice@flaky.example'), false);
     assert.equal(await judge('tel:+14155550100'), false, 'never for a phone number');
     assert.equal(await judge(`simon-key:${erin.key}`), false);
-    assert.deepEqual(await judgeClaims(signedQuestion, [actsFor, { type: 'x-other' }], 'paired', carrier, resolve), [
+    assert.deepEqual(await judgeClaims(signedQuestion, [actsFor, { type: 'x-other' }], carrier, resolve), [
       { ...actsFor, authoritative: true },
       { type: 'x-other' },
     ]);
     const unknown = ['custom', 'toString', 'constructor', '__proto__', 'hasOwnProperty'].map(type => ({ type }));
     assert.deepEqual(
-      await judgeClaims(signedQuestion, unknown, 'paired', carrier, async () => {
+      await judgeClaims(signedQuestion, unknown, carrier, async () => {
         throw new Error('unknown types must not resolve');
       }),
       unknown,
     );
     const selfJudged = [{ type: 'operator', agent: 'ada@example.com', operator: 'Big Bank', authoritative: true }];
     assert.deepEqual(
-      await judgeClaims(signedQuestion, selfJudged, 'paired', carrier, resolve),
+      await judgeClaims(signedQuestion, selfJudged, carrier, resolve),
       [{ type: 'operator', agent: 'ada@example.com', operator: 'Big Bank' }],
       "a carrier's own authoritative member means nothing",
     );
@@ -537,18 +540,17 @@ describe('envelopes', () => {
     const undated = { ...actsFor, verifiedAt: '2026-09-01' };
     const unscoped = { ...actsFor, scope: 'converse' };
     assert.deepEqual(
-      claimsAbout(signedQuestion, [actsFor, other, ceo, undated, unscoped, { type: 'something-else' }], 'paired'),
+      claimsAbout(signedQuestion, [actsFor, other, ceo, undated, unscoped, { type: 'something-else' }]),
       [actsFor, { type: 'something-else' }],
     );
     const { for: _, ...headers } = signedQuestion.headers;
     assert.deepEqual(
-      claimsAbout({ ...signedQuestion, headers } as Message, [actsFor, { ...actsFor, for: undefined }], 'paired'),
+      claimsAbout({ ...signedQuestion, headers } as Message, [actsFor, { ...actsFor, for: undefined }]),
       [],
     );
-    const later = { ...signedQuestion, v: 2 } as AnyMessage;
-    assert.deepEqual(claimsAbout(later, [actsFor], 'paired'), [], "a later version's headers are not read");
-    assert.deepEqual(claimsAbout(signedQuestion, [actsFor], 'solo'), [], 'a solo agent speaks for no one');
-    assert.deepEqual(claimsAbout(signedQuestion, [], 'paired'), []);
+    const later = { ...signedQuestion, v: 9 } as AnyMessage;
+    assert.deepEqual(claimsAbout(later, [actsFor]), [], "a later version's headers are not read");
+    assert.deepEqual(claimsAbout(signedQuestion, []), []);
   });
 });
 
@@ -556,7 +558,8 @@ describe('paired and solo agents', () => {
   const erinPrincipal = `simon-key:${erin.key}`;
   const fromBob = (headers: Record<string, string>) =>
     ({ ...signedQuestion, from: 'bob@example.net', headers }) as Message;
-  const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal);
+  // The fixtures' messages were sent long ago: their pairings lapse a year after.
+  const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal, PAIRED_UNTIL);
 
   it('a principal is mailto:, tel: or simon-key:, written exactly, nothing percent-encoded', () => {
     for (const ok of [
@@ -587,14 +590,32 @@ describe('paired and solo agents', () => {
     assert.equal(principalKey('mailto:alice@example.org'), null);
   });
 
-  it('a key principal pairs by signing SIMON-PAIR, the agent and itself, with either algorithm', () => {
-    assert.equal(pairingBytes('bob@example.net', erinPrincipal), `SIMON-PAIR\nbob@example.net\n${erinPrincipal}`);
-    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing), true);
-    assert.equal(verifyPairing('ada@example.com', erinPrincipal, pairing), false, 'another agent');
-    assert.equal(verifyPairing('bob@example.net', `simon-key:${frank.key}`, pairing), false, 'another principal');
-    assert.equal(verifyPairing('bob@example.net', 'mailto:erin@example.org', pairing), false, 'not a key principal');
+  it('a key principal pairs by signing SIMON-PAIR, the agent, itself and until, with either algorithm', () => {
+    const until = parsePairing(pairing)!.until;
+    assert.equal(
+      pairingBytes('bob@example.net', erinPrincipal, until),
+      `SIMON-PAIR\nbob@example.net\n${erinPrincipal}\n${until}`,
+    );
+    const sent = Date.parse(signedQuestion.sentAt);
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, sent), true);
+    assert.equal(verifyPairing('ada@example.com', erinPrincipal, pairing, sent), false, 'another agent');
+    assert.equal(verifyPairing('bob@example.net', `simon-key:${frank.key}`, pairing, sent), false, 'another principal');
+    assert.equal(verifyPairing('bob@example.net', 'mailto:erin@example.org', pairing, sent), false, 'not a key');
     const pq = `simon-key:${frank.key}`;
     assert.equal(verifyPairing('bob@example.net', pq, signPairing(frank.privateKey, 'bob@example.net', pq)), true);
+  });
+
+  it('a pairing lasts a year by default, counts only before its until, and never for more than 366 days', () => {
+    const pairing = signPairing(erin.privateKey, 'bob@example.net', erinPrincipal);
+    const until = Date.parse(parsePairing(pairing)!.until);
+    assert.ok(Math.abs(until - Date.now() - PAIRING_DEFAULT_MS) < 60_000, 'a year from now');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - 1), true, 'just before');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until), false, 'at until');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - PAIRING_MAX_MS), true, '366 days');
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, pairing, until - PAIRING_MAX_MS - 1), false, 'longer');
+    const signature = parsePairing(pairing)!.signature;
+    const later = timestamp(until + 1000);
+    assert.equal(verifyPairing('bob@example.net', erinPrincipal, `${later} ${signature}`), false, 'until is signed');
   });
 
   it("a paired agent's messages carry its principal, and a pairing exactly when it is a key; a solo agent's carry neither", () => {
@@ -613,7 +634,10 @@ describe('paired and solo agents', () => {
     assert.equal(check(fromBob({ for: erinPrincipal }), byKey), '400 invalid headers');
     assert.equal(
       check(
-        fromBob({ for: erinPrincipal, pairing: signPairing(erin.privateKey, 'ada@example.com', erinPrincipal) }),
+        fromBob({
+          for: erinPrincipal,
+          pairing: signPairing(erin.privateKey, 'ada@example.com', erinPrincipal, PAIRED_UNTIL),
+        }),
         byKey,
       ),
       '400 invalid headers',
@@ -621,13 +645,14 @@ describe('paired and solo agents', () => {
     assert.equal(check(signedQuestion, solo), '400 invalid headers');
     assert.equal(check(fromBob({ pairing }), solo), '400 invalid headers');
     assert.equal(check(fromBob({}), solo), 'accepted');
-    assert.equal(check({ ...signedQuestion, v: 2 } as AnyMessage, solo), 'accepted', "a later version's headers");
+    assert.equal(check({ ...signedQuestion, v: 9 } as AnyMessage, solo), 'accepted', "a later version's headers");
   });
 
   it('a routing server checks that pairing is present exactly with a key for, and its grammar, not its signature', () => {
     const m = (headers: Record<string, string>) => code(() => checkMessage({ ...signedQuestion, headers }));
-    assert.equal(m({ for: erinPrincipal, pairing: 'AAAA' }), 'accepted');
-    assert.equal(m({ for: erinPrincipal, pairing: 'AA==' }), '400 invalid headers');
+    assert.equal(m({ for: erinPrincipal, pairing: `${PAIRED_UNTIL} AAAA` }), 'accepted');
+    assert.equal(m({ for: erinPrincipal, pairing: 'AAAA' }), '400 invalid headers', 'no until');
+    assert.equal(m({ for: erinPrincipal, pairing: `${PAIRED_UNTIL} AA==` }), '400 invalid headers');
     assert.equal(m({ for: erinPrincipal }), '400 invalid headers');
     assert.equal(m({ pairing }), '400 invalid headers');
     assert.equal(m({ for: 'mailto:alice@example.org', pairing }), '400 invalid headers');
@@ -638,12 +663,12 @@ describe('paired and solo agents', () => {
 describe('documents', () => {
   const agent = (doc: Record<string, unknown>, k = exampleCom) =>
     Buffer.from(JSON.stringify(signAgentDocument(doc as never, k.privateKey)));
-  const ada1 = { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] };
+  const ada1 = { address: 'ada@example.com', keys: [keyEntry(ada.key)] };
 
   it('agent documents are signed over SIMON-AGENT by a server key valid at the time of reading', () => {
     const read = (b: Buffer, address = 'ada@example.com', keys = serverKeys) =>
       readAgentDocument(b, address, keys, NOW);
-    assert.deepEqual(read(agent(ada1)), { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] });
+    assert.deepEqual(read(agent(ada1)), { address: 'ada@example.com', keys: [keyEntry(ada.key)] });
     assert.equal(read(agent(ada1), 'bob@example.net'), null);
     assert.equal(read(agent(ada1), 'ADA@example.com'), null, 'the address asked for, as written');
     assert.equal(read(agent(ada1, ada)), null);
@@ -656,17 +681,10 @@ describe('documents', () => {
     assert.equal(read(Buffer.from(JSON.stringify({ ...ada1, signature }))), null, 'the context line is signed');
   });
 
-  it('an agent document names its kind; a kind a reader does not know reads as unknown', () => {
-    const kind = (k: unknown) =>
-      readAgentDocument(agent({ ...ada1, kind: k }), 'ada@example.com', serverKeys, NOW)?.kind ?? null;
-    assert.equal(kind('paired'), 'paired');
-    assert.equal(kind('solo'), 'solo');
-    assert.equal(kind('group'), 'unknown');
-    assert.equal(kind(1), null);
-    assert.equal(
-      readAgentDocument(agent({ address: ada1.address, keys: ada1.keys }), 'ada@example.com', serverKeys, NOW),
-      null,
-    );
+  it('an agent document says nothing of whom its agent speaks for; a kind member an earlier draft had is ignored', () => {
+    const read = (doc: object) => readAgentDocument(agent(doc as never), 'ada@example.com', serverKeys, NOW);
+    assert.deepEqual(read({ address: ada1.address, keys: ada1.keys }), { address: ada1.address, keys: ada1.keys });
+    assert.deepEqual(read({ ...ada1, kind: 'paired' }), { address: ada1.address, keys: ada1.keys });
   });
 
   it('a server document lists the algorithms it verifies, both of version 1 among them', () => {

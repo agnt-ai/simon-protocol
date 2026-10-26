@@ -13,6 +13,7 @@ import {
   signMessage,
   signRequest,
   timestamp,
+  readSuccession,
   verifyPairing,
   verifyRecovery,
   type Claim,
@@ -21,6 +22,9 @@ import {
   type Message,
   type Part,
   type SignedClaims,
+  isHeaderName,
+  isJsonType,
+  jsonDataProblem,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
@@ -36,6 +40,8 @@ export interface AgentOptions extends Transport {
   for?: string;
   /** With a key principal: the principal's pairing signature, written into every message as `pairing`. */
   pairing?: string;
+  /** With a key principal that moved to a new key: its signed succession, written into every message. */
+  succession?: string;
 }
 
 /** Account state, answered by register on success and by account/key operations. */
@@ -158,6 +164,7 @@ export class Agent {
   #address: string | null;
   #for: string | undefined;
   #pairing: string | undefined;
+  #succession: string | undefined;
 
   constructor(opts: AgentOptions) {
     this.server = originArg('server', opts.server);
@@ -171,6 +178,7 @@ export class Agent {
     this.#address = opts.address == null ? null : addressArg('address', opts.address);
     this.#for = opts.for;
     this.#pairing = opts.pairing;
+    this.#succession = opts.succession;
   }
 
   /** The agent's address, or null until a registration is active. */
@@ -183,8 +191,46 @@ export class Agent {
     return this.#for;
   }
 
+  /** The pairing every message carries, `<until> <signature>`; `parsePairing` reads when it lapses. */
   get pairing(): string | undefined {
     return this.#pairing;
+  }
+
+  /** The succession every message carries, from the principal's earlier keys on to its `for`. */
+  get succession(): string | undefined {
+    return this.#succession;
+  }
+
+  /**
+   * Move to the principal's new key (spec section 2.2): `for` its new identifier, a `pairing` that key signed,
+   * and the `succession`, steps both keys signed, leading from the principal this agent has to it. The steps
+   * from this agent's principal on are added to the chain it already carries, so moving twice before sending
+   * keeps the whole way. Checked here; the server moves its record on the next message, so this needs no call.
+   */
+  succeed(opts: { for: string; pairing: string; succession: string }): void {
+    const address = this.#requireAddress();
+    const steps = readSuccession(opts.succession, opts.for);
+    const from = steps?.findIndex(s => s.from === this.#for) ?? -1;
+    if (from < 0)
+      throw invalid('succession', "A succession must verify and lead from this agent's principal to the new one.");
+    const added = opts.succession.split(',').slice(from).join(',');
+    const succession = this.#succession === undefined ? opts.succession : `${this.#succession},${added}`;
+    if (readSuccession(succession, opts.for) === null)
+      throw invalid('succession', 'The chain this agent carries and the new steps do not make one succession.');
+    if (!verifyPairing(address, opts.for, opts.pairing, this.#transport.now()))
+      throw invalid('pairing', "The new key's pairing must be for this address, and count now.");
+    [this.#for, this.#pairing, this.#succession] = [opts.for, opts.pairing, succession];
+  }
+
+  /**
+   * Carry a renewed pairing from now on: the principal's signature over a later `until` (spec section 2.2).
+   * The server holds no pairing, so renewing needs no call to it; this checks the pairing counts now.
+   */
+  renewPairing(pairing: string): void {
+    const address = this.#requireAddress();
+    if (this.#for === undefined || !verifyPairing(address, this.#for, pairing, this.#transport.now()))
+      throw invalid('pairing', "A renewed pairing must be the principal's, for this address, and count now.");
+    this.#pairing = pairing;
   }
 
   /** Create or pair an address. Use recover for an existing address. An account answer binds this agent. */
@@ -202,7 +248,8 @@ export class Agent {
     );
     if ('keys' in r) {
       this.#address = r.address;
-      if ('for' in opts && opts.for !== undefined) [this.#for, this.#pairing] = [opts.for, opts.pairing];
+      if ('for' in opts && opts.for !== undefined)
+        [this.#for, this.#pairing, this.#succession] = [opts.for, opts.pairing, undefined];
     }
     return r;
   }
@@ -217,7 +264,8 @@ export class Agent {
     if (pairing !== undefined && principal === undefined) throw invalid('for', 'Pairing needs its principal.');
     if (
       principal !== undefined &&
-      (!isPrincipal(principal) || (principal.startsWith('simon-key:') && !verifyPairing(address, principal, pairing)))
+      (!isPrincipal(principal) ||
+        (principal.startsWith('simon-key:') && !verifyPairing(address, principal, pairing, this.#transport.now())))
     )
       throw invalid(
         'pairing',
@@ -241,6 +289,7 @@ export class Agent {
     );
     if ('keys' in result) {
       this.#address = result.address;
+      if (principal !== this.#for) this.#succession = undefined;
       [this.#for, this.#pairing] = [principal, pairing];
     }
     return result;
@@ -291,13 +340,21 @@ export class Agent {
     );
   }
 
-  async unpair(address: string, unpairing: string): Promise<{ status: 'retired'; address: string }> {
+  /**
+   * Retire a paired address by its principal's unpairing. An unpairing signed by a key the principal moved on
+   * from also counts, given `succession`, the chain from that key to the principal the server holds.
+   */
+  async unpair(
+    address: string,
+    unpairing: string,
+    succession?: string,
+  ): Promise<{ status: 'retired'; address: string }> {
     address = addressArg('address', address);
     return readJson(
       await this.#request(
         'POST',
         '/simon/unpair',
-        Buffer.from(JSON.stringify({ address, unpairing })),
+        Buffer.from(JSON.stringify({ address, unpairing, ...(succession !== undefined && { succession }) })),
         JSON_TYPE,
         address,
       ),
@@ -308,17 +365,23 @@ export class Agent {
   /** A signed version 1 message from a draft, written now. Send it with `send`; sending it again is safe. */
   compose(draft: Draft): Message {
     const from = this.#requireAddress();
-    for (const name of ['for', 'pairing']) {
+    for (const name of ['for', 'pairing', 'succession']) {
       if (draft.headers && Object.hasOwn(draft.headers, name)) {
         throw invalid('headers', `The agent writes the ${name} header from its pairing; leave it out of the draft.`);
       }
     }
-    const paired = withoutUndefined({ for: this.#for, pairing: this.#pairing });
+    const paired = withoutUndefined({ for: this.#for, pairing: this.#pairing, succession: this.#succession });
     const to = draft.to.map((a, i) => addressArg(`to[${i}]`, a));
     const parts = [
       ...(draft.text === undefined ? [] : [{ type: 'text/plain', data: draft.text }]),
       ...(draft.parts ?? []),
     ];
+    // A JSON block's value is signed as canonical JSON: say how to write one that is not, before signing.
+    for (const p of parts) {
+      if (typeof p?.type !== 'string' || !isJsonType(p.type) || !('data' in p)) continue;
+      const problem = jsonDataProblem(p.data);
+      if (problem !== null) throw invalid('parts', problem);
+    }
     return signMessage<Message>(
       {
         v: VERSION,
@@ -375,8 +438,8 @@ export class Agent {
   }
 
   async sendSignal(type: Signal['type'], about: string, to: string[]): Promise<{ accepted: true }> {
-    if (typeof type !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(type))
-      throw invalid('type', 'Signal type is a lower-case registry name.');
+    if (!isHeaderName(type))
+      throw invalid('type', 'A signal type is a name: a registry name, or a private reverse-domain one.');
     if (!HEX64.test(about)) throw invalid('about', 'A message id is 64 lower-case hex digits.');
     return this.call('POST', '/simon/send-signal', { type, about, to: to.map((a, i) => addressArg(`to[${i}]`, a)) });
   }

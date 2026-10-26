@@ -19,7 +19,7 @@ from simon import cli
 from simon.client import Agent
 from simon.errors import SimonError
 from simon.keys import SigningKey
-from simon.messages import message_id, sign_message
+from simon.messages import VERSION, message_id, sign_message
 from simon.transport import Response
 from simon.wait import read_wait_state, save_wait_state, wait_file, wait_for_message
 
@@ -59,7 +59,7 @@ class ExplicitMigrationGap(unittest.TestCase):
     def setUp(self):
         self.key = SigningKey(bytes(range(32)), allow_pure_python_signing=True)
         author = SigningKey(bytes(reversed(range(32))), allow_pure_python_signing=True)
-        message = sign_message({"v": 1, "from": "author@migration.test", "to": [ADDRESS],
+        message = sign_message({"v": VERSION, "from": "author@migration.test", "to": [ADDRESS],
                                 "inReplyTo": None, "headers": {}, "sentAt": "2026-10-15T12:00:00Z",
                                 "parts": [{"type": "text/plain", "data": "retained through migration"}]}, author)
         self.entry = {"id": message_id(message), "message": message, "carrier": ORIGIN,

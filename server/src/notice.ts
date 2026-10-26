@@ -15,6 +15,7 @@ import {
   signMessage,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { iso, later, type Context } from './context.ts';
 import { takeIntoInbox } from './fanout.ts';
@@ -55,7 +56,7 @@ export async function notify(ctx: Context, address: string, text: string): Promi
   }
   const message = signMessage<Message>(
     {
-      v: 1,
+      v: VERSION,
       from,
       to: [address],
       inReplyTo: null,

@@ -489,7 +489,7 @@ def(
 /** Non-canonical spellings of a message, each with the canonical form the refusal must return. */
 function nonCanonical(m: Message): [string, string][] {
   const c = canonicalize(m);
-  const reordered = `{"v":1,${c.slice(1).replace(/,"v":1/, '')}`;
+  const reordered = `{"v":${m.v},${c.slice(1).replace(`,"v":${m.v}`, '')}`;
   return [
     ['whitespace between tokens', JSON.stringify(m, null, 2)],
     ['keys out of order', reordered],
@@ -623,7 +623,7 @@ def(
 
 def(
   {
-    id: 'deliver.version-1-rules',
+    id: 'deliver.version-rules',
     section: `${S} step 4, PROTOCOL 5.2-5.4`,
     level: 'must',
     title: "A version 1 message breaking version 1's rules is 400, naming the field",
@@ -812,9 +812,9 @@ def(
     section: `${S} step 4, PROTOCOL 5.4`,
     level: 'must',
     title:
-      'rel only on a message that points at another; feed and audience only on a published one; listed only as yes, on a relation with recipients',
+      'audience only on a published one; a misplaced rel or feed ignored; listed only as yes, on a relation with recipients',
     expected:
-      '202 for a message with inReplyTo and a rel the registry does not list, and for a relation marked listed: yes; 400 invalid with details.field "headers" for rel without inReplyTo, rel in upper case, feed on a message with recipients, audience on a message with recipients, listed on a plain reply, and listed: Yes',
+      '202 for a message with inReplyTo and a rel the registry does not list, for a relation marked listed: yes, for rel without inReplyTo and for feed on a message with recipients (each ignored); 400 invalid with details.field "headers" for rel in upper case, audience on a message with recipients, listed on a plain reply, and listed: Yes',
   },
   async (t: T, ctx: Ctx) => {
     const parent = 'a'.repeat(64);
@@ -822,15 +822,17 @@ def(
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(rel), 'an unknown relation'), 'an unknown relation');
     const listed = (await valid(ctx, { inReplyTo: parent, headers: { rel: 'comment', listed: 'yes' } })).m;
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(listed), 'a listed relation'), 'a listed relation');
+    const loose = (await valid(ctx, { headers: { rel: 'reaction' } })).m;
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(loose), 'rel without inReplyTo'), 'rel without inReplyTo');
+    const fed = (await valid(ctx, { headers: { feed: 'posts' } })).m;
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(fed), 'feed with recipients'), 'feed with recipients');
     const { a, m } = await valid(ctx);
     await messageCases(
       t,
       ctx,
       [a.address],
       [
-        ['rel without inReplyTo', { ...m, headers: { rel: 'reaction' } }, 'headers'],
         ['rel in upper case', { ...m, inReplyTo: parent, headers: { rel: 'Reaction' } }, 'headers'],
-        ['feed on a message with recipients', { ...m, headers: { feed: 'posts' } }, 'headers'],
         ['audience on a message with recipients', { ...m, headers: { audience: 'followers' } }, 'headers'],
         ['listed on a plain reply', { ...m, inReplyTo: parent, headers: { listed: 'yes' } }, 'headers'],
         ['listed: Yes', { ...m, inReplyTo: parent, headers: { rel: 'comment', listed: 'Yes' } }, 'headers'],
@@ -851,15 +853,19 @@ def(
   async (t: T, ctx: Ctx) => {
     const principal = crypto.generateKeyPairSync('ed25519').privateKey;
     const forValue = `simon-key:${keyToken(principal)}`;
-    const p = ctx.peer.agent('paired', { kind: 'paired' });
+    const p = ctx.peer.agent('paired');
     const good = (
-      await valid(ctx, { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue) } }, p)
+      await valid(
+        ctx,
+        { headers: { for: forValue, pairing: signPairing(principal, p.address, forValue, ctx.until()) } },
+        p,
+      )
     ).m;
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(good), 'a valid pairing'), 'a valid pairing');
     const forged = (
       await valid(
         ctx,
-        { headers: { for: forValue, pairing: signPairing(principal, 'someone@else.example', forValue) } },
+        { headers: { for: forValue, pairing: signPairing(principal, 'someone@else.example', forValue, ctx.until()) } },
         p,
       )
     ).m;
@@ -1632,9 +1638,9 @@ def(
     id: 'deliver.author-document-extensible',
     section: 'PROTOCOL 2.3, 4',
     level: 'must',
-    title: 'Unknown algorithms, kinds and members in an agent document are skipped, not errors',
+    title: 'Unknown algorithms and members in an agent document are skipped, not errors',
     expected:
-      "202 when the author's document also lists a key of an algorithm nobody implements, when its kind is a string other than paired or solo, and when it has members no reader knows (the simulator's server document always has one too)",
+      "202 when the author's document also lists a key of an algorithm nobody implements, when it still says kind, a member of draft 0.1, and when it has members no reader knows (the simulator's server document always has one too)",
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await valid(ctx, {}, ctx.peer.agent('doc-alg', { doc: 'unknown-algorithm' }));
@@ -1643,8 +1649,8 @@ def(
       await ctx.deliver(t, ctx.peer.envelope(m), 'an unknown algorithm listed'),
       'an unknown algorithm listed',
     );
-    const { m: m2 } = await valid(ctx, {}, ctx.peer.agent('doc-kind', { kind: 'x-later-kind' }));
-    accepted(t, await ctx.deliver(t, ctx.peer.envelope(m2), 'an unknown kind'), 'an unknown kind');
+    const { m: m2 } = await valid(ctx, {}, ctx.peer.agent('doc-kind', { doc: 'legacy-kind' }));
+    accepted(t, await ctx.deliver(t, ctx.peer.envelope(m2), 'a draft 0.1 kind'), 'a draft 0.1 kind');
     const { m: m3 } = await valid(ctx, {}, ctx.peer.agent('doc-members', { doc: 'extra-members' }));
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(m3), 'unknown members'), 'unknown members');
   },

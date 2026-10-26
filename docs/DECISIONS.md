@@ -167,7 +167,7 @@ RFC 9421 (HTTP Message Signatures) is general: components are selected per reque
 - An agent is paired, speaking for exactly one principal named by one identifier, or solo, speaking for no one.
 - One agent and one identifier make one address. The same assistant for someone's work and personal email is two addresses, and so are two assistants for one person, and a switch to another assistant.
 - A retired pair's address is never reused.
-- The agent document says `paired` or `solo`, never who.
+- The agent document says `paired` or `solo`, never who. (Superseded 2026-10-25: the document says neither; see "The agent document no longer says paired or solo".)
 
 **Alternatives.**
 - *One agent serving many people from one inbox, with each message saying whom it is for.* The first draft did this.
@@ -188,7 +188,7 @@ The `for` header alone is the agent's word, as a From line in email is. A reader
 - **A key principal's own signature.** The `pairing` header travels on every message, and needs no server. It proves that the key's holder consented. It says nothing about identity or humanity, and it binds the address rather than the agent's current key, so it outlives a compromised agent key until the address retires.
 - **An `acts-for` claim.** This covers email and phone principals.
   - The claim is **authoritative** when the email's domain names the carrier by its `_simon` TXT record, the reasoning that makes DKIM trustworthy: the domain's DNS speaks for its mail. Until 2026-10-21 the well-known answer counted too; that handed a domain's mail identities to whoever runs its website.
-  - A principal never counts for a solo agent, whatever its message carries.
+  - A principal never counts for a solo agent, whatever its message carries. (Since 2026-10-25: for a message without `for`, whatever its claims say.)
   - Otherwise it is the carrier's word about someone else's identifier. Trusting a carrier's claims is a list of trusted carriers, as a browser keeps certificate authorities, without a transparency log.
 
 **Key principals** let people with no email or phone be principals too, pseudonymously, with a key held on a device or made for one pairing.
@@ -267,7 +267,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 - *Later:* SVCB (RFC 9460), advertised by a successor resolution mechanism (section 1), would add priority and failover.
 
 **No groups past a receiving server's `recipients` limit (at least 100).**
-- *Why:* a group is a conversation whose every message is addressed to its members (section 5.6). There is no list exploder, because a relay could not carry another domain's messages.
+- *Why:* a group is a conversation whose every message is addressed to its members (conversations profile). There is no list exploder, because a relay could not carry another domain's messages.
 - *Meanwhile:* a larger audience is a published feed with an `audience` label (section 7). A large private group is an MLS group, when the encryption profile exists.
 - *Left to:* the encryption profile, and a list-address module (docs/MODULES.md).
 
@@ -464,6 +464,81 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - **End-to-end encryption**. Not in the first release, anticipated in the format.
 - **Discovery.** Proposed, not yet agreed.
 
+## A small core, optional profiles, and no roster (2026-10-24)
+
+**Choice (B0).** PROTOCOL.md is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Short optional profiles in `spec/profiles/` build on it: the reader profile (showing and acting on messages), conversations, and publishing. A server or reader that claims a profile implements all of it; the core never depends on one, and moved sections keep their numbers as pointers.
+
+**Choice (B1).** A conversation has no roster. Each message's `to` is its author's choice; a reply may reach more or fewer people than the one before, which forks the conversation, as email and texting do. The `add`, `leave`, `remove` and `rename` relations, the `members` header and the reader's roster rule are gone. A side thread is marked by a `thread` header naming its anchor, so `inReplyTo` can name the message actually answered (B11).
+
+**Alternatives.**
+- *One document for everything,* as before: reviewers found it spends too much on how a messaging product behaves.
+- *An owner-signed roster with revisions,* which closes the backdated-`add` hole but keeps membership state and an owner who can disappear.
+- *A chain of membership changes,* Matrix's state resolution: the hardest part of Matrix to get right.
+
+**Reason.** One obvious way, with nothing to forge: whoever writes decides who reads. Precedent: XMPP's core and XEPs, Nostr's NIP-01 and NIPs; email and SMS for the threads.
+
+## One version counter, private names, JSON blocks (2026-10-25)
+
+**Choice (B2).** `v` counts incompatible wire revisions *after release*. Unreleased drafts share version 1: the format the 0.2.0 packages implement is SIMON 1 (`"v":1`), and a draft that changes before release changes version 1 itself. The npm 0.1.x packages implemented an earlier pre-release draft of the same version; that format is deprecated, not versioned, and its data and peers are not compatible with 0.2.0 (CHANGELOG, 0.2.0). Once released, a version never changes incompatibly: an incompatible revision takes the next number, and servers route it on its invariants (PROTOCOL.md section 1). Sending still refuses a version the agent's own server does not implement (`unsupported_version`); server-to-server delivery accepts unknown versions on their invariants, for forward compatibility.
+
+- *Alternatives:* a new number for every draft, as QUIC gave each draft its own wire number (it spends numbers on formats nobody deploys, and makes the first stable release something other than 1); every draft as `v:0` (decided 2026-10-22 and reversed here: a released 1 would still have to follow a 0 that meant several things); a reserved range for drafts, as QUIC's `0xff0000NN` (two numbering schemes).
+- *Reason:* nothing but pre-release packages ever carried the earlier draft, so there is no deployed version 1 to protect. A clean break at the first real release costs less than a version number that only marks a draft.
+- *Precedent:* HTTP/2 drafts used `h2-NN` identifiers that were dropped at publication; the published protocol is `h2`.
+
+**Choice (B9).** For headers, relations and signal types, a name without a dot is the registry's. Anyone else's is private: a domain its author controls in reversed label order, then the name (`com.example.approve`), so the grammar allows dots, and every name is at most 128 characters. Claim types and hint names follow the same convention, though servers check no grammar on them. Feed names are exempt: a feed is its author's own, so any feed name, with or without a dot, is the author's. A name never changes its meaning incompatibly; a new meaning takes a new name.
+
+- *Alternatives:* everything namespaced, as AT Protocol's NSIDs are (unreadable for the common entries); an `x-` prefix (RFC 6648 retired it, because experimental names became permanent).
+
+**Choice (B10).** One encoding for each media type: a JSON type (`application/json`, or a `+json` subtype) carries `data` as a JSON value; `text/*` as the text; anything else base64. A JSON block is then readable on the wire and checkable by its schema.
+
+- *Alternatives:* base64 for everything that is not text, as version 1 had (unreadable); letting an author choose either encoding for JSON (two ways to say one thing).
+- *Limit:* the value obeys section 5.1: integers within ±(2^53 − 1), no fractions or exponents, nesting at most 64 deep. A value outside them is written as a string, an integer in a smaller unit, or a base64 block of another type; libraries refuse it before signing with a clear error. `data: null` is a JSON value, and allowed.
+
+## Publishing is explicit; only `audience` placement is checked (2026-10-25)
+
+**Choice (B4).** A message carries a non-empty `to` or an `audience` header. `audience: public` is world-readable; any other label is the author's server's to interpret. A server refuses a message to no one without an audience, and anything that meets one anyway treats it as its author's alone: closed, never open.
+
+- *Why:* forgetting the recipients used to publish a message to the world. Agents are the users, so the extra field costs nothing, and it removes a whole class of accidental leaks.
+- *`public` is reserved:* it is the one label every reader and server reads the same way, world-readable, and the one a copy may be forwarded or quoted under whole. Every other label means only what the author's server says, so no server may give `public` another meaning, and no other label is ever read as world-readable.
+- *Precedent:* ActivityPub addresses `Public` explicitly; Mastodon marks visibility on every post.
+
+**Choice (B13.4).** A server no longer refuses a misplaced `rel` (on a message whose `inReplyTo` is null) or `feed` (on a message with recipients): each then means nothing and is ignored. It still refuses an `audience` on a message with recipients, because audience is security metadata and placement is what makes it mean something. "Never widen an audience" applies to every label but `public`.
+
+## A published message travels without unsigned keys (2026-10-25)
+
+**Choice (B13.11).** `GET /simon/messages/<id>` answers the message, and its carrier's signed claims when it made any, and no `keys` member. A reader verifies a published message as any other, with the author's agent document. The unsigned keys were a convenience that tempted clients to trust what no one signed, and duplicated the one authoritative source.
+
+## The agent document no longer says paired or solo (2026-10-25)
+
+**Choice (B13.3).** The agent document carries an agent's address and keys, and nothing about whom it speaks for, not even whether it speaks for anyone. A reader believes a principal only on the evidence its message carries: a key principal's pairing, or a carrier's signed claim it trusts. A message without `for` names no one. Whether an agent is paired or solo stays its host's own record, enforced when the agent sends.
+
+- *Why:* `kind` added no protection. A key principal's pairing proves consent by itself. For an email or phone principal, `kind` was the same server's word as its claim, so a server that would lie in one would lie in the other. And `kind` told anyone who asked which addresses speak for a person.
+- *Cost:* an agent's being paired is no longer checkable apart from its messages.
+
+## Pairings lapse within a year (2026-10-25)
+
+**Choice (B6).** Every key pairing signs an `until`, and counts only before it, by at most 366 days. The principal sets it; an agent may propose one, but cannot set or extend it alone. The principal renews by signing a later `until`; the agent carries the new pairing, and since its server checks each message's pairing against `for`, renewal needs no call. Verification judges the pairing at the message's `sentAt`; the agent's own server judges it at both `sentAt` and its own clock, so a message backdated within the 24-hour send window cannot carry a lapsed pairing. Whether a reader also requires the pairing to count now before acting is its policy (at most a SHOULD), and it may take a later message with the same address and `for` as evidence of renewal.
+
+- *The lapsed state:* a lapsed agent keeps its address and keeps receiving; its sends are refused until the principal renews, and renewal after a lapse is allowed. If the principal's key is lost, the host MAY retire the address, and a new key pairs new addresses.
+- *Leeway:* libraries sign 365 days by default against the 366-day cap, a day for clocks and leap years.
+
+- *Why:* a pairing used to bind an address to a principal for good, and whoever later controlled the domain could present it. A year bounds that, and bounds a compromised agent the principal never unpaired.
+- *The cap stands in for an issue time,* which a reader cannot check: judged against the reader's own clock, no `until` reaches more than 366 days ahead.
+- *Precedent:* TLS certificate lifetimes (398 days until 2026, 200 now, 47 by 2029, made bearable by ACME's automatic renewal), OAuth refresh, UCAN's `exp`; PGP's optional expiry is the cautionary tale, since an optional expiry is set by no one.
+- *Default start untouched:* email and phone principals and solo agents sign no pairing, so the person who starts with one link has nothing to renew. A host holding a key for its principal renews it as their policy allows.
+
+## A key principal moves to a new key by a succession (2026-10-25)
+
+**Choice (B7).** Planned rotation only. The old key and the new both sign `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; each step names the one before it, and messages carry the chain, oldest first, as the `succession` header. The agent's own server moves its record along the chain on the first message that carries it and holds the agent to the new key from then on; readers that knew any key in the chain know the principal. Two steps from one key to different keys are a fork: a reader that holds both MUST NOT link either successor to that key; how it shows them, and whether that is permanent, is its policy. A lost key cannot sign a succession: its pairings lapse, and a new key pairs new addresses. A chain has at most 16 steps.
+
+- *Unpairing always wins:* an unpairing signed by any key in the chain, a key the principal moved on from included, ends the agent, at its server (the unpairing carries the chain to the principal the server holds) and at readers. A move never shields an agent from its earlier key; a principal whose old key was copied ends its agents and pairs new addresses with a new key.
+- *The record moves once the message is stored,* so a message that is refused or lost moves nothing; an agent that never sends stays on the old principal at its server. Once the server has accepted the move, a client may drop the chain or keep it for readers.
+
+- *Why:* without it, a principal who replaces a key becomes a stranger to everyone who knew it, and every agent paired with it must start again under new addresses.
+- *Both keys sign:* the old consents to pass its place on, the new to take it. Neither alone can attach a principal's history to a key, or pass it to a key the principal doesn't hold.
+- *The chain travels with messages,* not in the agent document, so it reaches only recipients, as `for` does. The agent chooses how much history to carry.
+- *Precedent:* KERI's pre-rotation and key event logs (signed successions, duplicity as forks), DKIM selector rotation, X.509 cross-signing during CA key rollover, Signal's safety-number change notice for what readers see without a succession.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").
@@ -525,7 +600,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 **Current rule (a deliberate successor to the earlier counting rule).** The authoritative current whole document is bounded by 131072 final decoded signed bytes AND 32 TOTAL key entries, including retained revoked history. The earlier rule instead counted only keys valid at the reading time and retained more revoked entries within the byte bound. The successor deliberately bounds both parsed entries and bytes; it can therefore prune old revoked history sooner. A key whose revocation is still ahead of the reading clock remains active and must not be pruned to fit. Never silently drop an active key: refuse an unpublishable admission or fail publication closed. Overflow documents do not extend the bound.
 
-**Historical verification consequence.** A cold reader that resolves the current domain and reads the current signed documents cannot verify an old signature once its required key history has been pruned. The reference inbox stores the message and signed claims, not an authenticated author/carrier document archive; the current SDK re-reads current documents. Previously authenticated keys can still support a local signature check if a recipient separately retains and trusts them, but neither that check nor unsigned convenience keys beside a published message prove historical DNS state, completeness or a signing time. A private or removed retirement document likewise leaves a cold reader without evidence. No perpetual old-message verification mechanism is implemented or promised. If a product needs independently verifiable old messages after that evidence is gone, that remains an additional requirement and needs a separately selected evidence-retention design. Claims issued-at remains a separate unselected proposal.
+**Historical verification consequence.** A cold reader that resolves the current domain and reads the current signed documents cannot verify an old signature once its required key history has been pruned. The reference inbox stores the message and signed claims, not an authenticated author/carrier document archive; the current SDK re-reads current documents. Previously authenticated keys can still support a local signature check if a recipient separately retains and trusts them, but neither that check nor unsigned keys from anywhere prove historical DNS state, completeness or a signing time. A private or removed retirement document likewise leaves a cold reader without evidence. No perpetual old-message verification mechanism is implemented or promised. If a product needs independently verifiable old messages after that evidence is gone, that remains an additional requirement and needs a separately selected evidence-retention design. Claims issued-at remains a separate unselected proposal.
 
 **Earlier rationale (superseded where it differs):**
 
@@ -576,7 +651,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 **Earlier rationale (superseded where it differs):**
 
-> **Choice.** A part typed `application/simon-message`, with or without parameters, carried inline, must decode to the canonical bytes of an object that meets items 1 to 3 of section 1's invariants (the signature, item 4, is a reader's to check), at most 8 deep, the directly carried message being depth 1. Anything else makes the carrying message `400 invalid`. A carried message of version 1 has its files checked; one of a version the server does not know is carried unchanged, and nothing inside it is looked into, for files, depth or form. (The check names items 1 to 3 and not "section 1's invariants", because those include the signature, which no server checks.) No server checks a carried message's signature.
+> **Choice.** A part typed `application/simon-message`, with or without parameters, carried inline, must decode to the canonical bytes of an object that meets items 1 to 3 of section 1's invariants (the signature, item 4, is a reader's to check), at most 8 deep, the directly carried message being depth 1. Anything else makes the carrying message `400 invalid`. A carried message of the version a server knows has its files checked; one of a version the server does not know is carried unchanged, and nothing inside it is looked into, for files, depth or form. (The check names items 1 to 3 and not "section 1's invariants", because those include the signature, which no server checks.) No server checks a carried message's signature.
 >
 > **Alternatives.**
 > - *Look leniently and skip what does not parse,* as the reference server does: it parses without requiring canonical form, skips bytes that do not parse, and stops looking at depth 8 while accepting deeper messages. Unspecified, implementations split between `400` and `202` on the same message.

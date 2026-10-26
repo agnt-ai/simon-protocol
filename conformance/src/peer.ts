@@ -57,14 +57,14 @@ export type DocMode =
   | 'unknown-algorithm'
   | 'too-many-keys'
   | 'too-large'
-  | 'extra-members';
+  | 'extra-members'
+  | 'legacy-kind';
 
 export interface PeerAgent {
   name: string;
   address: string;
   key: KeyObject;
   token: string;
-  kind: string;
   /** The entries the document lists; by default the key, added long ago. */
   keys: KeyEntry[];
   doc: DocMode;
@@ -192,7 +192,6 @@ export class Peer {
       address: `${this.runId}-${name}@${this.domain}`,
       key,
       token,
-      kind: o.kind ?? 'solo',
       keys: o.keys ?? [{ key: token, added: LONG_AGO, revoked: null }],
       doc: o.doc ?? 'ok',
     };
@@ -234,9 +233,10 @@ export class Peer {
     if (a.doc === 'too-large') extra.padding = 'x'.repeat(131_072);
     if (a.doc === 'extra-members')
       Object.assign(extra, { encryptionKeys: [{ key: 'x-kem:AAAA' }], 'x-conformance': { any: ['thing', 1] } });
+    // Draft 0.1 said paired or solo here; a reader now skips it like any member it does not know.
+    if (a.doc === 'legacy-kind') extra.kind = 'solo';
     const doc = {
       address: a.doc === 'wrong-address' ? `someone-else-${a.address}` : a.address,
-      kind: a.kind,
       keys: keys as KeyEntry[],
       ...extra,
     };

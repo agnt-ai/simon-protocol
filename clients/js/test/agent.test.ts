@@ -179,7 +179,7 @@ describe('register', () => {
     ]);
     assert.equal(fresh.address, address);
     assert.equal(fresh.compose({ to: [], text: 'recovered' }).headers.for, id);
-    await fresh.send({ to: [], text: 'recovered' });
+    await fresh.send({ to: [], text: 'recovered', headers: { audience: 'public' } });
     const wire = fake.requests.findLast(r => r.path === '/simon/recovery');
     assert.ok(
       wire &&
@@ -265,7 +265,7 @@ describe('register', () => {
       saveAddress(home, fresh);
       const reloaded = openAgent(home, { fetch: fake.fetch });
       assert.deepEqual([reloaded.for, reloaded.pairing], [id, pairing]);
-      const message = reloaded.compose({ to: [], text: 'after reload' });
+      const message = reloaded.compose({ to: [], text: 'after reload', headers: { audience: 'public' } });
       assert.equal(message.headers.for, id);
       await reloaded.send(message);
     } finally {
@@ -328,6 +328,19 @@ describe('send and inbox', () => {
     assert.equal((await a.send(m)).id, messageId(m));
     const e = await failure(() => a.compose({ to: ['bob@agents.test'], headers: { for: 'mailto:x@example.com' } }));
     assert.deepEqual([e.code, e.details], ['invalid', { field: 'headers' }]);
+  });
+
+  it('refuses a JSON block whose value canonical JSON cannot carry, saying how to write it', async () => {
+    const { agent } = setup();
+    const ada = await registered(agent);
+    const json = (data: unknown) => ({ to: ['bob@agents.test'], parts: [{ type: 'application/json', data }] });
+    for (const data of [{ price: 19.99 }, [1e21], { n: 2 ** 53 }]) {
+      const e = await failure(() => ada.compose(json(data) as never));
+      assert.deepEqual([e.code, e.details], ['invalid', { field: 'parts' }], JSON.stringify(data));
+      assert.match(e.message, /canonical JSON.*"19\.99"/s);
+    }
+    assert.equal(ada.compose(json({ price: '19.99', cents: 1999 }) as never).parts[0].type, 'application/json');
+    assert.equal((ada.compose(json(null) as never).parts[0] as { data: unknown }).data, null, 'null is a JSON value');
   });
 
   it('sends a composed message again with the same answer', async () => {

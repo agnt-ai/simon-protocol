@@ -10,7 +10,7 @@ import {
 import { buildFrom, type Ctx } from '../context.ts';
 import type { T } from '../harness.ts';
 import { awaitSync, def, readSync, type SyncEntry } from './common.ts';
-import { LONG_AGO } from '../peer.ts';
+import { LONG_AGO, type DocMode } from '../peer.ts';
 import { requireControl } from './deliver.ts';
 
 const S = 'CLIENT sync';
@@ -142,7 +142,7 @@ const actsFor = (agent: string, forValue: string, extra: Record<string, unknown>
 
 /**
  * A message from a new simulated agent to agent a, with `forValue` as its for header when given, delivered
- * with these claims: the sync entry, once it arrives.
+ * with these claims: the sync entry, once it arrives. `doc` is how the simulator serves the agent's document.
  */
 async function claimed(
   t: T,
@@ -150,11 +150,11 @@ async function claimed(
   name: string,
   forValue: string | null,
   claims: (author: string) => Record<string, unknown>[],
-  kind = forValue ? 'paired' : 'solo',
+  doc: DocMode = 'ok',
 ) {
   await requireControl(ctx);
   const a = await ctx.agent('a');
-  const p = ctx.peer.agent(name, { kind });
+  const p = ctx.peer.agent(name, { doc });
   const m = buildFrom(p, [a.address], ctx.now(), forValue ? { headers: { for: forValue } } : {});
   t.status(
     await ctx.deliver(t, ctx.peer.envelope(m, { claims: claims(p.address) as never })),
@@ -217,19 +217,27 @@ def(
     level: 'must',
     title: "A claim for an email address on the carrier's own domain is shown as authoritative",
     expected:
-      "the entry shows the acts-for claim, as sent, with authoritative: true, for a message whose for is mailto: an address on the simulator's own domain, carried by the simulator (whose word the server need not otherwise trust)",
+      "the entry shows the acts-for claim, as sent, with authoritative: true, for a message whose for is mailto: an address on the simulator's own domain, carried by the simulator (whose word the server need not otherwise trust); the same when the author's document also says kind: solo, a member of draft 0.1 that no longer decides anything",
   },
   async (t: T, ctx: Ctx) => {
-    const forValue = ownMailto(ctx, 'owner');
-    let sent: Record<string, unknown> = {};
-    const { shown } = await claimed(t, ctx, 'claims-own', forValue, author => [(sent = actsFor(author, forValue))]);
-    t.assert(shown.length === 1, `the entry shows ${shown.length} acts-for claims: ${JSON.stringify(shown)}`);
-    const { authoritative, ...rest } = shown[0];
-    t.assert(authoritative === true, `authoritative is ${JSON.stringify(authoritative)}`);
-    t.assert(
-      canonicalize(rest) === canonicalize(sent),
-      `the claim shown differs from the one sent: ${JSON.stringify(rest)}`,
-    );
+    for (const [name, doc] of [
+      ['claims-own', 'ok'],
+      ['claims-own-kind', 'legacy-kind'],
+    ] as const) {
+      const forValue = ownMailto(ctx, `${name}-owner`);
+      let sent: Record<string, unknown> = {};
+      const { shown } = await claimed(t, ctx, name, forValue, author => [(sent = actsFor(author, forValue))], doc);
+      t.assert(
+        shown.length === 1,
+        `${name}: the entry shows ${shown.length} acts-for claims: ${JSON.stringify(shown)}`,
+      );
+      const { authoritative, ...rest } = shown[0];
+      t.assert(authoritative === true, `${name}: authoritative is ${JSON.stringify(authoritative)}`);
+      t.assert(
+        canonicalize(rest) === canonicalize(sent),
+        `${name}: the claim shown differs from the one sent: ${JSON.stringify(rest)}`,
+      );
+    }
   },
 );
 
@@ -278,17 +286,17 @@ def(
 
 def(
   {
-    id: 'sync.claims-solo',
+    id: 'sync.claims-no-for',
     section: `${S}, PROTOCOL 2.2, 6.2`,
     level: 'must',
-    title: 'A principal never counts for a solo agent, whatever its carrier claims',
+    title: 'A message without a for header names no principal, whatever its carrier claims',
     expected:
-      "no acts-for claim in the entry for a message carrying a for header from an agent whose document says solo, though the claim names an address on the carrier's own domain",
+      "no acts-for claim in the entry for a message without a for header, though the claim names an address on the carrier's own domain",
   },
   async (t: T, ctx: Ctx) => {
-    const forValue = ownMailto(ctx, 'solo-owner');
-    const { shown } = await claimed(t, ctx, 'claims-solo', forValue, author => [actsFor(author, forValue)], 'solo');
-    t.assert(shown.length === 0, `the entry shows ${JSON.stringify(shown)} for a solo agent`);
+    const forValue = ownMailto(ctx, 'unnamed-owner');
+    const { shown } = await claimed(t, ctx, 'claims-no-for', null, author => [actsFor(author, forValue)]);
+    t.assert(shown.length === 0, `the entry shows ${JSON.stringify(shown)} for a message that names no one`);
   },
 );
 

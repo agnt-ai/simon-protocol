@@ -29,6 +29,7 @@ import {
   type Message,
   type Part,
   type Unsigned,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig, type ConfigInput } from '../src/config.ts';
 import type { Extension } from '../src/extensions.ts';
@@ -39,7 +40,7 @@ import { SqliteStore } from '../src/store/sqlite.ts';
 import type { Store } from '../src/store/store.ts';
 import { Clock, FakeDns, FakeNet, replyBody, toRequest } from '../src/testing.ts';
 
-export { Clock, FakeDns, FakeNet, TARPIT_MS, toRequest } from '../src/testing.ts';
+export { CLOCK_PAIRING_UNTIL, Clock, FakeDns, FakeNet, TARPIT_MS, toRequest } from '../src/testing.ts';
 
 export interface Answer {
   status: number;
@@ -278,14 +279,15 @@ export class TestAgent {
   message(to: string[], text: string, extra: Partial<Unsigned<Message>> & { parts?: Part[] } = {}): Message {
     return signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: this.address,
         to,
         inReplyTo: null,
         parts: [{ type: 'text/plain', data: text }],
-        headers: {},
         sentAt: timestamp(this.fed.clock.t),
         ...extra,
+        // A message to no one is published, and says who may read it: public unless the test says otherwise.
+        headers: { ...(to.length === 0 ? { audience: 'public' } : {}), ...extra.headers },
       },
       this.key,
     );
@@ -421,7 +423,7 @@ export class Peer {
   message(from: string, to: string[], text: string, extra: Record<string, unknown> = {}): Message {
     return signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from,
         to,
         inReplyTo: null,

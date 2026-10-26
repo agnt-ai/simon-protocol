@@ -1,6 +1,6 @@
 {
   "name": "@agnt-sdk/simon-server",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The SIMON reference server: the whole protocol and client API, hardened, with Node's standard library only, and the Store contract any storage proves itself with.",
   "license": "Apache-2.0",
   "keywords": [
@@ -50,6 +50,6 @@
     "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.1.1"
+    "@agnt-sdk/simon-protocol": "0.2.0"
   }
 }

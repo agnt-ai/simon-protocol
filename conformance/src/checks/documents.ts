@@ -178,17 +178,17 @@ def(
 
 def(
   {
-    id: 'documents.agent.kind',
+    id: 'documents.agent.no-kind',
     section: 'PROTOCOL 2.2, 4',
     level: 'must',
-    title: 'An agent document says paired or solo',
-    expected: 'kind is "solo" for an agent registered without `for`',
+    title: 'An agent document says nothing of whom the agent speaks for',
+    expected: 'no kind member in the document of an agent registered without `for`',
   },
   async (t: T, ctx: Ctx) => {
     const a = await ctx.agent('a');
     const { res } = await agentDocument(t, ctx, a.address);
     t.status(res, 200);
-    t.assert(res.json?.kind === 'solo', `kind is ${JSON.stringify(res.json?.kind)}`);
+    t.assert(res.json?.kind === undefined, `the document says kind ${JSON.stringify(res.json?.kind)}`);
   },
 );
 

@@ -75,7 +75,7 @@ describe('the conformance suite against a broken toy server', () => {
       'deliver.fan-out-recipients',
       'deliver.canonical',
       'deliver.order-canonical-before-signature',
-      'deliver.version-1-rules',
+      'deliver.version-rules',
       'deliver.carried-files',
       'deliver.unknown-version-stored',
       'deliver.envelope-covers-everything',

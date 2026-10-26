@@ -30,6 +30,7 @@ from simon.resolution import Resolution, freshness_ms, resolve, well_known_outco
 from simon.wait import wait_for_message, save_wait_state, read_wait_state
 from simon.transport import _read
 from simon.wire import from_b64url, is_base64, parse_timestamp, timestamp
+from simon.messages import VERSION
 
 
 class CanonicalValues(unittest.TestCase):
@@ -142,7 +143,7 @@ class Provenance(unittest.TestCase):
         )
 
     def test_entries_unwrap_for_verification(self):
-        message = {"v": 1, "from": "ada@example.com", "signature": "AA"}
+        message = {"v": VERSION, "from": "ada@example.com", "signature": "AA"}
         entry = {
             "cursor": 1,
             "id": "x",

@@ -30,7 +30,7 @@ One file per concern, named for the spec section it implements. The Node templat
 | Fan-out | PROTOCOL 6.3 | `fanout.ts` | After the answer, offers each arrival to its recipient. |
 | Outbox | PROTOCOL 6.3 | `outbox.ts` | Delivers with leases, retries and the deadline. |
 | Signals | PROTOCOL 6.4 | `signal.ts` | Checks and sends signals; never stores them as messages. |
-| Published messages | PROTOCOL 7.1 | `published.ts`, `readers.ts` | Serves published messages to whoever their audience admits. |
+| Published messages | publishing profile, section 1 | `published.ts`, `readers.ts` | Serves published messages to whoever their audience admits. |
 | Parts | PROTOCOL 7.2 | `parts.ts` | Bytes per source; fetching from carriers. |
 | The client API | CLIENT | `register.ts`, `account.ts`, `send.ts` | Registration, recovery, keys, and sending. |
 | Sync and webhooks | CLIENT | `sync.ts`, `webhooks.ts` | `sync` and `sent`; verified, signed webhooks. The history calls are to be written. |

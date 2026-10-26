@@ -43,6 +43,10 @@ from .limits import (
     SERVER_DOCUMENT_REFETCH_SECONDS,
 )
 from .messages import (
+    is_header_name,
+    is_json_type,
+    json_data_problem,
+    PAIRING_DEFAULT_MS,
     PROTOCOL_HEADERS,
     VERSION,
     check_message,
@@ -51,14 +55,16 @@ from .messages import (
     is_principal,
     message_id,
     message_verdict,
+    parse_pairing,
     principal_key,
+    read_succession,
     sign_message,
     sign_pairing,
     verify_pairing,
     verify_recovery,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood
+from .reading import claimed_principal, is_understood, pairing_standing, predecessors
 from .request import add_key_proof, sign_request
 from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .transport import HostNotFound, Response, fetch
@@ -133,11 +139,26 @@ class PrincipalTrust:
     #: For ``key-pairing``: True when the address's retired document carries this principal's unpairing,
     #: which verifies with its key, so the pairing has ended for good (spec sections 2.2 and 4).
     ended: bool = False
+    #: For ``key-pairing``: when the pairing lapses, unless the principal renews it (spec section 2.2).
+    until: str | None = None
+    #: For ``key-pairing``: True when the pairing counted when the message was sent but has lapsed since.
+    #: The message spoke for the principal then; act on nothing in it for the principal now.
+    lapsed: bool = False
+    #: For ``key-pairing``: the principal's earlier keys, oldest first, from the message's verified
+    #: ``succession`` (spec section 2.2). Whoever knew one of them knows this principal, unless it has seen
+    #: that key succeeded by another as well.
+    succeeds: tuple[str, ...] = ()
 
     def to_json(self) -> dict[str, Any]:
         out: dict[str, Any] = {"id": self.id, "basis": self.basis}
         if self.basis == "server-claim":
             out.update(claimant=self.claimant, authoritative=self.authoritative, scope=list(self.scope or ()))
+        if self.basis == "key-pairing":
+            out["until"] = self.until
+        if self.succeeds:
+            out["succeeds"] = list(self.succeeds)
+        if self.lapsed:
+            out["lapsed"] = True
         if self.ended:
             out["ended"] = True
         out["proves"] = self.proves
@@ -152,8 +173,6 @@ class Trust:
 
     id: str
     author_server: str
-    #: ``paired``, ``solo``, or ``unknown`` for a kind this reader does not know.
-    kind: str
     #: False for a message of a version this client does not implement, or whose ``critical`` header lists
     #: one it does not understand (spec sections 1 and 5.4): whose key signed it is all it says. Act on
     #: nothing in it; it names no principal.
@@ -161,8 +180,8 @@ class Trust:
     #: Whether ``signed_claims`` were given (``none``), and verified with the carrier's keys (``verified``)
     #: or not (``unverified``, and ignored).
     claims: Literal["none", "verified", "unverified"]
-    #: The principal that counts: None for a message with no ``for`` header, one not understood, or one
-    #: from an agent its document does not call ``paired``: a solo agent speaks for no one.
+    #: The principal it names, with the basis that backs it: None for a message with no ``for`` header,
+    #: or one not understood.
     principal: PrincipalTrust | None = None
     #: When the author's address retired, if it has (spec section 4): the message was signed before then,
     #: but the address is ended for good, and nothing from it dated at or after this verifies.
@@ -176,7 +195,6 @@ class Trust:
             "id": self.id,
             "authorSigned": True,
             "authorServer": self.author_server,
-            "kind": self.kind,
             "understood": self.understood,
             "principal": None if self.principal is None else self.principal.to_json(),
             "claims": self.claims,
@@ -186,7 +204,7 @@ class Trust:
 
 #: Why a message did not verify: ``invalid_message``, ``no_server``, ``no_agent``, ``bad_document``,
 #: ``bad_signature``, ``unsupported_algorithm`` (the author has keys, none of an algorithm implemented
-#: here) or ``bad_pairing``.
+#: here), ``bad_pairing`` or ``bad_succession``.
 NotVerifiedReason = Literal[
     "invalid_message",
     "no_server",
@@ -195,6 +213,7 @@ NotVerifiedReason = Literal[
     "bad_signature",
     "unsupported_algorithm",
     "bad_pairing",
+    "bad_succession",
 ]
 
 
@@ -251,7 +270,7 @@ class Reader:
 
     def agent_document(self, address: str, *, refresh: bool = False) -> dict[str, Any] | None:
         """An agent's document, from the server its address's domain resolves to, verified under that
-        server's keys valid now: ``{"address", "server", "kind", "keys", "algorithms"}``, ``algorithms``
+        server's keys valid now: ``{"address", "server", "keys", "algorithms"}``, ``algorithms``
         being those its server verifies. None when the server answers that no such agent exists. Cached for
         ten minutes."""
         wire = address if is_address(address) else _address_arg("address", address)
@@ -261,8 +280,8 @@ class Reader:
     def verify_author(self, message: Any, *, signed_claims: Any = None) -> Verification:
         """Whether a message was signed by its author, with a key the server ``from``'s domain resolves to
         publishes as valid at its ``sentAt``; whether this reader understands it; and if so, on what basis
-        it names its principal. Only a ``paired`` agent has one: a solo agent, or one of a kind this reader
-        does not know, speaks for no one.
+        it names its principal. A message without a ``for`` header speaks for no one; one with it names a
+        principal only as far as a pairing or a trusted claim backs it.
 
         Pass the sync entry's ``signedClaims`` as ``signed_claims`` so an ``acts-for`` claim counts. They
         count only when their signature verifies with a key of the server ``from``'s domain resolves to,
@@ -294,17 +313,27 @@ class Reader:
         claims = None if signed_claims is None else self._carried_claims(signed_claims, m, server)
         understood = is_understood(m, PROTOCOL_HEADERS)
         status = "none" if signed_claims is None else "unverified" if claims is None else "verified"
-        trust = Trust(id, server, author["kind"], understood, status, retired=author.get("retired"))
-        principal = claimed_principal(m, author["kind"]) if understood else None
+        trust = Trust(id, server, understood, status, retired=author.get("retired"))
+        principal = claimed_principal(m) if understood else None
         if principal is None:
             return trust
         if principal_key(principal) is not None:
-            if not verify_pairing(m["from"], principal, header(m, "pairing")):
+            standing = pairing_standing(m, self._now_ms())
+            if standing == "refused":
                 return NotVerified(id, "bad_pairing")
+            lapsed = standing == "lapsed"
+            earlier = predecessors(m)
+            if earlier == "refused":
+                return NotVerified(id, "bad_succession")
             unpairing = author.get("unpairing")
-            ended = unpairing is not None and verify_unpairing(m["from"], principal, unpairing)
-            return _with(trust, PrincipalTrust(principal, "key-pairing", _PROVES["key-pairing"], ended=ended))
-        considered = claims_about(m, claims or (), author["kind"])
+            # Unpairing always wins: one signed by a key the principal moved on from ends the agent too.
+            ended = unpairing is not None and any(
+                verify_unpairing(m["from"], p, unpairing) for p in [principal, *earlier]
+            )
+            until = parse_pairing(header(m, "pairing"))[0]  # type: ignore[index]
+            proves = _PROVES["key-pairing"]
+            return _with(trust, PrincipalTrust(principal, "key-pairing", proves, ended=ended, until=until, lapsed=lapsed, succeeds=tuple(earlier)))
+        considered = claims_about(m, claims or ())
         claim = next((c for c in considered if c["type"] == "acts-for"), None)
         if claim is None:
             return _with(trust, PrincipalTrust(principal, "agent-asserted", _PROVES["agent-asserted"]))
@@ -438,6 +467,7 @@ class Agent(Reader):
         *,
         principal: str | None = None,
         pairing: str | None = None,
+        succession: str | None = None,
         timeout: float = 30.0,
         resolver: Callable[[str], Resolution] | None = None,
     ) -> None:
@@ -447,6 +477,7 @@ class Agent(Reader):
         self.address = None if address is None else _address_arg("address", address)
         self.principal = principal
         self.pairing = pairing
+        self.succession = succession
 
     def __repr__(self) -> str:
         return f"Agent({self.origin!r}, {self.key!r}, {self.address!r})"
@@ -486,7 +517,7 @@ class Agent(Reader):
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
             if principal is not None:
-                self.principal, self.pairing = principal, pairing
+                self.principal, self.pairing, self.succession = principal, pairing, None
         return result
 
     def account(self) -> dict[str, Any]:
@@ -506,7 +537,7 @@ class Agent(Reader):
             if principal is not None and principal != principal_key.identifier:
                 raise _invalid("principal", "The recovery principal must match its signing key.")
             principal = principal_key.identifier
-            pairing = sign_pairing(principal_key, address) if pairing is None else pairing
+            pairing = sign_pairing(principal_key, address, timestamp(self._now_ms() + PAIRING_DEFAULT_MS)) if pairing is None else pairing
             at = timestamp(self._now_ms()) if at is None else at
             recover = principal_key.sign(f"SIMON-RECOVER\n{address}\n{self._key().token}\n{at}".encode())
         if principal is None and self.principal is not None and self.address != address:
@@ -515,7 +546,7 @@ class Agent(Reader):
         effective_pairing = (self.pairing if pairing is None else pairing) if principal is None else pairing
         if effective_pairing is not None and effective_principal is None:
             raise _invalid("principal", "Pairing needs its principal.")
-        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("simon-key:") and not verify_pairing(address, effective_principal, effective_pairing))):
+        if effective_principal is not None and (not is_principal(effective_principal) or (effective_principal.startswith("simon-key:") and not verify_pairing(address, effective_principal, effective_pairing, self._now_ms()))):
             raise _invalid("pairing", "Effective recovery principal must be valid; its key pairing must verify for the target address.")
         if recover is not None and (effective_principal is None or not effective_principal.startswith("simon-key:") or not isinstance(at, str) or not verify_recovery(address, effective_principal, self._key().token, at, recover)):
             raise _invalid("recover", "Recovery proof must verify for this same principal, target address, new key and timestamp.")
@@ -528,6 +559,8 @@ class Agent(Reader):
         result = self.call("POST", "/simon/recovery", canonical_bytes(body), agent=address)
         if isinstance(result, dict) and isinstance(result.get("keys"), list):
             self.address = result["address"]
+            if effective_principal != self.principal:
+                self.succession = None
             self.principal, self.pairing = effective_principal, effective_pairing
         return result
 
@@ -574,9 +607,42 @@ class Agent(Reader):
             raise _invalid("id", "A grant id is a nonempty string.")
         return self.call("DELETE", "/simon/grants/" + quote(id, safe=""))
 
-    def unpair(self, address: str, unpairing: str) -> dict[str, Any]:
+    def unpair(self, address: str, unpairing: str, succession: str | None = None) -> dict[str, Any]:
+        """Retire a paired address by its principal's unpairing. One signed by a key the principal moved on
+        from also counts, given ``succession``, the chain from that key to the principal the server holds."""
         address = _address_arg("address", address)
-        return self.call("POST", "/simon/unpair", canonical_bytes({"address": address, "unpairing": unpairing}), agent=address)
+        body = {"address": address, "unpairing": unpairing}
+        if succession is not None:
+            body["succession"] = succession
+        return self.call("POST", "/simon/unpair", canonical_bytes(body), agent=address)
+
+    def renew_pairing(self, pairing: str) -> None:
+        """Carry a renewed pairing from now on: the principal's signature over a later ``until`` (spec
+        section 2.2). The server holds no pairing, so renewing needs no call to it; this checks the pairing
+        counts now."""
+        address = self._address()
+        if self.principal is None or not verify_pairing(address, self.principal, pairing, self._now_ms()):
+            raise _invalid("pairing", "A renewed pairing must be the principal's, for this address, and count now.")
+        self.pairing = pairing
+
+    def succeed(self, principal: str, pairing: str, succession: str) -> None:
+        """Move to the principal's new key (spec section 2.2): ``principal`` its new identifier, a ``pairing``
+        that key signed, and the ``succession``, steps both keys signed, leading from the principal this agent
+        has to it. The steps from this agent's principal on are added to the chain it already carries, so moving
+        twice before sending keeps the whole way. Checked here; the server moves its record on the next
+        message, so this needs no call."""
+        address = self._address()
+        steps = read_succession(succession, principal) or []
+        start = next((i for i, step in enumerate(steps) if step["from"] == self.principal), None)
+        if start is None:
+            raise _invalid("succession", "A succession must verify and lead from this agent's principal to the new one.")
+        added = ",".join(succession.split(",")[start:])
+        chain = succession if self.succession is None else f"{self.succession},{added}"
+        if read_succession(chain, principal) is None:
+            raise _invalid("succession", "The chain this agent carries and the new steps do not make one succession.")
+        if not verify_pairing(address, principal, pairing, self._now_ms()):
+            raise _invalid("pairing", "The new key's pairing must be for this address, and count now.")
+        self.principal, self.pairing, self.succession = principal, pairing, chain
 
     def compose(
         self,
@@ -590,10 +656,10 @@ class Agent(Reader):
         """A signed version 1 message, written now, and checked as this agent's server will check it.
 
         ``text``, when given, becomes the first part (``text/plain``), ahead of ``parts``; a message may
-        carry any parts, or none. An empty ``to`` is a public message. The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
+        carry any parts, or none. An empty ``to`` publishes the message, which then needs an ``audience`` header (``public`` for anyone). The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.
         """
         headers = dict(headers or {})
-        for name in ("for", "pairing"):
+        for name in ("for", "pairing", "succession"):
             if name in headers:
                 raise _invalid(
                     "headers", f"The agent writes the {name} header from its pairing; leave it out."
@@ -602,13 +668,22 @@ class Agent(Reader):
             headers["for"] = self.principal
         if self.pairing is not None:
             headers["pairing"] = self.pairing
+        if self.succession is not None:
+            headers["succession"] = self.succession
+        parts = ([{"type": "text/plain", "data": text}] if text is not None else []) + list(parts)
+        # A JSON block's value is signed as canonical JSON: say how to write one that is not, before signing.
+        for part in parts:
+            if isinstance(part.get("type"), str) and is_json_type(part["type"]) and "data" in part:
+                problem = json_data_problem(part["data"])
+                if problem is not None:
+                    raise _invalid("parts", problem)
         message = sign_message(
             {
                 "v": VERSION,
                 "from": self._address(),
                 "to": [_address_arg(f"to[{i}]", a) for i, a in enumerate(to)],
                 "inReplyTo": in_reply_to,
-                "parts": ([{"type": "text/plain", "data": text}] if text is not None else []) + list(parts),
+                "parts": parts,
                 "headers": headers,
                 "sentAt": timestamp(self._now_ms()),
             },
@@ -673,8 +748,8 @@ class Agent(Reader):
 
     def send_signal(self, type: str, about: str, to: Iterable[str]) -> dict[str, Any]:
         """Ask the server to send a signal. Read/typing sharing is always opt-in."""
-        if not isinstance(type, str) or re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", type) is None:
-            raise _invalid("type", "type is a registry name.")
+        if not is_header_name(type):
+            raise _invalid("type", "A signal type is a name: a registry name, or a private reverse-domain one.")
         body = {"type": type, "about": _hex64_arg("about", about),
                 "to": [_address_arg(f"to[{i}]", a) for i, a in enumerate(to)]}
         return self.call("POST", "/simon/send-signal", canonical_bytes(body))

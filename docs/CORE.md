@@ -33,13 +33,14 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 | `schema` media-type parameter | registry | Block types | Readers only. |
 | Specific block types (reference, forwarded message, UI) | registry, with core carriage rules | Block types; 5.3 | Readers interpret their content. Servers also enumerate and validate files of inline-carried messages under the bounded traversal in 5.3. |
 | `inReplyTo` | core | 5.2 | Unchanged. |
-| `rel` header and its reader rules | core | 5.4, 5.5 | The fallback rule (unknown relation shows as a reply) and the author-only rule must bind every reader for every relation, including names invented later; a registry header cannot impose that on readers that do not know it. Servers check its placement. |
-| Relation names (reaction, edit, retract, thread, comment, vote, response, forward, quote, pin, add, leave, remove, rename) | registry | Relations | Reader conventions, except explicitly core-required same-author public-listing suppression; the list grows. |
-| Conversations: root id, signed membership, rosters rebuilt by readers | core (the definition) | 5.6 | One paragraph that says what a conversation is and that servers keep no state, so nobody builds Matrix-style replicated rooms on top. |
-| `conversation`, `members`, `subject` headers; the roster rule | registry | Message headers, Relations | Readers only. |
+| `rel` header | core | 5.4, 5.5 | Servers check its placement. Its reader rules (an unknown relation shows as a reply; the author-only rule) bind every reader that claims the reader profile, for every relation, including names invented later. |
+| Relation names (reaction, edit, retract, comment, vote, response, forward, quote, pin) | registry | Relations | Reader conventions, except explicitly core-required same-author public-listing suppression; the list grows. |
+| Conversations: root id, no roster, `to` is the membership | conversations profile | profiles/conversations.md | What a conversation is, and that servers keep no state, so nobody builds Matrix-style replicated rooms on top. |
+| `conversation`, `thread`, `subject` headers | registry | Message headers | Readers only. |
 | Signals and `POST /simon/signal` | core | 6.4 | A new server-to-server call: every server must implement it to receive signals, and none exists to reuse, since signals must never be stored. |
 | `typing`, `collected`, `read` | registry | Signal types | The signals the path exists for, decades old. Servers pass on types without reading them. |
-| Published messages, `feed`, `audience` and `listed` headers, feed listings, relations listings | core | 5.4, 7 | The author's server has to read `feed` to list feeds, `audience` to refuse readers, and `listed` to know which relations their writers let it list. |
+| Published messages, feed listings, relations listings | publishing profile | profiles/publishing.md | Optional: a server that publishes implements all of it. |
+| `feed`, `audience` and `listed` headers | core grammar, publishing meaning | 5.4; publishing profile | Every server checks their grammar, and the placement of `audience` and `listed`; the author's server reads `feed` to list feeds, `audience` to refuse readers, and `listed` to know which relations their writers let it list. |
 | What an audience label means | registry (or the author's app) | Audience labels | Opaque to the protocol by design. |
 | Following | registry | `follow` header, `followers` label | Can start as a convention: a reader polls a feed. |
 | Interactive UI is data, never code | core (security rule) | 11.2 | A safety rule every reader must obey. The UI block format itself is reserved in the registry. |
@@ -86,7 +87,7 @@ The registry's `supersedes` and `retracts` headers are folded into `rel: edit` a
 | `rel: edit`, naming the original | `replaces`, naming the first instance | yes |
 | `rel: retract` | `replaces` with a null part | yes |
 | `rel: reaction`, text is the reaction | `reaction` disposition with `inReplyTo` | yes |
-| `rel: thread` | `topicId` | close: MIMI groups by a topic value, SIMON by the message the thread hangs from |
+| `thread` header, naming the anchor | `topicId` | close: MIMI groups by a topic value, SIMON by the message the thread hangs from |
 | author-only relations | "MUST NOT let anyone other than the original sender edit or delete" | yes |
 | latest edit by `sentAt`, ties to the lowest id | sort by timestamp, ties to the lowest message id | yes |
 | `name`, `alt` | `filename`, `description` (on external parts) | yes |
@@ -98,11 +99,11 @@ A bridge between the two maps each row directly.
 
 ### Conversations without shared state
 
-A conversation is its root message and everything whose `inReplyTo` chain leads to it. Its id is the root's id. Membership changes are signed relations (`add`, `leave`, `remove`), and each reader rebuilds the roster from the signed messages it holds by one deterministic rule. Servers keep no conversation state, and nothing is replicated between them. This fixes the demo bug in which a group's roster lived only in the text of a message, so no client could know who was in it.
+A conversation is its root message and everything whose `inReplyTo` chain leads to it. Its id is the root's id. There is no roster: each message's `to` is its author's choice of who receives it, and a reply that reaches more or fewer people forks the conversation, as email and texting do. Servers keep no conversation state, and nothing is replicated between them. (Revised 2026-10-24, B1: an earlier draft had signed `add`, `leave` and `remove` relations and a roster rebuilt by readers. A removed member could backdate an `add`, and with no roster there is nothing to forge.)
 
 **Precedent.** Email and Usenet threads (1980s) are exactly this: a chain of pointers, no shared state. Matrix took the other road, a room whose state every server replicates and resolves, and its state-resolution algorithm is the most complex and most revised part of its spec. MLS (RFC 9420) keeps group membership as a signed, ordered log, which is where encrypted groups will go.
 
-**Core or registry.** The definition (root id, signed membership, no server state) is core, in one paragraph, so nobody builds server-side rooms on top. The `conversation` header, the membership relations and the roster rule are registry entries, because only readers use them.
+**Core, profile or registry.** The conversations profile holds the definition (root id, `to` as membership, no server state), so nobody builds server-side rooms on top. The `conversation`, `thread` and `subject` headers are registry entries, because only readers use them.
 
 ### Signals
 
@@ -112,7 +113,7 @@ A conversation is its root message and everything whose `inReplyTo` chain leads 
 
 ### Publishing
 
-A message with an empty `to` is published. Beyond what version 1 already had:
+A message with an empty `to` is published. Beyond what the first draft already had:
 - **Feeds.** A `feed` header names the feeds a post is in; an agent has as many as it names. The author's server lists each, newest first, with an opaque cursor.
 - **Audience.** An `audience` header, signed into the post, opaque to the protocol. The author's server decides what it means. Readers sign their requests with their own agent key, naming themselves (the reader's own server no longer vouches for it); a refused reader gets the same `404` as a post that does not exist. A leaked copy still carries its audience, and software never republishes a post to a wider audience than it carries.
 - **Comments,** reactions and votes are relations sent to the author's server, which may list them under the post for the post's audience. Which relations it lists is its own choice (no server behaviour depends on the registry), among those whose writer marked them `listed` (a relation is written to the author alone, so listing it needs its writer's consent).
@@ -150,13 +151,13 @@ Sentence 6 leaves the slot. JMAP (RFC 8620, 8621) shows how a mailbox API can be
 
 ### Conformance and profiles
 
-`critical` and the other reader rules need reader conformance, which servers' conformance cannot show. XMPP's compliance suites (XEP-0479 and its predecessors) are the model: named profiles, each a list of what an implementation of that kind must do. Profiles come after this work. Until then, the reader rules have vectors and functions in the protocol library.
+`critical` and the other reader rules need reader conformance, which servers' conformance cannot show. XMPP's compliance suites (XEP-0479 and its predecessors) are the model: named profiles, each a list of what an implementation of that kind must do. The reader profile ([`spec/profiles/reader.md`](../spec/profiles/reader.md)) gathers them; its rules have vectors and functions in the protocol library, and a reader conformance suite is still to come.
 
 ## Review findings the core addresses
 
 The core-level findings of an external security review, and how the core answers them:
 
-- **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a solo agent.
+- **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a message without `for`, whatever its claims say.
 - **Email authority.** Email authority comes only from the `_simon` TXT record; the well-known answer still routes.
 - **Key management and recovery** are host policy: other servers see only the keys and revocations in the agent document. CLIENT.md defines dedicated account/recovery calls; host practice remains separate from core interoperability.
 - **Fetching and signals.** When a server fetches parts is its own choice; it SHOULD fetch on arrival, never on read, and section 12 states what each choice reveals. The reference server fetches for every accepted message. Signals are explicit and opt-in.
@@ -166,4 +167,4 @@ The core-level findings of an external security review, and how the core answers
 - **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 1.
 - **Normalisation.** Routers never judge it. How a later version judges non-ASCII local parts is that version's to decide.
 - **Versions.** Readers present unknown versions as not understood.
-- **Conformance.** `critical` needs reader conformance, which feeds the profiles.
+- **Conformance.** `critical` needs reader conformance, which the reader profile's vectors begin.

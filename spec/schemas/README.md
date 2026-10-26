@@ -4,7 +4,7 @@ Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLI
 
 | File | Object |
 | --- | --- |
-| `message.json` | Version 1 message; unsupported versions require the protocol's separate reading rules |
+| `message.json` | Version 1 message; `common.json#/$defs/anyMessage` is a message of any version (the section 1 invariants), which unsupported versions are judged by |
 | `envelope.json`, `signal.json` | Server-to-server delivery and transient signal |
 | `server-document.json`, `agent-document.json` | Documents, including optional sync/history advertisement and retirement evidence |
 | `published.json`, `listing.json` | Published message and feed/related listing |
@@ -23,10 +23,10 @@ Schema validation alone cannot establish:
 - authorization, key roles, current account membership, recovery atomicity, webhook URL/transport safety or endpoint availability;
 - opaque-token account/origin binding, expiry, complete retention, deduplication or durable retraction suppression.
 
-Document `keys` has at most 32 total entries, retained revoked entries included. Optional retirement evidence is a host disclosure choice. A fresh reader may lose verification when authenticated old keys disappear; unsigned convenience keys and stored messages are not a durable evidence archive. A `history` object with `retentionDays` advertises optional history calls; absent or false means a relay may offer retained sync only. Positive whole days or null describe history retention; no perpetual verification service follows. OAuth delegation likewise depends on host discovery. The reference host's webhook answer shapes are labeled as such because CLIENT specifies the verification behavior without fixing every success body.
+Document `keys` has at most 32 total entries, retained revoked entries included. Optional retirement evidence is a host disclosure choice. A fresh reader may lose verification when authenticated old keys disappear; stored messages are not a durable evidence archive. A `history` object with `retentionDays` advertises optional history calls; absent or false means a relay may offer retained sync only. Positive whole days or null describe history retention; no perpetual verification service follows. OAuth delegation likewise depends on host discovery. The reference host's webhook answer shapes are labeled as such because CLIENT specifies the verification behavior without fixing every success body.
 
 `410 token_expired` is a gap. For `details.reason: history_migration`, each client must explicitly accept the limitation before using `details.resumeToken`; no automatic replay is implied. Signals are transient and may be dropped; received sync notes expire five minutes after arrival.
 
 The `origin` grammar accepts production HTTPS only; explicit development HTTP origins do not match. The URL and address patterns are shape aids, not complete transport or IDNA validation. `unsignedSendRequest` intentionally leaves message semantics to the protocol validator.
 
-This revision has not been run through a schema validator, vectors, server integration checks or syntax checks. Earlier branch claims about checked inbox/register answers do not verify these updated dedicated lifecycle and sync shapes. No readiness or interoperability result is asserted here.
+`test/spec/schemas.test.ts` (`npm run test:spec`) validates the vectors against these schemas with a draft 2020-12 validator: every message, envelope, signal, document, published answer and problem the vectors accept is valid under its schema, and every one they refuse is invalid unless the test names the rule a schema cannot state (a size, canonical bytes, a calendar date, a signature, the receiving server's context, or a carried message's interior). The client API shapes beyond those are not checked against server answers; no readiness or interoperability result is asserted here.

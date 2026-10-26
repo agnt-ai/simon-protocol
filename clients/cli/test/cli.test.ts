@@ -57,6 +57,8 @@ describe('offline', () => {
       'revoke-key',
       'end-grant',
       'cancel-recovery',
+      'renew-pairing',
+      'succeed',
       'unpair',
       'sync',
       'send-signal',
@@ -406,8 +408,8 @@ describe('two agents', () => {
       server.origin,
       '--address',
       address,
-      '--principal-recovery',
-      signRecovery(principal.privateKey, address, key.key, at),
+      // A signature may begin with a dash, so it is joined to its option.
+      `--principal-recovery=${signRecovery(principal.privateKey, address, key.key, at)}`,
       '--at',
       at,
       '--for',
@@ -421,6 +423,24 @@ describe('two agents', () => {
     assert.equal(sent.code, 0, JSON.stringify(sent.err));
   });
 
+  it('renews a pairing with no call to the server, and the next process carries it', async () => {
+    const principal = generateKey();
+    const id = `simon-key:${principal.key}`;
+    const home = tempDir();
+    const { address } = (await cli(home, ['register', '--server', server.origin, '--for', id])).out;
+    const soon = signPairing(principal.privateKey, address, id, timestamp(Date.now() + 3_600_000));
+    await cli(home, ['register', '--server', server.origin, '--for', id, '--pairing', soon]);
+    const refused = await cli(home, ['renew-pairing', '--pairing', signPairing(generateKey().privateKey, address, id)]);
+    assert.notEqual(refused.code, 0, 'another key signed it');
+    const renewed = signPairing(principal.privateKey, address, id);
+    const r = await cli(home, ['renew-pairing', '--pairing', renewed]);
+    assert.equal(r.code, 0, JSON.stringify(r.err));
+    assert.equal(r.out.until, renewed.split(' ')[0]);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(home, 'address.json'), 'utf8')).pairing, renewed);
+    const sent = await cli(home, ['send', '--to', address, '--text', 'renewed']);
+    assert.equal(sent.code, 0, JSON.stringify(sent.err));
+  });
+
   it('says what to run next for a pairing, with the server and the leased address', async () => {
     const forValue = `simon-key:${generateKey().key}`;
     const r = await cli(tempDir(), ['register', '--server', server.origin, '--for', forValue]);
@@ -428,7 +448,7 @@ describe('two agents', () => {
     assert.equal(
       r.out.next,
       `simon register --server '${server.origin}' --address '${r.out.address}' --for '${forValue}' --pairing ` +
-        `<the principal's signature over "SIMON-PAIR\\n${r.out.address}\\n${forValue}">`,
+        `<until, a space, and the principal's signature over "SIMON-PAIR\\n${r.out.address}\\n${forValue}\\n<until>">`,
     );
   });
 });

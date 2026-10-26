@@ -17,7 +17,7 @@ import {
   verifyClaims,
   type Message,
 } from '@agnt-sdk/simon-protocol';
-import { Federation, Peer, toRequest } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, Peer, toRequest } from './harness.ts';
 
 const HOUR = 3_600_000;
 
@@ -182,7 +182,7 @@ describe('deliver (spec section 6.3)', async () => {
 
   it('routes a message of a version it does not know, on its invariants alone (spec section 1)', async () => {
     const m = signMessage(
-      { v: 2, from: zed, to: [bob.address], sentAt: timestamp(fed.clock.t), body: { anything: 'new' } } as never,
+      { v: 9, from: zed, to: [bob.address], sentAt: timestamp(fed.clock.t), body: { anything: 'new' } } as never,
       peer.agents.get(zed)!,
     );
     assert.deepEqual(await answer(peer.envelope(m)), [202, { accepted: true }, undefined]);
@@ -243,7 +243,7 @@ describe('deliver (spec section 6.3)', async () => {
     assert.deepEqual(box.at(-1).claims, [{ ...claim(t, tFor), authoritative: false }, other]);
   });
 
-  it("carries the carrier's signed claims into the inbox, checkable there, and never a principal for a solo agent", async () => {
+  it("carries the carrier's signed claims into the inbox, judged and checkable there", async () => {
     const solo = peer.agent('solo');
     const forValue = `mailto:solo@${peer.domain}`;
     const actsFor = {
@@ -258,7 +258,8 @@ describe('deliver (spec section 6.3)', async () => {
     await fed.work();
     const entry = (await bob.received()).at(-1);
     assert.deepEqual(entry.message, m);
-    assert.deepEqual(entry.claims, [], 'a solo agent speaks for no one, whatever its carrier claims');
+    // No agent document says paired or solo: the carrier's signed claim is its word, judged by DNS here.
+    assert.deepEqual(entry.claims, [{ ...actsFor, authoritative: true }]);
     const carrierKeys = [{ key: keyToken(peer.key), added: '2026-01-01T00:00:00Z', revoked: null }];
     assert.equal(verifyClaims(entry.signedClaims, m, carrierKeys), true);
     assert.equal(
@@ -296,7 +297,7 @@ describe('deliver (spec section 6.3)', async () => {
     const principal = generateKey();
     const forValue = `simon-key:${principal.key}`;
     const known = identifier(kai, 'principal', `mailto:kim@${peer.domain}`);
-    const pairing = signPairing(principal.privateKey, kai, forValue);
+    const pairing = signPairing(principal.privateKey, kai, forValue, CLOCK_PAIRING_UNTIL);
     await post(
       peer.envelope(peer.message(kai, [bob.address], 'for a key', { headers: { for: forValue, pairing } }), {
         claims: [known, identifier(kai, 'principal', 'mailto:kim@else.test')],

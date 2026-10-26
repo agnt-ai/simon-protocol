@@ -1,7 +1,7 @@
 """The two documents a server publishes, fetched without authentication (spec section 4)::
 
     GET /simon/server              {server, keys, algorithms, limits}
-    GET /simon/agents/<address>    {address, kind, keys, signature}   signed by the server over SIMON-AGENT
+    GET /simon/agents/<address>    {address, keys, signature}         signed by the server over SIMON-AGENT
 
 A reader takes a document's bytes: at most 131072 of them, JSON under the canonical rules (not necessarily
 canonical), with at most 32 total key entries, including retained revoked keys. Members a reader does not know are
@@ -63,9 +63,9 @@ def read_server_document(body: bytes, origin: str, now_ms: int) -> dict[str, Any
 def read_agent_document(
     body: bytes, address: str, server_keys: Iterable[Mapping[str, Any]], now_ms: int
 ) -> dict[str, Any] | None:
-    """A fetched agent document as ``{"address", "kind", "keys"}``, or None unless it is readable, names
-    exactly the address asked for, has a string ``kind``, and is signed by one of the server's keys valid
-    at ``now_ms``. A kind other than ``paired`` or ``solo`` reads as ``unknown``.
+    """A fetched agent document as ``{"address", "keys"}``, or None unless it is readable, names exactly
+    the address asked for, and is signed by one of the server's keys valid at ``now_ms``. It says nothing
+    about whom the agent speaks for: only its messages do, with the evidence that backs them (section 2.2).
 
     A retired document (section 4) also reads with ``retired``, and ``unpairing`` when an unpairing retired
     the address. It is unreadable unless ``retired`` is a timestamp, ``unpairing`` when present a base64url
@@ -75,7 +75,6 @@ def read_agent_document(
         doc is None
         or not is_address(address)
         or doc.get("address") != address
-        or not isinstance(doc.get("kind"), str)
     ):
         return None
     keys = read_keys(doc.get("keys"), now_ms)
@@ -83,15 +82,14 @@ def read_agent_document(
         server_keys, now_ms, signing_bytes("SIMON-AGENT", doc), doc.get("signature")
     ):
         return None
-    kind = doc["kind"] if doc["kind"] in ("paired", "solo") else "unknown"
     if "retired" not in doc:
-        return {"address": address, "kind": kind, "keys": keys}
+        return {"address": address, "keys": keys}
     retired = parse_timestamp(doc["retired"])
     if retired is None or ("unpairing" in doc and not is_b64url(doc["unpairing"])):
         return None
     if not all(k["revoked"] is not None and parse_timestamp(k["revoked"]) <= retired for k in keys):
         return None
-    read = {"address": address, "kind": kind, "keys": keys, "retired": doc["retired"]}
+    read = {"address": address, "keys": keys, "retired": doc["retired"]}
     if "unpairing" in doc:
         read["unpairing"] = doc["unpairing"]
     return read

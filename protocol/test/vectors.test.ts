@@ -36,9 +36,13 @@ import {
   isAddress,
   isCriticalValue,
   isListedValue,
-  isB64url,
   isPrincipal,
   pairingBytes,
+  isSuccessionValue,
+  pairingStanding,
+  predecessors,
+  readSuccession,
+  parsePairing,
   verifyPairing,
   verifyRecovery,
   isFresh,
@@ -149,14 +153,21 @@ describe('the published vectors', () => {
 
   it('header values and pairings', () => {
     for (const c of vectors.headerValues.cases) {
-      const check = { for: isPrincipal, critical: isCriticalValue, pairing: isB64url, listed: isListedValue }[
-        c.header as string
-      ]!;
+      const check = {
+        for: isPrincipal,
+        critical: isCriticalValue,
+        pairing: (v: unknown) => parsePairing(v) !== null,
+        succession: isSuccessionValue,
+        listed: isListedValue,
+      }[c.header as string]!;
       assert.equal(check(c.value), c.valid, `${c.header}: ${c.value}`);
     }
     for (const c of vectors.pairings.cases) {
-      assert.equal(pairingBytes(c.agent, c.principal), c.bytes, c.why);
-      assert.equal(verifyPairing(c.agent, c.principal, c.pairing), c.verifies, c.why);
+      assert.equal(pairingBytes(c.agent, c.principal, parsePairing(c.pairing)!.until), c.bytes, c.why);
+      assert.equal(verifyPairing(c.agent, c.principal, c.pairing, Date.parse(c.at)), c.verifies, c.why);
+    }
+    for (const c of vectors.successions.cases) {
+      assert.deepEqual(readSuccession(c.succession, c.principal), c.steps, c.why);
     }
   });
 
@@ -237,13 +248,13 @@ describe('the published vectors', () => {
     for (const p of vectors.principals.cases) {
       const got = answer(() => {
         parseMessage(bytes(canonicalize(p.message)));
-        checkPrincipal(p.message, p.agent);
+        checkPrincipal(p.message, p.agent, p.now === undefined ? undefined : new Date(p.now));
       });
       assert.deepEqual(got, expected(p), p.name);
     }
     const c = vectors.claimsConsidered;
     const message = vectors.messages.cases.find((m: { name: string }) => m.name === c.message).message;
-    assert.deepEqual(claimsAbout(message, c.claims, c.kind), c.considered);
+    assert.deepEqual(claimsAbout(message, c.claims), c.considered);
   });
 
   it('signatures at deliver are 403, and an author with no key to try is unsupported_algorithm', () => {
@@ -314,7 +325,8 @@ describe('the published vectors', () => {
     const { post, carrierKeys } = vectors.publications;
     const r = post.response;
     assert.equal(post.id, messageId(r.message));
-    assert.equal(verifyMessage(r.message, r.keys), true);
+    assert.equal(verifyMessage(r.message, post.authorKeys), true);
+    assert.equal('keys' in r, false, 'a published message is served without unsigned keys');
     assert.equal(verifyClaims({ claims: r.claims, signature: r.claimsSignature }, r.message, carrierKeys), true);
     assert.equal(
       verifyClaims(
@@ -344,7 +356,9 @@ describe('the published vectors', () => {
     const r = vectors.reading;
     for (const c of r.understood)
       assert.equal(isUnderstood(c.message, new Set(r.understoodHeaders)), c.understood, c.name);
-    for (const c of r.principals) assert.equal(claimedPrincipal(c.message, c.kind), c.principal, c.name);
+    for (const c of r.principals) assert.equal(claimedPrincipal(c.message), c.principal, c.name);
+    for (const c of r.pairings) assert.equal(pairingStanding(c.message, Date.parse(c.now)), c.standing, c.name);
+    for (const c of r.predecessors) assert.deepEqual(predecessors(c.message), c.predecessors, c.name);
     for (const c of r.relations)
       assert.equal(readsAs(c.message, c.target, new Set(r.knownRelations)), c.readsAs, c.name);
   });

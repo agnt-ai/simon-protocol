@@ -159,7 +159,7 @@ export const AREAS: Record<string, string> = {
   outbound: 'Deliver, sent to the simulator (PROTOCOL 6)',
   sent: 'sent (CLIENT)',
   parts: 'Parts (CLIENT parts, PROTOCOL 7.2)',
-  public: 'Published messages, feeds and relations (PROTOCOL 7)',
+  public: 'Published messages, feeds and relations (publishing profile; must for a server that publishes)',
   errors: 'Errors (PROTOCOL 9, CLIENT errors)',
 };
 

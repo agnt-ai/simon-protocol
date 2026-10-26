@@ -9,6 +9,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import type { AnyMessage } from '@agnt-sdk/simon-protocol';
+import { VERSION } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS } from './store.ts';
 import type { Agent, Delivery, QueuedArrival, Store, StoredMessage, Webhook, RetractionCapacity } from './store.ts';
 
@@ -31,7 +32,7 @@ const agent = (address: string, ...keys: string[]): Agent => ({
 let n = 0;
 function message(from: string, to: string[], extra: Record<string, unknown> = {}): StoredMessage {
   const m = {
-    v: 1,
+    v: VERSION,
     from,
     to,
     inReplyTo: null,
@@ -101,6 +102,18 @@ export function storeContract(name: string, make: () => Store | Promise<Store>) 
         assert.equal(retired?.keys[0].revoked, at(1));
         assert.equal(retired?.unpairing ?? null, null);
         assert.equal(await store.createAgent(agent('ada@a.test', 'k3')), 'address_taken');
+      });
+
+      it("moves a paired agent's principal to its successor only from the principal it holds, never once retired", async () => {
+        await store.createAgent({ ...agent('ada@a.test', 'k1'), kind: 'paired', principal: 'simon-key:p1' });
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p0', 'simon-key:p2'), false, 'stale');
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p1', 'simon-key:p2'), true);
+        assert.equal((await store.agentByAddress('ada@a.test'))?.principal, 'simon-key:p2');
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p1', 'simon-key:p3'), false, 'a fork');
+        assert.equal(await store.succeedPrincipal('bob@a.test', 'simon-key:p1', 'simon-key:p2'), false, 'no agent');
+        await store.retireAgent('ada@a.test', at(1));
+        assert.equal(await store.succeedPrincipal('ada@a.test', 'simon-key:p2', 'simon-key:p3'), false, 'retired');
+        assert.equal((await store.agentByAddress('ada@a.test'))?.principal, 'simon-key:p2');
       });
 
       it('keeps the unpairing that retired an address, and only the first retirement', async () => {

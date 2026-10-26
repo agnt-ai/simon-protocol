@@ -20,6 +20,7 @@ import {
   type AnyMessage,
   type Message,
   type Part,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer } from '../src/server.ts';
@@ -64,7 +65,7 @@ function fixture() {
   function message(parts: Part[], headers: Record<string, string> = {}, inReplyTo: string | null = null) {
     const signed = signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: 'author@remote.example',
         to: [address],
         sentAt: T,
@@ -569,7 +570,15 @@ it('refuses a corrupt private flag on a genuinely signed public message', async 
   const f = fixture();
   try {
     const message = signMessage<Message>(
-      { v: 1, from: 'author@remote.example', to: [], sentAt: T, inReplyTo: null, parts: [], headers: {} },
+      {
+        v: VERSION,
+        from: 'author@remote.example',
+        to: [],
+        sentAt: T,
+        inReplyTo: null,
+        parts: [],
+        headers: { audience: 'public' },
+      },
       f.foreign.privateKey,
     );
     assert.ok(verifyMessage(message, [{ key: f.foreign.key, added: T, revoked: null }]));
@@ -739,7 +748,7 @@ it('keeps unknown-version interiors opaque instead of inventing file grants or r
   try {
     const unknown = signMessage<FutureMessage>(
       {
-        v: 2,
+        v: 9,
         from: 'author@remote.example',
         to: [f.address],
         sentAt: T,
