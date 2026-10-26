@@ -298,6 +298,11 @@ export interface Store {
    */
   published(author: string, before: string | null, limit: number): Promise<Page>;
   /**
+   * The latest `limit` messages `author` published whose `inReplyTo` is `id` and whose `rel` is `rel`, oldest
+   * first: its own edits, or its retraction, of its own message (publishing profile, section 4).
+   */
+  publishedRelations(author: string, id: string, rel: string, limit: number): Promise<StoredMessage[]>;
+  /**
    * The messages in `address`'s inbox whose `inReplyTo` is `id`, newest first, after the one whose id is
    * `before` (null for the newest): the relations to a published message its author may show (publishing
    * profile, section 4). A record's cursor is its message id.
@@ -424,6 +429,17 @@ export interface Store {
     viewer: { published: true } | { server: string },
     self: string,
   ): Promise<{ author: string; message: AnyMessage }[]>;
+  /**
+   * The relations marked `listed: yes` naming the part, newest first, that are in the inbox of an agent here, not retired, and name a message
+   * that agent published here (`inReplyTo`): those its server may list under its message, whose files go
+   * to that message's readers (publishing profile, section 2). Each with its owner, the agent whose inbox
+   * holds it, and the carrier its bytes came from. At most `limit`.
+   */
+  relationPartNamers(
+    sha256: string,
+    self: string,
+    limit: number,
+  ): Promise<{ owner: string; id: string; message: AnyMessage; carrier: string }[]>;
 
   // Part fetches: one per (sha256, carrier).
 

@@ -469,7 +469,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     assert.ok(Number(refused.headers?.['retry-after']) > 0, 'with Retry-After');
     // A signed read past the bound asks as nobody in particular, and looks nothing up.
     const reader = generateKey().privateKey;
-    const url = new URL(`${alpha.origin}/simon/feeds/ada@alpha.test/posts`);
+    const url = new URL(`${alpha.origin}/simon/published/ada@alpha.test`);
     const signed = signRequest(reader, { method: 'GET', url: url.href, now: fed.clock.t, agent: 'eve@r6.victim.test' });
     const read = await alpha.server.handle(toRequest('GET', url, signed, Buffer.alloc(0), '198.51.100.12'));
     assert.equal(read.status, 200);
@@ -542,7 +542,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     const peer = new Peer(fed, 'peer');
     const asked = () => fed.net.sent.filter(r => r.url.includes('/simon/agents/ghost@peer.test')).length;
     const read = async () => {
-      const url = new URL(`${alpha.origin}/simon/feeds/ada@alpha.test/posts`);
+      const url = new URL(`${alpha.origin}/simon/published/ada@alpha.test`);
       const signed = signRequest(generateKey().privateKey, {
         method: 'GET',
         url: url.href,

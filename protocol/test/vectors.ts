@@ -51,6 +51,7 @@ import {
   WireError,
   isPrincipal,
   pairingBytes,
+  currentVersion,
   pairingStanding,
   predecessors,
   parsePairing,
@@ -1298,7 +1299,7 @@ async function requests() {
       ),
       signed('GET', `/simon/sent/${messageId(question)}`, '', carol, 'carol@example.org'),
       signed('GET', partTarget, '', peerKey, peer, true),
-      signed('GET', `/simon/feeds/${addressSegment(oddAddress)}/posts`, '', ada, asAda),
+      signed('GET', `/simon/published/${addressSegment(oddAddress)}`, '', ada, asAda),
     ],
     signedFor: [
       'HTTPS://SIMON.Example.COM/',
@@ -2225,6 +2226,35 @@ function reading() {
     ['a succession the new key did not sign', successor(fixedStep(erin, gwen, [erin, frank]))],
     ['a message whose principal is not a key', signedQuestion],
   ];
+  const post = fixedSignMessage<Message>({ ...question, to: [], headers: { audience: 'public' } }, ada);
+  const change = (rel: string, minutes: number, by = ada, target = messageId(post), text = `${rel} ${minutes}`) =>
+    fixedSignMessage<Message>(
+      {
+        ...question,
+        from: by === ada ? 'ada@example.com' : 'bob@example.net',
+        to: [],
+        inReplyTo: target,
+        parts: [{ type: 'text/plain', data: text }],
+        headers: { rel, audience: 'public' },
+        sentAt: at(question.sentAt, minutes * 60_000),
+      },
+      by,
+    );
+  const [edit1, edit2, retraction] = [change('edit', 1), change('edit', 2), change('retract', 3)];
+  const tieA = change('edit', 5, ada, messageId(post), 'tie a');
+  const tieB = change('edit', 5, ada, messageId(post), 'tie b');
+  const versionCases: [string, AnyMessage[]][] = [
+    ['no relations', []],
+    ['an edit by its author', [edit1]],
+    ['two edits: the later sentAt wins, whatever order they arrive in', [edit2, edit1]],
+    ['two edits at one moment: the greater id wins', [tieA, tieB]],
+    ['two edits at one moment, the other way round: still the greater id', [tieB, tieA]],
+    ['an edit by anyone else changes nothing', [change('edit', 4, bob)]],
+    ['an edit of an edit names no original', [change('edit', 4, ada, messageId(edit1))]],
+    ['a retraction', [edit1, retraction]],
+    ['an edit after a retraction: still retracted', [retraction, change('edit', 6)]],
+    ['a retraction of the retraction does nothing', [retraction, change('retract', 7, ada, messageId(retraction))]],
+  ];
   const known = ['reaction', 'edit', 'retract', 'pin', 'comment'];
   const rel = (from: string, name: string | null): Message => ({
     ...signedQuestion,
@@ -2248,7 +2278,7 @@ function reading() {
   ];
   return {
     about:
-      "Rules that bind readers. understood: whether a reader that implements version 1 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 1 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+      "Rules that bind readers. understood: whether a reader that implements version 1 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 1 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. versions: what a reader shows for versionsOf, given the relations it holds: current is the id of its author's latest edit naming it (by sentAt, then id) or its own, and retracted whether its author retracted it; a retraction is final, and relations naming an edit or a retraction change nothing. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     understoodHeaders: understood,
     understood: understoodCases.map(([name, message]) => ({
       name,
@@ -2267,6 +2297,11 @@ function reading() {
       standing: pairingStanding(message, Date.parse(now)),
     })),
     predecessors: predecessorCases.map(([name, message]) => ({ name, message, predecessors: predecessors(message) })),
+    versionsOf: post,
+    versions: versionCases.map(([name, relations]) => {
+      const { message, retracted } = currentVersion(post, relations);
+      return { name, relations, current: messageId(message), retracted };
+    }),
     knownRelations: known,
     relations: relationCases.map(([name, message, target]) => ({
       name,
@@ -2540,7 +2575,7 @@ function publications() {
   ];
   return {
     about:
-      'Published response and paged feed fixtures (publishing profile, sections 1 and 3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
+      'Published response and paged listing fixtures (publishing profile, sections 1 and 3): feed is the listing GET /simon/published/<address>?feed=<name> answers. stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
     carrierKeys: [keyEntry(exampleCom.key)],
     post: {
       id: messageId(post),

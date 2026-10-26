@@ -2,12 +2,20 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "published.json",
   "title": "SIMON published message answer",
-  "description": "GET /simon/messages/<id>: the message, and its carrier's signed claims when it made any. No keys are served beside it: a reader verifies against the author's agent document, resolved independently; pruning or private retirement may prevent fresh verification of older messages.",
+  "description": "GET /simon/messages/<id>: the message, its author's edits and retraction of it that the reader may see (changes: the latest 100 edits, oldest first, then the retraction), and its carrier's signed claims when it made any. No keys are served beside it: a reader verifies against the author's agent document, resolved independently; pruning or private retirement may prevent fresh verification of older messages.",
   "type": "object",
   "required": ["message"],
   "properties": {
     "message": {
       "$ref": "message.json"
+    },
+    "changes": {
+      "type": "array",
+      "maxItems": 101,
+      "items": {
+        "$ref": "message.json"
+      },
+      "description": "The author's own edits of this message, the latest 100, oldest first, then its retraction when it has one (publishing profile, section 1)."
     }
   }
 }

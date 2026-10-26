@@ -43,6 +43,8 @@ No server test can show that a reader obeys `critical`; the protocol library off
 - **An unknown `rel` reads as a reply** (PROTOCOL.md 5.5), by its blocks and alts as usual: a reaction's text is its emoji. So does a `rel` on a message whose `inReplyTo` is `null`, which names nothing and is ignored (PROTOCOL.md 5.4).
 - **Author-only relations** count only from the original's author (PROTOCOL.md 5.5). The registry marks which relations are author-only; edit and retract are. Reactions, replies and comments may come from anyone.
 - **A relation names one message.** An edit or a retraction names the original message, never an earlier edit, so every reader that holds the same messages reaches the same result.
+- **The current version** of a message is its author's latest edit naming it, by `sentAt`, then by id; with none, the message itself.
+- **A retraction is final.** Once its author retracts a message, the reader shows it as retracted for good. An edit after the retraction does not bring it back, and a relation naming the retraction, rather than the message, changes nothing: retracting a retraction does nothing. Restoring a message is a new message.
 - **A relation to a message the reader does not hold** waits: the reader shows it as a reply to a message it does not have, and applies it if that message arrives.
 - **A relation is a message,** signed, delivered and kept like any other. A reader that never receives one never learns of it, and a retraction asks readers to stop showing a message; nothing forces a server or a reader to forget it.
 - **Reactions** are folded onto the message they name.
@@ -63,4 +65,4 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 ## 7. Vectors
 
-`spec/vectors/v1.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), where a pairing stands now, which earlier keys a succession names, and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).
+`spec/vectors/v1.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), where a pairing stands now, which earlier keys a succession names, and the current version of an edited or retracted message, and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).

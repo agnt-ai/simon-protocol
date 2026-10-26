@@ -17,8 +17,9 @@ import {
   type Message,
 } from '@agnt-sdk/simon-protocol';
 import type { Extension } from '../src/extensions.ts';
+import { PREFETCH_JITTER_MS } from '../src/parts.ts';
 import { replyBody } from '../src/testing.ts';
-import { Federation, toRequest, type TestAgent } from './harness.ts';
+import { Federation, Peer, toRequest, type TestAgent } from './harness.ts';
 
 const TEXT = { type: 'text/plain', data: 'x' };
 
@@ -58,7 +59,7 @@ describe('documents (spec section 4)', async () => {
     const doc = await ada.request('GET', `/simon/agents/${segment}`, { sign: false });
     assert.deepEqual([doc.status, doc.json.address], [200, address]);
     // The odd agent's own signed call, with its address in simon-agent and in the target.
-    const feed = await odd.request('GET', `/simon/feeds/${segment}/posts`);
+    const feed = await odd.request('GET', `/simon/published/${segment}`);
     assert.equal(feed.status, 200);
     // A target rewritten after signing, to bytes that decode the same (%31 is 1), no longer verifies: the
     // target is checked as sent, before any decoding (spec section 8).
@@ -313,6 +314,112 @@ describe('public messages (publishing profile, section 1)', async () => {
     assert.deepEqual(await related(), []);
   });
 
+  it("answers a published message with its author's edits and retraction, never anyone else's (publishing profile, section 4)", async () => {
+    const { json: sent } = await ada.send(ada.message([], 'Version one.'));
+    const change = (rel: string, text: string) => ada.message([], text, { inReplyTo: sent.id, headers: { rel } });
+    const edit = change('edit', 'Version two.');
+    const retraction = change('retract', '');
+    const comment = ada.message([], 'Its author commenting.', { inReplyTo: sent.id, headers: { rel: 'comment' } });
+    // An edit for a narrower audience goes only to the readers that audience admits.
+    const narrower = ada.message([], 'For friends.', {
+      inReplyTo: sent.id,
+      headers: { rel: 'edit', audience: 'friends' },
+    });
+    for (const m of [edit, comment, narrower]) assert.equal((await ada.send(m)).status, 200);
+    await bob.send(bob.message([ada.address], 'Not mine to edit.', { inReplyTo: sent.id, headers: { rel: 'edit' } }));
+    await fed.work();
+    const read = async () =>
+      (await alpha.newAgent().request('GET', `/simon/messages/${sent.id}`, { sign: false })).json;
+    assert.deepEqual((await read()).changes?.map(messageId), [messageId(edit)]);
+    assert.equal((await ada.send(retraction)).status, 200);
+    assert.deepEqual((await read()).changes?.map(messageId), [messageId(edit), messageId(retraction)]);
+  });
+
+  it("serves a listed comment's files to whoever its post admits, and stops once its writer retracts it (publishing profile, section 2)", async () => {
+    const { json: sent } = await ada.send(ada.message([], 'Show me your photos.'));
+    const photo = Buffer.from('a photo in a comment');
+    const sha256 = sha256Hex(photo);
+    await bob.upload(photo);
+    const file = { type: 'image/png', sha256, size: photo.length };
+    const comment = bob.message([ada.address], 'Here.', {
+      inReplyTo: sent.id,
+      headers: { rel: 'comment', listed: 'yes' },
+      parts: [TEXT, file],
+    });
+    assert.equal((await bob.send(comment)).status, 200);
+    await fed.work();
+    // The file comes to ada's server after the fetch's random delay.
+    fed.clock.advance(PREFETCH_JITTER_MS);
+    await fed.work();
+    const fetchPart = async () =>
+      (await alpha.newAgent().request('GET', `/simon/parts/${sha256}`, { sign: false })).status;
+    assert.equal(await fetchPart(), 200);
+    await bob.send(bob.message([ada.address], '', { inReplyTo: messageId(comment), headers: { rel: 'retract' } }));
+    await fed.work();
+    assert.equal(await fetchPart(), 404, 'no longer listed, so no longer served');
+  });
+
+  it("never serves, for a listed comment, bytes its post's owner holds for anything else", async () => {
+    const carol = await beta.agent('carol-private');
+    const secret = Buffer.from("ada's private file");
+    const sha256 = sha256Hex(secret);
+    await ada.upload(secret);
+    const file = { type: 'application/octet-stream', sha256, size: secret.length };
+    await ada.send(ada.message([carol.address], 'Private.', { parts: [TEXT, file] }));
+    const { json: sent } = await ada.send(ada.message([], 'A public post.'));
+    await fed.work();
+    const fetchPart = async () =>
+      (await alpha.newAgent().request('GET', `/simon/parts/${sha256}`, { sign: false })).status;
+    // A server that never held the bytes names their hash in a listed comment on the post.
+    const peer = new Peer(fed, 'nosy');
+    const eve = peer.agent('eve');
+    const comment = peer.message(eve, [ada.address], 'Here.', {
+      inReplyTo: sent.id,
+      headers: { rel: 'comment', listed: 'yes' },
+      parts: [TEXT, file],
+    });
+    assert.equal((await peer.post(alpha, peer.envelope(comment))).status, 202);
+    await fed.work();
+    fed.clock.advance(PREFETCH_JITTER_MS);
+    await fed.work();
+    assert.equal(await fetchPart(), 404);
+  });
+
+  it("serves a listed comment's files only to readers its post's audience admits, and only for a comment listed on the owner's own post", async () => {
+    const photo = Buffer.from('a photo for friends');
+    const sha256 = sha256Hex(photo);
+    await bob.upload(photo);
+    const file = { type: 'image/png', sha256, size: photo.length };
+    const { json: forFriends } = await ada.send(ada.message([], 'For friends.', { headers: { audience: 'friends' } }));
+    const { json: open } = await ada.send(ada.message([], 'For anyone.'));
+    const comment = (inReplyTo: string, headers: Record<string, string>) =>
+      bob.message([ada.address], 'Here.', { inReplyTo, headers, parts: [TEXT, file] });
+    for (const m of [comment(forFriends.id, { rel: 'comment', listed: 'yes' }), comment(open.id, { rel: 'comment' })]) {
+      assert.equal((await bob.send(m)).status, 200);
+    }
+    await fed.work();
+    fed.clock.advance(PREFETCH_JITTER_MS);
+    await fed.work();
+    const status = (await alpha.newAgent().request('GET', `/simon/parts/${sha256}`, { sign: false })).status;
+    assert.equal(status, 404, 'listed only under a post the reader may not see, and unlisted under one it may');
+  });
+
+  it("lists an agent's published messages as one collection, a feed being a label on some of them (publishing profile, section 3)", async () => {
+    const pat = await alpha.agent('collector');
+    const labelled = pat.message([], 'In travel.', { headers: { feed: 'travel' } });
+    const plain = pat.message([], 'In no feed.');
+    for (const m of [labelled, plain]) assert.equal((await pat.send(m)).status, 200);
+    const list = async (q = '') =>
+      (await alpha.newAgent().request('GET', `/simon/published/${pat.address}${q}`, { sign: false })).json.messages.map(
+        (m: AnyMessage) => messageId(m),
+      );
+    assert.deepEqual(await list(), [messageId(plain), messageId(labelled)]);
+    assert.deepEqual(await list('?feed=travel'), [messageId(labelled)]);
+    assert.deepEqual(await list('?feed=posts'), [], 'no feed is implied');
+    const bad = await alpha.newAgent().request('GET', `/simon/published/${pat.address}?feed=Bad`, { sign: false });
+    assert.deepEqual([bad.status, bad.json.details.field], [400, 'feed']);
+  });
+
   it('answers 404 for a message that is not public', async () => {
     const { json } = await ada.send(ada.message([bob.address], 'private'));
     const res = await ada.request('GET', `/simon/messages/${json.id}`, { sign: false });
@@ -403,8 +510,8 @@ describe('readers of a published message with an audience (spec sections 7.1 and
     assert.equal(await probe(`/simon/messages/${'0'.repeat(64)}`), '404 1', 'an unknown id');
     assert.equal(await probe(target), '404 1', 'an audience-limited id');
     assert.equal(await probe(`/simon/messages/${pub.id}`), '200 1', 'a public post');
-    assert.equal(await probe(`/simon/feeds/${ada.address}/nothing`), '200 1', 'an empty feed');
-    assert.equal(await probe(`/simon/feeds/nobody@alpha.test/posts`), '200 1', "an unknown agent's feed");
+    assert.equal(await probe(`/simon/published/${ada.address}?feed=nothing`), '200 1', 'an empty feed');
+    assert.equal(await probe(`/simon/published/nobody@alpha.test`), '200 1', "an unknown agent's feed");
     assert.equal(await probe(`/simon/parts/${'0'.repeat(64)}`), '404 1', 'an unknown part');
     assert.equal(await probe(`/simon/parts/${limited}`), '404 1', "an audience-limited post's part");
   });

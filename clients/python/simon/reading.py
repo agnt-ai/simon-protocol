@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Collection, Mapping
 from typing import Any
 
-from .messages import VERSION, header, parse_pairing, principal_key, read_succession, verify_pairing
+from .messages import VERSION, header, message_id, parse_pairing, principal_key, read_succession, verify_pairing
 from .wire import parse_timestamp
 
 #: The relations the registry marks author-only: they change or withdraw the message they name.
@@ -90,3 +90,21 @@ def predecessors(message: Mapping[str, Any]) -> list[str] | str:
         return []
     steps = read_succession(succession, principal)
     return "refused" if steps is None else [step["from"] for step in steps]
+
+
+def current_version(original: Mapping[str, Any], relations: Collection[Mapping[str, Any]]) -> tuple[Mapping[str, Any], bool]:
+    """What a reader shows for a message, given relations to it it holds (reader profile, section 4): its
+    author's latest edit naming it, by ``sentAt`` then id, or the message itself; and whether its author
+    retracted it. A retraction is final: nothing restores the message, and a relation naming an edit or a
+    retraction, rather than the original, changes nothing. Relations from anyone else change nothing."""
+    target = message_id(original)
+    own = [r for r in relations if r["v"] == VERSION and r["from"] == original["from"] and r.get("inReplyTo") == target]
+    retracted = any(header(r, "rel") == "retract" for r in own)
+    edits = [r for r in own if header(r, "rel") == "edit"]
+    # A sentAt that is not a timestamp sorts first, so it never wins.
+    def order(r: Mapping[str, Any]) -> tuple[float, str]:
+        t = parse_timestamp(r["sentAt"])
+        return (float("-inf") if t is None else t, message_id(r))
+
+    latest = max(edits, key=order, default=None)
+    return (original if latest is None else latest), retracted
