@@ -180,7 +180,7 @@ def(
     level: 'must',
     title: "The envelope passes a receiver's steps 1 to 5",
     expected:
-      "the body parses under section 5.1's rules, has the envelope's shape, carries the message in canonical form, the message keeps version 2's rules, and the envelope is for the simulator and recipients on its domain",
+      "the body parses under section 5.1's rules, has the envelope's shape, carries the message in canonical form, the message keeps version 1's rules, and the envelope is for the simulator and recipients on its domain",
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await plain(ctx);

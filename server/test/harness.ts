@@ -275,7 +275,7 @@ export class TestAgent {
     });
   }
 
-  /** A signed version 2 message from this agent. */
+  /** A signed version 1 message from this agent. */
   message(to: string[], text: string, extra: Partial<Unsigned<Message>> & { parts?: Part[] } = {}): Message {
     return signMessage<Message>(
       {

@@ -157,7 +157,7 @@ describe('the sqlite schema', () => {
           store = null;
           const inspector = new DatabaseSync(file);
           try {
-            assert.equal((inspector.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 10);
+            assert.equal((inspector.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 9);
           } finally {
             inspector.close();
           }
@@ -260,33 +260,8 @@ describe('the sqlite schema', () => {
       assert.equal((await store.agentByAddress('ada@a.test'))?.recoveryEpoch, 1);
       await store.close();
       const db2 = new DatabaseSync(file);
-      assert.equal((db2.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 10);
+      assert.equal((db2.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 9);
       db2.close();
-    } finally {
-      fs.rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  it('refuses to open a file of schema 9 that holds a wire version 1 message, and opens one that holds none', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-schema-'));
-    const file = path.join(dir, 'simon.sqlite');
-    try {
-      await new SqliteStore(file).close();
-      const db = new DatabaseSync(file);
-      db.exec('PRAGMA user_version = 9;');
-      db.close();
-      await new SqliteStore(file).close();
-      const old = new DatabaseSync(file);
-      const json =
-        '{"from":"ada@a.test","headers":{},"inReplyTo":null,"parts":[],"sentAt":"2026-10-15T00:00:00Z","signature":"AA","to":["bob@b.test"],"v":1}';
-      old
-        .prepare(
-          'INSERT INTO messages(id,json,from_address,public,carrier,claims,received_at,expires,kept,generation) VALUES(?,?,?,?,?,?,?,?,?,?)',
-        )
-        .run('a'.repeat(64), json, 'ada@a.test', 0, 'https://a.test', '[]', '2026-10-15T00:00:00Z', 0, 1, 'g');
-      old.exec('PRAGMA user_version = 9;');
-      old.close();
-      assert.throws(() => new SqliteStore(file), /wire version 1/);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
@@ -317,7 +292,7 @@ describe('the sqlite schema', () => {
       assert.equal((await store.agentByAddress('ada@a.test'))?.unpairing, 'UNPAIRING');
       await store.close();
       const db2 = new DatabaseSync(file);
-      assert.equal((db2.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 10);
+      assert.equal((db2.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 9);
       // What a second process sees when it read schema 3 just before the first upgraded the file: the column is
       // there, the version it read is 3. It opens the file without upgrading it again.
       db2.exec('PRAGMA user_version = 3;');

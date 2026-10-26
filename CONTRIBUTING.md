@@ -37,7 +37,7 @@ Every test passes; the counts below are those of the initial commit.
 
 | Suite | Command | Tests | What it covers |
 | --- | --- | --- | --- |
-| Protocol | `npm test -w protocol` | 126 | Canonical JSON, keys, messages, envelopes, documents, resolution, requests; the vectors regenerated and compared with `spec/vectors/v2.json`; the import boundaries |
+| Protocol | `npm test -w protocol` | 126 | Canonical JSON, keys, messages, envelopes, documents, resolution, requests; the vectors regenerated and compared with `spec/vectors/v1.json`; the import boundaries |
 | Basic server | `npm test -w server` | 474 | The spec's rules as the server applies them, federation on a fake network, hardening, running behind a tunnel or a load balancer, the extension hooks, configuration, the store contract on sqlite |
 | Conformance | `npm test -w conformance` | 11 | The whole suite against a toy server with planted faults, each caught by the check aimed at it; the simulator behind a tunnel; the README's check list |
 | Application | `npm test -w app` | 197 | Every module, privacy and safety, federations of application and basic servers, the store contract on MongoDB, the conformance suite against the application. It needs no MongoDB of your own: `mongodb-memory-server` downloads one the first time |
@@ -80,7 +80,7 @@ Commit these regenerated with the change that alters them; a test fails when one
 
 | File | Regenerate with | After changing |
 | --- | --- | --- |
-| `spec/vectors/v2.json` | `npm run vectors` | the protocol library or the vector generator |
+| `spec/vectors/v1.json` | `npm run vectors` | the protocol library or the vector generator |
 | `app/openapi.json` | `npm run openapi` | a route of the application |
 | the check list in `conformance/README.md` | `npm run readme -w conformance` | a conformance check |
 

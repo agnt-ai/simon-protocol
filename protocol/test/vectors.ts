@@ -1,5 +1,5 @@
 /**
- * The published test vectors (spec/vectors/v2.json), built from the reference code. An implementation in
+ * The published test vectors (spec/vectors/v1.json), built from the reference code. An implementation in
  * any language should reproduce every canonical form, id, signature and verdict here byte for byte.
  */
 import {
@@ -176,7 +176,7 @@ const canonical = {
 
 const addresses = {
   about:
-    'Addresses (section 2.1). wire: the version 2 wire form of the input from any case, or null. anyVersion: whether the input as written is an address a message of any version may carry: the invariant local part (1 to 64 bytes of UTF-8 with no @, no space, no ASCII capital and no character of category Cc), and a domain. Routers do not judge normalisation, so a local part not in NFC, or holding a mark assigned only in a recent Unicode version, is an address to every router.',
+    'Addresses (section 2.1). wire: the version 1 wire form of the input from any case, or null. anyVersion: whether the input as written is an address a message of any version may carry: the invariant local part (1 to 64 bytes of UTF-8 with no @, no space, no ASCII capital and no character of category Cc), and a domain. Routers do not judge normalisation, so a local part not in NFC, or holding a mark assigned only in a recent Unicode version, is an address to every router.',
   cases: [
     'ada@example.com',
     'Ada@Example.COM',
@@ -244,7 +244,7 @@ function offCurve() {
 
 const keyTokens = {
   about:
-    'Key tokens (section 2.3): whether each is a key of an algorithm version 2 defines. An algorithm a reader does not implement is never a key to it.',
+    'Key tokens (section 2.3): whether each is a key of an algorithm version 1 defines. An algorithm a reader does not implement is never a key to it.',
   cases: [
     { token: ada.key, why: 'an Ed25519 key' },
     { token: carol.key, why: 'an ML-DSA-65 key' },
@@ -270,7 +270,7 @@ const keyTokens = {
     { token: `ED25519:${raw(ada.key).toString('base64url')}`, why: 'an algorithm name in upper case' },
     { token: raw(ada.key).toString('base64url'), why: 'no algorithm' },
     { token: 'ed25519:', why: 'no key' },
-    { token: 'x-later:AAAA', why: 'an algorithm version 2 does not define' },
+    { token: 'x-later:AAAA', why: 'an algorithm version 1 does not define' },
   ].map(({ token, why }) => ({ token, key: isPublicKey(token), why })),
 };
 
@@ -326,14 +326,14 @@ const keyLists = {
   ).map(([keys, why]) => ({ keys, read: readKeys(keys, new Date(NOW)), why })),
 };
 
-/** A version 2 message whose transmitted form is exactly `size` bytes, padded in a text part. */
+/** A version 1 message whose transmitted form is exactly `size` bytes, padded in a text part. */
 function messageOfSize(size: number): Message {
   const base = (data: string): Unsigned<Message> => ({ ...question, parts: [{ type: 'text/plain', data }] });
   const empty = canonicalize(fixedSignMessage<Message>(base(''), ada)).length;
   return fixedSignMessage<Message>(base('x'.repeat(size - empty)), ada);
 }
 
-/** A version 7 message: invariants, plus fields version 2 does not have. */
+/** A version 7 message: invariants, plus fields version 1 does not have. */
 const version7 = fixedSignMessage<AnyMessage>(
   {
     v: 7,
@@ -348,9 +348,6 @@ const version7 = fixedSignMessage<AnyMessage>(
 
 /** A message that names no principal: no for header. */
 const noPrincipal = fixedSignMessage<Message>({ ...question, headers: {} }, ada);
-
-/** A version 1 message, the first draft's: members this version shares, but a version it does not know. */
-const version1 = fixedSignMessage<AnyMessage>({ ...question, v: 1 } as unknown as Unsigned<AnyMessage>, ada);
 
 /** Bob, paired with the key principal erin, who signed the pairing. */
 const erinPrincipal = `simon-key:${erin.key}`;
@@ -465,7 +462,7 @@ const messages = {
       carol,
     ),
     messageCase('from an agent paired with a key principal', keyPaired, bob),
-    messageCase('version 7, with fields version 2 does not define', version7 as Unsigned<AnyMessage>),
+    messageCase('version 7, with fields version 1 does not define', version7 as Unsigned<AnyMessage>),
   ],
 };
 
@@ -527,11 +524,11 @@ function messageChecks() {
       ],
       [
         'duplicate carried members are refused',
-        '{"v":2,"v":2,"parts":[{"sha256":"' + 'a'.repeat(64) + '","size":26214401}]}',
+        '{"v":1,"v":1,"parts":[{"sha256":"' + 'a'.repeat(64) + '","size":26214401}]}',
       ],
       [
         'fractional carried numbers are refused',
-        '{"v":2,"extra":1.5,"parts":[{"sha256":"' + 'a'.repeat(64) + '","size":26214401}]}',
+        '{"v":1,"extra":1.5,"parts":[{"sha256":"' + 'a'.repeat(64) + '","size":26214401}]}',
       ],
     ].map(
       ([name, body]) =>
@@ -546,7 +543,7 @@ function messageChecks() {
         {
           type: 'application/simon-message',
           data: Buffer.concat([
-            Buffer.from('{"v":2,"extra":"'),
+            Buffer.from('{"v":1,"extra":"'),
             Buffer.from([0xff]),
             Buffer.from('","parts":[{"sha256":"' + 'a'.repeat(64) + '","size":26214401}]}'),
           ]).toString('base64'),
@@ -584,16 +581,12 @@ function messageChecks() {
     ['carried file at depth nine', forward(nested(9, 1))],
     ['oversized carried file at depth eight', forward(nested(8, MINIMUM_LIMITS.partBytes + 1))],
     ['oversized carried file at depth nine', forward(nested(9, MINIMUM_LIMITS.partBytes + 1))],
-    ['version 2', canonicalize(signedQuestion)],
-    ['version 7 with fields version 2 does not define', canonicalize(version7)],
+    ['version 1', canonicalize(signedQuestion)],
+    ['version 7 with fields version 1 does not define', canonicalize(version7)],
     ['version 7 from a local part that is not ASCII', v7({ from: 'josé@example.com' })],
-    ['version 7 to an address version 2 refuses (a dot at the start)', v7({ to: ['.bob@example.net'] })],
+    ['version 7 to an address version 1 refuses (a dot at the start)', v7({ to: ['.bob@example.net'] })],
     ['version 7 naming one recipient twice', v7({ to: ['bob@example.net', 'bob@example.net'] })],
     ['version 7 with a signature of any length', v7({ signature: 'AAAA' })],
-    [
-      'a version 1 message, the first draft: a version this one does not know, routed on its invariants',
-      v7({ v: 1, json: 'a version 1 JSON part was base64', note: 'version 1 fields are not checked' }),
-    ],
     ['exactly 262144 bytes', canonicalize(messageOfSize(262144))],
     ['100 recipients', v1({ to: many(100, i => `r${i}@example.net`) })],
     ['32 parts', v1({ parts: many(32, () => ({ type: 'text/plain', data: 'x' })) })],
@@ -774,7 +767,7 @@ function messageChecks() {
       'version 7 of 262145 bytes',
       v7({ body: { text: 'x'.repeat(262145 - canonicalize({ ...version7, body: { text: '' } }).length) } }),
     ],
-    ['a field version 2 does not define', canonicalize({ ...m, id: 'x' })],
+    ['a field version 1 does not define', canonicalize({ ...m, id: 'x' })],
     ['262145 bytes', canonicalize(messageOfSize(262145))],
     ['from a local part that is not ASCII', v1({ from: 'josé@example.com' })],
     ['an address twice in to', v1({ to: ['bob@example.net', 'bob@example.net'] })],
@@ -875,7 +868,7 @@ function messageChecks() {
   ];
   return {
     about:
-      'Message bodies as sent, and the answer to each under the minimum limits: section 6.3 steps 1, 3 and 4 (parse, canonical form, then the invariants, size, recipients and, for version 2, its own rules: 0 to 32 parts, part members, part sizes within partBytes, and the grammar and placement of the headers the protocol names). field is details.field; canonical is details.canonical.',
+      'Message bodies as sent, and the answer to each under the minimum limits: section 6.3 steps 1, 3 and 4 (parse, canonical form, then the invariants, size, recipients and, for version 1, its own rules: 0 to 32 parts, part members, part sizes within partBytes, and the grammar and placement of the headers the protocol names). field is details.field; canonical is details.canonical.',
     cases: cases.map(([name, bytes]) => ({ name, bytes, ...outcome(() => parseMessage(Buffer.from(bytes))) })),
   };
 }
@@ -1118,7 +1111,7 @@ async function requests() {
   };
 
   const sync = '/simon/sync?since=0';
-  /** A version 2 address holding every character that is not a pchar, and so is percent-encoded in a path. */
+  /** A version 1 address holding every character that is not a pchar, and so is percent-encoded in a path. */
   const oddAddress = 'a#b%c/d?e^f`g{h|i}j@example.com';
   const asAda = 'ada@example.com';
   const ok = signRequest(ada.privateKey, { method: 'GET', url: ORIGIN + sync, now, nonce, agent: asAda });
@@ -1448,7 +1441,7 @@ function documents() {
   ];
   return {
     about:
-      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 2 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
+      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 1 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
     now: NOW,
     server: server.map(([name, body, origin = ORIGIN]) => ({
       name,
@@ -1510,7 +1503,7 @@ function envelopes() {
       signed({ message, ...forBob, claims: [], hints: {} }),
     ],
     [
-      'with a member version 2 does not define (it is signed)',
+      'with a member version 1 does not define (it is signed)',
       signed({ message, ...forBob, route: ['https://relay.example.com'] }),
     ],
     [
@@ -1559,7 +1552,7 @@ function envelopes() {
     ['no signature', canonicalize({ message, ...forBob })],
     ['an envelope that is an array', canonicalize([signEnvelope({ message, ...forBob }, exampleCom.privateKey)])],
     ['a message not in canonical form', signed({ message, ...forBob }).replace('"from":', '"from" :')],
-    ['a version 2 message with a field it does not define', signed({ message: { ...message, id: 'x' }, ...forBob })],
+    ['a version 1 message with a field it does not define', signed({ message: { ...message, id: 'x' }, ...forBob })],
     ['a message of version 0', signed({ message: { ...version7, v: 0 }, ...forBob })],
     [
       'not JSON this protocol parses (a repeated member)',
@@ -1841,7 +1834,7 @@ const consideredClaims: Claim[] = [
 
 const claimsConsidered = {
   about:
-    "Which claims a receiver considers for the message named (section 6.2, and the registry's identifier): an acts-for claim only for the author and the message's for header, with a timestamp verifiedAt and a scope that is an array of strings; an identifier claim only for the author, of agent, or of principal on a message whose for header names a key (this message's names an email address, so none), with a mailto: or tel: identifier in the version 2 form, exactly as written, and a timestamp verifiedAt; other types pass through.",
+    "Which claims a receiver considers for the message named (section 6.2, and the registry's identifier): an acts-for claim only for the author and the message's for header, with a timestamp verifiedAt and a scope that is an array of strings; an identifier claim only for the author, of agent, or of principal on a message whose for header names a key (this message's names an email address, so none), with a mailto: or tel: identifier in the version 1 form, exactly as written, and a timestamp verifiedAt; other types pass through.",
   message: 'question with a for header',
   claims: consideredClaims,
   considered: claimsAbout(signedQuestion, consideredClaims),
@@ -2142,15 +2135,14 @@ function reading() {
   const understood = ['for', 'pairing', 'critical', 'rel', 'subject'];
   const withCritical = (c: string) => ({ ...signedQuestion, headers: { ...signedQuestion.headers, critical: c } });
   const understoodCases: [string, AnyMessage][] = [
-    ['version 2, nothing critical', signedQuestion],
-    ['version 2, critical headers it understands', withCritical('for,subject')],
-    ['version 2, an absent critical header is ignored', withCritical('binding')],
+    ['version 1, nothing critical', signedQuestion],
+    ['version 1, critical headers it understands', withCritical('for,subject')],
+    ['version 1, an absent critical header is ignored', withCritical('binding')],
     [
-      'version 2, a critical header it does not understand',
+      'version 1, a critical header it does not understand',
       { ...withCritical('binding'), headers: { critical: 'binding', binding: 'opaque' } },
     ],
     ['a version it does not implement', version7],
-    ['the first draft, version 1, though its members look like this version', version1],
   ];
   const principalCases: [string, AnyMessage][] = [
     ['a message naming its principal in for', signedQuestion],
@@ -2217,7 +2209,7 @@ function reading() {
   ];
   return {
     about:
-      "Rules that bind readers. understood: whether a reader that implements version 2 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 2 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+      "Rules that bind readers. understood: whether a reader that implements version 1 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 1 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     understoodHeaders: understood,
     understood: understoodCases.map(([name, message]) => ({
       name,
@@ -2537,7 +2529,7 @@ export async function buildVectors() {
   const key = (k: FixedKey) => ({ alg: k.alg, seed: k.seed, key: k.key });
   return {
     about:
-      'SIMON Protocol version 2 test vectors (spec/PROTOCOL.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
+      'SIMON Protocol version 1 test vectors (spec/PROTOCOL.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
     keys: {
       about:
         'The keys every section uses, from their seeds. erin and frank are principals who pair with agents by key.',

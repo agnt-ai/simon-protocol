@@ -38,7 +38,7 @@ misplaced `audience` is still refused. Public posts may be forwarded whole.
 Version 1 messages are a version this library does not know: routed on their invariants, presented as not
 understood. Names (headers, relations, feeds, signal types) may be private and reverse-domain,
 `com.example.approve`, up to 128 characters. A JSON block (`application/json`, any `+json` type) carries its
-`data` as a JSON value instead of base64. The vectors move to `spec/vectors/v2.json`. A store a wire version 1 server wrote (SQLite before schema 10, any MongoStore
+`data` as a JSON value instead of base64. The vectors move to `spec/vectors/v1.json`. A store a wire version 1 server wrote (SQLite before schema 10, any MongoStore
 without this version's marker) refuses to open while it holds a version 1 message, rather than losing its
 replies, retractions and files; the offline schema-2 converter refuses it too (`legacy_wire_version`).
 

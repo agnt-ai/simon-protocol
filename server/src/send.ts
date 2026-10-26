@@ -202,7 +202,7 @@ async function holds(ctx: Context, address: string, p: { sha256: string; size: n
 }
 
 /**
- * The files a version 2 message names by content address: its own, and those of every message it carries
+ * The files a version 1 message names by content address: its own, and those of every message it carries
  * whole, which count as its own (spec section 5.3). A later version's are not known here.
  */
 export function contentParts(m: AnyMessage): { sha256: string; size: number }[] {

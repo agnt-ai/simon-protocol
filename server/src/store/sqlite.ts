@@ -25,7 +25,7 @@ import type {
 } from './store.ts';
 
 /** The schema's version, kept in `PRAGMA user_version`. A file made by another version is refused. */
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 9;
 
 const SCHEMA = `
 CREATE TABLE agents (address TEXT PRIMARY KEY, kind TEXT NOT NULL, principal TEXT, mailbox INTEGER NOT NULL,
@@ -99,7 +99,7 @@ const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) =>
   ...new Map(sources.map(s => [`${'uploader' in s ? 'u' : 'c'} ${sourceKey(s)} ${s.size}`, s])).values(),
 ];
 
-/** A version 2 message's `inReplyTo`. Other versions point at nothing the server can see. */
+/** A version 1 message's `inReplyTo`. Other versions point at nothing the server can see. */
 const inReplyTo = (m: AnyMessage) =>
   m.v === VERSION ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null;
 
@@ -110,7 +110,7 @@ const page = (rows: Row[], limit: number, record: (r: Row) => StoredMessage): Pa
 });
 
 /**
- * The files a version 2 message names by content address, its own and those of messages it carries whole
+ * The files a version 1 message names by content address, its own and those of messages it carries whole
  * (`namedFiles`). Other versions name none the server can see.
  */
 const namedParts = (m: AnyMessage) => namedFiles(m);
@@ -149,17 +149,9 @@ export class SqliteStore implements Store {
         // Inspect and migrate again under the write lock: another opener may have upgraded first.
         const locked = this.#get('PRAGMA user_version')!.user_version as number;
         if (locked === SCHEMA_VERSION) return;
-        if (locked < 3 || locked > 9) {
+        if (locked !== 3 && locked !== 4 && locked !== 5 && locked !== 6 && locked !== 7 && locked !== 8) {
           throw new Error(
             `${path} was made by another version of this server (schema ${locked}, not ${SCHEMA_VERSION}).`,
-          );
-        }
-        // Schema 10 came with wire version 2. An older store was written by a wire version 1 server, whose
-        // messages this server reads only as a version it does not know (a signature covers v, so none can be
-        // rewritten): opening it would silently lose their replies, retractions and files.
-        if (this.#get(`SELECT 1 FROM messages WHERE json LIKE '%,"v":1}' LIMIT 1`)) {
-          throw new Error(
-            `${path} holds messages of wire version 1, which this server does not read; keep it on a wire version 1 release.`,
           );
         }
         const columns = (table: string) => this.#all(`PRAGMA table_info(${table})`).map(c => c.name);

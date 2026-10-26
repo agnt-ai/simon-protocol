@@ -5,7 +5,7 @@ import { it } from 'node:test';
 import { messageId, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { Federation } from './harness.ts';
 
-const v = JSON.parse(fs.readFileSync(new URL('../../spec/vectors/v2.json', import.meta.url), 'utf8')).publications;
+const v = JSON.parse(fs.readFileSync(new URL('../../spec/vectors/v1.json', import.meta.url), 'utf8')).publications;
 it('returns the published signed claims and follows every opaque feed page', async () => {
   const fed = new Federation();
   try {

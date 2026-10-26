@@ -12,8 +12,6 @@ hold and the host/runtime/BOM/backend adoption hold. File activity also retains 
 history/adapter hold. There is no operational selection, promotion, force/reset or recovery-drain
 override. No automatic startup migration is added.
 
-**Wire version 2.** A schema2 store was written by a wire version 1 server, and its messages are version 1. This server reads version 1 only as a version it does not know, and a signed message cannot be rewritten, so its replies, retractions and files would silently fall away. The converter therefore refuses a store holding any version 1 message (`legacy_wire_version`). A store whose history must be kept stays on a wire version 1 release.
-
 Activation prerequisite: retired agents carried over (`retired_at`, `unpairing: null`) stay private
 under the server's default `SIMON_RETIRED_AGENT_DOCUMENTS=private`, matching legacy schema2's 404;
 an activated host must not switch to `public` without a separate decision.

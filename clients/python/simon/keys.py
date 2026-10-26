@@ -1,4 +1,4 @@
-"""Key tokens, the two algorithms of version 2, key history, and the agent's signing key (spec 2.3, 2.4).
+"""Key tokens, the two algorithms of version 1, key history, and the agent's signing key (spec 2.3, 2.4).
 
 A key is written as one string, its key token: the algorithm name, a colon, and the raw public key in
 canonical base64url (``ed25519:11qY...``). A token naming an algorithm this reader does not implement is

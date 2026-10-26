@@ -1,4 +1,4 @@
-"""Every section and every case of spec/vectors/v2.json.
+"""Every section and every case of spec/vectors/v1.json.
 
 Ed25519 signatures are reproduced with every signing path available here: the pure-Python one (opted in)
 always, and ``cryptography`` when it is installed. ML-DSA-65 signatures are hedged, so they are verified,
@@ -94,7 +94,7 @@ from simon.wire import (
     timestamp,
 )
 
-VECTORS = Path(os.environ.get("SIMON_VECTORS") or Path(__file__).resolve().parents[3] / "spec/vectors/v2.json")
+VECTORS = Path(os.environ.get("SIMON_VECTORS") or Path(__file__).resolve().parents[3] / "spec/vectors/v1.json")
 V = json.loads(VECTORS.read_text(encoding="utf-8"))
 KEYS = {name: k for name, k in V["keys"].items() if name != "about"}
 SEEDS = {k["key"]: bytes.fromhex(k["seed"]) for k in KEYS.values()}
@@ -123,7 +123,7 @@ def raw(case: dict, name: str) -> bytes:
 
 
 class VectorCase(unittest.TestCase):
-    #: The section of v2.json this class runs, and the members of it that hold cases.
+    #: The section of v1.json this class runs, and the members of it that hold cases.
     section: str
     members: tuple[str, ...] = ("cases",)
 

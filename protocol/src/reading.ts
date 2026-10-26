@@ -24,7 +24,7 @@ export const AUTHOR_ONLY_RELATIONS: readonly string[] = ['edit', 'retract'];
 export const PUBLIC_RELATIONS: readonly string[] = ['comment', 'reaction', 'vote'];
 
 /**
- * Whether a reader that implements version 2 and understands the headers in `understood` may act on a
+ * Whether a reader that implements version 1 and understands the headers in `understood` may act on a
  * message, or must present it as not understood: only whose key signed it, nothing it says.
  */
 export function isUnderstood(m: AnyMessage, understood: ReadonlySet<string>): boolean {

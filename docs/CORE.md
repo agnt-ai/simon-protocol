@@ -164,7 +164,7 @@ The core-level findings of an external security review, and how the core answers
 - **Sender protection.** The historical ordering requirement stays: no recipient lookups before carrier authentication. The subsequent review also requires bounded unauthenticated lookup work, with mechanisms and values chosen by the host. Fair fetching, counting repeats, an envelope size bound and separate lookup budgets are the reference server's notes (`docs/REFERENCE-SERVER.md`).
 - **Unpairing.** A key principal can end its pairing.
 - **`human-consulted`** signs over the message itself.
-- **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 2.
+- **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 1.
 - **Normalisation.** Routers never judge it. How a later version judges non-ASCII local parts is that version's to decide.
 - **Versions.** Readers present unknown versions as not understood.
 - **Conformance.** `critical` needs reader conformance, which the reader profile's vectors begin.

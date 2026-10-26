@@ -687,7 +687,7 @@ describe('documents', () => {
     assert.deepEqual(read({ ...ada1, kind: 'paired' }), { address: ada1.address, keys: ada1.keys });
   });
 
-  it('a server document lists the algorithms it verifies, both of version 2 among them', () => {
+  it('a server document lists the algorithms it verifies, both of version 1 among them', () => {
     const doc = serverDocument('https://simon.example.com', serverKeys);
     assert.deepEqual(doc.algorithms, ['ed25519', 'ml-dsa-65']);
     const read = (algorithms: unknown) =>

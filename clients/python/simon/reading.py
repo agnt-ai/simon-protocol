@@ -23,7 +23,7 @@ AUTHOR_ONLY_RELATIONS = frozenset({"edit", "retract"})
 
 
 def is_understood(message: Mapping[str, Any], understood: Collection[str]) -> bool:
-    """Whether a reader that implements version 2 and understands the headers in ``understood`` may act on
+    """Whether a reader that implements version 1 and understands the headers in ``understood`` may act on
     a message, or must present it as not understood: only whose key signed it, nothing it says."""
     if message["v"] != VERSION:
         return False

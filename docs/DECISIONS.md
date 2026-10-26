@@ -477,12 +477,13 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 **Reason.** One obvious way, with nothing to forge: whoever writes decides who reads. Precedent: XMPP's core and XEPs, Nostr's NIP-01 and NIPs; email and SMS for the threads.
 
-## Wire version 2: one counter, private names, JSON blocks (2026-10-25)
+## One version counter, private names, JSON blocks (2026-10-25)
 
-**Choice (B2).** `v` counts incompatible wire revisions, one integer counter for drafts and stable releases alike. The first draft was version 1; this one is version 2. The draft number (0.2) is only a label. Version 1 messages become a version this one does not know: servers still route them on their invariants, and readers present them as not understood. There is no second, legacy reading of version 1.
+**Choice (B2).** `v` counts incompatible wire revisions *after release*. Unreleased drafts share version 1: the format the 0.2.0 packages implement is SIMON 1 (`"v":1`), and a draft that changes before release changes version 1 itself. The npm 0.1.x packages implemented an earlier pre-release draft of the same version; that format is deprecated, not versioned, and its data and peers are not compatible with 0.2.0 (CHANGELOG, 0.2.0). Once released, a version never changes incompatibly: an incompatible revision takes the next number, and servers route it on its invariants (PROTOCOL.md section 1). Sending still refuses a version the agent's own server does not implement (`unsupported_version`); server-to-server delivery accepts unknown versions on their invariants, for forward compatibility.
 
-- *Alternatives:* every draft as `v:0` (decided 2026-10-22 and reversed here: two drafts that mean different things would share a number, so the unknown-version safeguard never fires); a reserved range for drafts, as QUIC's `0xff0000NN` (two numbering schemes).
-- *Precedent:* WebSocket's RFC 6455 is protocol version 13 because its drafts used 1 to 12; QUIC gave each draft its own wire number.
+- *Alternatives:* a new number for every draft, as QUIC gave each draft its own wire number (it spends numbers on formats nobody deploys, and makes the first stable release something other than 1); every draft as `v:0` (decided 2026-10-22 and reversed here: a released 1 would still have to follow a 0 that meant several things); a reserved range for drafts, as QUIC's `0xff0000NN` (two numbering schemes).
+- *Reason:* nothing but pre-release packages ever carried the earlier draft, so there is no deployed version 1 to protect. A clean break at the first real release costs less than a version number that only marks a draft.
+- *Precedent:* HTTP/2 drafts used `h2-NN` identifiers that were dropped at publication; the published protocol is `h2`.
 
 **Choice (B9).** A name without a dot is the registry's. Anyone else's is reverse-domain (`com.example.approve`), so the grammar allows dots, and every name is at most 128 characters. A name never changes its meaning incompatibly; a new meaning takes a new name.
 

@@ -643,7 +643,7 @@ class Agent(Reader):
         headers: Mapping[str, str] | None = None,
         in_reply_to: str | None = None,
     ) -> dict[str, Any]:
-        """A signed version 2 message, written now, and checked as this agent's server will check it.
+        """A signed version 1 message, written now, and checked as this agent's server will check it.
 
         ``text``, when given, becomes the first part (``text/plain``), ahead of ``parts``; a message may
         carry any parts, or none. An empty ``to`` publishes the message, which then needs an ``audience`` header (``public`` for anyone). The agent writes ``for`` and ``pairing`` itself, so ``headers`` must not.

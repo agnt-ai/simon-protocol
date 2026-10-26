@@ -2,7 +2,7 @@
  * The message: the protocol's only object (spec sections 1 and 5).
  *
  * Every version has `v`, `from`, `to`, `sentAt` and `signature`. Those, the canonical form and the size are
- * all a server checks of a version it does not know, so it routes later versions unchanged. Version 2 has
+ * all a server checks of a version it does not know, so it routes later versions unchanged. Version 1 has
  * exactly eight fields:
  *
  *   { v, from, to, inReplyTo, parts, headers, sentAt, signature }
@@ -48,7 +48,7 @@ import {
 import { parseTimestamp } from './time.ts';
 
 /** The wire version this library implements (spec section 5.2): one counter for every incompatible revision. */
-export const VERSION = 2;
+export const VERSION = 1;
 
 /** A message of any version, as far as the invariants say. A later version's other fields ride along unread. */
 export interface AnyMessage {
@@ -178,7 +178,7 @@ export function parseMessage(body: Uint8Array, limits: Limits = MINIMUM_LIMITS):
 
 /**
  * Step 4 of spec section 6.3, for a message already known to be canonical: the invariants hold, the size is
- * within `messageBytes`, `to` is within `recipients`, and a version 2 message keeps version 2's rules. A
+ * within `messageBytes`, `to` is within `recipients`, and a version 1 message keeps version 1's rules. A
  * later version passes on its invariants alone.
  */
 export function checkMessage(value: unknown, limits: Limits = MINIMUM_LIMITS): AnyMessage {
@@ -402,7 +402,7 @@ export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
 
 /**
  * What an agent's own server checks on `send`, beyond the message's validity (CLIENT.md). A paired agent's
- * version 2 message carries its principal as `for`; with a key principal it also carries a `pairing` that
+ * version 1 message carries its principal as `for`; with a key principal it also carries a `pairing` that
  * verifies, and with any other it carries none. A solo agent's message carries neither. A `succession` must
  * verify; with one, a key principal's `for` may be a successor of the agent's principal, and the server then
  * moves its record to it (spec section 2.2). Refused as `400 invalid` on `headers`. A later version's headers
@@ -445,7 +445,7 @@ export function isFresh(m: Pick<AnyMessage, 'sentAt'>, now: Date, pastMs: number
   return t !== null && t >= now.getTime() - pastMs && t <= now.getTime() + SENT_AT_FUTURE_MS;
 }
 
-/** A version 2 header's value, or null. Names are lower case on the wire. */
+/** A version 1 header's value, or null. Names are lower case on the wire. */
 export const header = (m: Pick<Message, 'headers'>, name: string): string | null =>
   Object.hasOwn(m.headers, name) ? m.headers[name] : null;
 
@@ -482,7 +482,7 @@ function readCarried(data: string): Record<string, Json> | null {
 }
 
 /**
- * The parts of every message a version 2 message carries whole inline, at every depth up to MAX_CARRIED_DEPTH.
+ * The parts of every message a version 1 message carries whole inline, at every depth up to MAX_CARRIED_DEPTH.
  * With `strict`, a carried message that `readCarried` refuses, or one carried deeper, makes the carrying
  * message invalid; without it, such a message names nothing.
  */
@@ -572,7 +572,7 @@ function checkCarriedFiles(m: Record<string, Json>, limits: Limits) {
 }
 
 /**
- * The files a version 2 message names by content address (spec sections 5.3 and 7.2): its own, and those of
+ * The files a version 1 message names by content address (spec sections 5.3 and 7.2): its own, and those of
  * every message it carries whole inline, which count as named by the message that carries it. A carried
  * message the checks above would refuse names nothing, and neither does one carried by content address. Only well-formed
  * entries are returned, so a message that skipped the checks above still names nothing unsafe.
@@ -588,7 +588,7 @@ export function namedFiles(m: AnyMessage): { sha256: string; size: number }[] {
 }
 
 /**
- * Every message a version 2 message carries whole inline (spec section 5.3), at every depth up to
+ * Every message a version 1 message carries whole inline (spec section 5.3), at every depth up to
  * MAX_CARRIED_DEPTH, as the JSON objects they are. A carried part that does not hold a readable message, or
  * one carried by content address, is not among them: its bytes are not in the message.
  */

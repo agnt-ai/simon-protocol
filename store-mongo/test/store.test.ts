@@ -101,20 +101,6 @@ function held(db: Db, hold: Hold): Db {
   });
 }
 
-describe('MongoStore and wire versions', () => {
-  it('refuses a store a wire version 1 server wrote, and opens a fresh one again and again', async () => {
-    const db = await freshDb();
-    await db.collection('core.messages').insertOne({
-      _id: 'a'.repeat(64) as never,
-      json: '{"from":"ada@a.test","headers":{},"inReplyTo":null,"parts":[],"sentAt":"2026-10-15T00:00:00Z","signature":"AA","to":["bob@b.test"],"v":1}',
-    });
-    await assert.rejects(new MongoStore(db).init(), /wire version 1/);
-    const fresh = await freshDb();
-    await new MongoStore(fresh).init();
-    await new MongoStore(fresh).init();
-  });
-});
-
 describe('MongoStore sync cursors', () => {
   /**
    * An inbox entry is written. A writer takes the next position and stalls before writing it; another

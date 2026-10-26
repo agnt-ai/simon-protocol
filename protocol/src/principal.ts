@@ -3,7 +3,7 @@
  * labelled string written exactly as one of these. The labels look like URI schemes, but identifiers are not
  * URIs: nothing is percent-encoded, and no URI parser applies.
  *
- *   mailto:<an address as version 2 writes one>
+ *   mailto:<an address as version 1 writes one>
  *   tel:+<a digit from 1 to 9><1 to 14 more digits>
  *   simon-key:<key token>
  *

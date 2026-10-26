@@ -544,7 +544,7 @@ def(
     level: 'must',
     title: 'Canonical form is checked before the message rules',
     expected:
-      '400 invalid with details.canonical for a non-canonical message that also has a field version 2 does not define',
+      '400 invalid with details.canonical for a non-canonical message that also has a field version 1 does not define',
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await valid(ctx);
@@ -626,7 +626,7 @@ def(
     id: 'deliver.version-rules',
     section: `${S} step 4, PROTOCOL 5.2-5.4`,
     level: 'must',
-    title: "A version 2 message breaking version 2's rules is 400, naming the field",
+    title: "A version 1 message breaking version 1's rules is 400, naming the field",
     expected:
       '400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without a simon-key for, a simon-key for without pairing, and critical with spaces',
   },
@@ -641,7 +641,7 @@ def(
       ctx,
       [a.address],
       [
-        ['a field version 2 does not define', { ...m, note: 'x' }, 'note'],
+        ['a field version 1 does not define', { ...m, note: 'x' }, 'note'],
         ['no inReplyTo', without('inReplyTo'), 'inReplyTo'],
         ['inReplyTo not an id', { ...m, inReplyTo: 'ABC' }, 'inReplyTo'],
         ['a recipient twice', { ...m, to: [a.address, a.address] }, 'to'],
@@ -675,7 +675,7 @@ def(
     id: 'deliver.any-parts',
     section: `${S} step 4, PROTOCOL 5.3`,
     level: 'must',
-    title: 'A version 2 message carries 0 to 32 parts of any type, with no content rule',
+    title: 'A version 1 message carries 0 to 32 parts of any type, with no content rule',
     expected:
       '202 for a message with no parts, one with only a file, one whose only text is HTML, one whose text is content-addressed, a sealed message, and one of 32 parts; 400 invalid with details.field "parts" for one of 33 parts',
   },
@@ -939,7 +939,7 @@ def(
   },
 );
 
-/** A version 7 message: the invariants, and fields no version 2 reader knows. */
+/** A version 7 message: the invariants, and fields no version 1 reader knows. */
 function version7(p: PeerAgent, to: string[], now: number, extra: Record<string, unknown> = {}) {
   const unsigned = {
     v: 7,
@@ -960,7 +960,7 @@ def(
     level: 'must',
     title: 'A message of an unknown version is taken on its invariants',
     expected:
-      '202 for a version 7 message with fields version 2 does not define (and a headers member version 2 would refuse), signed by its author; and for one whose to also names a non-ASCII local part, which only version 2 forbids',
+      '202 for a version 7 message with fields version 1 does not define (and a headers member version 1 would refuse), signed by its author; and for one whose to also names a non-ASCII local part, which only version 1 forbids',
   },
   async (t: T, ctx: Ctx) => {
     const { a, p } = await valid(ctx);
@@ -981,7 +981,7 @@ def(
     level: 'must',
     title: 'A message of an unknown version is stored and delivered unchanged',
     expected:
-      "the version 7 message appears in the recipient's inbox with its id, byte for byte (given that a plain version 2 message from the same sender does)",
+      "the version 7 message appears in the recipient's inbox with its id, byte for byte (given that a plain version 1 message from the same sender does)",
   },
   async (t: T, ctx: Ctx) => {
     await requireControl(ctx);
@@ -1155,7 +1155,7 @@ def(
     level: 'must',
     title: 'The message is checked before the destination',
     expected:
-      '400 invalid naming the undefined field (not server) for a message with a field version 2 does not define, in an envelope for another server',
+      '400 invalid naming the undefined field (not server) for a message with a field version 1 does not define, in an envelope for another server',
   },
   async (t: T, ctx: Ctx) => {
     const { m } = await valid(ctx);

@@ -333,7 +333,7 @@
     },
     "sendRequest": {
       "$ref": "message.json",
-      "description": "POST /simon/send with an agent key: signed canonical version 2 message. Unknown versions and grant signing require semantic handling; see unsignedSendRequest."
+      "description": "POST /simon/send with an agent key: signed canonical version 1 message. Unknown versions and grant signing require semantic handling; see unsignedSendRequest."
     },
     "unsignedSendRequest": {
       "type": "object",
@@ -383,7 +383,7 @@
         },
         "message": {
           "type": "object",
-          "description": "Message of any version. Version 2 shape is message.json; unsupported versions are not understood."
+          "description": "Message of any version. Version 1 shape is message.json; unsupported versions are not understood."
         },
         "carrier": {
           "$ref": "common.json#/$defs/origin"

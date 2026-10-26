@@ -362,7 +362,7 @@ function operator(cmd: string, name: string, address: string): Promise<string> {
   });
 }
 
-/** A version 2 message from a simulated agent. */
+/** A version 1 message from a simulated agent. */
 export function buildFrom(p: PeerAgent, to: string[], now: number, f: MessageFields = {}) {
   return buildMessage({ ...f, from: p.address, to }, f.signWith ?? p.key, now);
 }

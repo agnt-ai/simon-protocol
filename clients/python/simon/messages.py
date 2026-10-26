@@ -1,7 +1,7 @@
 """The message, the protocol's only object (spec sections 1, 2.2 and 5).
 
 Every version has ``v``, ``from``, ``to``, ``sentAt`` and ``signature``; those, the canonical form and the
-size are all a server checks of a version it does not know. Version 2 has exactly eight fields::
+size are all a server checks of a version it does not know. Version 1 has exactly eight fields::
 
     {v, from, to, inReplyTo, parts, headers, sentAt, signature}
 
@@ -33,7 +33,7 @@ from .limits import (
 from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex, timestamp
 
 # The wire version this port implements (spec section 5.2): one counter for every incompatible revision.
-VERSION = 2
+VERSION = 1
 FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
 
 _HEX64 = re.compile(r"[0-9a-f]{64}")
@@ -127,7 +127,7 @@ def parse_message(body: bytes, limits: Mapping[str, int] = MINIMUM_LIMITS) -> di
 
 def check_message(value: Any, limits: Mapping[str, int] = MINIMUM_LIMITS) -> dict[str, Any]:
     """Step 4 of section 6.3: the invariants hold, the size is within ``messageBytes``, ``to`` is within
-    ``recipients``, and a version 2 message keeps version 2's rules. A later version passes on its
+    ``recipients``, and a version 1 message keeps version 1's rules. A later version passes on its
     invariants alone. Raises ``400 invalid`` with ``details.field``."""
     message = check_invariants(value)
     try:
@@ -450,7 +450,7 @@ def is_critical_value(value: object) -> bool:
 
 
 def header(message: Mapping[str, Any], name: str) -> str | None:
-    """A version 2 header's value, or None."""
+    """A version 1 header's value, or None."""
     return message["headers"].get(name)
 
 
@@ -625,7 +625,7 @@ def verify_unpairing(agent: str, principal: str, unpairing: object) -> bool:
 
 def check_principal(message: Mapping[str, Any], kind: str, principal: str | None = None) -> None:
     """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
-    ``solo``, and a paired agent's principal. A paired agent's version 2 message carries its principal as
+    ``solo``, and a paired agent's principal. A paired agent's version 1 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
     neither. A ``succession`` must verify; with one, a key principal's ``for`` may be a successor of the
     agent's principal, and the server then moves its record to it (section 2.2). Raises ``400 invalid`` on

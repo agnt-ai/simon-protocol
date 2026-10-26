@@ -1,4 +1,4 @@
-/** The message: its invariants, version 2's rules, its id, its signature, and its age. */
+/** The message: its invariants, version 1's rules, its id, its signature, and its age. */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -323,10 +323,10 @@ describe('the message', () => {
     for (const body of [
       'not JSON',
       '[]',
-      '{"v":2,"v":2,"parts":[' + file + ']}',
-      '{"v":2,"extra":1.5,"parts":[' + file + ']}',
+      '{"v":1,"v":1,"parts":[' + file + ']}',
+      '{"v":1,"extra":1.5,"parts":[' + file + ']}',
       '{"v":true,"parts":[' + file + ']}',
-      Buffer.concat([Buffer.from('{"v":2,"extra":"'), Buffer.from([0xff]), Buffer.from('","parts":[' + file + ']}')]),
+      Buffer.concat([Buffer.from('{"v":1,"extra":"'), Buffer.from([0xff]), Buffer.from('","parts":[' + file + ']}')]),
     ]) {
       const m = carried(body);
       assert.equal(

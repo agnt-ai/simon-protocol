@@ -1,6 +1,6 @@
 /**
  * Keys and signatures (spec section 2.3). A key is written as one string, its key token: the algorithm name,
- * a colon, and the raw public key in base64url (`ed25519:11qY...`). Version 2 defines `ed25519` and
+ * a colon, and the raw public key in base64url (`ed25519:11qY...`). Version 1 defines `ed25519` and
  * `ml-dsa-65`. A token naming any other algorithm is unknown to this reader, never an error.
  *
  * Signatures do not name their algorithm: a verifier tries each of the signer's keys valid at the moment

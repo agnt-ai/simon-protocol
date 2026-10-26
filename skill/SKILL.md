@@ -204,7 +204,7 @@ simon sync
     "message": { "untrusted": { "from": "ada@example.net", "basis": "author-signed",
       "content": { "from": "ada@example.net", "to": ["..."], "inReplyTo": null,
         "parts": [ { "type": "text/plain", "data": "..." } ], "headers": {},
-        "sentAt": "...", "signature": "...", "v": 2 } } },
+        "sentAt": "...", "signature": "...", "v": 1 } } },
     "claims": [], "signedClaims": { "untrusted": { ... } } } ] }
 ```
 

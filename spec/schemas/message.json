@@ -1,14 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "message.json",
-  "title": "SIMON message, version 2",
+  "title": "SIMON message, version 1",
   "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over SIMON-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
   "type": "object",
   "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"],
   "additionalProperties": false,
   "properties": {
     "v": {
-      "const": 2
+      "const": 1
     },
     "from": {
       "$ref": "common.json#/$defs/address"

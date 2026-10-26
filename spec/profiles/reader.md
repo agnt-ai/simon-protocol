@@ -60,4 +60,4 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 ## 7. Vectors
 
-`spec/vectors/v2.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), where a pairing stands now, which earlier keys a succession names, and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).
+`spec/vectors/v1.json` section `reading` exercises this profile: which relations a reader applies and which it shows as replies, which principals count (never for a message without `for`), where a pairing stands now, which earlier keys a succession names, and which messages a reader presents as not understood (an unknown version, an unknown present critical header, an absent critical header ignored).

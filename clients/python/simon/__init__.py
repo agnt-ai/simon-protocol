@@ -1,4 +1,4 @@
-"""A client for the SIMON Protocol, version 2 (spec/PROTOCOL.md and spec/CLIENT.md).
+"""A client for the SIMON Protocol, version 1 (spec/PROTOCOL.md and spec/CLIENT.md).
 
 Standard library only. ``cryptography`` signs when it is installed, and ``dnspython`` resolves.
 """

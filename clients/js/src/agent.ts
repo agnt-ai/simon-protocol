@@ -352,7 +352,7 @@ export class Agent {
     );
   }
 
-  /** A signed version 2 message from a draft, written now. Send it with `send`; sending it again is safe. */
+  /** A signed version 1 message from a draft, written now. Send it with `send`; sending it again is safe. */
   compose(draft: Draft): Message {
     const from = this.#requireAddress();
     for (const name of ['for', 'pairing', 'succession']) {

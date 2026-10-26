@@ -1,4 +1,4 @@
-# The SIMON Protocol, draft 0.2 (wire version 2)
+# The SIMON Protocol: SIMON 1 (wire `v:1`)
 
 SIMON delivers one signed message to `name@domain`. The test for every rule here is whether a server can route, store, deliver and verify a message without understanding it; anything a server needs to understand belongs to a server feature or a service, not to the protocol. A2A carries tasks, MCP carries tools; this protocol carries messages between agents at addresses, the way email carries mail between people.
 
@@ -15,9 +15,9 @@ SIMON delivers one signed message to `name@domain`. The test for every rule here
 
 Nothing in the core is about AI: an agent is just a sender. A feature is in this document only when it has existed for decades in some form, and adding it later would force every server to change. Everything else is a registry entry. [`docs/CORE.md`](../docs/CORE.md) maps each idea to core or registry and gives its precedent.
 
-**Status.** Draft 0.2, public, and any rule may change. Its messages carry wire version 2. `v` counts incompatible wire revisions with one counter for drafts and stable releases alike, so two drafts that mean different things never share a number; the draft number is only a label. The protocol becomes version 1.0 when two independent implementations reproduce every test vector and pass the conformance suite against each other. Until then any rule may change, except that changes to section 1 need an overwhelming reason.
+**Status.** SIMON 1, a public draft: its messages carry `"v":1`, and this text is what the reference packages' release 0.2.0 implements. It is declared stable when two independent implementations reproduce every test vector and pass the conformance suite against each other. Until then any rule may change, except that changes to section 1 need an overwhelming reason. Unreleased drafts share version 1; once a version is released, `v` changes only for an incompatible revision (section 10). The npm 0.1.x packages implemented an earlier pre-release draft of this same version; that format is deprecated, not given a number of its own.
 
-**Audience.** Most implementers will be agents. Every rule is stated so it can be implemented without asking anyone. The grammars are in Appendix A, and offline rules are exercised by `spec/vectors/v2.json`; section 15 describes coverage and its limits. The agent-to-server API is in [CLIENT.md](CLIENT.md), conventions are in [registry.md](registry.md), and the reasoning behind each choice is in [`docs/DECISIONS.md`](../docs/DECISIONS.md).
+**Audience.** Most implementers will be agents. Every rule is stated so it can be implemented without asking anyone. The grammars are in Appendix A, and offline rules are exercised by `spec/vectors/v1.json`; section 15 describes coverage and its limits. The agent-to-server API is in [CLIENT.md](CLIENT.md), conventions are in [registry.md](registry.md), and the reasoning behind each choice is in [`docs/DECISIONS.md`](../docs/DECISIONS.md).
 
 **Conventions.**
 - The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be read as in BCP 14 (RFC 2119, RFC 8174) when, and only when, they appear in capitals.
@@ -64,7 +64,7 @@ An address is `local@domain`, the only thing the protocol routes to.
 
   An internationalised domain is written as its A-labels (`xn--`). An implementation MUST NOT reject an A-label for not being valid punycode.
 - **The local part,** for every version, is 1 to 64 bytes of UTF-8 with no `@`, no space (U+0020), no ASCII capital letter and no character of general category Cc. That set of characters is fixed by Unicode's stability policy, so every implementation agrees on it whatever Unicode version its runtime carries.
-- **In version 2 messages the local part is ASCII:** letters, digits, ``! # $ % & ' * + / = ? ^ _ ` { | } ~ -``, and dots between them.
+- **In version 1 messages the local part is ASCII:** letters, digits, ``! # $ % & ' * + / = ? ^ _ ` { | } ~ -``, and dots between them.
 - **Inside a message an address is written in lower case** (ASCII lowercasing only), so one message has one form and one id. Anywhere else, such as an API or a command line, an implementation MAY accept any case and lower it.
 
 ### 2.2 Paired and solo agents
@@ -75,7 +75,7 @@ An agent is one of two kinds, fixed for the life of its address.
 - **A solo agent** speaks for no one, and its messages carry no `for` header.
 
 **Identifiers.** A principal's identifier is a labelled string in one of three forms, written exactly as shown. The labels look like URI schemes but these are not URIs: nothing in them is percent-encoded, and a generic URI parser does not apply.
-- **`mailto:`** followed by an email address in the version 2 address form (section 2.1);
+- **`mailto:`** followed by an email address in the version 1 address form (section 2.1);
 - **`tel:`** followed by an E.164 number: `+`, a digit from 1 to 9, then 1 to 14 more digits;
 - **`simon-key:`** followed by a key token (section 2.3). This is for a principal who holds a key rather than an email address or a phone number. The key may be long-lived, or made for one pairing and then discarded.
 
@@ -137,7 +137,7 @@ A server SHOULD give paired agents local parts that do not reveal their principa
 
 A key is written as one string, its **key token**: the algorithm name, a colon, and the raw public key in base64url (`ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo`). Algorithm names are lower-case letters, digits and hyphens.
 
-Version 2 defines two algorithms, and every server implements both. Each definition says which keys and which signatures are well formed:
+Version 1 defines two algorithms, and every server implements both. Each definition says which keys and which signatures are well formed:
 
 - **`ed25519`** (RFC 8032).
   - **Keys.** A key is 32 bytes that decode to a point on the curve (RFC 8032 section 5.1.3, with the y-coordinate below p) that is not of small order. Any other 32 bytes are never a key.
@@ -155,7 +155,7 @@ Every published key carries `added` and `revoked` (a timestamp, or `null`). A ke
 
 - **History only grows forward.** A key's `added` is its first publication time. An authorized move between hosts MAY preserve genuine existing key history and its original timestamps; it MUST NOT invent an earlier history for a new key. A revocation takes effect when first published: a server MUST NOT backdate it or deliberately schedule it in the future. Readers allow the ordinary 300-second clock tolerance. Once revoked, a key never becomes valid again and its recorded revocation does not move. A reader that caches documents can catch conflicting history; there is no transparency log (section 12).
 - **Who adds, revokes and recovers keys** is the agent's host's policy. Other servers see only the result, the keys and revocations in the agent document. The client API is specified separately in CLIENT.md; this core does not promise principal recovery, mailbox-only cancellation or any particular recovery wait. CLIENT.md defines the dedicated account and recovery calls; the host documents the delays, limits and recovery guarantees it offers. A key principal's unpairing (section 2.2) ends a pairing whatever the agent's keys say.
-- A server MAY stop listing a revoked key. A fresh reader that no longer obtains the necessary authenticated key history cannot verify what that key signed. Keeping a message alone does not preserve the evidence needed to verify it again. A recipient may retain previously authenticated key material for its own local trust decisions; this is not a transferable proof of historical DNS authority, signing time or completeness, and version 2 defines no durable archival-evidence format or perpetual verification service.
+- A server MAY stop listing a revoked key. A fresh reader that no longer obtains the necessary authenticated key history cannot verify what that key signed. Keeping a message alone does not preserve the evidence needed to verify it again. A recipient may retain previously authenticated key material for its own local trust decisions; this is not a transferable proof of historical DNS authority, signing time or completeness, and version 1 defines no durable archival-evidence format or perpetual verification service.
 
 ### 2.5 Encodings and timestamps
 
@@ -230,7 +230,7 @@ Both documents are fetched without authentication and are cacheable. Requiring a
 ```
 
 - `server` equals the origin it was fetched from. A reader refuses a server document that names another.
-- `algorithms` lists every signature algorithm the server verifies. It includes both version 2 algorithms.
+- `algorithms` lists every signature algorithm the server verifies. It includes both version 1 algorithms.
 - `limits` are the values this server enforces where the protocol lets a server go higher. All four are required, and each is a positive safe integer at least the protocol's minimum (section 9). Fixed rules, such as time windows and part and header counts, are not published, because no server may change them.
 
 **The agent document.** `GET https://<server>/simon/agents/<address>` returns the document below, or `404 not_found`. The address goes in the path as one segment, written with a literal `@`.
@@ -256,7 +256,7 @@ The protocol models agents and servers. It has no model of people. Whether a hum
 The only object.
 
 ```json
-{"from":"ada@example.com","headers":{"for":"mailto:alice@example.org","subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does **3pm** work? The agenda is attached.","type":"text/markdown; variant=GFM"},{"alt":"Thursday's agenda","name":"agenda.pdf","sha256":"<hex>","size":48213,"type":"application/pdf"}],"sentAt":"2026-10-14T21:00:00Z","to":["bob@example.net"],"v":2,"signature":"<base64url>"}
+{"from":"ada@example.com","headers":{"for":"mailto:alice@example.org","subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does **3pm** work? The agenda is attached.","type":"text/markdown; variant=GFM"},{"alt":"Thursday's agenda","name":"agenda.pdf","sha256":"<hex>","size":48213,"type":"application/pdf"}],"sentAt":"2026-10-14T21:00:00Z","to":["bob@example.net"],"v":1,"signature":"<base64url>"}
 ```
 
 ### 5.1 Canonical JSON
@@ -276,11 +276,11 @@ A message is transmitted and stored as canonical JSON. This is RFC 8785, restric
 
 Parsers accept any JSON whitespace (space, tab, CR, LF) between tokens and any valid escape. So a message that is valid but not canonical can be recognised, and its canonical form returned. A server refuses a message that is not already in canonical form and returns the canonical form in `details.canonical` (section 9), so drift is caught at the first hop. An author signs the canonical form, so resending the returned form needs no new signature. A signature over any other bytes verifies against nothing.
 
-### 5.2 Version 2 members
+### 5.2 Version 1 members
 
-Version 2 defines exactly eight members, all required. Any other member makes a version 2 message invalid; what later versions add is theirs to define.
+Version 1 defines exactly eight members, all required. Any other member makes a version 1 message invalid; what later versions add is theirs to define.
 
-- `v` is `2`. (Version 1, the first draft, is a version this one does not know: servers route it on its invariants, and readers present it as not understood.)
+- `v` is `1`.
 - `from` is the author's address.
 - `to` is an array of distinct addresses. Empty means published, and the message then says who may read it with an `audience` header (section 5.4): publishing is never an accident.
 - `inReplyTo` is `null` or a message id: the message this one answers or relates to (section 5.5).
@@ -316,7 +316,7 @@ Inline text is UTF-8, whatever a `charset` parameter says. The bytes of a conten
 
 **A message carried whole.** A part of type `application/simon-message` carries another message as canonical signed message bytes, inline or by content address. The carried message keeps its own parts. Recognized inline carriage must decode from canonical padded base64 into a canonical JSON object and satisfy the common message shape, version, address, timestamp and signature-encoding invariants. It is refused as invalid if malformed; parsing never falls back to lenient JSON. This check performs no inner-author signature verification, freshness check, recipient resolution or file fetch.
 
-Known version 2 messages contribute their named files recursively through the same traversal used for validation and enumeration. A message names at most 1024 file occurrences in all, and their declared sizes sum to at most **32 × the receiver's advertised `partBytes`**, computed exactly without integer overflow. Repeated occurrences count separately and must declare a consistent size for the same hash. Each file must itself satisfy `partBytes`. Direct inline carriage is depth 1; depth 8 is allowed and depth 9 is refused. Unknown-version interiors are opaque after common invariant checks and contribute no version 2 files. For conservative recognition of a carried media type, trim only U+0020 around the substring before its first semicolon and compare it to `application/simon-message` without regard to ASCII case. A content-addressed carried message is not fetched to inspect its interior. Naming a hash still creates no entitlement: section 7.2 requires an authorized source held for the carrying author.
+Known version 1 messages contribute their named files recursively through the same traversal used for validation and enumeration. A message names at most 1024 file occurrences in all, and their declared sizes sum to at most **32 × the receiver's advertised `partBytes`**, computed exactly without integer overflow. Repeated occurrences count separately and must declare a consistent size for the same hash. Each file must itself satisfy `partBytes`. Direct inline carriage is depth 1; depth 8 is allowed and depth 9 is refused. Unknown-version interiors are opaque after common invariant checks and contribute no version 1 files. For conservative recognition of a carried media type, trim only U+0020 around the substring before its first semicolon and compare it to `application/simon-message` without regard to ASCII case. A content-addressed carried message is not fetched to inspect its interior. Naming a hash still creates no entitlement: section 7.2 requires an authorized source held for the carrying author.
 
 **Sealed blocks.** A block of type `application/simon-sealed` (registry) is ciphertext. A sealed message is an ordinary signed message whose blocks are sealed, so servers route, store and deliver it unchanged, and only the agents it is for can read it (section 10).
 
@@ -326,7 +326,7 @@ Known version 2 messages contribute their named files recursively through the sa
 
 **Names.** A header name, and every other name the protocol and the registry use (relations, feeds, signal types), is lower-case letters and digits in groups joined by single hyphens, at most 128 characters in all. A name without a dot is the registry's (section 10). Anyone else's name is **private**: reverse-domain, several such labels joined by dots and starting with a domain its author controls, as in `com.example.approve`, so two parties' names never collide. A name's meaning never changes incompatibly; a new meaning takes a new name.
 
-Headers are the extension point of version 2. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar and placement of each as a version 2 message rule:
+Headers are the extension point of version 1. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar and placement of each as a version 1 message rule:
 
 - **`for`** names the principal of a paired agent: a `mailto:`, `tel:` or `simon-key:` identifier (section 2.2).
   - Every message from a paired agent carries it, always with the same value, until a succession moves a key principal on to its new key (section 2.2). A message from a solo agent never does.
@@ -556,7 +556,7 @@ SIMON-REQUEST
 **What each part binds:**
 - The origin line uses the URL-serialized origin: lower-case scheme/host, no default port and no trailing slash, even when discovery supplied another accepted spelling. It binds a request to one server, so a request signed for one cannot be replayed to another.
 - The identity line uses the header value exactly as received. A server actor header must already be the serialized origin: lower-case scheme and host, no default port or leading-zero port spelling, and no trailing slash. The identity line binds a request to the one it acts as, so changing the header that names the actor breaks the signature, even when one key serves several addresses.
-- The target line is the raw path and query as transmitted, with percent escapes preserved byte for byte; neither verifier nor proxy decodes or re-encodes it before checking. A client writes an address as one path segment, preserves literal `@`, and percent-encodes exactly the characters outside RFC 3986 `pchar`, using uppercase hex for their UTF-8 bytes. In a version 2 address these characters are ``# % / ? ^ ` { | }``. A verifier still checks the raw received target; it does not regenerate it from the decoded address.
+- The target line is the raw path and query as transmitted, with percent escapes preserved byte for byte; neither verifier nor proxy decodes or re-encodes it before checking. A client writes an address as one path segment, preserves literal `@`, and percent-encodes exactly the characters outside RFC 3986 `pchar`, using uppercase hex for their UTF-8 bytes. In a version 1 address these characters are ``# % / ? ^ ` { | }``. A verifier still checks the raw received target; it does not regenerate it from the decoded address.
 - The timestamp is within 300 seconds of the server's clock.
 - A sender does not reuse a nonce with the same key within 600 seconds. This sender obligation is distinct from receiver retention: a server keeps an accepted nonce until that request's timestamp has left the ±300-second freshness window. With whole-second timestamp comparisons, the first stale instant is `(simon-timestamp + 301) × 1000` milliseconds. Retention is not a fixed 600 seconds from receipt.
 
@@ -619,7 +619,7 @@ The codes the protocol defines (the client API's own are in [CLIENT.md](CLIENT.m
 | 503 | `unavailable` | a lookup or fetch the server needed failed just now; `retryable: true` |
 
 **Fixed rules**, the same for every server:
-- a version 2 message has 0 to 32 parts and at most 32 headers; a part's `name` is at most 255 bytes and its `alt` at most 1024 (section 5.3);
+- a version 1 message has 0 to 32 parts and at most 32 headers; a part's `name` is at most 255 bytes and its `alt` at most 1024 (section 5.3);
 - claims and hints together are at most 16384 bytes (section 6.2);
 - a signal is at most 4096 bytes without its signature, and its body at most 16384 (section 6.4);
 - known inline carriage contributes at most 1024 file occurrences, at most 32 × `partBytes` in declared size, with consistent size for each hash and at most eight inline levels;
@@ -709,7 +709,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
   - A claim is the carrier's word, authoritative only for email addresses on a domain whose TXT record names the carrier (section 6.2).
   - Authority comes only from the TXT record, never from the well-known answer: whoever runs a domain's website, a site builder, a marketing contractor, or whoever claims a dangling record, need not run its mail. Such a party can still take the domain's SIMON addresses, as it could take its web addresses, until the domain publishes a TXT record.
   - Claims are signed for their message (section 6.2), so a reader checks them wherever the message travels, and a pasted inbox entry carries no claim its carrier did not make.
-  - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 2. Consumer email addresses, on domains whose servers make no SIMON claims, can be backed only this way.
+  - Trusting a carrier's non-authoritative claims trusts its word about any identifier it names. A receiving server chooses such carriers as carefully as a browser chooses certificate authorities, and with less to go on: claims have no expiry, no revocation and no transparency log in version 1. Consumer email addresses, on domains whose servers make no SIMON claims, can be backed only this way.
   - On a server that hosts several domains, one domain's agents carry the server's authoritative claims about the others' email addresses. A reader that wants alignment, as DMARC requires, MAY count a claim only when the identifier's domain is the agent's own.
 - **Successions.** A succession is only as safe as the old key, and a moved-on key keeps its standing until it is destroyed: its pairings count until they lapse, and whoever holds it can sign a succession to a key of their own. An agent's own server follows only the first move a message signed by the agent's key presents, so a thief also needs the agent's key to move that agent. Readers that see the principal's own move and the thief's see a fork, and link neither successor, for good; a reader that saw only the thief's links the thief's key. A principal who suspects its key was copied does not move: it unpairs its agents (section 2.2) and pairs anew, and its readers meet a new principal.
 - **Pairings.** A key pairing outlives the agent's keys. If an agent's key is compromised, its pairing goes with it until the principal unpairs the agent (section 2.2), the pairing lapses, the host provides a recovery that removes the compromised keys, or the address retires; the core does not supply that recovery call. A pairing binds an address, not a domain's owner: whoever controls the domain after it lapses can present the old pairing, with keys of their own, to readers that never learned of an unpairing, but only until its `until`, at most a year after it was last renewed. The cap stands in for an issue time the reader cannot check: a reader judges `until` against its own clock, so a principal cannot sign a pairing that counts for longer. A reader showing an old message at its `sentAt` takes the sender's word for when it was sent; one acting on it judges the pairing now.
@@ -744,8 +744,8 @@ This section follows RFC 6973.
 
 - **Accountability over deniability.** Every message is signed, so anyone holding one can prove to anyone else that its author's key signed it. With a `for` header, the proof is that this person's agent's key signed it.
   - The protocol makes this choice on purpose: agents that negotiate and commit for people need attributable messages.
-  - **What the proof rests on.** It shows that the author's server listed, when the reader checked, a key valid at the message's `sentAt`. The server sets each key's history. A server that is compromised, coerced or dishonest can list a key with a false `added` and sign a message dated whenever it likes, and a stolen key signs messages dated before its theft. Version 2 has no transparency log of key histories, so nothing but a reader's own cached documents can catch that. A dispute over an old message rests on the honesty of the author's server, as one over old email rests on its provider's.
-  - A deniable mode would need a different kind of signature, which section 1 leaves room for. It is not part of version 2.
+  - **What the proof rests on.** It shows that the author's server listed, when the reader checked, a key valid at the message's `sentAt`. The server sets each key's history. A server that is compromised, coerced or dishonest can list a key with a false `added` and sign a message dated whenever it likes, and a stolen key signs messages dated before its theft. Version 1 has no transparency log of key histories, so nothing but a reader's own cached documents can catch that. A dispute over an old message rests on the honesty of the author's server, as one over old email rests on its provider's.
+  - A deniable mode would need a different kind of signature, which section 1 leaves room for. It is not part of version 1.
 - **Who learns what.**
   - The author's server sees everything its agents send.
   - Each recipient's server sees each message it carries, and its claims.
@@ -826,7 +826,7 @@ All of these are server features or services built on top.
 
 ## 15. Test vectors and conformance
 
-`spec/vectors/v2.json` holds:
+`spec/vectors/v1.json` holds:
 
 - **Canonical JSON:** canonical forms and refusals, every escape included.
 - **Addresses and identifiers:** addresses in their wire form, with their length boundaries, and principal identifiers.
@@ -850,7 +850,7 @@ All of these are server features or services built on top.
 An implementation checks the published bytes and verification outcomes; hedged ML-DSA signatures are verified rather than reproduced. Vector presence and a component test pass do not establish complete coverage or live interoperability. Final coverage is checked against the exact source/vector candidate, with omissions and live checks reported explicitly. The black-box conformance suite in `conformance/` can be pointed at any server, and plays a peer server against it.
 
 **What this evidence is, and is not.**
-- The vectors are generated by this repository's reference library, the same library its server and conformance suite import, so a mistake in that library would be in all three. Each vector is checked against this text by review, and the repository's Python client, a port maintained beside the JavaScript one, reproduces them. Neither is an independent implementation. That is the bar for version 1.0 (Status, above), and it has not been met.
+- The vectors are generated by this repository's reference library, the same library its server and conformance suite import, so a mistake in that library would be in all three. Each vector is checked against this text by review, and the repository's Python client, a port maintained beside the JavaScript one, reproduces them. Neither is an independent implementation. That is the bar for declaring version 1 stable.0 (Status, above), and it has not been met.
 - The conformance suite tests servers. It runs against a server set up for it (local origins, loosened rate limits), so it cannot test the transport rules of sections 9 and 11.2. Rules that bind readers, such as `critical`, relations, principal verification and unknown versions, have vectors and functions in the library, gathered in the [reader profile](profiles/reader.md).
 
 ## Appendix A. Grammar
@@ -864,7 +864,7 @@ ALNUM          = %x41-5A / LALPHA / DIGIT
 
 address        = local "@" domain
 local          = 1*64(%x21-3F / %x5B-7E / UTF8-non-ascii)   ; any version: no "@", space, capital or Cc
-local-ascii    = atom *("." atom)                    ; at most 64 bytes; the local part of version 2 messages
+local-ascii    = atom *("." atom)                    ; at most 64 bytes; the local part of version 1 messages
 atom           = 1*(LALPHA / DIGIT / "!" / "#" / "$" / "%" / "&" / "'" / "*" / "+" / "/" /
                     "=" / "?" / "^" / "_" / "`" / "{" / "|" / "}" / "~" / "-")
 domain         = label 1*("." label)                 ; at most 253 bytes, last label not all digits

@@ -95,7 +95,7 @@ def(
     id: 'documents.server.algorithms',
     section: 'PROTOCOL 2.3, 4',
     level: 'must',
-    title: 'The server document lists the signature algorithms it verifies, both of version 2 among them',
+    title: 'The server document lists the signature algorithms it verifies, both of version 1 among them',
     expected: `algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ${V1_ALGORITHMS.join(' and ')}`,
   },
   async (t: T, ctx: Ctx) => {
@@ -160,7 +160,7 @@ def(
     level: 'must',
     title: 'An address in a path is read as one segment, its non-pchar characters percent-encoded',
     expected:
-      "for an agent whose hosted name holds every version 2 character that is not an RFC 3986 pchar (# % / ? ^ ` { | }), GET /simon/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other",
+      "for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { | }), GET /simon/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other",
   },
   async (t: T, ctx: Ctx) => {
     const domain = requireHosted(ctx);

@@ -8,7 +8,7 @@
   "properties": {
     "message": {
       "type": "object",
-      "description": "A message of any version; message.json for version 2."
+      "description": "A message of any version; message.json for version 1."
     },
     "server": {
       "$ref": "common.json#/$defs/origin"

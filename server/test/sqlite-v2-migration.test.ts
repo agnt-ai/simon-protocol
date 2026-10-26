@@ -242,7 +242,7 @@ it('copies actual schema2 raw state, WAL cohort, row order, tombstones, null sen
     const candidateFile = path.join(f.options.directory, result.candidate.core);
     const destination = new DatabaseSync(candidateFile);
     try {
-      assert.equal(destination.prepare('PRAGMA user_version').get()!.user_version, 10);
+      assert.equal(destination.prepare('PRAGMA user_version').get()!.user_version, 9);
       const copied = destination
         .prepare(
           'SELECT rowid,id,json,from_address,public,carrier,claims,received_at,expires,kept FROM messages ORDER BY rowid',
@@ -312,7 +312,7 @@ it('keeps schema2 refused by the normal Store and gives every legacy device an e
   let server: ReturnType<typeof createServer> | undefined;
   let otherOrigin: ReturnType<typeof createServer> | undefined;
   try {
-    assert.throws(() => new SqliteStore(f.source), /schema 2, not 10/);
+    assert.throws(() => new SqliteStore(f.source), /schema 2, not 9/);
     const secondDevice = generateKey();
     f.core.prepare('INSERT INTO agent_keys VALUES(?,?,?,?,?)').run(secondDevice.key, f.address, T, null, 2);
     const otherKey = generateKey();
@@ -565,29 +565,6 @@ for (const { name, mutate, code } of corruptions)
       f.close();
     }
   });
-
-it('refuses a legacy store holding a wire version 1 message, which this server cannot read as it was', async () => {
-  const f = fixture();
-  try {
-    const message = signMessage<Message>(
-      {
-        v: 1,
-        from: 'author@remote.example',
-        to: [f.address],
-        sentAt: T,
-        inReplyTo: null,
-        parts: [{ type: 'text/plain', data: 'written under wire version 1' }],
-        headers: {},
-      } as never,
-      f.foreign.privateKey,
-    );
-    f.keep(message, 78);
-    await assert.rejects(createSqliteV2Candidate(f.options), refused('legacy_wire_version'));
-    assert.equal(fs.existsSync(path.join(f.options.directory, '004-VERIFIED.json')), false);
-  } finally {
-    f.close();
-  }
-});
 
 it('refuses a corrupt private flag on a genuinely signed public message', async () => {
   const f = fixture();

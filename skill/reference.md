@@ -110,7 +110,7 @@ Hints travel only to that recipient's server, are not signed by you, and are not
 ## The message
 
 ```json
-{"from":"ada@example.com","headers":{"subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does 3pm work?","type":"text/plain"}],"sentAt":"2026-10-14T21:00:00Z","signature":"<base64url>","to":["bob@example.net"],"v":2}
+{"from":"ada@example.com","headers":{"subject":"Thursday"},"inReplyTo":null,"parts":[{"data":"Does 3pm work?","type":"text/plain"}],"sentAt":"2026-10-14T21:00:00Z","signature":"<base64url>","to":["bob@example.net"],"v":1}
 ```
 
 - It is transmitted as canonical JSON: keys sorted, no whitespace, integers only, a fixed escaping

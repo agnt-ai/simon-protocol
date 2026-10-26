@@ -378,9 +378,6 @@ function validateRows(data: Rows, m: Maintenance) {
     } catch {
       refuse('message_structure_or_binding');
     }
-    // A wire version 1 message cannot be rewritten (its signature covers v), and this server reads it only
-    // as a version it does not know, so its replies, retractions and files would silently fall away.
-    if (message.v === 1) refuse('legacy_wire_version');
     if (integer(row.public, 'message_public') !== (message.to.length === 0 ? 1 : 0)) refuse('message_public');
     if (![0, 1].includes(integer(row.kept, 'message_kept'))) refuse('message_kept');
     const carrier = text(row.carrier, 'message_carrier');

@@ -103,7 +103,7 @@ def(
     level: 'must',
     title: 'send applies the message rules of section 6.3 step 4',
     expected:
-      '400 invalid naming the field for a field version 2 does not define, naming to for one recipient over the published limit, and naming headers for a message to no one with no audience',
+      '400 invalid naming the field for a field version 1 does not define, naming to for one recipient over the published limit, and naming headers for a message to no one with no audience',
   },
   async (t: T, ctx: Ctx) => {
     const { a, b } = await pair(ctx);
@@ -351,7 +351,7 @@ def(
   },
 );
 
-/** A version 7 message from `from`, signed by `key`: the invariants, and members version 2 does not define. */
+/** A version 7 message from `from`, signed by `key`: the invariants, and members version 1 does not define. */
 function version7(from: TargetAgent, to: string[] | undefined, key = from.key) {
   const unsigned: Record<string, unknown> = {
     v: 7,
