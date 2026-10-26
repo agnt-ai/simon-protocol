@@ -408,8 +408,8 @@ describe('two agents', () => {
       server.origin,
       '--address',
       address,
-      '--principal-recovery',
-      signRecovery(principal.privateKey, address, key.key, at),
+      // A signature may begin with a dash, so it is joined to its option.
+      `--principal-recovery=${signRecovery(principal.privateKey, address, key.key, at)}`,
       '--at',
       at,
       '--for',
