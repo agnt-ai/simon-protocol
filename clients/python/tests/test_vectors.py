@@ -514,7 +514,8 @@ class Principals(VectorCase):
                 agent = c["agent"]
 
                 def check(c=c, agent=agent):
-                    check_principal(c["message"], agent["kind"], agent.get("for"))
+                    now = parse_timestamp(c["now"]) if "now" in c else None
+                    check_principal(c["message"], agent["kind"], agent.get("for"), now)
 
                 if c.get("accepted"):
                     check()

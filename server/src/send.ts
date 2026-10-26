@@ -29,6 +29,7 @@ import {
   namedFiles,
   parseMessage,
   parseStrict,
+  readSuccession,
   SEND_WINDOW_MS,
   sign,
   unauthorized,
@@ -74,6 +75,8 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     // The claims that travel, as the first call checked them: without this server's judgement.
     checkHints(ctx, hints, m, earlier.signedClaims?.claims ?? []);
     await ctx.store.putMessage(earlier, { deliveries: deliveriesFor(earlier, hints as Hints) });
+    // The first call may have stored the message and stopped before it moved the record.
+    await follow(ctx, agent, earlier.message);
     ctx.wake();
     return { id, receivedAt: earlier.receivedAt };
   }
@@ -90,7 +93,7 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
   if (!verifyMessage(m, agent.keys)) {
     throw unauthorized('bad_signature', "The message does not verify with the author's keys valid at its sentAt.", now);
   }
-  checkPrincipal(m, agent.principal === null ? { kind: 'solo' } : { kind: 'paired', for: agent.principal });
+  checkPrincipal(m, agent.principal === null ? { kind: 'solo' } : { kind: 'paired', for: agent.principal }, now);
   if (!isFresh(m, now, SEND_WINDOW_MS)) {
     throw invalid('sentAt is more than 24 hours old or more than 5 minutes ahead.', { field: 'sentAt' });
   }
@@ -109,15 +112,16 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
   ctx.rate.hit('send', agent.address);
   ctx.rate.distinct('destinations', agent.address, m.to.map(domainOf));
 
-  // A succession its principal signed moves a paired agent's principal on to the successor (spec section 2.2).
+  // A succession its principal signed moves a paired agent's principal on to the successor (spec section 2.2),
+  // once the message is stored, so a message that is not stored moves nothing. A concurrent send may have made
+  // the same move first; anything else that changed the record meanwhile refuses this one.
   const forValue = m.v === VERSION ? header(m as Message, 'for') : null;
-  if (agent.principal !== null && forValue !== null && forValue !== agent.principal) {
-    const moved = await ctx.store.succeedPrincipal(agent.address, agent.principal, forValue);
-    // A concurrent send may have made the same move first; anything else changed under this one.
-    if (!moved && (await ctx.store.agentByAddress(agent.address))?.principal !== forValue) {
+  const moving = agent.principal !== null && forValue !== null && forValue !== agent.principal;
+  if (moving) {
+    const held = (await ctx.store.agentByAddress(agent.address))?.principal;
+    if (held !== agent.principal && held !== forValue) {
       throw conflict('principal_changed', "This agent's principal changed meanwhile: compose the message again.");
     }
-    if (moved) ctx.log('info', 'principal succeeded', { address: agent.address });
   }
 
   const record: StoredMessage = {
@@ -130,9 +134,30 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     expiresAt: later(now, ctx.config.retentionDays * DAY_MS),
   };
   const stored = await ctx.store.putMessage(record, { deliveries: deliveriesFor(record, hints as Hints) });
+  if (moving) await follow(ctx, agent, m);
   ctx.defer(() => ctx.hooks.emit('stored', { message: stored }));
   await changed(ctx, agent.address);
   return { id, receivedAt: stored.receivedAt };
+}
+
+/**
+ * Move the agent's record on to the successor a stored message names along its succession from the principal
+ * held (spec section 2.2), as a compare-and-set. A record that changed otherwise since the message was checked
+ * stays as that change left it: the message was checked against the record as it was, as any message racing
+ * a change is.
+ */
+async function follow(ctx: Context, agent: Agent, m: AnyMessage) {
+  const from = agent.principal;
+  if (from === null || m.v !== VERSION) return;
+  const to = header(m as Message, 'for');
+  const succession = header(m as Message, 'succession');
+  if (to === null || to === from || succession === null) return;
+  if (!readSuccession(succession, to)?.some(step => step.from === from)) return;
+  if (await ctx.store.succeedPrincipal(agent.address, from, to)) {
+    ctx.log('info', 'principal succeeded', { address: agent.address });
+  } else if ((await ctx.store.agentByAddress(agent.address))?.principal !== to) {
+    ctx.log('warn', 'principal changed while a move was stored', { address: agent.address });
+  }
 }
 
 /** How often a send renews what it noted about serving its domain, at most. */

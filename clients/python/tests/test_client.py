@@ -465,6 +465,14 @@ class ClientTest(unittest.TestCase):
         agent.succeed(third.identifier, sign_pairing(third, address), sign_succession(new, third))
         later = Reader(resolver=self.server.resolve).verify_author(agent.compose([], "Again.", headers={"audience": "public"}))
         self.assertEqual(later.principal.succeeds, (old.identifier, new.identifier))
+        # Unpairing always wins: an unpairing by a key it moved on from ends the pairing for a reader that
+        # follows the chain; one by a key outside it ends nothing.
+        held = self.server.agents[address]
+        held.update(retired=timestamp(parse_timestamp(message["sentAt"]) + 60_000))
+        held["extra"] = {"unpairing": sign_unpairing(old, address)}
+        self.assertTrue(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
+        held["extra"] = {"unpairing": sign_unpairing(SigningKey.generate(), address)}
+        self.assertFalse(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
 
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends

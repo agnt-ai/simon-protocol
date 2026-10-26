@@ -275,7 +275,10 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
     const earlier = predecessors(m);
     if (earlier === 'refused') return { verified: false, id, reason: 'bad_succession' };
     const lapsed = standing === 'lapsed';
-    const ended = author.unpairing !== undefined && verifyUnpairing(m.from, forValue, author.unpairing);
+    // Unpairing always wins: one signed by a key the principal moved on from ends the agent too.
+    const ended =
+      author.unpairing !== undefined &&
+      [forValue, ...earlier].some(id => verifyUnpairing(m.from, id, author.unpairing));
     return {
       ...trust,
       principal: {

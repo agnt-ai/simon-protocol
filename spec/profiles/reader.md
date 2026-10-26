@@ -10,8 +10,11 @@ A reader checks a message against authenticated evidence from its author's domai
 
 **Successions.** A key principal may move to a new key along a `succession` (PROTOCOL.md 2.2). A reader that remembers principals:
 - treats `for` as the principal it knew by any key the chain names, once every step verifies;
-- remembers each step it has seen, and when it holds two from one key to different keys, a fork, treats neither successor as that key's, now or later, and shows each as a principal of its own;
-- never links a key to an earlier one by anything but a step both keys signed.
+- remembers each step it has seen, and when it holds two from one key to different keys, a fork, MUST NOT treat either successor as that key's. How it shows the two, and whether it ever links them again, is its own policy; showing each as a principal of its own is the simple choice;
+- never links a key to an earlier one by anything but a step both keys signed. When an address's `for` changes to a key with no succession from the one before, the reader treats it as a new principal and SHOULD say so, as messaging apps flag a changed safety number;
+- treats a valid unpairing by any key in the chain, the current key or one it moved on from, as ending the agent's pairing: unpairing always wins (PROTOCOL.md 2.2).
+
+**Lapsed pairings.** A reader verifies a key principal's pairing at the message's `sentAt` (PROTOCOL.md 2.2). Whether a pairing that has lapsed since still lets it act on the message for the principal is its policy: it SHOULD at most require the pairing to count now, and MAY take a later message from the same address with the same `for` and a pairing that counts as evidence of renewal.
 
 ## 2. `critical`
 

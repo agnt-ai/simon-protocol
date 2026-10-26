@@ -405,10 +405,12 @@ export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
  * version 1 message carries its principal as `for`; with a key principal it also carries a `pairing` that
  * verifies, and with any other it carries none. A solo agent's message carries neither. A `succession` must
  * verify; with one, a key principal's `for` may be a successor of the agent's principal, and the server then
- * moves its record to it (spec section 2.2). Refused as `400 invalid` on `headers`. A later version's headers
- * are not known here, so its messages pass.
+ * moves its record to it (spec section 2.2). The pairing must count at the message's `sentAt` and, when `now`
+ * is given (the server's clock), at `now` too, so a message backdated within the send window cannot carry a
+ * pairing that has already lapsed. Refused as `400 invalid` on `headers`. A later version's headers are not
+ * known here, so its messages pass.
  */
-export function checkPrincipal(m: AnyMessage, agent: Principal): void {
+export function checkPrincipal(m: AnyMessage, agent: Principal, now?: Date): void {
   if (m.v !== VERSION) return;
   const forValue = header(m as Message, 'for');
   const pairing = header(m as Message, 'pairing');
@@ -431,10 +433,13 @@ export function checkPrincipal(m: AnyMessage, agent: Principal): void {
   const principal = forValue!;
   if (principalKey(principal) === null) {
     if (pairing !== null) throw refuse('Only a key principal pairs by signature: this message carries no pairing.');
-  } else if (!verifyPairing(m.from, principal, pairing, parseTimestamp(m.sentAt) ?? NaN)) {
+  } else if (
+    !verifyPairing(m.from, principal, pairing, parseTimestamp(m.sentAt) ?? NaN) ||
+    (now !== undefined && !verifyPairing(m.from, principal, pairing, now))
+  ) {
     const until = parsePairing(pairing)?.until ?? '<until>';
     throw refuse(
-      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, principal, until))}, valid at sentAt: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
+      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, principal, until))}, valid at sentAt and now: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
     );
   }
 }

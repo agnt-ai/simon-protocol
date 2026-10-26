@@ -324,7 +324,10 @@ class Reader:
             if earlier == "refused":
                 return NotVerified(id, "bad_succession")
             unpairing = author.get("unpairing")
-            ended = unpairing is not None and verify_unpairing(m["from"], principal, unpairing)
+            # Unpairing always wins: one signed by a key the principal moved on from ends the agent too.
+            ended = unpairing is not None and any(
+                verify_unpairing(m["from"], p, unpairing) for p in [principal, *earlier]
+            )
             until = parse_pairing(header(m, "pairing"))[0]  # type: ignore[index]
             proves = _PROVES["key-pairing"]
             return _with(trust, PrincipalTrust(principal, "key-pairing", proves, ended=ended, until=until, lapsed=lapsed, succeeds=tuple(earlier)))
@@ -602,9 +605,14 @@ class Agent(Reader):
             raise _invalid("id", "A grant id is a nonempty string.")
         return self.call("DELETE", "/simon/grants/" + quote(id, safe=""))
 
-    def unpair(self, address: str, unpairing: str) -> dict[str, Any]:
+    def unpair(self, address: str, unpairing: str, succession: str | None = None) -> dict[str, Any]:
+        """Retire a paired address by its principal's unpairing. One signed by a key the principal moved on
+        from also counts, given ``succession``, the chain from that key to the principal the server holds."""
         address = _address_arg("address", address)
-        return self.call("POST", "/simon/unpair", canonical_bytes({"address": address, "unpairing": unpairing}), agent=address)
+        body = {"address": address, "unpairing": unpairing}
+        if succession is not None:
+            body["succession"] = succession
+        return self.call("POST", "/simon/unpair", canonical_bytes(body), agent=address)
 
     def renew_pairing(self, pairing: str) -> None:
         """Carry a renewed pairing from now on: the principal's signature over a later ``until`` (spec

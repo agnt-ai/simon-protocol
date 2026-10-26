@@ -146,6 +146,18 @@ describe('verifyAuthor', () => {
     );
     const r = await verifyAuthor(bad, opts);
     assert.deepEqual(r.verified || r.reason, 'bad_succession');
+
+    // Unpairing always wins: an unpairing by the key it moved on from ends the pairing for a reader that
+    // follows the chain, and one by a key outside the chain ends nothing.
+    const retired = new Date(Date.parse(m.sentAt) + 60_000).toISOString();
+    const held = fake.agents.get(address)!;
+    held.keys = held.keys.map(k => ({ ...k, revoked: retired }));
+    held.retired = retired;
+    held.unpairing = signUnpairing(old.privateKey, address, oldId);
+    const ended = async () => ((await verifyAuthor(m, opts)) as { principal: { ended?: true } }).principal.ended;
+    assert.equal(await ended(), true);
+    held.unpairing = signUnpairing(generateKey().privateKey, address, oldId);
+    assert.equal(await ended(), undefined);
   });
 
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {

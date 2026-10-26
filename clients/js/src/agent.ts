@@ -338,13 +338,21 @@ export class Agent {
     );
   }
 
-  async unpair(address: string, unpairing: string): Promise<{ status: 'retired'; address: string }> {
+  /**
+   * Retire a paired address by its principal's unpairing. An unpairing signed by a key the principal moved on
+   * from also counts, given `succession`, the chain from that key to the principal the server holds.
+   */
+  async unpair(
+    address: string,
+    unpairing: string,
+    succession?: string,
+  ): Promise<{ status: 'retired'; address: string }> {
     address = addressArg('address', address);
     return readJson(
       await this.#request(
         'POST',
         '/simon/unpair',
-        Buffer.from(JSON.stringify({ address, unpairing })),
+        Buffer.from(JSON.stringify({ address, unpairing, ...(succession !== undefined && { succession }) })),
         JSON_TYPE,
         address,
       ),

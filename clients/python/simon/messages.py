@@ -616,19 +616,31 @@ def sign_unpairing(key: SigningKey, agent: str) -> str:
     return key.sign(unpairing_bytes(agent, key.identifier))
 
 
-def verify_unpairing(agent: str, principal: str, unpairing: object) -> bool:
-    """Whether ``unpairing`` is the signature of the key ``principal`` names, ending its pairing with
-    ``agent``."""
-    key = principal_key(principal)
-    return key is not None and verify(key, unpairing_bytes(agent, principal), unpairing)
+def verify_unpairing(agent: str, principal: str, unpairing: object, succession: object = None) -> bool:
+    """Whether ``unpairing`` ends ``agent``'s pairing with the key ``principal`` names: it is that key's
+    signature, or, given a ``succession`` leading to ``principal``, the signature of any key the principal
+    moved on from along it. Unpairing always wins (section 2.2): a move never shields an agent from a key it
+    moved on from."""
+    earlier = [] if succession is None else read_succession(succession, principal)
+    if earlier is None:
+        return False
+    for identifier in [principal, *(step["from"] for step in earlier)]:
+        key = principal_key(identifier)
+        if key is not None and verify(key, unpairing_bytes(agent, identifier), unpairing):
+            return True
+    return False
 
 
-def check_principal(message: Mapping[str, Any], kind: str, principal: str | None = None) -> None:
+def check_principal(
+    message: Mapping[str, Any], kind: str, principal: str | None = None, now_ms: int | None = None
+) -> None:
     """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
     ``solo``, and a paired agent's principal. A paired agent's version 1 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
     neither. A ``succession`` must verify; with one, a key principal's ``for`` may be a successor of the
-    agent's principal, and the server then moves its record to it (section 2.2). Raises ``400 invalid`` on
+    agent's principal, and the server then moves its record to it (section 2.2). The pairing must count at
+    ``sentAt`` and, when ``now_ms`` is given (the server's clock), at that moment too, so a message backdated
+    within the send window cannot carry a pairing that has already lapsed. Raises ``400 invalid`` on
     ``headers``. A later version's headers are not known, so it passes."""
     if message["v"] != VERSION:
         return
@@ -659,14 +671,16 @@ def check_principal(message: Mapping[str, Any], kind: str, principal: str | None
             raise invalid(
                 "Only a key principal pairs by signature: this message carries no pairing.", field="headers"
             )
-    elif (sent := parse_timestamp(message["sentAt"])) is None or not verify_pairing(
-        message["from"], principal, pairing, sent
+    elif (
+        (sent := parse_timestamp(message["sentAt"])) is None
+        or not verify_pairing(message["from"], principal, pairing, sent)
+        or (now_ms is not None and not verify_pairing(message["from"], principal, pairing, now_ms))
     ):
         until = (parse_pairing(pairing) or ("<until>", ""))[0]
         expected = pairing_bytes(message["from"], principal, until).decode("utf-8")
         raise invalid(
             f"The pairing header must be <until> <signature>: the principal's signature over "
-            f"{canonical(expected)}, valid at sentAt: before until, by at most 366 days. The principal "
+            f"{canonical(expected)}, valid at sentAt and now: before until, by at most 366 days. The principal "
             "renews a lapsed pairing by signing a later until.",
             field="headers",
         )

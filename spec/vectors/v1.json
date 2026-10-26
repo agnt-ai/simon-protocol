@@ -6552,7 +6552,7 @@
     ]
   },
   "principals": {
-    "about": "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
+    "about": "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt and, when now is given (the server's clock), at now too, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
     "cases": [
       {
         "name": "a paired agent naming its principal",
@@ -7039,6 +7039,66 @@
           "signature": "6FrfxiFjZaX09R5EwvG3q97m-DYLmWNB7eYLEjUnbbWbZKUg3NloDBlBIF9cOPyAD9XxpbWtapnc7oqctYUCAQ"
         },
         "accepted": true
+      },
+      {
+        "name": "a key-paired agent whose pairing counts at sentAt, judged by a server whose clock is still before until",
+        "agent": {
+          "kind": "paired",
+          "for": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA"
+        },
+        "now": "2026-10-14T21:30:00.000Z",
+        "message": {
+          "v": 1,
+          "from": "bob@example.net",
+          "to": [
+            "ada@example.com"
+          ],
+          "inReplyTo": null,
+          "parts": [
+            {
+              "type": "text/plain",
+              "data": "Does 3pm work?"
+            }
+          ],
+          "headers": {
+            "for": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA",
+            "pairing": "2026-10-14T22:00:00.000Z RBkOCHG-fuL5sQB4E0RYE8vOIKBUheEg_3qezAadiyRwlxaJkZMc7zGWykOpUZUDKPpmeQZ5RJfsv6S4Ae2SAQ"
+          },
+          "sentAt": "2026-10-14T21:00:00Z",
+          "signature": "99zUCF6wGPssaJlK3RittFJYmlwdSLhZYoQrgxZTEdoIm1vib1Z-GKDyTeedX0mftg2WnJmAapEAVDqVqhuGBw"
+        },
+        "accepted": true
+      },
+      {
+        "name": "a backdated message: its pairing counts at sentAt, but lapsed before the server's now",
+        "agent": {
+          "kind": "paired",
+          "for": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA"
+        },
+        "now": "2026-10-14T23:00:00.000Z",
+        "message": {
+          "v": 1,
+          "from": "bob@example.net",
+          "to": [
+            "ada@example.com"
+          ],
+          "inReplyTo": null,
+          "parts": [
+            {
+              "type": "text/plain",
+              "data": "Does 3pm work?"
+            }
+          ],
+          "headers": {
+            "for": "simon-key:ed25519:7bw8M2IWJR2NL0Cb2B-g1PbBZ4hXMkOoAbG4kTtiaMA",
+            "pairing": "2026-10-14T22:00:00.000Z RBkOCHG-fuL5sQB4E0RYE8vOIKBUheEg_3qezAadiyRwlxaJkZMc7zGWykOpUZUDKPpmeQZ5RJfsv6S4Ae2SAQ"
+          },
+          "sentAt": "2026-10-14T21:00:00Z",
+          "signature": "99zUCF6wGPssaJlK3RittFJYmlwdSLhZYoQrgxZTEdoIm1vib1Z-GKDyTeedX0mftg2WnJmAapEAVDqVqhuGBw"
+        },
+        "status": 400,
+        "code": "invalid",
+        "field": "headers"
       }
     ]
   },

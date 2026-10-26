@@ -147,10 +147,18 @@ export const unpairingBytes = (agent: string, principal: string) => `SIMON-UNPAI
 export const signUnpairing = (principalPrivateKey: string | KeyObject, agent: string, principal: string) =>
   sign(principalPrivateKey, unpairingBytes(agent, principal));
 
-/** Whether `unpairing` is the signature of the key `principal` names, ending its pairing with `agent`. */
-export function verifyUnpairing(agent: string, principal: string, unpairing: unknown): boolean {
-  const key = principalKey(principal);
-  return key !== null && verify(key, unpairingBytes(agent, principal), unpairing);
+/**
+ * Whether `unpairing` ends `agent`'s pairing with the key `principal` names: it is that key's signature, or,
+ * given a `succession` leading to `principal`, the signature of any key the principal moved on from along it.
+ * Unpairing always wins (spec section 2.2): a move never shields an agent from a key it moved on from.
+ */
+export function verifyUnpairing(agent: string, principal: string, unpairing: unknown, succession?: unknown): boolean {
+  const earlier = succession === undefined || succession === null ? [] : readSuccession(succession, principal);
+  if (earlier === null) return false;
+  return [principal, ...earlier.map(step => step.from)].some(id => {
+    const key = principalKey(id);
+    return key !== null && verify(key, unpairingBytes(agent, id), unpairing);
+  });
 }
 
 /**

@@ -289,18 +289,22 @@ async function cancelByCode(ctx: Context, req: Request, address: string | undefi
 
 /**
  * A key principal ends its pairing: the address retires at once, its keys revoked, whatever they say. The
- * unpairing is the authority, so any key may sign the request; a repeat answers as the first call did.
+ * unpairing is the authority, so any key may sign the request; a repeat answers as the first call did. An
+ * unpairing by a key the principal moved on from counts when `succession` leads from that key to the
+ * principal held here.
  */
 export async function unpair(ctx: Context, req: Request): Promise<Reply> {
   const now = ctx.now();
   const headers = readSignedHeaders(req.headers, now, { agent: true, optionalAgent: true });
-  const body = readBody(req.body, ['address', 'unpairing']);
+  const body = readBody(req.body, ['address', 'unpairing', 'succession']);
   const named = normalizeAddress(body.address);
   checkActor(headers, named, now);
   await verifyAnyKey(ctx, req, headers);
   const agent = named === null ? null : await ctx.store.agentByAddress(named);
   // One answer for every refusal, with nothing in it: a principal is shown only to its agent's recipients.
-  if (!agent?.principal || !verifyUnpairing(agent.address, agent.principal, body.unpairing)) {
+  // Unpairing always wins (spec section 2.2): a key the principal moved on from unpairs too, given the succession
+  // from it to the principal held here.
+  if (!agent?.principal || !verifyUnpairing(agent.address, agent.principal, body.unpairing, body.succession)) {
     throw unauthorized(
       'bad_proof',
       "unpairing is the key principal's signature over SIMON-UNPAIR, the address and the principal.",

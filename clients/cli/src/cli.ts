@@ -311,12 +311,17 @@ const VERBS: Record<string, Verb> = {
     },
   },
   unpair: {
-    usage: 'unpair --address A --unpairing SIG [--server URL]',
-    summary: 'Retire a paired address using its principal signature.',
-    options: { address: { type: 'string' }, unpairing: { type: 'string' }, server: { type: 'string' } },
+    usage: 'unpair --address A --unpairing SIG [--succession CHAIN] [--server URL]',
+    summary: 'Retire a paired address using its principal signature; --succession when a key it moved on from signed.',
+    options: {
+      address: { type: 'string' },
+      unpairing: { type: 'string' },
+      succession: { type: 'string' },
+      server: { type: 'string' },
+    },
     async run(v) {
       if (!v.address || !v.unpairing) throw usageError('Give --address and --unpairing.');
-      return agent(str(v.server), true).unpair(String(v.address), String(v.unpairing));
+      return agent(str(v.server), true).unpair(String(v.address), String(v.unpairing), str(v.succession));
     },
   },
   sync: {

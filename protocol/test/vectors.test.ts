@@ -248,7 +248,7 @@ describe('the published vectors', () => {
     for (const p of vectors.principals.cases) {
       const got = answer(() => {
         parseMessage(bytes(canonicalize(p.message)));
-        checkPrincipal(p.message, p.agent);
+        checkPrincipal(p.message, p.agent, p.now === undefined ? undefined : new Date(p.now));
       });
       assert.deepEqual(got, expected(p), p.name);
     }

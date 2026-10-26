@@ -323,16 +323,22 @@ export const TOOLS: Tool[] = [
   {
     name: 'unpair',
     description:
-      'Retire a paired agent address with its principal unpairing signature, only when the one you act for asks.',
-    inputSchema: schema({ address: { type: 'string' }, unpairing: { type: 'string' }, server: { type: 'string' } }, [
-      'address',
-      'unpairing',
-    ]),
+      'Retire a paired agent address with its principal unpairing signature, only when the one you act for asks. When a key the principal moved on from signed it, give succession, the chain from that key to the current principal.',
+    inputSchema: schema(
+      {
+        address: { type: 'string' },
+        unpairing: { type: 'string' },
+        succession: { type: 'string' },
+        server: { type: 'string' },
+      },
+      ['address', 'unpairing'],
+    ),
     run: async (args, ctx) =>
       answer(
         await openAgent(ctx.home, { server: args.server ?? ctx.server, timeoutMs: ctx.timeoutMs }).unpair(
           args.address,
           args.unpairing,
+          args.succession,
         ),
       ),
   },

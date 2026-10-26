@@ -1698,7 +1698,7 @@ function principals() {
       headers: { for: principal, pairing: fixedPairing(k, 'bob@example.net', principal), succession },
     };
   };
-  const cases: [string, AnyMessage, Principal][] = [
+  const cases: [string, AnyMessage, Principal, string?][] = [
     ['a paired agent naming its principal', signedQuestion, paired],
     ['a paired agent naming no one', sign({ ...question, headers: { subject: 'Thursday' } }, ada), paired],
     [
@@ -1796,17 +1796,48 @@ function principals() {
       { kind: 'paired', for: `simon-key:${gwen.key}` },
     ],
     ['a paired agent sending a version whose headers this server does not know', version7, paired],
+    [
+      'a key-paired agent whose pairing counts at sentAt, judged by a server whose clock is still before until',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: erinPrincipal,
+            pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, 3_600_000)),
+          },
+        },
+        bob,
+      ),
+      byKey,
+      at(NOW, 1_800_000),
+    ],
+    [
+      "a backdated message: its pairing counts at sentAt, but lapsed before the server's now",
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: erinPrincipal,
+            pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, 3_600_000)),
+          },
+        },
+        bob,
+      ),
+      byKey,
+      at(NOW, 7_200_000),
+    ],
   ];
   return {
     about:
-      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
-    cases: cases.map(([name, message, agent]) => ({
+      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt and, when now is given (the server's clock), at now too, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
+    cases: cases.map(([name, message, agent, now]) => ({
       name,
       agent,
+      ...(now === undefined ? {} : { now }),
       message,
       ...outcome(() => {
         parseMessage(Buffer.from(canonicalize(message)));
-        checkPrincipal(message, agent);
+        checkPrincipal(message, agent, now === undefined ? undefined : new Date(now));
       }),
     })),
   };
