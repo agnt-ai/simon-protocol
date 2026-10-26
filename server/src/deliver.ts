@@ -134,9 +134,7 @@ export async function deliver(ctx: Context, req: Request): Promise<Reply> {
       id,
       message: m,
       carrier: server,
-      claims: await judgeClaims(m, envelope.claims, author.kind, server, d =>
-        ctx.resolver.resolve(d, { charge: carrier }),
-      ),
+      claims: await judgeClaims(m, envelope.claims, server, d => ctx.resolver.resolve(d, { charge: carrier })),
       signedClaims: envelope.claims ? { claims: envelope.claims, signature: envelope.claimsSignature! } : null,
       receivedAt: iso(now),
       expiresAt: later(now, ctx.config.retentionDays * DAY_MS),

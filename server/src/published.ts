@@ -2,7 +2,7 @@
  * Published messages: messages written here with an empty `to` (spec section 7), served to whoever their
  * audience admits (readers.ts):
  *
- *   GET /simon/messages/<id>                  the message and its author's keys valid at its `sentAt`
+ *   GET /simon/messages/<id>                  the message, and its carrier's signed claims when it made any
  *   GET /simon/feeds/<address>/<feed>         the author's published messages in that feed, newest first
  *   GET /simon/messages/<id>/related          the relations to it marked listed that this server shows, newest first
  *
@@ -15,9 +15,7 @@ import {
   MAX_CURSOR_LENGTH,
   MAX_LISTING_LIMIT,
   DEFAULT_LISTING_LIMIT,
-  parseTimestamp,
   PUBLIC_RELATIONS,
-  validAt,
   VERSION,
   type AnyMessage,
   type Message,
@@ -33,7 +31,7 @@ import type { Page, StoredMessage } from './store/store.ts';
  * scan that ends there ends the listing too: its next cursor would be a hidden message's.
  */
 const MAX_SCANNED = 5000;
-/** The feed of a published message that names none (spec section 7.3). */
+/** The feed of a published message that names none (publishing profile, section 3). */
 const DEFAULT_FEED = 'posts';
 const CURSOR = new RegExp(`^[\\x21-\\x7e]{1,${MAX_CURSOR_LENGTH}}$`);
 const EMPTY = { messages: [], cursor: null, more: false };
@@ -92,7 +90,7 @@ async function listing(
 }
 
 /**
- * Whether a relation to a published message is one its author's server lists (spec section 7.4): its writer
+ * Whether a relation to a published message is one its author's server lists (publishing profile, section 4): its writer
  * marked it `listed`, a plain reply never is; of those, the relations this server shows (PUBLIC_RELATIONS);
  * and not retracted by its writer since.
  */
@@ -116,16 +114,11 @@ export function publishedRoutes(ctx: Context): Route[] {
       async handle(req) {
         const record = await readable(req.params.id, await askerOf(ctx, req));
         if (!record) throw notFound('No published message has this id here.');
-        const author = (await ctx.store.agentByAddress(record.message.from))!;
-        const at = new Date(parseTimestamp(record.message.sentAt)!);
         const claims = record.signedClaims
           ? { claims: record.signedClaims.claims, claimsSignature: record.signedClaims.signature }
           : {};
-        return json({
-          message: record.message,
-          keys: author.keys.filter(k => validAt(k, at)).map(({ key, added, revoked }) => ({ key, added, revoked })),
-          ...claims,
-        });
+        // No keys beside it: a reader takes them from the author's agent document, where they are signed.
+        return json({ message: record.message, ...claims });
       },
     },
     {

@@ -76,7 +76,6 @@ export function agentDocument(ctx: Context, agent: Agent): AgentDocument {
     const doc = signAgentDocument(
       {
         address: agent.address,
-        kind: agent.kind,
         keys,
         ...(agent.retiredAt && {
           retired: retiredAt(agent.retiredAt, keys),

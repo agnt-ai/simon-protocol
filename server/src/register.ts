@@ -26,6 +26,7 @@ import {
   isPublicKey,
   normalizeAddress,
   pairingBytes,
+  parsePairing,
   parseTimestamp,
   principalKey,
   readSignedHeaders,
@@ -208,10 +209,14 @@ async function pairing(ctx: Context, address: string, key: string, body: Registe
   if (!isPrincipal(principal)) throw invalid('for is a mailto:, tel: or simon-key: identifier.', { field: 'for' });
   if (principalKey(principal) !== null) {
     if (body.pairing === undefined) return json({ status: 'pairing_required', address }, 202);
-    if (!verifyPairing(address, principal, body.pairing)) {
-      throw unauthorized('bad_proof', "pairing is the principal key's signature over the pairing string.", ctx.now(), {
-        pairingString: pairingBytes(address, principal),
-      });
+    if (!verifyPairing(address, principal, body.pairing, ctx.now())) {
+      const until = parsePairing(body.pairing)?.until ?? '<until>';
+      throw unauthorized(
+        'bad_proof',
+        "pairing is <until> <signature>: the principal key's signature over the pairing string, lapsing within 366 days from now.",
+        ctx.now(),
+        { pairingString: pairingBytes(address, principal, until) },
+      );
     }
     return principal;
   }

@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
+import { CLOCK_PAIRING_UNTIL } from '@agnt-sdk/simon-server/testing';
 import { generateKey, signPairing } from '@agnt-sdk/simon-protocol';
 import { Agent } from '@agnt-sdk/simon-client';
 import { texts, World } from './harness.ts';
@@ -90,7 +91,7 @@ describe('recipient policy', async () => {
       fetch: world.fetch,
       now: world.clock.now,
     });
-    const pairing = signPairing(principal.privateKey, 'keyed@alpha.test', forValue);
+    const pairing = signPairing(principal.privateKey, 'keyed@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
     await keyed.register({ address: 'keyed@alpha.test', for: forValue, pairing });
     await solo.agent.send({ to: [bob.agent.address!], text: 'solo' });
     await paired.agent.send({ to: [bob.agent.address!], text: 'claimed' });

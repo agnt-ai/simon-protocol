@@ -50,9 +50,12 @@ import {
   withinRepeatWindow,
   WireError,
   isPrincipal,
-  isB64url,
   pairingBytes,
-  signPairing,
+  pairingStanding,
+  predecessors,
+  parsePairing,
+  isSuccessionValue,
+  readSuccession,
   verifyPairing,
   verifyRecovery,
   isCriticalValue,
@@ -95,7 +98,11 @@ import {
   exampleCom,
   frank,
   fixedKey,
+  fixedPairing,
   fixedSign,
+  fixedStep,
+  gwen,
+  PAIRED_UNTIL,
   fixedSignMessage,
   keyEntry,
   question,
@@ -339,6 +346,9 @@ const version7 = fixedSignMessage<AnyMessage>(
   ada,
 );
 
+/** A message that names no principal: no for header. */
+const noPrincipal = fixedSignMessage<Message>({ ...question, headers: {} }, ada);
+
 /** Bob, paired with the key principal erin, who signed the pairing. */
 const erinPrincipal = `simon-key:${erin.key}`;
 const keyPaired = fixedSignMessage<Message>(
@@ -346,7 +356,7 @@ const keyPaired = fixedSignMessage<Message>(
     ...question,
     from: 'bob@example.net',
     to: ['ada@example.com'],
-    headers: { for: erinPrincipal, pairing: fixedSign(erin, pairingBytes('bob@example.net', erinPrincipal)) },
+    headers: { for: erinPrincipal, pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal) },
   },
   bob,
 );
@@ -366,7 +376,7 @@ function messageCase(name: string, unsigned: Unsigned<Message> | Unsigned<AnyMes
 const post = {
   ...question,
   to: [],
-  headers: { subject: 'Hello, SIMON' },
+  headers: { subject: 'Hello, SIMON', audience: 'public' },
   parts: [{ type: 'text/plain', data: 'First post.' }],
 };
 
@@ -399,7 +409,7 @@ const messages = {
           name: 'agenda.pdf',
           alt: "Thursday's agenda",
         },
-        { type: 'application/json; schema="https://example.org/schemas/slots"', data: 'eyJzbG90cyI6WyIxNTowMCJdfQ==' },
+        { type: 'application/json; schema="https://example.org/schemas/slots"', data: { slots: ['15:00'] } },
       ],
     }),
     messageCase(
@@ -421,6 +431,7 @@ const messages = {
       parts: [{ type: 'text/markdown; variant=GFM', data: 'Landed in *Lisbon*.' }],
     }),
     messageCase('public post (empty to)', post),
+    messageCase('a message with no for header, which speaks for no one', { ...question, headers: {} }),
     messageCase('media type parameters, one quoted', {
       ...question,
       parts: [
@@ -580,7 +591,7 @@ function messageChecks() {
     ['100 recipients', v1({ to: many(100, i => `r${i}@example.net`) })],
     ['32 parts', v1({ parts: many(32, () => ({ type: 'text/plain', data: 'x' })) })],
     ['32 headers', v1({ headers: Object.fromEntries(many(32, i => [`h${i}`, 'x'])) })],
-    ['a header name of 64 characters', v1({ headers: { ['h'.repeat(64)]: 'x' } })],
+    ['a header name of 128 characters', v1({ headers: { ['h'.repeat(128)]: 'x' } })],
     [
       'a media type of 200 characters',
       v1({ parts: [TEXT, { type: `${'a'.repeat(127)}/${'b'.repeat(72)}`, data: '' }] }),
@@ -688,6 +699,37 @@ function messageChecks() {
     ['a relation', v1({ inReplyTo: messageId(question), headers: { rel: 'reaction' } })],
     ['a relation the registry does not know', v1({ inReplyTo: messageId(question), headers: { rel: 'x-poke' } })],
     [
+      'a private relation name, reverse-domain',
+      v1({ inReplyTo: messageId(question), headers: { rel: 'com.example.approve' } }),
+    ],
+    [
+      'a private header, listed as critical',
+      v1({ headers: { 'org.example.binding-v2': 'yes', critical: 'org.example.binding-v2' } }),
+    ],
+    ['a JSON block carrying an object', v1({ parts: [TEXT, { type: 'application/json', data: { yes: true, n: 3 } }] })],
+    [
+      'a JSON block carrying a string, which is a JSON value',
+      v1({ parts: [TEXT, { type: 'application/json', data: 'yes' }] }),
+    ],
+    [
+      'a JSON block whose data is null, which is a JSON value',
+      v1({ parts: [TEXT, { type: 'application/json', data: null }] }),
+    ],
+    [
+      'a part with null data that is not a JSON type is refused',
+      v1({ parts: [TEXT, { type: 'image/png', data: null }] }),
+    ],
+    [
+      'a text/*+json block is a JSON type: its data is a JSON value',
+      v1({ parts: [TEXT, { type: 'text/x-notes+json', data: { a: 1 } }] }),
+    ],
+    [
+      'a +json block with a schema parameter, carrying an array',
+      v1({
+        parts: [TEXT, { type: 'application/simon-ui+json; schema="https://example.org/poll"', data: [1, 2, null] }],
+      }),
+    ],
+    [
       'a relation its writer marked listed',
       v1({ inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes' } }),
     ],
@@ -695,6 +737,9 @@ function messageChecks() {
       'a published message in feeds, with an audience',
       v1({ to: [], headers: { feed: 'posts,travel', audience: 'x' } }),
     ],
+    ['a public post', v1({ to: [], headers: { audience: 'public' } })],
+    ['a relation to nothing: its rel is ignored', v1({ headers: { rel: 'reaction' } })],
+    ['a feed on a message with recipients: ignored', v1({ headers: { feed: 'posts' } })],
     ['a local part of 64 bytes', v1({ to: [`${'b'.repeat(64)}@example.net`] })],
     ['a domain of 253 bytes', v1({ to: [`bob@${domain253}`] })],
     ['a for header naming a phone number', v1({ headers: { for: 'tel:+14155550100' } })],
@@ -740,14 +785,38 @@ function messageChecks() {
     ['a domain of 254 bytes', v1({ to: [`bob@${domain253}a`] })],
     ['inReplyTo in upper case', v1({ inReplyTo: messageId(question).toUpperCase() })],
     ['a header name with a capital', v1({ headers: { Subject: 'x' } })],
-    ['a header name of 65 characters', v1({ headers: { ['h'.repeat(65)]: 'x' } })],
+    ['a header name of 129 characters', v1({ headers: { ['h'.repeat(129)]: 'x' } })],
+    ['a private name with a capital', v1({ headers: { 'com.Example.flag': 'x' } })],
+    ['a private name starting with a dot', v1({ headers: { '.example.flag': 'x' } })],
+    ['a private name with two dots together', v1({ headers: { 'com..flag': 'x' } })],
+    ['a private name ending with a dot', v1({ headers: { 'com.example.': 'x' } })],
+    ['a label ending in a hyphen', v1({ headers: { 'com.example-.flag': 'x' } })],
+    ['JSON data on a part that is not a JSON type', v1({ parts: [TEXT, { type: 'application/pdf', data: { a: 1 } }] })],
+    ['JSON data on a text part', v1({ parts: [{ type: 'text/plain', data: ['See below.'] }] })],
+    [
+      'JSON data on a type that only contains json',
+      v1({ parts: [TEXT, { type: 'application/jsonx', data: { a: 1 } }] }),
+    ],
+    [
+      'JSON data on application/json-seq, which is not a JSON type',
+      v1({ parts: [TEXT, { type: 'application/json-seq', data: [1] }] }),
+    ],
+    ['a number as the data of a part that is not a JSON type', v1({ parts: [TEXT, { type: 'image/png', data: 7 }] })],
     ['a header value that is not a string', v1({ headers: { subject: 1 } })],
     ['33 headers', v1({ headers: Object.fromEntries(many(33, i => [`h${i}`, 'x'])) })],
     ['a for header without a label', v1({ headers: { for: 'alice@example.org' } })],
     ['a for header with a number that is not E.164', v1({ headers: { for: 'tel:4155550100' } })],
     ['a for header percent-encoded', v1({ headers: { for: 'mailto:alice%40example.org' } })],
     ['a for header naming a key in upper case', v1({ headers: { for: `simon-key:${erin.key.toUpperCase()}` } })],
-    ['a pairing that is not base64url', v1({ headers: { for: `simon-key:${erin.key}`, pairing: 'AA==' } })],
+    [
+      'a pairing that is not base64url',
+      v1({ headers: { for: `simon-key:${erin.key}`, pairing: `${PAIRED_UNTIL} AA==` } }),
+    ],
+    ['a succession without a pairing', v1({ headers: { ...question.headers, succession: fixedStep(erin, gwen) } })],
+    [
+      'a succession of seventeen steps',
+      v1({ headers: { ...keyPaired.headers, succession: Array(17).fill(fixedStep(erin, gwen)).join(',') } }),
+    ],
     ['a key for without a pairing', v1({ headers: { for: `simon-key:${erin.key}` } })],
     ['a pairing without a for', v1({ headers: { pairing: keyPaired.headers.pairing } })],
     ['a pairing beside a mailto for', v1({ headers: { ...question.headers, pairing: keyPaired.headers.pairing } })],
@@ -768,15 +837,16 @@ function messageChecks() {
     ['an alt of two lines', v1({ parts: [{ ...TEXT, alt: 'two\nlines' }] })],
     ['an empty alt', v1({ parts: [{ ...TEXT, alt: '' }] })],
     ['an alt with a right-to-left override', v1({ parts: [{ ...TEXT, alt: 'agenda\u202efdp.exe' }] })],
-    ['a relation to nothing', v1({ headers: { rel: 'reaction' } })],
     ['a relation name in upper case', v1({ inReplyTo: messageId(question), headers: { rel: 'Reaction' } })],
-    ['a feed on a message with recipients', v1({ headers: { feed: 'posts' } })],
     ['an audience on a message with recipients', v1({ headers: { audience: 'followers' } })],
-    ['feed names with a space', v1({ to: [], headers: { feed: 'posts, travel' } })],
+    ['feed names with a space', v1({ to: [], headers: { feed: 'posts, travel', audience: 'public' } })],
+    ['a message to no one that does not say who may read it', v1({ to: [] })],
+    ['a message to no one with only a feed', v1({ to: [], headers: { feed: 'posts' } })],
     ['listed on a plain reply, with no rel', v1({ inReplyTo: messageId(question), headers: { listed: 'yes' } })],
+    ['listed on a rel that names no message', v1({ headers: { rel: 'comment', listed: 'yes' } })],
     [
       'listed on a relation with an empty to',
-      v1({ to: [], inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes' } }),
+      v1({ to: [], inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'yes', audience: 'public' } }),
     ],
     ['listed in upper case', v1({ inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'Yes' } })],
     ['listed with another value', v1({ inReplyTo: messageId(question), headers: { rel: 'comment', listed: 'true' } })],
@@ -813,7 +883,7 @@ function messageChecks() {
 
 const headerValues = {
   about:
-    'The values of four headers the protocol names (section 5.4), and whether each is well formed: for, critical, pairing, and listed, whose only value is yes (placement is in messageChecks). A for header is a principal (section 2.2), written exactly, with nothing percent-encoded.',
+    'The values of five headers the protocol names (section 5.4), and whether each is well formed: for, critical, pairing (until, one space, a signature), succession (1 to 16 steps joined by commas, each a key token and two signatures one space apart), and listed, whose only value is yes (placement is in messageChecks). A for header is a principal (section 2.2), written exactly, with nothing percent-encoded.',
   cases: [
     ...[
       'mailto:alice@example.org',
@@ -852,13 +922,27 @@ const headerValues = {
       value,
       valid: isCriticalValue(value),
     })),
-    ...[signPairing(erin.privateKey, 'bob@example.net', `simon-key:${erin.key}`), 'AA', 'AB', 'AA==', ''].map(
-      value => ({
-        header: 'pairing',
-        value,
-        valid: isB64url(value),
-      }),
-    ),
+    ...[
+      fixedPairing(erin, 'bob@example.net', `simon-key:${erin.key}`),
+      `${PAIRED_UNTIL} AA`,
+      `2027-10-14T21:00:00.000Z AA`,
+      `${PAIRED_UNTIL} AB`,
+      `${PAIRED_UNTIL} AA==`,
+      `${PAIRED_UNTIL}  AA`,
+      `${PAIRED_UNTIL} AA `,
+      `${PAIRED_UNTIL}`,
+      '2027-10-14 AA',
+      'AA',
+      '',
+    ].map(value => ({ header: 'pairing', value, valid: parsePairing(value) !== null })),
+    ...[
+      fixedStep(erin, gwen),
+      `${fixedStep(erin, gwen)},${fixedStep(gwen, frank)}`,
+      `${fixedStep(erin, gwen)}, ${fixedStep(gwen, frank)}`,
+      `${erin.key} AA`,
+      `x:AA AA AA`,
+      '',
+    ].map(value => ({ header: 'succession', value, valid: isSuccessionValue(value) })),
     ...['yes', 'Yes', 'YES', 'yes ', 'true', 'no', ''].map(value => ({
       header: 'listed',
       value,
@@ -867,30 +951,65 @@ const headerValues = {
   ],
 };
 
-/** Pairings by key principals (sections 2.2 and 5.4), for both algorithms. */
+/** Pairings by key principals (sections 2.2 and 5.4), for both algorithms, judged at a moment. */
 function pairings() {
-  const pair = (agent: string, k: FixedKey, signedAgent = agent, signedPrincipal = `simon-key:${k.key}`) => {
+  const pair = (
+    agent: string,
+    k: FixedKey,
+    { signedAgent = agent, signedPrincipal = `simon-key:${k.key}`, until = PAIRED_UNTIL, at = NOW } = {},
+  ) => {
     const principal = `simon-key:${k.key}`;
-    const pairing = fixedSign(k, pairingBytes(signedAgent, signedPrincipal));
+    const pairing = fixedPairing(k, signedAgent, signedPrincipal, until);
     return {
       agent,
       principal,
-      bytes: pairingBytes(agent, principal),
+      bytes: pairingBytes(agent, principal, until),
       pairing,
-      verifies: verifyPairing(agent, principal, pairing),
+      at,
+      verifies: verifyPairing(agent, principal, pairing, Date.parse(at)),
     };
   };
+  const year = (days: number) => at(NOW, days * 24 * 60 * 60 * 1000);
   return {
     about:
-      "Pairings (sections 2.2 and 5.4): bytes is SIMON-PAIR, the agent address and the principal, joined by newlines; pairing is the principal key's signature, the value of the pairing header; verifies is whether it verifies for this agent and principal.",
+      "Pairings (sections 2.2 and 5.4): bytes is SIMON-PAIR, the agent address, the principal and the pairing's until, joined by newlines; pairing is the pairing header, until, one space and the principal key's signature over bytes; verifies is whether it pairs this agent with this principal at the moment at: the signature verifies, and at is before until by at most 366 days.",
     cases: [
       { why: 'an Ed25519 principal', ...pair('bob@example.net', erin) },
       { why: 'an ML-DSA-65 principal', ...pair('bob@example.net', frank) },
-      { why: 'signed for another agent', ...pair('bob@example.net', erin, 'ada@example.com') },
+      { why: 'signed for another agent', ...pair('bob@example.net', erin, { signedAgent: 'ada@example.com' }) },
       {
         why: 'signed for another principal',
-        ...pair('bob@example.net', erin, 'bob@example.net', 'mailto:erin@example.org'),
+        ...pair('bob@example.net', erin, { signedPrincipal: 'mailto:erin@example.org' }),
       },
+      { why: 'judged the moment it lapses', ...pair('bob@example.net', erin, { at: PAIRED_UNTIL }) },
+      { why: 'judged a millisecond before it lapses', ...pair('bob@example.net', erin, { at: at(PAIRED_UNTIL, -1) }) },
+      { why: 'lasting 366 days from the moment judged', ...pair('bob@example.net', erin, { until: year(366) }) },
+      { why: 'lasting longer than 366 days', ...pair('bob@example.net', erin, { until: at(year(366), 1) }) },
+    ],
+  };
+}
+
+/** Successions of a key principal (section 2.2): which chains lead to `for`, and the steps they name. */
+function successions() {
+  const id = (k: FixedKey) => `simon-key:${k.key}`;
+  const chain = (principal: FixedKey, ...steps: string[]) => {
+    const succession = steps.join(',');
+    return { principal: id(principal), succession, steps: readSuccession(succession, id(principal)) };
+  };
+  return {
+    about:
+      "Successions (section 2.2): each step is the old key's token, its signature and the new key's, one space apart, over SIMON-SUCCEED, the old identifier and the new, joined by newlines; steps are joined by commas, oldest first, each step's new key the next step's old key and the last's the principal's (for). steps is what a reader takes from it, from and to identifiers, or null when it does not verify.",
+    cases: [
+      { why: 'one step', ...chain(gwen, fixedStep(erin, gwen)) },
+      {
+        why: 'two steps, the second to an ML-DSA-65 key',
+        ...chain(frank, fixedStep(erin, gwen), fixedStep(gwen, frank)),
+      },
+      { why: 'a chain that does not reach for', ...chain(frank, fixedStep(erin, gwen)) },
+      { why: 'a step the new key did not sign', ...chain(gwen, fixedStep(erin, gwen, [erin, frank])) },
+      { why: 'a step the old key did not sign', ...chain(gwen, fixedStep(erin, gwen, [frank, gwen])) },
+      { why: 'a chain back to a key it left', ...chain(erin, fixedStep(erin, gwen), fixedStep(gwen, erin)) },
+      { why: 'two spaces in a step', ...chain(gwen, fixedStep(erin, gwen).replace(' ', '  ')) },
     ],
   };
 }
@@ -1265,9 +1384,9 @@ function documents() {
 
   const signedBy = (d: Record<string, unknown>, k: FixedKey = exampleCom) =>
     signAgentDocument(d as unknown as UnsignedAgentDocument, k.privateKey);
-  const ada1 = { address: 'ada@example.com', kind: 'paired', keys: [keyEntry(ada.key)] };
+  const ada1 = { address: 'ada@example.com', keys: [keyEntry(ada.key)] };
   const agent = signedBy(ada1);
-  const solo = { address: 'carol@example.org', kind: 'solo', keys: [keyEntry(carol.key)] };
+  const solo = { address: 'carol@example.org', keys: [keyEntry(carol.key)] };
   const revoked = [keyEntry(exampleCom.key, '2026-10-01T00:00:00Z', '2026-10-14T00:00:00Z')];
   const RETIRED = '2026-10-14T09:00:00Z';
   const retired = (extra: KeyEntry[] = []) => ({
@@ -1277,16 +1396,18 @@ function documents() {
   });
   const retiredUnpairing = fixedSign(erin, unpairingBytes('ada@example.com', erinPrincipal));
   const agentCases: [string, string, string, KeyEntry[]?][] = [
-    ['as served: a paired agent', text(agent), 'ada@example.com'],
-    ['a solo agent with an ML-DSA-65 key', text(signedBy(solo)), 'carol@example.org'],
-    ['of a kind readers do not know', text(signedBy({ ...ada1, kind: 'group' })), 'ada@example.com'],
+    ['as served', text(agent), 'ada@example.com'],
+    ['an agent with an ML-DSA-65 key', text(signedBy(solo)), 'carol@example.org'],
+    [
+      'with the kind member an earlier draft had: a member readers do not know',
+      text(signedBy({ ...ada1, kind: 'paired' })),
+      'ada@example.com',
+    ],
     [
       'with a member readers do not know, under the signature',
       text(signedBy({ ...ada1, avatar: 'https://example.com/a.png' })),
       'ada@example.com',
     ],
-    ['with no kind', text(signedBy({ address: ada1.address, keys: ada1.keys })), 'ada@example.com'],
-    ['with a kind that is not a string', text(signedBy({ ...ada1, kind: 1 })), 'ada@example.com'],
     ['naming another address', text(agent), 'bob@example.net'],
     ['asked for in another case', text(agent), 'Ada@example.com'],
     ['with a member added after signing', text({ ...agent, note: 'x' }), 'ada@example.com'],
@@ -1328,7 +1449,7 @@ function documents() {
   ];
   return {
     about:
-      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 1 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A kind the reader does not know reads as "unknown". A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
+      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 1 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
     now: NOW,
     server: server.map(([name, body, origin = ORIGIN]) => ({
       name,
@@ -1575,10 +1696,17 @@ function principals() {
     const principal = `simon-key:${k.key}`;
     return {
       ...keyPairedFields,
-      headers: { for: principal, pairing: fixedSign(k, pairingBytes('bob@example.net', principal)) },
+      headers: { for: principal, pairing: fixedPairing(k, 'bob@example.net', principal) },
     };
   };
-  const cases: [string, AnyMessage, Principal][] = [
+  const withSuccession = (k: FixedKey, succession: string) => {
+    const principal = `simon-key:${k.key}`;
+    return {
+      ...keyPairedFields,
+      headers: { for: principal, pairing: fixedPairing(k, 'bob@example.net', principal), succession },
+    };
+  };
+  const cases: [string, AnyMessage, Principal, string?][] = [
     ['a paired agent naming its principal', signedQuestion, paired],
     ['a paired agent naming no one', sign({ ...question, headers: { subject: 'Thursday' } }, ada), paired],
     [
@@ -1599,7 +1727,7 @@ function principals() {
       sign(
         {
           ...keyPairedFields,
-          headers: { for: erinPrincipal, pairing: fixedSign(erin, pairingBytes('ada@example.com', erinPrincipal)) },
+          headers: { for: erinPrincipal, pairing: fixedPairing(erin, 'ada@example.com', erinPrincipal) },
         },
         bob,
       ),
@@ -1610,24 +1738,114 @@ function principals() {
       sign(
         {
           ...keyPairedFields,
-          headers: { for: erinPrincipal, pairing: fixedSign(frank, pairingBytes('bob@example.net', erinPrincipal)) },
+          headers: { for: erinPrincipal, pairing: fixedPairing(frank, 'bob@example.net', erinPrincipal) },
         },
         bob,
       ),
       byKey,
     ],
+    [
+      'a key-paired agent whose pairing lapsed before sentAt',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: { for: erinPrincipal, pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, -1)) },
+        },
+        bob,
+      ),
+      byKey,
+    ],
+    [
+      'a key-paired agent whose pairing lasts more than 366 days past sentAt',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: erinPrincipal,
+            pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, 367 * 24 * 60 * 60 * 1000)),
+          },
+        },
+        bob,
+      ),
+      byKey,
+    ],
+    [
+      "a key-paired agent moving to its principal's successor along a succession",
+      sign(withSuccession(gwen, fixedStep(erin, gwen)), bob),
+      byKey,
+    ],
+    [
+      'a key-paired agent naming a successor with no succession',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: `simon-key:${gwen.key}`,
+            pairing: fixedPairing(gwen, 'bob@example.net', `simon-key:${gwen.key}`),
+          },
+        },
+        bob,
+      ),
+      byKey,
+    ],
+    [
+      "a key-paired agent naming a successor of someone else's key",
+      sign(withSuccession(gwen, fixedStep(frank, gwen)), bob),
+      byKey,
+    ],
+    [
+      'a key-paired agent carrying a succession that does not verify',
+      sign(withSuccession(gwen, fixedStep(erin, gwen, [erin, frank])), bob),
+      byKey,
+    ],
+    [
+      'an agent already moved, carrying the succession for readers',
+      sign(withSuccession(gwen, fixedStep(erin, gwen)), bob),
+      { kind: 'paired', for: `simon-key:${gwen.key}` },
+    ],
     ['a paired agent sending a version whose headers this server does not know', version7, paired],
+    [
+      'a key-paired agent whose pairing counts at sentAt, judged by a server whose clock is still before until',
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: erinPrincipal,
+            pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, 3_600_000)),
+          },
+        },
+        bob,
+      ),
+      byKey,
+      at(NOW, 1_800_000),
+    ],
+    [
+      "a backdated message: its pairing counts at sentAt, but lapsed before the server's now",
+      sign(
+        {
+          ...keyPairedFields,
+          headers: {
+            for: erinPrincipal,
+            pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, at(NOW, 3_600_000)),
+          },
+        },
+        bob,
+      ),
+      byKey,
+      at(NOW, 7_200_000),
+    ],
   ];
   return {
     about:
-      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and verifies, exactly when the principal is a key; a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
-    cases: cases.map(([name, message, agent]) => ({
+      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt and, when now is given (the server's clock), at now too, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
+    cases: cases.map(([name, message, agent, now]) => ({
       name,
       agent,
+      ...(now === undefined ? {} : { now }),
       message,
       ...outcome(() => {
         parseMessage(Buffer.from(canonicalize(message)));
-        checkPrincipal(message, agent);
+        checkPrincipal(message, agent, now === undefined ? undefined : new Date(now));
       }),
     })),
   };
@@ -1657,9 +1875,8 @@ const claimsConsidered = {
   about:
     "Which claims a receiver considers for the message named (section 6.2, and the registry's identifier): an acts-for claim only for the author and the message's for header, with a timestamp verifiedAt and a scope that is an array of strings; an identifier claim only for the author, of agent, or of principal on a message whose for header names a key (this message's names an email address, so none), with a mailto: or tel: identifier in the version 1 form, exactly as written, and a timestamp verifiedAt; other types pass through.",
   message: 'question with a for header',
-  kind: 'paired',
   claims: consideredClaims,
-  considered: claimsAbout(signedQuestion, consideredClaims, 'paired'),
+  considered: claimsAbout(signedQuestion, consideredClaims),
 };
 
 /** Which acts-for claims a receiving server marks authoritative under its local policy (sections 2.2 and 6.2). */
@@ -1726,11 +1943,10 @@ async function claimsJudged() {
     'example.org': { outcome: 'server', server: 'https://simon.example.org', via: 'dns' },
   };
   const resolve: Resolve = async d => resolutions[d] ?? { outcome: 'not_found' };
-  const cases: [string, AnyMessage, string, Claim[]][] = [
+  const cases: [string, AnyMessage, Claim[]][] = [
     [
       'question with a for header',
       signedQuestion,
-      'paired',
       [
         actsFor,
         identifierOf('agent', 'mailto:ada.mail@example.com'),
@@ -1743,30 +1959,27 @@ async function claimsJudged() {
     [
       'from an agent paired with a key principal',
       keyPaired,
-      'paired',
       [
         identifierOf('principal', 'mailto:erin@example.com', keyPaired.from),
         identifierOf('principal', 'mailto:erin@example.org', keyPaired.from),
       ],
     ],
     [
-      'question with a for header',
-      signedQuestion,
-      'solo',
+      'a message with no for header, which speaks for no one',
+      noPrincipal,
       [actsFor, identifierOf('agent', 'mailto:ada.mail@example.com')],
     ],
   ];
   return {
     about:
-      'The claims a receiving server considers for each message named, from an author of the kind given (its agent document says paired or solo; a solo agent has no acts-for or principal claim that counts, whatever its message carries), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
+      'The claims a receiving server considers for each message named (a message with no for header has no acts-for or principal claim that counts), as it passes them to its agents: each acts-for claim marked authoritative by its for, each identifier claim by its identifier, true exactly for a mailto: identifier whose domain names the carrier by TXT record; other types unmarked, and stripped of any authoritative member the carrier sent, which means nothing. resolutions are the outcomes of resolving each domain; any domain not listed is not_found.',
     carrier,
     resolutions,
     cases: await Promise.all(
-      cases.map(async ([message, m, kind, claims]) => ({
+      cases.map(async ([message, m, claims]) => ({
         message,
-        kind,
         claims,
-        judged: await judgeClaims(m, claims, kind, carrier, resolve),
+        judged: await judgeClaims(m, claims, carrier, resolve),
       })),
     ),
   };
@@ -1949,8 +2162,8 @@ function unpairings() {
         agent: 'bob@example.net',
         principal: erinPrincipal,
         bytes: unpairingBytes('bob@example.net', erinPrincipal),
-        unpairing: keyPaired.headers.pairing,
-        verifies: verifyUnpairing('bob@example.net', erinPrincipal, keyPaired.headers.pairing),
+        unpairing: parsePairing(keyPaired.headers.pairing)!.signature,
+        verifies: verifyUnpairing('bob@example.net', erinPrincipal, parsePairing(keyPaired.headers.pairing)!.signature),
       },
     ],
   };
@@ -1970,13 +2183,49 @@ function reading() {
     ],
     ['a version it does not implement', version7],
   ];
-  const principalCases: [string, AnyMessage, string][] = [
-    ['a paired agent', signedQuestion, 'paired'],
-    ['a solo agent carrying a for header', signedQuestion, 'solo'],
-    ['an agent of a kind the reader does not know', signedQuestion, 'robot'],
-    ['a paired agent writing a version the reader does not implement', version7, 'paired'],
+  const principalCases: [string, AnyMessage][] = [
+    ['a message naming its principal in for', signedQuestion],
+    ['a message with no for header', noPrincipal],
+    ['a version the reader does not implement', version7],
   ];
-  const known = ['reaction', 'edit', 'retract', 'thread', 'comment'];
+  const { signature: _, ...keyPairedFields } = keyPaired;
+  const pairedUntil = (until: string) =>
+    fixedSignMessage<Message>(
+      {
+        ...keyPairedFields,
+        headers: { for: erinPrincipal, pairing: fixedPairing(erin, 'bob@example.net', erinPrincipal, until) },
+      },
+      bob,
+    );
+  const DAY = 24 * 60 * 60 * 1000;
+  const pairingCases: [string, AnyMessage, string][] = [
+    ['a pairing that has not lapsed', keyPaired, at(NOW, DAY)],
+    ['a pairing judged the moment it lapses', keyPaired, PAIRED_UNTIL],
+    ['a pairing that lapsed before the message was sent', pairedUntil(at(NOW, -1)), NOW],
+    [
+      "a pairing at the cap, judged by a reader whose clock is behind the sender's",
+      pairedUntil(at(NOW, 366 * DAY)),
+      at(NOW, -60_000),
+    ],
+    ['a message whose principal is not a key', signedQuestion, NOW],
+  ];
+  const successor = (succession: string) => {
+    const principal = `simon-key:${gwen.key}`;
+    return fixedSignMessage<Message>(
+      {
+        ...keyPairedFields,
+        headers: { for: principal, pairing: fixedPairing(gwen, 'bob@example.net', principal), succession },
+      },
+      bob,
+    );
+  };
+  const predecessorCases: [string, AnyMessage][] = [
+    ['a key principal with no succession', keyPaired],
+    ['a key principal that succeeded another', successor(fixedStep(erin, gwen))],
+    ['a succession the new key did not sign', successor(fixedStep(erin, gwen, [erin, frank]))],
+    ['a message whose principal is not a key', signedQuestion],
+  ];
+  const known = ['reaction', 'edit', 'retract', 'pin', 'comment'];
   const rel = (from: string, name: string | null): Message => ({
     ...signedQuestion,
     from,
@@ -1991,22 +2240,33 @@ function reading() {
     ['an edit by anyone else', rel('bob@example.net', 'edit'), { from: 'ada@example.com' }],
     ['a retraction by anyone else', rel('bob@example.net', 'retract'), { from: 'ada@example.com' }],
     ['an edit of a message the reader does not hold yet', rel('bob@example.net', 'edit'), null],
+    [
+      'a retraction that names no message: its rel is ignored',
+      { ...rel('ada@example.com', 'retract'), inReplyTo: null },
+      null,
+    ],
   ];
   return {
     about:
-      "Rules that bind readers. understood: whether a reader that implements version 1 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal that may count, given the kind the author's agent document states: the for header of a version 1 message from a paired agent, else null; whether it is verified is a further question. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
+      "Rules that bind readers. understood: whether a reader that implements version 1 and understands the headers listed may act on the message, or must present it as not understood (an unknown version, or an unknown critical header). principals: the principal a message names: the for header of a version 1 message, else null; whether it is verified is a further question (a pairing, or a trusted claim). pairings: where a key principal's pairing stands for a reader at now: counts (it counted at sentAt and now is before its until), lapsed (it counted at sentAt; now is at or past until), refused (it did not count at sentAt), or null when the message names no key principal. predecessors: a key principal's earlier keys, oldest first, from its succession header ([] for none), or refused when it does not verify. relations: how a reader that knows the relations listed reads the message, given the from of the message its inReplyTo names (target, or null when it does not hold it): reply (no rel, an unknown rel, or an author-only relation, edit or retract, from anyone but the target's author), relation, or pending.",
     understoodHeaders: understood,
     understood: understoodCases.map(([name, message]) => ({
       name,
       message,
       understood: isUnderstood(message, new Set(understood)),
     })),
-    principals: principalCases.map(([name, message, kind]) => ({
+    principals: principalCases.map(([name, message]) => ({
       name,
       message,
-      kind,
-      principal: claimedPrincipal(message, kind),
+      principal: claimedPrincipal(message),
     })),
+    pairings: pairingCases.map(([name, message, now]) => ({
+      name,
+      message,
+      now,
+      standing: pairingStanding(message, Date.parse(now)),
+    })),
+    predecessors: predecessorCases.map(([name, message]) => ({ name, message, predecessors: predecessors(message) })),
     knownRelations: known,
     relations: relationCases.map(([name, message, target]) => ({
       name,
@@ -2256,14 +2516,14 @@ const clock = {
 /** Offline publication response fixtures; feed order is publication order, independent of sentAt. */
 function publications() {
   const post = fixedSignMessage<Message>(
-    { ...question, to: [], headers: { ...question.headers, feed: 'updates' } },
+    { ...question, to: [], headers: { ...question.headers, feed: 'updates', audience: 'public' } },
     ada,
   );
   const newer = fixedSignMessage<Message>(
     {
       ...question,
       to: [],
-      headers: { ...question.headers, feed: 'updates' },
+      headers: { ...question.headers, feed: 'updates', audience: 'public' },
       parts: [{ type: 'text/plain', data: 'Published second.' }],
       sentAt: at(question.sentAt, -60_000),
     },
@@ -2280,13 +2540,14 @@ function publications() {
   ];
   return {
     about:
-      'Published response and paged feed fixtures (sections 7.1 and 7.3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
+      'Published response and paged feed fixtures (publishing profile, sections 1 and 3). stored is insertion/publication order. Each page specifies its messages by id; cursors are implementation-defined opaque tokens, non-null iff more. Claims remain separately signed evidence for this exact post. These fixtures do not select a relation-publication consent rule or a reader reducer.',
     carrierKeys: [keyEntry(exampleCom.key)],
     post: {
       id: messageId(post),
+      // The author's keys, from its agent document: the response carries none.
+      authorKeys: [keyEntry(ada.key)],
       response: {
         message: post,
-        keys: [keyEntry(ada.key)],
         claims,
         claimsSignature: fixedSign(exampleCom, claimsBytes(claims, messageId(post))),
       },
@@ -2327,6 +2588,7 @@ export async function buildVectors() {
     messageChecks: messageChecks(),
     headerValues,
     pairings: pairings(),
+    successions: successions(),
     signatures: signatures(),
     requests: await requests(),
     documents: documents(),

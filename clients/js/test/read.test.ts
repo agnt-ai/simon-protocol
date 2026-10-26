@@ -7,11 +7,15 @@ import assert from 'node:assert/strict';
 import {
   generateKey,
   messageId,
+  sign,
   signMessage,
   signPairing,
+  signSuccession,
+  successionBytes,
   signUnpairing,
   timestamp,
   type AnyMessage,
+  type Message,
   type ResolverIO,
 } from '@agnt-sdk/simon-protocol';
 import { Agent, SimonError, fetchAgentDocument, fetchServerDocument, verifyAuthor, type Fetch } from '../src/index.ts';
@@ -44,7 +48,6 @@ describe('verifyAuthor', () => {
       id: messageId(message),
       authorSigned: true,
       authorServer: fake.origin,
-      kind: 'solo',
       understood: true,
       principal: null,
       claims: 'none',
@@ -71,7 +74,6 @@ describe('verifyAuthor', () => {
     await a.register({ for: id, pairing: signPairing(principal.privateKey, address, id) });
     const v = await verifyAuthor(a.compose({ to: ['bob@agents.test'], text: 'For my principal.' }), opts);
     assert.ok(v.verified);
-    assert.equal(v.kind, 'paired');
     assert.deepEqual([v.principal?.id, v.principal?.basis], [id, 'key-pairing']);
     assert.match(v.principal!.proves, /consented/);
     assert.match(v.principal!.proves, /nothing about who holds the key/);
@@ -80,6 +82,82 @@ describe('verifyAuthor', () => {
     const unpaired = new Agent({ server: fake.origin, key, address, for: id, pairing: wrong });
     const r = await verifyAuthor(unpaired.compose({ to: ['bob@agents.test'], text: 'x' }), opts);
     assert.deepEqual(r.verified || r.reason, 'bad_pairing');
+  });
+
+  it('reads a pairing that lapsed after the message as lapsed, and carries a renewed one from then on', async () => {
+    const { fake, opts } = await world();
+    const principal = generateKey();
+    const id = `simon-key:${principal.key}`;
+    const a = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
+    const { address } = await a.register({ for: id });
+    const until = timestamp(Date.now() + 3_600_000);
+    await a.register({ for: id, pairing: signPairing(principal.privateKey, address, id, until) });
+    const m = a.compose({ to: ['bob@agents.test'], text: 'Within the hour.' });
+    const now = await verifyAuthor(m, opts);
+    assert.ok(now.verified);
+    assert.deepEqual([now.principal?.until, now.principal?.lapsed], [until, undefined]);
+    const later = await verifyAuthor(m, { ...opts, now: () => new Date(Date.parse(until) + 1) });
+    assert.ok(later.verified, 'it spoke for the principal when sent');
+    assert.equal(later.principal?.lapsed, true);
+
+    assert.throws(() => a.renewPairing(signPairing(generateKey().privateKey, address, id)), /principal/);
+    assert.throws(() => a.renewPairing(signPairing(principal.privateKey, address, id, timestamp(Date.now() - 1))));
+    const renewed = signPairing(principal.privateKey, address, id);
+    a.renewPairing(renewed);
+    assert.equal(a.compose({ to: ['bob@agents.test'], text: 'Renewed.' }).headers.pairing, renewed);
+  });
+
+  it("moves to the principal's new key along a succession, and reads the earlier key as its predecessor", async () => {
+    const { fake, opts } = await world();
+    const [old, fresh, agentKey] = [generateKey(), generateKey(), generateKey()];
+    const [oldId, newId] = [`simon-key:${old.key}`, `simon-key:${fresh.key}`];
+    const a = new Agent({ server: fake.origin, key: agentKey.privateKeyPem, fetch: fake.fetch });
+    const { address } = await a.register({ for: oldId });
+    await a.register({ for: oldId, pairing: signPairing(old.privateKey, address, oldId) });
+    const pairing = signPairing(fresh.privateKey, address, newId);
+    assert.throws(() =>
+      a.succeed({ for: newId, pairing, succession: signSuccession(generateKey().privateKey, fresh.privateKey) }),
+    );
+    const succession = signSuccession(old.privateKey, fresh.privateKey);
+    a.succeed({ for: newId, pairing, succession });
+    const m = a.compose({ to: ['bob@agents.test'], text: 'From my new key.' });
+    assert.deepEqual([m.headers.for, m.headers.succession], [newId, succession]);
+    const v = await verifyAuthor(m, opts);
+    assert.ok(v.verified);
+    assert.deepEqual([v.principal?.id, v.principal?.succeeds], [newId, [oldId]]);
+    // Moving again before the server has seen the first move keeps the whole way from the key it holds.
+    const third = generateKey();
+    const thirdId = `simon-key:${third.key}`;
+    a.succeed({
+      for: thirdId,
+      pairing: signPairing(third.privateKey, address, thirdId),
+      succession: signSuccession(fresh.privateKey, third.privateKey),
+    });
+    const later = await verifyAuthor(a.compose({ to: ['bob@agents.test'], text: 'Again.' }), opts);
+    assert.ok(later.verified);
+    assert.deepEqual(later.principal?.succeeds, [oldId, newId]);
+    const { signature: _, ...unsigned } = m;
+    // A step that claims the old key but was signed by another.
+    const bytes = successionBytes(oldId, newId);
+    const forged = `${old.key} ${sign(generateKey().privateKey, bytes)} ${sign(fresh.privateKey, bytes)}`;
+    const bad = signMessage<Message>(
+      { ...unsigned, headers: { ...m.headers, succession: forged } },
+      agentKey.privateKey,
+    );
+    const r = await verifyAuthor(bad, opts);
+    assert.deepEqual(r.verified || r.reason, 'bad_succession');
+
+    // Unpairing always wins: an unpairing by the key it moved on from ends the pairing for a reader that
+    // follows the chain, and one by a key outside the chain ends nothing.
+    const retired = new Date(Date.parse(m.sentAt) + 60_000).toISOString();
+    const held = fake.agents.get(address)!;
+    held.keys = held.keys.map(k => ({ ...k, revoked: retired }));
+    held.retired = retired;
+    held.unpairing = signUnpairing(old.privateKey, address, oldId);
+    const ended = async () => ((await verifyAuthor(m, opts)) as { principal: { ended?: true } }).principal.ended;
+    assert.equal(await ended(), true);
+    held.unpairing = signUnpairing(generateKey().privateKey, address, oldId);
+    assert.equal(await ended(), undefined);
   });
 
   it("reads a retired address's document: what it signed before verifies, and its unpairing ends the pairing", async () => {
@@ -171,7 +249,7 @@ describe('what is understood', () => {
     // A later version's members mean nothing here, however much they look like version 1's.
     const headers = { for: 'mailto:ceo@agents.test' };
     const later = signMessage<AnyMessage & { headers: object }>(
-      { v: 2, from: a.address!, to: ['bob@agents.test'], sentAt: timestamp(new Date()), headers },
+      { v: 9, from: a.address!, to: ['bob@agents.test'], sentAt: timestamp(new Date()), headers },
       key,
     );
     const v = await verifyAuthor(later, opts);
@@ -303,7 +381,7 @@ describe('the basis of a principal', () => {
     }
   });
 
-  it("never gives a solo agent a principal, even with its carrier's authoritative claim pasted beside it", async () => {
+  it("takes a carrier's claim it really signed as that carrier's word, since no document says paired or solo", async () => {
     const fake = fakeServer();
     const key = generateKey().privateKeyPem;
     const solo = new Agent({ server: fake.origin, key, fetch: fake.fetch });
@@ -325,7 +403,7 @@ describe('the basis of a principal', () => {
       signedClaims: forged.signedClaims,
     });
     assert.ok(v.verified);
-    assert.deepEqual([v.kind, v.claims, v.principal], ['solo', 'verified', null]);
+    assert.deepEqual([v.claims, v.principal?.id, v.principal?.basis], ['verified', ceo, 'server-claim']);
   });
 });
 
@@ -346,9 +424,9 @@ describe('documents', () => {
     const ada = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch: fake.fetch });
     await ada.register();
     const record = await fetchAgentDocument(ada.address!.toUpperCase(), opts);
-    assert.deepEqual(record && [record.address, record.kind, record.keys.map(k => k.key)], [
+    assert.deepEqual(record && [record.address, 'kind' in record, record.keys.map(k => k.key)], [
       ada.address,
-      'solo',
+      false,
       [ada.key],
     ]);
   });

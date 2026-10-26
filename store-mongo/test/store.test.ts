@@ -5,6 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
+import { VERSION } from '@agnt-sdk/simon-protocol';
 import type { StoredMessage } from '@agnt-sdk/simon-server';
 import { storeContract, retractionCapacityContract } from '@agnt-sdk/simon-server/contract';
 import type { Collection, Db, Document } from 'mongodb';
@@ -22,7 +23,7 @@ const T = '2026-10-15T00:00:00.000Z';
 const message = (n: number): StoredMessage => ({
   id: String(n).padStart(64, '0'),
   message: {
-    v: 1,
+    v: VERSION,
     from: 'ada@a.test',
     to: ['bob@b.test'],
     inReplyTo: null,

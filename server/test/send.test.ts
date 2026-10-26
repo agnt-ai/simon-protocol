@@ -10,6 +10,8 @@ import {
   sha256Hex,
   signMessage,
   signPairing,
+  signSuccession,
+  signUnpairing,
   signRequest,
   timestamp,
   type Claim,
@@ -17,7 +19,7 @@ import {
   readServerDocument,
   verifyClaims,
 } from '@agnt-sdk/simon-protocol';
-import { Federation, type TestAgent } from './harness.ts';
+import { CLOCK_PAIRING_UNTIL, Federation, type TestAgent } from './harness.ts';
 
 const TEXT = { type: 'text/plain', data: 'x' };
 
@@ -62,10 +64,10 @@ describe('send (CLIENT.md)', async () => {
     await p.register({
       address: 'p@alpha.test',
       for: forValue,
-      pairing: signPairing(principal.privateKey, 'p@alpha.test', forValue),
+      pairing: signPairing(principal.privateKey, 'p@alpha.test', forValue, CLOCK_PAIRING_UNTIL),
     });
     assert.deepEqual(await code(p.send(p.message([bob.address], 'x'))), [400, 'invalid', 'headers']);
-    const pairing = signPairing(principal.privateKey, p.address, forValue);
+    const pairing = signPairing(principal.privateKey, p.address, forValue, CLOCK_PAIRING_UNTIL);
     assert.equal((await p.send(p.message([bob.address], 'x', { headers: { for: forValue, pairing } }))).status, 200);
   });
 
@@ -103,7 +105,7 @@ describe('send (CLIENT.md)', async () => {
     assert.equal((await ada.send(m)).status, 200);
   });
 
-  it('refuses to carry whole a message with an audience, at any depth (spec section 7.1)', async () => {
+  it('refuses to carry whole a message for an audience narrower than public, at any depth (spec section 5.4)', async () => {
     const carry = (m: object) => ({
       type: 'application/simon-message',
       data: Buffer.from(canonicalize(m as never)).toString('base64'),
@@ -122,6 +124,15 @@ describe('send (CLIENT.md)', async () => {
       'parts',
     ]);
     assert.equal((await ada.send(ada.message([bob.address], 'fwd', { parts: [TEXT, carry(open)] }))).status, 200);
+    // A message to no one with no audience is its author's alone; a later version's narrow audience still binds.
+    const unsaid = { ...bob.message([], 'unsaid'), headers: {} };
+    const later = { ...bob.message([], 'a later version', { headers: { audience: 'followers' } }), v: 9 };
+    for (const inner of [unsaid, later])
+      assert.deepEqual(await code(ada.send(ada.message([bob.address], 'fwd', { parts: [TEXT, carry(inner)] }))), [
+        400,
+        'invalid',
+        'parts',
+      ]);
   });
 
   it('answers a repeat with the same id and receivedAt', async () => {
@@ -209,6 +220,154 @@ describe('send (CLIENT.md)', async () => {
     const res = await g.send(g.message(['d@three.example'], '3'));
     assert.equal(res.status, 429);
     assert.ok(Number(res.headers['retry-after']) > 0);
+  });
+});
+
+describe('a pairing that lapses (spec section 2.2)', async () => {
+  const fed = new Federation();
+  after(() => fed.close());
+  const alpha = await fed.server('alpha');
+  const bob = await alpha.agent('bob');
+
+  it('judges the pairing at sentAt and at its own now, refuses one lapsed by either, and takes a renewed one with no call to the server', async () => {
+    const principal = generateKey();
+    const forValue = `simon-key:${principal.key}`;
+    const p = alpha.newAgent();
+    const pairing = signPairing(principal.privateKey, 'lapse@alpha.test', forValue, CLOCK_PAIRING_UNTIL);
+    assert.equal((await p.register({ address: 'lapse@alpha.test', for: forValue, pairing })).status, 200);
+    const send = (pairing: string) => p.send(p.message([bob.address], 'x', { headers: { for: forValue, pairing } }));
+
+    // An hour old and sent while the pairing counted: it still counts at the server's now, so it is taken.
+    fed.clock.t = Date.parse(CLOCK_PAIRING_UNTIL) - 1000;
+    const hourOld = p.message([bob.address], 'x', {
+      headers: { for: forValue, pairing },
+      sentAt: timestamp(fed.clock.t - 3_600_000),
+    });
+    assert.equal((await p.send(hourOld)).status, 200);
+    // Backdated within the send window to a moment the pairing counted, after it lapsed: judged at the
+    // server's now as well as at sentAt, so it is refused.
+    fed.clock.t = Date.parse(CLOCK_PAIRING_UNTIL) + 1000;
+    const backdated = p.message([bob.address], 'y', {
+      headers: { for: forValue, pairing },
+      sentAt: timestamp(fed.clock.t - 3_600_000),
+    });
+    const refused = await p.send(backdated);
+    assert.deepEqual([refused.status, refused.json.code, refused.json.details.field], [400, 'invalid', 'headers']);
+    const lapsed = await send(pairing);
+    assert.deepEqual([lapsed.status, lapsed.json.code, lapsed.json.details.field], [400, 'invalid', 'headers']);
+    const renewed = signPairing(principal.privateKey, p.address, forValue, timestamp(fed.clock.t + 90 * 86_400_000));
+    assert.equal((await send(renewed)).status, 200);
+  });
+});
+
+describe('a principal that moves to a new key (spec section 2.2)', async () => {
+  const fed = new Federation();
+  after(() => fed.close());
+  const alpha = await fed.server('alpha');
+  const bob = await alpha.agent('bob');
+
+  it('moves the record along a succession both keys signed, and then holds the agent to the new key', async () => {
+    const [old, fresh, stranger] = [generateKey(), generateKey(), generateKey()];
+    const [oldFor, newFor] = [`simon-key:${old.key}`, `simon-key:${fresh.key}`];
+    const p = alpha.newAgent();
+    const address = 'moving@alpha.test';
+    const oldPairing = signPairing(old.privateKey, address, oldFor, CLOCK_PAIRING_UNTIL);
+    assert.equal((await p.register({ address, for: oldFor, pairing: oldPairing })).status, 200);
+    const newPairing = signPairing(fresh.privateKey, address, newFor, CLOCK_PAIRING_UNTIL);
+    const send = (headers: Record<string, string>) => p.send(p.message([bob.address], 'x', { headers }));
+    const code = async (headers: Record<string, string>) => {
+      const res = await send(headers);
+      return [res.status, res.json?.code];
+    };
+
+    assert.deepEqual(await code({ for: newFor, pairing: newPairing }), [400, 'invalid'], 'no succession');
+    const forged = signSuccession(stranger.privateKey, fresh.privateKey);
+    assert.deepEqual(
+      await code({ for: newFor, pairing: newPairing, succession: forged }),
+      [400, 'invalid'],
+      "a succession from someone else's key",
+    );
+    const succession = signSuccession(old.privateKey, fresh.privateKey);
+    assert.equal((await send({ for: newFor, pairing: newPairing, succession })).status, 200);
+    assert.equal((await alpha.store.agentByAddress(address))?.principal, newFor);
+    assert.equal((await send({ for: newFor, pairing: newPairing })).status, 200, 'the chain is history now');
+    assert.deepEqual(await code({ for: oldFor, pairing: oldPairing }), [400, 'invalid'], 'the old key is left');
+    const post = (body: object) => alpha.newAgent().request('POST', '/simon/unpair', { body: JSON.stringify(body) });
+    const unpair = (k: typeof old) => ({
+      address,
+      unpairing: signUnpairing(k.privateKey, address, `simon-key:${k.key}`),
+    });
+    assert.equal((await post(unpair(old))).status, 401, 'the key it left, without the chain to the key it holds');
+    assert.equal(
+      (await post({ ...unpair(old), succession: signSuccession(stranger.privateKey, fresh.privateKey) })).status,
+      401,
+      "a chain from someone else's key",
+    );
+    assert.equal((await post(unpair(fresh))).status, 200, 'the key it moved to');
+  });
+
+  it('retires a moved agent on an unpairing by the key it moved on from, with the chain: unpairing always wins', async () => {
+    const [old, fresh] = [generateKey(), generateKey()];
+    const [oldFor, newFor] = [`simon-key:${old.key}`, `simon-key:${fresh.key}`];
+    const p = alpha.newAgent();
+    const address = 'unpaired-after-move@alpha.test';
+    const oldPairing = signPairing(old.privateKey, address, oldFor, CLOCK_PAIRING_UNTIL);
+    assert.equal((await p.register({ address, for: oldFor, pairing: oldPairing })).status, 200);
+    const succession = signSuccession(old.privateKey, fresh.privateKey);
+    const newPairing = signPairing(fresh.privateKey, address, newFor, CLOCK_PAIRING_UNTIL);
+    const moved = await p.send(
+      p.message([bob.address], 'x', { headers: { for: newFor, pairing: newPairing, succession } }),
+    );
+    assert.equal(moved.status, 200);
+    assert.equal((await alpha.store.agentByAddress(address))?.principal, newFor);
+    const unpairing = signUnpairing(old.privateKey, address, oldFor);
+    const res = await alpha.newAgent().request('POST', '/simon/unpair', {
+      body: JSON.stringify({ address, unpairing, succession }),
+    });
+    assert.deepEqual([res.status, res.json.status], [200, 'retired']);
+    const retired = await alpha.store.agentByAddress(address);
+    assert.ok(retired?.retiredAt);
+    assert.equal(retired?.unpairing, unpairing);
+  });
+
+  it('moves the record only for a message it accepts, and once for concurrent sends of the same move', async () => {
+    const [old, fresh] = [generateKey(), generateKey()];
+    const [oldFor, newFor] = [`simon-key:${old.key}`, `simon-key:${fresh.key}`];
+    const p = alpha.newAgent();
+    const address = 'racing@alpha.test';
+    const pairing = signPairing(old.privateKey, address, oldFor, CLOCK_PAIRING_UNTIL);
+    assert.equal((await p.register({ address, for: oldFor, pairing })).status, 200);
+    const headers = {
+      for: newFor,
+      pairing: signPairing(fresh.privateKey, address, newFor, CLOCK_PAIRING_UNTIL),
+      succession: signSuccession(old.privateKey, fresh.privateKey),
+    };
+    // Refused for a file never uploaded: a check after the principal's.
+    const missing = p.message([bob.address], 'x', {
+      headers,
+      parts: [{ type: 'application/pdf', sha256: '0'.repeat(64), size: 10 }],
+    });
+    assert.equal((await p.send(missing)).json.code, 'part_not_uploaded');
+    assert.equal((await alpha.store.agentByAddress(address))?.principal, oldFor, 'a refused message moves nothing');
+    // A message the store fails to keep moves nothing either: the record moves only once the message is stored.
+    const store = alpha.store;
+    const putMessage = store.putMessage;
+    store.putMessage = async () => {
+      throw new Error('the store failed');
+    };
+    const lost = p.message([bob.address], 'lost', { headers });
+    try {
+      assert.equal((await p.send(lost)).status, 500);
+    } finally {
+      store.putMessage = putMessage;
+    }
+    assert.equal((await store.agentByAddress(address))?.principal, oldFor, 'an unstored message moves nothing');
+    const [one, two] = await Promise.all([
+      p.send(p.message([bob.address], 'one', { headers })),
+      p.send(p.message([bob.address], 'two', { headers })),
+    ]);
+    assert.deepEqual([one.status, two.status], [200, 200]);
+    assert.equal((await alpha.store.agentByAddress(address))?.principal, newFor);
   });
 });
 

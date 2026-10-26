@@ -16,7 +16,15 @@
  *
  * Hooks: on.stored (the author), on.inbox (each recipient).
  */
-import { header, messageId, principalKey, verify, verifyPairing, type Message } from '@agnt-sdk/simon-protocol';
+import {
+  header,
+  messageId,
+  principalKey,
+  verify,
+  verifyPairing,
+  type Message,
+  VERSION,
+} from '@agnt-sdk/simon-protocol';
 import type { ServerApi, StoredMessage } from '@agnt-sdk/simon-server';
 import type { Ctx, Module } from '../../context.ts';
 
@@ -29,13 +37,13 @@ function unconsultedId(m: Message): string {
   return messageId({ ...m, headers });
 }
 
-/** Whether `signature` is the author's key principal's, over the message, its pairing carried and verifying. */
-function signedByPrincipal(m: Message, signature: string): boolean {
+/** Whether `signature` is the author's key principal's, over the message, its pairing carried and counting now. */
+function signedByPrincipal(m: Message, signature: string, now: Date): boolean {
   const principal = header(m, 'for');
   const key = principal && principalKey(principal);
   return (
     !!key &&
-    verifyPairing(m.from, principal, header(m, 'pairing')) &&
+    verifyPairing(m.from, principal, header(m, 'pairing'), now) &&
     verify(key, consultedBytes(m.from, unconsultedId(m)), signature)
   );
 }
@@ -50,7 +58,7 @@ export function nudgeModule(ctx: Ctx): { module: Module } {
     const m = record.message as Message;
     const claim = header(m, 'human-consulted');
     if (!claim) return false;
-    if (signedByPrincipal(m, claim)) return true;
+    if (signedByPrincipal(m, claim, ctx.api.now())) return true;
     const { api } = ctx;
     return (
       !!m.inReplyTo &&
@@ -61,7 +69,7 @@ export function nudgeModule(ctx: Ctx): { module: Module } {
 
   async function runOf(record: StoredMessage): Promise<number> {
     const m = record.message as Message;
-    if (m.v !== 1 || (await consulted(record))) return 0;
+    if (m.v !== VERSION || (await consulted(record))) return 0;
     const { store } = ctx.api;
     const parent = m.inReplyTo ? await store.value<number>('nudge-run', m.inReplyTo, ctx.now().toISOString()) : null;
     return store.valueOnce('nudge-run', record.id, (parent ?? 0) + 1, record.expiresAt, ctx.now().toISOString());

@@ -298,11 +298,11 @@ const isIdentifier = (c: Claim, m: AnyMessage, forHeader: string | null): c is I
  * `verifiedAt` and a `scope` of strings; an identifier claim only when it names the author as `agent`, an
  * email address or phone number as `identifier`, a timestamp `verifiedAt`, and `of` the agent, or the
  * principal of a message whose `for` header names a key. A message of a version whose headers this reader
- * does not know, or from an agent whose document does not say `paired` (`kind`), has no acts-for or
- * principal claim that counts. Any other claim type passes through, opaque.
+ * does not know, or with no `for` header, has no acts-for or principal claim that counts. Any other claim
+ * type passes through, opaque.
  */
-export function claimsAbout(message: AnyMessage, claims: readonly Claim[], kind: string): Claim[] {
-  const forHeader = claimedPrincipal(message, kind);
+export function claimsAbout(message: AnyMessage, claims: readonly Claim[]): Claim[] {
+  const forHeader = claimedPrincipal(message);
   return claims.filter(
     c =>
       (c.type !== 'acts-for' || isActsFor(c, message, forHeader)) &&
@@ -342,12 +342,11 @@ const JUDGED_BY: Record<string, string | undefined> = { 'acts-for': 'for', ident
 export async function judgeClaims(
   message: AnyMessage,
   claims: readonly Claim[] | undefined,
-  kind: string,
   carrier: string,
   resolve: Resolve,
 ): Promise<Claim[]> {
   return Promise.all(
-    claimsAbout(message, claims ?? [], kind).map(async ({ authoritative: _, ...c }) => {
+    claimsAbout(message, claims ?? []).map(async ({ authoritative: _, ...c }) => {
       const subject = Object.hasOwn(JUDGED_BY, c.type) ? JUDGED_BY[c.type] : undefined;
       if (!subject) return c;
       return {

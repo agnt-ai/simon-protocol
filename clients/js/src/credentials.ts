@@ -3,7 +3,7 @@
  *
  *   <home>              mode 700: SIMON_HOME, or ~/.config/simon
  *     key.pem           the private key, PKCS #8 PEM, mode 600, created once and never overwritten
- *     address.json      {"server","address","for"?,"pairing"?} once registered, mode 600
+ *     address.json      {"server","address","for"?,"pairing"?,"succession"?} once registered, mode 600
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -20,6 +20,7 @@ export interface AddressRecord {
   address: string;
   for?: string;
   pairing?: string;
+  succession?: string;
 }
 
 export const defaultHome = (env: NodeJS.ProcessEnv = process.env) =>
@@ -70,8 +71,11 @@ export function readAddressFile(home: string): AddressRecord | null {
     // Described below.
   }
   const strings = r && [r.server, r.address].every(v => typeof v === 'string');
-  if (!r || !strings || ![r.for, r.pairing].every(v => v === undefined || typeof v === 'string')) {
-    throw invalid('address.json', 'The address file in the agent home is not {"server","address","for"?,"pairing"?}.');
+  if (!r || !strings || ![r.for, r.pairing, r.succession].every(v => v === undefined || typeof v === 'string')) {
+    throw invalid(
+      'address.json',
+      'The address file in the agent home is not {"server","address","for"?,"pairing"?,"succession"?}.',
+    );
   }
   return r as AddressRecord;
 }
@@ -84,6 +88,7 @@ export function saveAddress(home: string, agent: Agent): AddressRecord {
     address: agent.address,
     for: agent.for,
     pairing: agent.pairing,
+    succession: agent.succession,
   };
   fs.mkdirSync(home, { recursive: true, mode: 0o700 });
   const fresh = `${addressFile(home)}.${crypto.randomUUID()}.tmp`;

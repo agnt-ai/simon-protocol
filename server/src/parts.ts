@@ -44,7 +44,7 @@ import { iso, later, type Context } from './context.ts';
 import { notFound, unavailable } from './errors.ts';
 import { clientKey } from './net/ip.ts';
 import type { Reply, Request, Route } from './http.ts';
-import { askerOf, asReader, audienceOf, mayRead, type Asker } from './readers.ts';
+import { askerOf, asReader, isPublic, mayRead, type Asker } from './readers.ts';
 import { contentParts } from './send.ts';
 import type { PartFetch, PartSource, StoredMessage } from './store/store.ts';
 
@@ -363,8 +363,7 @@ export function partRoutes(ctx: Context): Route[] {
     const reader = await viewer.published.reader();
     // Try every unconditional grant before invoking an unrelated asynchronous audience policy.
     // Yield lazily: read() can return held bytes without starting or retaining that policy work.
-    const unconditional = ({ message }: (typeof namers)[number]) =>
-      audienceOf(message) === null || reader === message.from;
+    const unconditional = ({ message }: (typeof namers)[number]) => isPublic(message) || reader === message.from;
     for (const { author } of namers.filter(unconditional)) {
       for (const source of await ctx.store.heldFor(sha256, author, self)) yield source;
     }

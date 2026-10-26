@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import base64
 import re
+import time
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -29,19 +30,23 @@ from .limits import (
     MINIMUM_LIMITS,
     SENT_AT_AHEAD_MS,
 )
-from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex
+from .wire import is_address, is_b64url, is_base64, is_v1_address, parse_timestamp, sha256_hex, timestamp
 
+# The wire version this port implements (spec section 5.2): after release, only an incompatible revision takes a new number.
 VERSION = 1
-V1_FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
+FIELDS = frozenset({"v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"})
 
 _HEX64 = re.compile(r"[0-9a-f]{64}")
-_HEADER_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+# A name (spec section 5.4): hyphen-joined lower-case groups, and for a private name several such labels
+# joined by dots, reverse-domain ("com.example.approve").
+_HEADER_NAME = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*")
+MAX_NAME_LENGTH = 128
 # An RFC 6838 restricted name in lower case, then parameters: ";", an optional space, a lower-case name,
 # "=", and a value of restricted-name characters in any case or a quoted string of printable ASCII.
 _NAME = r"[a-z0-9][a-z0-9!#$&^_.+-]{0,126}"
 _MEDIA_TYPE = re.compile(rf'{_NAME}/{_NAME}(?:; ?{_NAME}=(?:[A-Za-z0-9!#$&^_.+-]+|"[ !#-\[\]-~]*"))*')
 # The headers the protocol names (spec section 5.4); every other header is a registry convention.
-PROTOCOL_HEADERS = frozenset({"for", "pairing", "critical", "rel", "feed", "audience", "listed"})
+PROTOCOL_HEADERS = frozenset({"for", "pairing", "succession", "critical", "rel", "feed", "audience", "listed"})
 # What a part's name never holds: "/", a backslash, category Cc, and the bidirectional formatting characters.
 _NOT_IN_NAME = re.compile(r"[/\\\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
 _NOT_IN_ALT = re.compile(r"[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -125,7 +130,10 @@ def check_message(value: Any, limits: Mapping[str, int] = MINIMUM_LIMITS) -> dic
     ``recipients``, and a version 1 message keeps version 1's rules. A later version passes on its
     invariants alone. Raises ``400 invalid`` with ``details.field``."""
     message = check_invariants(value)
-    size = len(canonical_bytes(message))
+    try:
+        size = len(canonical_bytes(message))
+    except ValueError as e:  # a float, say: no canonical form, as a parsed message would never hold
+        raise invalid(f"The message has no canonical JSON form: {e}", field="message") from None
     if size > limits["messageBytes"]:
         raise invalid(
             f"A message is at most {limits['messageBytes']} canonical bytes; this one is {size}.",
@@ -134,7 +142,7 @@ def check_message(value: Any, limits: Mapping[str, int] = MINIMUM_LIMITS) -> dic
     if len(message["to"]) > limits["recipients"]:
         raise invalid(f"A message names at most {limits['recipients']} recipients.", field="to")
     if message["v"] == VERSION:
-        _check_version_1(message, limits)
+        _check_version_rules(message, limits)
     return message
 
 
@@ -161,14 +169,14 @@ def check_invariants(value: Any) -> dict[str, Any]:
     return value
 
 
-def _check_version_1(m: dict[str, Any], limits: Mapping[str, int]) -> None:
-    extra = next((k for k in m if k not in V1_FIELDS), None)
+def _check_version_rules(m: dict[str, Any], limits: Mapping[str, int]) -> None:
+    extra = next((k for k in m if k not in FIELDS), None)
     if extra is not None:
-        raise invalid(f"A version 1 message has no field {extra}.", field=extra)
+        raise invalid(f"A version {VERSION} message has no field {extra}.", field=extra)
     if not is_v1_address(m["from"]):
-        raise invalid("from must be an ASCII address in version 1.", field="from")
+        raise invalid(f"from must be an ASCII address in version {VERSION}.", field="from")
     if not all(is_v1_address(a) for a in m["to"]):
-        raise invalid("to must hold ASCII addresses in version 1.", field="to")
+        raise invalid(f"to must hold ASCII addresses in version {VERSION}.", field="to")
     if len(set(m["to"])) != len(m["to"]):
         raise invalid("An address appears twice in to.", field="to")
     if "inReplyTo" not in m or not (m["inReplyTo"] is None or _is_hex64(m["inReplyTo"])):
@@ -208,7 +216,7 @@ def _read_carried(data: str) -> dict[str, Any] | None:
 def _carried_parts(m: Mapping[str, Any], depth: int = 0) -> list[Any]:
     """The parts of every message ``m`` carries whole inline, at every depth up to ``MAX_CARRIED_DEPTH``. A
     carried message ``_read_carried`` refuses, or one carried deeper, makes the carrying message invalid."""
-    parts = m.get("parts") if type(m.get("v")) is int and m.get("v") == 1 else None
+    parts = m.get("parts") if type(m.get("v")) is int and m.get("v") == VERSION else None
     if not isinstance(parts, list):
         return []
     found: list[Any] = []
@@ -228,7 +236,7 @@ def _carried_parts(m: Mapping[str, Any], depth: int = 0) -> list[Any]:
                 else f"Messages are carried inline at most {MAX_CARRIED_DEPTH} deep.",
                 field="parts",
             )
-        if type(carried.get("v")) is int and carried.get("v") == 1 and isinstance(carried.get("parts"), list):
+        if type(carried.get("v")) is int and carried.get("v") == VERSION and isinstance(carried.get("parts"), list):
             found.extend(carried["parts"])
         found.extend(_carried_parts(carried, depth + 1))
     return found
@@ -301,12 +309,15 @@ def _check_part(i: int, part: Any, limits: Mapping[str, int]) -> None:
     # Other members are ignored, so a later one needs no flag day; the content is one of exactly two shapes.
     content = tuple(name in part for name in ("data", "sha256", "size"))
     if content == (True, False, False):
-        if not isinstance(part["data"], str):
-            raise invalid(f"Part {i}: data must be a string.", field="parts")
-        if not part["type"].startswith("text/") and not is_base64(part["data"]):
-            raise invalid(
-                f"Part {i}: the data of a part that is not text/* is padded, canonical base64.", field="parts"
-            )
+        # One encoding per type: a JSON value for a JSON type, the text for text/*, base64 for anything else.
+        if not is_json_type(part["type"]):
+            if not isinstance(part["data"], str):
+                raise invalid(f"Part {i}: data must be a string.", field="parts")
+            if not part["type"].startswith("text/") and not is_base64(part["data"]):
+                raise invalid(
+                    f"Part {i}: the data of a part that is neither JSON nor text is padded, canonical base64.",
+                    field="parts",
+                )
     elif content == (False, True, True):
         if not _is_hex64(part["sha256"]):
             raise invalid(f"Part {i}: sha256 must be 64 lower-case hex.", field="parts")
@@ -355,11 +366,21 @@ def _check_headers(m: dict[str, Any]) -> None:
             "The for header is a principal: mailto:<address>, tel:<E.164 number> or simon-key:<key token>.",
             field="headers",
         )
-    if pairing is not None and not is_b64url(pairing):
-        raise invalid("The pairing header is a signature in canonical base64url.", field="headers")
+    if pairing is not None and parse_pairing(pairing) is None:
+        raise invalid(
+            "The pairing header is a timestamp, one space, and a signature in canonical base64url.", field="headers"
+        )
     if (pairing is not None) != (principal_key(principal) is not None):
         raise invalid(
             "The pairing header is present exactly when the for header is a simon-key: principal.",
+            field="headers",
+        )
+    succession = headers.get("succession")
+    if succession is not None and pairing is None:
+        raise invalid("The succession header goes only with a simon-key: for and its pairing.", field="headers")
+    if succession is not None and not is_succession_value(succession):
+        raise invalid(
+            "The succession header is steps joined by commas: a key token and two signatures, one space apart.",
             field="headers",
         )
     if critical is not None and not is_critical_value(critical):
@@ -367,21 +388,29 @@ def _check_headers(m: dict[str, Any]) -> None:
             "The critical header is header names joined by commas, with no spaces.", field="headers"
         )
     rel, feed, audience = headers.get("rel"), headers.get("feed"), headers.get("audience")
-    if rel is not None and not (is_header_name(rel) and m["inReplyTo"] is not None):
-        raise invalid(
-            "The rel header is a relation name, on a message whose inReplyTo names another.", field="headers"
-        )
+    # A rel without inReplyTo, or a feed on a message with recipients, means nothing and is ignored; audience
+    # is security metadata, so its placement is checked (spec section 5.4).
+    if rel is not None and not is_header_name(rel):
+        raise invalid("The rel header is a relation name.", field="headers")
     if feed is not None and not is_critical_value(feed):
         raise invalid(
             "The feed header is feed names joined by commas, with no spaces.", field="headers"
         )
-    if (feed is not None or audience is not None) and m["to"]:
+    if audience is not None and m["to"]:
         raise invalid(
-            "The feed and audience headers belong only on a published message, whose to is empty.",
+            "The audience header belongs only on a published message, whose to is empty.", field="headers"
+        )
+    # Publishing is explicit: a message names recipients, or says who may read it (spec section 5.2).
+    if not m["to"] and audience is None:
+        raise invalid(
+            "A message with no recipients is published, and says who may read it: an audience header, "
+            "public for anyone.",
             field="headers",
         )
     listed = headers.get("listed")
-    if listed is not None and not (is_listed_value(listed) and rel is not None and m["to"]):
+    if listed is not None and not (
+        is_listed_value(listed) and rel is not None and m["inReplyTo"] is not None and m["to"]
+    ):
         raise invalid(
             "The listed header is yes, on a relation (it carries rel) whose to is not empty.", field="headers"
         )
@@ -389,7 +418,7 @@ def _check_headers(m: dict[str, Any]) -> None:
 
 def is_listed_value(value: object) -> bool:
     """Whether a value is a ``listed`` header: exactly ``yes`` (section 5.4), the writer's consent to have
-    a relation listed under the published message it names (section 7.4)."""
+    a relation listed under the published message it names (publishing profile, section 4)."""
     return value == "yes"
 
 
@@ -403,8 +432,39 @@ def is_media_type(value: object) -> bool:
 
 
 def is_header_name(value: object) -> bool:
-    """Lower-case letters and digits in groups joined by single hyphens, at most 64 characters."""
-    return isinstance(value, str) and len(value) <= 64 and _HEADER_NAME.fullmatch(value) is not None
+    """A name: lower-case letters and digits in groups joined by single hyphens, or several such labels
+    joined by dots for a private name, at most 128 characters."""
+    return isinstance(value, str) and len(value) <= MAX_NAME_LENGTH and _HEADER_NAME.fullmatch(value) is not None
+
+
+#: How deep a part's ``data`` sits in its message: the message, its ``parts`` list, the part (spec 5.1).
+_DATA_DEPTH = 3
+
+
+def json_data_problem(data: Any) -> str | None:
+    """Why a value cannot be a JSON block's ``data``, or None when it can (spec sections 5.1 and 5.3). The
+    value is signed inside the message, so canonical JSON limits it: integers within +/-(2^53 - 1), no
+    floats, and at most 64 levels of nesting counting the message's own three."""
+    nested: Any = data
+    for _ in range(_DATA_DEPTH):
+        nested = [nested]
+    try:
+        canonical(nested)
+        return None
+    except (ValueError, TypeError) as e:
+        return (
+            f"A JSON block's data must fit canonical JSON (spec section 5.1): {e} Numbers are integers "
+            "within +/-(2^53 - 1), with no fraction or exponent, and values nest at most 61 levels; write "
+            '19.99 as the string "19.99" or as 1999 in a smaller unit, or send the bytes as a base64 block '
+            "of another type."
+        )
+
+
+def is_json_type(media_type: str) -> bool:
+    """Whether a media type is a JSON type (spec section 5.3), whose inline ``data`` is a JSON value:
+    ``application/json``, or any type with the ``+json`` suffix, whatever its parameters."""
+    base = media_type.split(";", 1)[0].strip()
+    return base == "application/json" or base.endswith("+json")
 
 
 def is_critical_value(value: object) -> bool:
@@ -420,7 +480,9 @@ def header(message: Mapping[str, Any], name: str) -> str | None:
 def text_of(message: Mapping[str, Any], separator: str = "\n") -> str:
     """The text of a message's inline ``text/*`` parts."""
     return separator.join(
-        p["data"] for p in message["parts"] if "data" in p and p["type"].startswith("text/")
+        p["data"]
+        for p in message["parts"]
+        if "data" in p and p["type"].startswith("text/") and isinstance(p["data"], str)
     )
 
 
@@ -453,9 +515,17 @@ def principal_key(principal: object) -> str | None:
     return None
 
 
-def pairing_bytes(agent: str, principal: str) -> bytes:
-    """What a key principal signs to pair with an agent: ``SIMON-PAIR``, the address and the identifier."""
-    return f"SIMON-PAIR\n{agent}\n{principal}".encode()
+#: The longest a pairing may last from any moment it counts at: 366 days, so no pairing is for good.
+PAIRING_MAX_MS = 366 * 24 * 60 * 60 * 1000
+
+#: How long ``sign_pairing`` makes a pairing last when given no ``until``: 365 days.
+PAIRING_DEFAULT_MS = 365 * 24 * 60 * 60 * 1000
+
+
+def pairing_bytes(agent: str, principal: str, until: str) -> bytes:
+    """What a key principal signs to pair with an agent until ``until``, a wire timestamp: ``SIMON-PAIR``,
+    the address, the identifier and ``until``."""
+    return f"SIMON-PAIR\n{agent}\n{principal}\n{until}".encode()
 
 
 def unpairing_bytes(agent: str, principal: str) -> bytes:
@@ -464,15 +534,37 @@ def unpairing_bytes(agent: str, principal: str) -> bytes:
     return f"SIMON-UNPAIR\n{agent}\n{principal}".encode()
 
 
-def sign_pairing(key: SigningKey, agent: str) -> str:
-    """The ``pairing`` a key principal gives the agent at ``agent``; its ``for`` is ``key.identifier``."""
-    return key.sign(pairing_bytes(agent, key.identifier))
+def sign_pairing(key: SigningKey, agent: str, until: str | None = None) -> str:
+    """The ``pairing`` a key principal gives the agent at ``agent``, ``<until> <signature>``, lasting until
+    ``until`` (a year from now by default); its ``for`` is ``key.identifier``."""
+    until = timestamp(int(time.time() * 1000) + PAIRING_DEFAULT_MS) if until is None else until
+    return f"{until} {key.sign(pairing_bytes(agent, key.identifier, until))}"
 
 
-def verify_pairing(agent: str, principal: str, pairing: object) -> bool:
-    """Whether ``pairing`` is the signature of the key ``principal`` names over its pairing with ``agent``."""
-    key = principal_key(principal)
-    return key is not None and verify(key, pairing_bytes(agent, principal), pairing)
+def parse_pairing(pairing: object) -> tuple[str, str] | None:
+    """A ``pairing`` value's ``(until, signature)``: a wire timestamp, one space and canonical base64url;
+    otherwise None."""
+    if not isinstance(pairing, str):
+        return None
+    parts = pairing.split(" ")
+    if len(parts) != 2 or parse_timestamp(parts[0]) is None or not is_b64url(parts[1]):
+        return None
+    return parts[0], parts[1]
+
+
+def verify_pairing(agent: str, principal: str, pairing: object, at_ms: int | None = None) -> bool:
+    """Whether ``pairing`` pairs ``agent`` with the key ``principal`` names at ``at_ms`` (now by default):
+    its signature verifies, and the moment is before its ``until`` by at most ``PAIRING_MAX_MS``. A
+    reader acting on a message asks for now; one showing an old message may ask for its ``sentAt``."""
+    key, parsed = principal_key(principal), parse_pairing(pairing)
+    if key is None or parsed is None:
+        return False
+    until, signature = parsed
+    end = parse_timestamp(until)
+    t = int(time.time() * 1000) if at_ms is None else at_ms
+    if not (end is not None and t < end and end - t <= PAIRING_MAX_MS):
+        return False
+    return verify(key, pairing_bytes(agent, principal, until), signature)
 
 
 def recover_bytes(agent: str, new_key: str, at: str) -> bytes:
@@ -494,23 +586,85 @@ def verify_recovery(agent: str, principal: str, new_key: str, at: str, recover: 
     return key is not None and verify(key, recover_bytes(agent, new_key, at), recover)
 
 
+def succession_bytes(old: str, new: str) -> bytes:
+    """What a key principal's old key and its new key both sign when the new key succeeds the old:
+    ``SIMON-SUCCEED``, the old identifier and the new."""
+    return f"SIMON-SUCCEED\n{old}\n{new}".encode()
+
+
+def sign_succession(old: SigningKey, new: SigningKey) -> str:
+    """One step of a ``succession`` header, ``<old key token> <old signature> <new signature>``: both of the
+    principal's keys signing that ``new`` succeeds ``old`` (section 2.2)."""
+    data = succession_bytes(old.identifier, new.identifier)
+    return f"{old.token} {old.sign(data)} {new.sign(data)}"
+
+
+#: The most steps a ``succession`` header holds: a principal moves keys rarely, and each step costs every reader.
+MAX_SUCCESSION_STEPS = 16
+
+
+def is_succession_value(value: object) -> bool:
+    """Whether a value has the ``succession`` header's grammar: 1 to 16 steps joined by commas, each a key
+    token and two canonical base64url signatures, one space apart."""
+    if not isinstance(value, str) or len(value.split(",")) > MAX_SUCCESSION_STEPS:
+        return False
+    for step in value.split(","):
+        parts = step.split(" ")
+        if len(parts) != 3 or parse_key_token(parts[0]) is None or not all(is_b64url(p) for p in parts[1:]):
+            return False
+    return True
+
+
+def read_succession(value: object, principal: str) -> list[dict[str, str]] | None:
+    """The steps a ``succession`` header names, oldest first, as ``{"from", "to"}`` identifiers leading to
+    ``principal``, the message's ``for``; None unless the grammar holds, each step's new key is the next
+    step's old key (the last's is ``principal``'s), no key appears twice, and both signatures of every step
+    verify."""
+    if not is_succession_value(value) or principal_key(principal) is None:
+        return None
+    parsed = [step.split(" ") for step in value.split(",")]  # type: ignore[union-attr]
+    ids = [_KEY_PRINCIPAL + key for key, _, _ in parsed] + [principal]
+    if len(set(ids)) != len(ids):
+        return None
+    steps = [{"from": ids[i], "to": ids[i + 1]} for i in range(len(parsed))]
+    for (key, old_signature, new_signature), step in zip(parsed, steps):
+        data = succession_bytes(step["from"], step["to"])
+        if not (verify(key, data, old_signature) and verify(principal_key(step["to"]), data, new_signature)):
+            return None
+    return steps
+
+
 def sign_unpairing(key: SigningKey, agent: str) -> str:
     """The unpairing a key principal gives to end the pairing of ``key.identifier`` with ``agent``."""
     return key.sign(unpairing_bytes(agent, key.identifier))
 
 
-def verify_unpairing(agent: str, principal: str, unpairing: object) -> bool:
-    """Whether ``unpairing`` is the signature of the key ``principal`` names, ending its pairing with
-    ``agent``."""
-    key = principal_key(principal)
-    return key is not None and verify(key, unpairing_bytes(agent, principal), unpairing)
+def verify_unpairing(agent: str, principal: str, unpairing: object, succession: object = None) -> bool:
+    """Whether ``unpairing`` ends ``agent``'s pairing with the key ``principal`` names: it is that key's
+    signature, or, given a ``succession`` leading to ``principal``, the signature of any key the principal
+    moved on from along it. Unpairing always wins (section 2.2): a move never shields an agent from a key it
+    moved on from."""
+    earlier = [] if succession is None else read_succession(succession, principal)
+    if earlier is None:
+        return False
+    for identifier in [principal, *(step["from"] for step in earlier)]:
+        key = principal_key(identifier)
+        if key is not None and verify(key, unpairing_bytes(agent, identifier), unpairing):
+            return True
+    return False
 
 
-def check_principal(message: Mapping[str, Any], kind: str, principal: str | None = None) -> None:
+def check_principal(
+    message: Mapping[str, Any], kind: str, principal: str | None = None, now_ms: int | None = None
+) -> None:
     """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
     ``solo``, and a paired agent's principal. A paired agent's version 1 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
-    neither. Raises ``400 invalid`` on ``headers``. A later version's headers are not known, so it passes."""
+    neither. A ``succession`` must verify; with one, a key principal's ``for`` may be a successor of the
+    agent's principal, and the server then moves its record to it (section 2.2). The pairing must count at
+    ``sentAt`` and, when ``now_ms`` is given (the server's clock), at that moment too, so a message backdated
+    within the send window cannot carry a pairing that has already lapsed. Raises ``400 invalid`` on
+    ``headers``. A later version's headers are not known, so it passes."""
     if message["v"] != VERSION:
         return
     found, pairing = header(message, "for"), header(message, "pairing")
@@ -520,18 +674,36 @@ def check_principal(message: Mapping[str, Any], kind: str, principal: str | None
                 "A solo agent speaks for no one: its messages carry no for and no pairing.", field="headers"
             )
         return
-    if found != principal:
+    succession = header(message, "succession")
+    steps = [] if succession is None or found is None else read_succession(succession, found)
+    if steps is None:
         raise invalid(
-            f"A paired agent's messages carry its principal as the for header: {principal}.", field="headers"
+            "Each succession step must be signed by both its keys over SIMON-SUCCEED, the old and the new "
+            "identifier, leading to for.",
+            field="headers",
         )
+    if found != principal and not any(step["from"] == principal for step in steps):
+        raise invalid(
+            f"A paired agent's messages carry its principal as the for header, or a successor it signed: {principal}.",
+            field="headers",
+        )
+    # The agent's principal, or the successor it moves to: either way the one that must have signed the pairing.
+    principal = found
     if principal_key(principal) is None:
         if pairing is not None:
             raise invalid(
                 "Only a key principal pairs by signature: this message carries no pairing.", field="headers"
             )
-    elif not verify_pairing(message["from"], principal, pairing):
-        expected = pairing_bytes(message["from"], principal).decode("utf-8")
+    elif (
+        (sent := parse_timestamp(message["sentAt"])) is None
+        or not verify_pairing(message["from"], principal, pairing, sent)
+        or (now_ms is not None and not verify_pairing(message["from"], principal, pairing, now_ms))
+    ):
+        until = (parse_pairing(pairing) or ("<until>", ""))[0]
+        expected = pairing_bytes(message["from"], principal, until).decode("utf-8")
         raise invalid(
-            f"The pairing header must be the principal's signature over {canonical(expected)}.",
+            f"The pairing header must be <until> <signature>: the principal's signature over "
+            f"{canonical(expected)}, valid at sentAt and now: before until, by at most 366 days. The principal "
+            "renews a lapsed pairing by signing a later until.",
             field="headers",
         )

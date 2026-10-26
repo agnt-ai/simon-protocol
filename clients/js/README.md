@@ -59,9 +59,9 @@ Read-only: `server`, `key` (the key token), `address` (null until registered), `
 | `{address}` | An address on a hosted domain binds at once; any other is sent a code. |
 | `{address, code}` | The creation code that was sent. Existing-address recovery uses `recover`, never `register`. |
 | `{for}` | Pair with a key principal (`simon-key:<token>`). A leased address answers `pairing_required`. |
-| `{for, pairing}` | The principal's signature over `SIMON-PAIR\n<address>\n<for>` (`signPairing` in `@agnt-sdk/simon-protocol`). |
+| `{for, pairing}` | `<until> <signature>`: the principal's signature over `SIMON-PAIR\n<address>\n<for>\n<until>` (`signPairing` in `@agnt-sdk/simon-protocol`, a year by default). |
 
-An account answer binds `address`, and `for`/`pairing` when given. `recover` is separate from
+An account answer binds `address`, and `for`/`pairing` when given. Before the pairing's `until`, `renewPairing(pairing)` carries the principal's later one; the server needs no call. `verifyAuthor` shows a key principal's `until`, and `lapsed` for a pairing that counted when sent but not now. When the principal moves to a new key, `succeed({for, pairing, succession})` carries it, and the server moves its record on the next message; `verifyAuthor` shows the earlier keys as `succeeds`, and refuses a succession that does not verify (`bad_succession`). `recover` is separate from
 creation and pairing: request a code, then repeat `recover` with the address and code. A waiting
 recovery answers `recovery_pending` with `completesAt`; it binds nothing until completion. A key
 principal can supply its signed `recover` proof with `at` for immediate recovery.
@@ -85,7 +85,7 @@ it queues unmatched correspondents, deduplicates message ids and rejects legacy 
 | Function | |
 | --- | --- |
 | `verifyAuthor(message, options?)` | Whether the message was signed by its author with a key valid at its `sentAt`, whether it is understood, and on what basis it names a principal. |
-| `fetchAgentDocument(address, options?)` | `{address, server, kind, keys}`, verified under the server's keys, or null when the server says there is no such agent. |
+| `fetchAgentDocument(address, options?)` | `{address, server, keys}`, verified under the server's keys, or null when the server says there is no such agent. |
 | `fetchServerDocument(server, options?)` | `{server, keys, algorithms, limits}`. |
 
 **Keys come only from resolution.** No option names the server to ask: a reader told where an author's
@@ -99,20 +99,20 @@ resolves to, read by `verifyAuthor` itself. An entry's `claims` never count: any
 `verifyAuthor` answers a trust record,
 
 ```ts
-{ verified: true, id, authorSigned: true, authorServer, kind, understood,
+{ verified: true, id, authorSigned: true, authorServer, understood,
   principal: null | { id, basis: 'agent-asserted' | 'key-pairing' | 'server-claim',
                       claimant?, authoritative?, scope?, proves },
   claims: 'none' | 'verified' | 'unverified' }
 ```
 
 or `{verified: false, id, reason}`, where `reason` is `invalid_message`, `no_server`, `no_agent`,
-`bad_document`, `bad_signature`, `unsupported_algorithm` or `bad_pairing`. A lookup or fetch that may
+`bad_document`, `bad_signature`, `unsupported_algorithm`, `bad_pairing` or `bad_succession`. A lookup or fetch that may
 pass is never an answer: it throws a retryable `SimonError` (`unavailable`, `timeout` or `network_error`).
 
 `understood` is false for a message of a version this client does not implement, or whose `critical`
 header lists one it does not understand (it understands the protocol's six): whose key signed it is all
-it says, and it names no principal. `principal` is null too for a message from an agent whose document
-does not say `paired`: a solo agent speaks for no one, whatever its message carries. `claims` says
+it says, and it names no principal. `principal` is null too for a message without a `for` header, which
+speaks for no one. `claims` says
 whether `signedClaims` were given and verified; unverified claims are ignored.
 
 | `basis` | What it proves |
@@ -182,7 +182,7 @@ Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles
 (`@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-server`, `@agnt-sdk/simon-store-mongo`, this one,
 `@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`) to JavaScript
 with type declarations, and packs each as a tarball in `packed/`. Each commit's build is its own version,
-`0.1.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
+`0.2.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
 later, the first with ML-DSA-65 keys, and their declarations use `@types/node`. A release publishes the
 same build, at the release's version, to npm (CONTRIBUTING.md, "Releasing").
 
@@ -191,7 +191,7 @@ serves stands in for the build:
 
 ```sh
 echo '@agnt-sdk:registry=https://registry.invalid/' >> .npmrc
-npm install ./packed/agnt-sdk-simon-protocol-0.1.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.1.0-g<commit>.tgz
+npm install ./packed/agnt-sdk-simon-protocol-0.2.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.2.0-g<commit>.tgz
 ```
 
 ## Tests

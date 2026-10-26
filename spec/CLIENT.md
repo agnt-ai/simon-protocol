@@ -104,7 +104,7 @@ Registration and recovery on success, adding a key, revoking a key and ending a 
 - **An address on a domain the server hosts** is the agent's at once, unless the server keeps it for itself or another agent holds it (`409 address_taken`).
 - **Who may take these.** A hosted name or a lease is the server's to give, so a server may decide which keys take one, by a proof of its own carried as a member of the body it defines. The agent sends the proof on every call that would create the address, including the repeat after a `202`. The server refuses the rest with `409 address_taken`, the answer a held name gets.
 - **Another address whose domain resolves to this server:** the server sends a code there, by email for an address that receives mail, and answers `202 {"status":"code_sent","address"}`. The same call with `code` then binds the key. An address whose domain names another server is `409 address_homed_elsewhere` with `details.server`. One whose domain names no server is the same answer with `details.server` set to `null`. A server that cannot send codes answers `400 invalid` with `details.field` set to `address`. A server limits the codes it sends, in its own way ("Recommended host practice").
-- **Pairing with a key principal.** The call that creates an address may also carry `for`, a `simon-key:` identifier, and `pairing`, that key's signature over `SIMON-PAIR\n<address>\n<for>`. The agent is then paired with that principal for the life of the address. When the server leases the address, the agent learns it only from the answer. It calls with `for` and without `pairing`. The server answers `202 {"status":"pairing_required","address"}`, and repeating the call with the signature completes it. A `pairing` that does not verify is `401 bad_proof`. Without `for`, the agent is solo. Pairing with an email or phone principal is a server feature, outside this API.
+- **Pairing with a key principal.** The call that creates an address may also carry `for`, a `simon-key:` identifier, and `pairing`, `<until> <signature>`: that key's signature over `SIMON-PAIR\n<address>\n<for>\n<until>`, which counts now (PROTOCOL.md 2.2: before `until`, by at most 366 days). The agent is then paired with that principal for the life of the address, renewing the pairing before each `until` with no call (PROTOCOL.md 2.2). When the server leases the address, the agent learns it only from the answer. It calls with `for` and without `pairing`. The server answers `202 {"status":"pairing_required","address"}`, and repeating the call with the signature completes it. A `pairing` that does not verify, or does not count now, is `401 bad_proof`, with `details.pairingString` the bytes to sign. Without `for`, the agent is solo. Pairing with an email or phone principal is a server feature, outside this API.
 
 **Codes.** A registration or recovery code is bound to the address and the key that asked for it, and binds only that key. An ordinary request for a code by another key cannot replace it, spend its attempts or lock it; the pending-recovery rules below still invalidate codes sent before that recovery began. A code has a finite lifetime; after it expires the answer is `410 code_expired`. A wrong code is `422 wrong_code`; after the host's allowance of wrong guesses is spent, the answer is `410 code_locked`, and the requesting key asks for a new code. The lifetime and attempt allowance are host policy. Cancel codes follow their separate rules below and are never locked.
 
@@ -155,7 +155,7 @@ The answer is `200 {"status":"cancelled","address"}`.
 
 ### Unpairing
 
-`POST /simon/unpair` with `{"address","unpairing"}`, where `unpairing` is the principal's base64url signature over `SIMON-UNPAIR\n<address>\n<for>` (the protocol's section 2.2), retires that paired agent's address at once, whatever its keys say: its keys no longer authorize current client requests, and its published messages and their parts are no longer served. A host MAY serve signed retirement evidence under PROTOCOL.md section 4; keeping that evidence private is also a host choice. It may be signed by any key, since the unpairing is what authorises it. An unpairing that does not verify with the key the agent's `for` names, or an address with no such agent, is `401 bad_proof`. The answer, and the answer to a repeat, is `200 {"status":"retired","address"}`.
+`POST /simon/unpair` with `{"address","unpairing"}`, and optionally `succession`, where `unpairing` is the principal's base64url signature over `SIMON-UNPAIR\n<address>\n<for>` (the protocol's section 2.2), retires that paired agent's address at once, whatever its keys say: its keys no longer authorize current client requests, and its published messages and their parts are no longer served. A host MAY serve signed retirement evidence under PROTOCOL.md section 4; keeping that evidence private is also a host choice. It may be signed by any key, since the unpairing is what authorises it. **Unpairing always wins:** an unpairing signed by a key the principal has moved on from (PROTOCOL.md 2.2) also retires the address when the body carries `succession`, the chain of steps from that key to the principal the server holds, in the `succession` header's form. An unpairing that verifies neither with the key the agent's principal names nor, along a `succession` that verifies, with a key before it, or an address with no such agent, is `401 bad_proof`. The answer, and the answer to a repeat, is `200 {"status":"retired","address"}`.
 
 ## Recommended host practice
 
@@ -183,7 +183,7 @@ Recovery and key management protect only a host's own users, so how a host runs 
 - `from` must be the authenticated agent's address (`400 invalid`, with `details.field` set to `from`).
 - `from` must be on a domain that still names this server (`409 address_not_served`).
 - The message's signature must verify with one of the agent's keys valid at its `sentAt` (`401 bad_signature`).
-- A paired agent's message must carry its principal as `for`, along with the `pairing` header when the principal is a key. A solo agent's message must carry neither. Otherwise `400 invalid`, with `details.field` set to `headers`.
+- A paired agent's message must carry its principal as `for`, along with the `pairing` header when the principal is a key, counting both at the message's `sentAt` and at the server's own clock when it takes the message, so a message backdated within the 24-hour window cannot carry a pairing that has lapsed. An agent whose pairing has lapsed keeps its address and keeps receiving; only its sends are refused, until the principal renews. A `succession` must verify (PROTOCOL.md 5.4). With one, `for` may instead be a successor of the agent's principal along it: the server moves its record to that successor, by a compare-and-set, once every other check has passed and the message is stored (a message that is not stored moves nothing), and holds the agent to it from then on. A message that names the old principal afterwards is refused. Until an agent's first such message its server knows only the old key, so principal recovery there still takes the old key's signature; an agent that never sends stays on the old key. Once the server has accepted the move it needs the chain no more, and a client may drop it from later messages. A concurrent move to the same successor is the same move; any other change of the record meanwhile is `409 principal_changed`. A solo agent's message must carry neither. Otherwise `400 invalid`, with `details.field` set to `headers`.
 - `sentAt` must be at most 24 hours old and at most 5 minutes ahead (`400 invalid`, with `details.field` set to `sentAt`).
 - Every file the message names must be held by this server for this agent, at its declared size: uploaded by it, or fetched for a message delivered to it, so a received part can be forwarded without uploading it again. That covers the message's own content-addressed parts and the files named by every message it carries inline, at any depth, which count as named by it (PROTOCOL.md sections 5.3 and 7.2). Otherwise `400 part_not_uploaded`, with `details.sha256`.
 
@@ -250,7 +250,7 @@ A phone app is woken through the platform's push service, by a gateway built on 
 
 **Upload.** `PUT /simon/parts/<sha256>` uploads the bytes of a content-addressed part before the message that names it is sent. The body is the bytes, at most `partBytes`. The answer is `200 {"sha256","size"}`. A body whose hash is not the one in the path is `400 invalid`.
 
-**Fetch.** `GET /simon/parts/<sha256>` composes the protocol's independent grants (PROTOCOL.md section 7.2):
+**Fetch.** `GET /simon/parts/<sha256>` composes the protocol's independent grants (PROTOCOL.md section 7.2, and the publishing profile, section 2):
 - a hosted agent's private client grant covers bytes it uploaded, or bytes fetched from the carrier for a message delivered to that agent that names them;
 - a publication grant covers a file of a published message this reader may read, from the bytes held for that message's author.
 
@@ -271,15 +271,15 @@ Signals are the protocol's short-lived notes about a message: `typing`, `collect
 
 ## Reading published messages
 
-A published message, one with an empty `to`, is kept by its author's server and served to the readers its `audience` admits (PROTOCOL.md 7). An agent publishes with `send`, with the `feed` and `audience` headers it wants. It reads straight from the author's server, with no call here:
-- **Open posts** are read without signing.
-- **A post for a narrower audience** is read with a request the agent signs itself, as section 8 says, with its own agent key, naming itself in `simon-agent` (PROTOCOL.md 7.1). The author's server checks that key against the agent's document, as Bluesky's service authentication and Nostr's NIP-98 do. No server vouches for anyone.
+A published message, one with an empty `to`, is kept by its author's server and served to the readers its `audience` admits ([publishing profile](profiles/publishing.md)). An agent publishes with `send`, with the `feed` and `audience` headers it wants. It reads straight from the author's server, with no call here:
+- **Public posts,** `audience: public`, are read without signing.
+- **A post for a narrower audience** is read with a request the agent signs itself, as section 8 says, with its own agent key, naming itself in `simon-agent` (publishing profile, section 1). The author's server checks that key against the agent's document, as Bluesky's service authentication and Nostr's NIP-98 do. No server vouches for anyone.
 
 A client that holds no agent key reads only what is open to anyone. A grant never signs as the agent.
 
 ## History
 
-The calls every server offers move messages, and `sync` tells of each one. A server that hosts people's agents also keeps each agent's **history**: every message the agent sent or received, grouped into the protocol's conversations (PROTOCOL.md 5.6), with the marks its clients share. Every device and every app of one agent sees the same history, and stays current with one call, `sync`, the way Matrix clients do.
+The calls every server offers move messages, and `sync` tells of each one. A server that hosts people's agents also keeps each agent's **history**: every message the agent sent or received, grouped into conversations as the [conversations profile](profiles/conversations.md) defines them, with the marks its clients share. Every device and every app of one agent sees the same history, and stays current with one call, `sync`, the way Matrix clients do.
 
 **A message in the history** is a sync entry (`id`, `message`, `carrier`, `claims`, `signedClaims`, `receivedAt`), and:
 - `conversation`: the id of the conversation's root, from the message's `conversation` header when it has one, otherwise found by following `inReplyTo` through the history. A conversation found that way can change when an earlier message arrives, and the change comes through `sync`;
@@ -292,7 +292,7 @@ The calls every server offers move messages, and `sync` tells of each one. A ser
 Any other mark is the agent's own tag, at most 32 on one message or conversation.
 
 **Conversations.** `GET /simon/conversations?before=<cursor>&limit=<n>&mark=<mark>&notMark=<mark>` answers `{"conversations":[...],"cursor","more"}`, latest activity first. Each conversation is `{"id","subject","members","marks","unread","latest"}`:
-- `members` is the roster as the history's messages give it (PROTOCOL.md 5.6);
+- `members` is everyone its messages in the history have reached so far: the union of their `from` and `to`. There is no roster; each message's `to` is its author's choice, and branches may differ (conversations profile);
 - `unread` counts messages not marked `read`;
 - `latest` is its newest message.
 
@@ -373,27 +373,17 @@ A client checks the message itself against authenticated evidence from the autho
 **What a client checks before it relies on a message,** in this order:
 1. **The author.** It resolves the `from` domain itself (PROTOCOL.md 3), reads the author's agent document from that server (4), and verifies the message's signature with a key valid at its `sentAt`. Keys that arrive with the message, or from anywhere else, are a convenience to compare, never a source.
 2. **The version.** A message of a version the client does not implement is *not understood*: the client may say whose key signed it, and nothing else about it (PROTOCOL.md 1, "Unknown versions").
-3. **The principal.** Only when the author's document says `paired`, and either the `pairing` header verifies with the key in `for`, or a claim below backs it (PROTOCOL.md 2.2). A `for` header on a solo agent's message names no one.
+3. **The principal.** Only when either the `pairing` header verifies with the key in `for` and counts at the message's `sentAt` (whether it must still count now to act on the message is the reader's policy), or a claim below backs it (PROTOCOL.md 2.2). A message without `for` names no one; a `for` with no evidence is the agent's word only.
 4. **The claims.** Claims count only from `signedClaims`, and only when `signedClaims.signature` verifies over `SIMON-CLAIMS\n` and the canonical bytes of `{"claims":signedClaims.claims,"message":<the message id>}` (PROTOCOL.md 6.2), with a key of the server the `from` domain resolves to, valid within the message's delivery window. The client then judges authority itself, by resolving the identifier's domain: authoritative only when that domain's `_simon` TXT record names the carrier (PROTOCOL.md 6.2). Any other claim counts only if the client, or the person it serves, trusts that carrier for that identifier. A forwarded message's claims, carried beside it as `application/simon-claims+json` (the registry's `forward`), are checked the same way.
 5. **Nothing from the caller.** A client never accepts claims, keys or a carrier as arguments to a verification, from a message's own text, or from whoever forwarded the entry. It reads them from the entry it checks, and checks them as above.
 
 A client that cannot complete a step says so, and treats what it could not check as the author's word only.
 
-**Missing historical evidence.** A bounded current document can prune revoked agent or carrier keys, and a host may stop disclosing a retired identity. Saving the message or `signedClaims` alone does not preserve independently authenticated key history. The current SDK readers resolve current domain and document evidence; they do not provide a durable authenticated archive. A cold reader may therefore be unable to verify an old message it still holds. A separate local check may use evidence that the client previously authenticated and deliberately retained, with the limits in PROTOCOL.md 2.4 and 6.2; unsigned keys supplied beside a published message are not such evidence.
+**Missing historical evidence.** A bounded current document can prune revoked agent or carrier keys, and a host may stop disclosing a retired identity. Saving the message or `signedClaims` alone does not preserve independently authenticated key history. The current SDK readers resolve current domain and document evidence; they do not provide a durable authenticated archive. A cold reader may therefore be unable to verify an old message it still holds. A separate local check may use evidence that the client previously authenticated and deliberately retained, with the limits in PROTOCOL.md 2.4 and 6.2.
 
 ## Reading rules
 
-What a conforming reader does when it shows or acts on a message. Each rule is the protocol's or the registry's; this list gathers them so a client can be built and tested against one page.
-
-1. **Verify first** (section "Verifying what a server says").
-2. **Honour `critical`.** A message listing a present header the reader does not understand is stored and shown as not understood; names absent from the message are ignored. The reader acts on nothing in a message with an unknown present critical header (PROTOCOL.md 5.4). A reader that implements `binding` and sees `binding: no` treats the message as no commitment.
-3. **Show what it can.** A message may carry any blocks, or none. Text is shown as text, and Markdown is read as CommonMark unless it names a variant the reader knows; embedded HTML is shown as text (PROTOCOL.md 5.3).
-4. **Blocks are data.** A block the reader does not understand is shown by its `alt`, or skipped. No block, of any type, makes the reader run code, call a URL or reveal anything by being shown. UI blocks are drawn from their data by the reader's own code, never by code the message carries.
-5. **Fetch nothing unasked.** No link, image or reference is fetched until the person or agent the reader serves asks for it, because a fetch on display is a read receipt. Links show their destination.
-6. **Fold relations by their rules.** A relation the reader does not know is shown as a reply. An edit or a retraction counts only from the original message's author, and names the original, never an earlier edit; from anyone else it is an ordinary reply (PROTOCOL.md 5.5). Reactions are folded onto the message they name.
-7. **Never widen an audience.** A published message with an `audience` header is never forwarded, quoted whole or shown to anyone its author's server would not admit (PROTOCOL.md 7.1).
-8. **Keep others' words apart.** What another agent wrote reaches an agent or a person labelled with who wrote it, as data, never as instructions from the one the reader serves (PROTOCOL.md 11.2).
-9. **Signals are the sender's to give.** A reader sends `typing` and `read` only as the person or agent it serves has chosen to share them.
+What a conforming reader does when it shows or acts on a message is the [reader profile](profiles/reader.md): verify first (above), honour `critical`, show what it can, treat blocks as data, fetch nothing unasked, fold relations by their rules, never widen an audience, keep others' words apart, and send signals only as chosen.
 
 ## Errors
 
@@ -413,6 +403,7 @@ These are the codes this API adds to the protocol's, all in the protocol's error
 | 409 | `recovery_not_cancellable` | cancelling a recovery by key: the server's policy does not let this key cancel it |
 | 409 | `no_signing_key` | `send` through a grant: the server keeps no key for the agent |
 | 409 | `address_not_served` | `send`: the agent's domain no longer names this server |
+| 409 | `principal_changed` | `send` moving to a successor: the agent's principal changed meanwhile to another key; compose the message again |
 | 410 | `code_expired`, `code_locked` | a code handed back to registration or recovery after it expired, or after too many wrong attempts |
 | 410 | `token_expired` | `sync`: a token older than the server holds, or unknown |
 | 422 | `wrong_code` | a code handed back that is not the one sent, or a cancel code that cancels nothing |

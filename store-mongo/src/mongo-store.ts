@@ -39,6 +39,7 @@ import {
   type Claim,
   type Hints,
   type SignedClaims,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import type {
   Agent,
@@ -248,7 +249,8 @@ const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) =>
 ];
 
 /** A version 1 message's `inReplyTo`. Other versions point at nothing the server can see. */
-const inReplyTo = (m: AnyMessage) => (m.v === 1 ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null);
+const inReplyTo = (m: AnyMessage) =>
+  m.v === VERSION ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null;
 
 /**
  * Where a page continues: below `position`, the place of the record whose id is `before`; everywhere for
@@ -644,6 +646,14 @@ export class MongoStore implements Store {
       );
       if (r.matchedCount) return 'kept' as const;
     }
+  }
+
+  async succeedPrincipal(address: string, from: string, to: string) {
+    const r = await this.#agents.updateOne(
+      { _id: address, principal: from, retiredAt: null },
+      { $set: { principal: to }, $inc: { authorityVersion: 1 } },
+    );
+    return r.matchedCount === 1;
   }
 
   async retireAgent(address: string, at: string, unpairing?: string) {
@@ -1335,7 +1345,7 @@ export class MongoStore implements Store {
   #retractionsOf(record: StoredMessage) {
     const m = record.message;
     const target = inReplyTo(m);
-    if (m.v !== 1 || header(m as never, 'rel') !== 'retract' || !target) return [];
+    if (m.v !== VERSION || header(m as never, 'rel') !== 'retract' || !target) return [];
     return (m.to.length ? m.to : ['*']).map(owner => ({ owner, target, author: m.from, retraction: record.id }));
   }
 

@@ -4,6 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
+import { CLOCK_PAIRING_UNTIL } from '@agnt-sdk/simon-server/testing';
 import { generateKey, signPairing, signRecovery } from '@agnt-sdk/simon-protocol';
 import { Agent, type Delivered } from '@agnt-sdk/simon-client';
 import { AppAgent, pair } from '../src/client.ts';
@@ -114,7 +115,7 @@ describe('pairing', async () => {
     await agent.register({
       address: 'keyed@alpha.test',
       for: forValue,
-      pairing: signPairing(principal.privateKey, 'keyed@alpha.test', forValue),
+      pairing: signPairing(principal.privateKey, 'keyed@alpha.test', forValue, CLOCK_PAIRING_UNTIL),
     });
     const home = await new AppAgent(agent).home();
     assert.equal(home.pair?.identifier, forValue);
@@ -130,7 +131,11 @@ describe('pairing', async () => {
       fetch: world.fetch,
       now: world.clock.now,
     });
-    await agent.register({ address, for: forValue, pairing: signPairing(principal.privateKey, address, forValue) });
+    await agent.register({
+      address,
+      for: forValue,
+      pairing: signPairing(principal.privateKey, address, forValue, CLOCK_PAIRING_UNTIL),
+    });
     const key = generateKey().privateKey;
     const at = world.clock.now().toISOString();
     const fresh = new Agent({ server: alpha.origin, key, fetch: world.fetch, now: world.clock.now });

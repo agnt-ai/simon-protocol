@@ -21,7 +21,7 @@
     "node": ">=26"
   },
   "scripts": {
-    "test": "npm run test -w protocol && npm run test -w server && npm run test -w store-mongo && npm run test -w conformance && npm run test -w app && npm run test -w clients/js && npm run test -w clients/cli && npm run test -w clients/mcp && npm run test:integration",
+    "test": "npm run test -w protocol && npm run test -w server && npm run test -w store-mongo && npm run test -w conformance && npm run test -w app && npm run test -w clients/js && npm run test -w clients/cli && npm run test -w clients/mcp && npm run test:spec && npm run test:integration",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -31,10 +31,12 @@
     "build": "node scripts/pack.ts",
     "demo": "node examples/demo/run-demo.ts",
     "conformance": "node conformance/src/cli.ts",
+    "test:spec": "node --test 'test/spec/**/*.test.ts'",
     "test:integration": "node --test 'test/integration/**/*.test.ts'"
   },
   "devDependencies": {
     "@types/node": "24.13.6",
+    "ajv": "8.20.0",
     "prettier": "3.6.2",
     "typescript": "6.0.3"
   }

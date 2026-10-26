@@ -28,6 +28,7 @@ import {
   type AnyMessage,
   type Limits,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { listedKeys } from '../public.ts';
 import { SqliteStore } from './sqlite.ts';
@@ -549,7 +550,7 @@ function precomputedReceipts(data: Rows, messages: Map<string, AnyMessage>, limi
   const receipts: Record<string, Record<string, unknown>> = Object.create(null);
   for (const row of data.messages) {
     const message = messages.get(row.id as string)!;
-    if (message.v !== 1) continue;
+    if (message.v !== VERSION) continue;
     const v1 = message as Message;
     if (v1.headers.rel !== 'retract' || v1.inReplyTo === null) continue;
     receipts[row.id as string] = {
@@ -876,7 +877,7 @@ export async function createSqliteV2Candidate(options: SqliteV2CandidateOptions)
             const message = messages.get(row.id as string)!;
             extra = {
               ...extra,
-              in_reply_to: message.v === 1 ? (message as Message).inReplyTo : null,
+              in_reply_to: message.v === VERSION ? (message as Message).inReplyTo : null,
               signed_claims: null,
               cursor: null,
               taken: null,

@@ -120,7 +120,7 @@ export function createServer(opts: ServerOptions): SimonServer {
       ownDocument: () => (docCache ??= ownDocument(ctx)),
       localAgent: async address => {
         const agent = await store.agentByAddress(address);
-        return agent && !agent.retiredAt ? { kind: agent.kind, keys: agent.keys } : null;
+        return agent && !agent.retiredAt ? { keys: agent.keys } : null;
       },
       publicSuffixes: config.publicSuffixFile ? loadPublicSuffixes(config.publicSuffixFile) : undefined,
       chargeCarrier: carrier => ctx.rate.hit('carrierLookup', carrier),

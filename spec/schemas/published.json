@@ -2,18 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "published.json",
   "title": "SIMON published message answer",
-  "description": "GET /simon/messages/<id>. keys are an unsigned convenience, never authenticated historical evidence. Verify against independently resolved authenticated author material; pruning or private retirement may prevent fresh verification of older messages. Public key projections exclude private device labels.",
+  "description": "GET /simon/messages/<id>: the message, and its carrier's signed claims when it made any. No keys are served beside it: a reader verifies against the author's agent document, resolved independently; pruning or private retirement may prevent fresh verification of older messages.",
   "type": "object",
-  "required": ["message", "keys"],
+  "required": ["message"],
   "properties": {
     "message": {
       "$ref": "message.json"
-    },
-    "keys": {
-      "type": "array",
-      "items": {
-        "$ref": "common.json#/$defs/keyEntry"
-      }
     }
   }
 }

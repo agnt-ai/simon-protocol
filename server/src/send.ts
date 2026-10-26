@@ -3,7 +3,7 @@
  * client API gives: the message as a delivery would check it (spec section 6.3, steps 1, 3 and 4); a
  * version this server implements; `from` the agent's own address, on a domain that still names this
  * server; the author's signature; the paired or solo rule; the 24-hour window; no message with an audience
- * carried whole (spec section 7.1); every content-addressed
+ * carried whole (spec section 5.4); every content-addressed
  * part held for this agent, uploaded or received, so a part it received can be forwarded. Then the message,
  * this server's claims about it signed for it (spec section 6.2), and one delivery row per recipient domain
  * are stored as one, and the answer is given; delivery follows.
@@ -20,6 +20,7 @@ import {
   checkSupportedVersion,
   deliveryWindow,
   domainOf,
+  header,
   invalid,
   isFresh,
   isJsonObject,
@@ -28,6 +29,7 @@ import {
   namedFiles,
   parseMessage,
   parseStrict,
+  readSuccession,
   SEND_WINDOW_MS,
   sign,
   unauthorized,
@@ -36,6 +38,8 @@ import {
   type Claim,
   type Hints,
   type Json,
+  type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { authenticateAgent } from './auth.ts';
 import { iso, later, type Context } from './context.ts';
@@ -71,6 +75,8 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     // The claims that travel, as the first call checked them: without this server's judgement.
     checkHints(ctx, hints, m, earlier.signedClaims?.claims ?? []);
     await ctx.store.putMessage(earlier, { deliveries: deliveriesFor(earlier, hints as Hints) });
+    // The first call may have stored the message and stopped before it moved the record.
+    await follow(ctx, agent, earlier.message);
     ctx.wake();
     return { id, receivedAt: earlier.receivedAt };
   }
@@ -87,7 +93,7 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
   if (!verifyMessage(m, agent.keys)) {
     throw unauthorized('bad_signature', "The message does not verify with the author's keys valid at its sentAt.", now);
   }
-  checkPrincipal(m, agent.principal === null ? { kind: 'solo' } : { kind: 'paired', for: agent.principal });
+  checkPrincipal(m, agent.principal === null ? { kind: 'solo' } : { kind: 'paired', for: agent.principal }, now);
   if (!isFresh(m, now, SEND_WINDOW_MS)) {
     throw invalid('sentAt is more than 24 hours old or more than 5 minutes ahead.', { field: 'sentAt' });
   }
@@ -98,15 +104,25 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     }
   }
   const made = await ctx.hooks.claimsFor(m, agent);
-  const claims = await judgeClaims(m, made, agent.kind, ctx.config.origin, d =>
-    ctx.resolver.resolve(d, { charge: payer }),
-  );
+  const claims = await judgeClaims(m, made, ctx.config.origin, d => ctx.resolver.resolve(d, { charge: payer }));
   // What travels, and is signed for the message, is the claims considered, without this server's judgement.
   const sent = claims.map(({ authoritative: _, ...c }) => c as Claim);
   checkHints(ctx, hints, m, sent);
 
   ctx.rate.hit('send', agent.address);
   ctx.rate.distinct('destinations', agent.address, m.to.map(domainOf));
+
+  // A succession its principal signed moves a paired agent's principal on to the successor (spec section 2.2),
+  // once the message is stored, so a message that is not stored moves nothing. A concurrent send may have made
+  // the same move first; anything else that changed the record meanwhile refuses this one.
+  const forValue = m.v === VERSION ? header(m as Message, 'for') : null;
+  const moving = agent.principal !== null && forValue !== null && forValue !== agent.principal;
+  if (moving) {
+    const held = (await ctx.store.agentByAddress(agent.address))?.principal;
+    if (held !== agent.principal && held !== forValue) {
+      throw conflict('principal_changed', "This agent's principal changed meanwhile: compose the message again.");
+    }
+  }
 
   const record: StoredMessage = {
     id,
@@ -118,9 +134,30 @@ async function write(ctx: Context, agent: Agent, m: AnyMessage, hints: Json) {
     expiresAt: later(now, ctx.config.retentionDays * DAY_MS),
   };
   const stored = await ctx.store.putMessage(record, { deliveries: deliveriesFor(record, hints as Hints) });
+  if (moving) await follow(ctx, agent, m);
   ctx.defer(() => ctx.hooks.emit('stored', { message: stored }));
   await changed(ctx, agent.address);
   return { id, receivedAt: stored.receivedAt };
+}
+
+/**
+ * Move the agent's record on to the successor a stored message names along its succession from the principal
+ * held (spec section 2.2), as a compare-and-set. A record that changed otherwise since the message was checked
+ * stays as that change left it: the message was checked against the record as it was, as any message racing
+ * a change is.
+ */
+async function follow(ctx: Context, agent: Agent, m: AnyMessage) {
+  const from = agent.principal;
+  if (from === null || m.v !== VERSION) return;
+  const to = header(m as Message, 'for');
+  const succession = header(m as Message, 'succession');
+  if (to === null || to === from || succession === null) return;
+  if (!readSuccession(succession, to)?.some(step => step.from === from)) return;
+  if (await ctx.store.succeedPrincipal(agent.address, from, to)) {
+    ctx.log('info', 'principal succeeded', { address: agent.address });
+  } else if ((await ctx.store.agentByAddress(agent.address))?.principal !== to) {
+    ctx.log('warn', 'principal changed while a move was stored', { address: agent.address });
+  }
 }
 
 /** How often a send renews what it noted about serving its domain, at most. */
@@ -147,17 +184,27 @@ async function notedServing(ctx: Context, domain: string, now: Date): Promise<vo
 }
 
 /**
- * A message with an `audience` header is never forwarded or quoted whole (spec section 7.1): a message that
- * carries one inline, at any depth, is refused as the message checks refuse a part (`400 invalid`, `parts`).
- * One carried by content address is not seen here; its bytes are the client's to keep to itself.
+ * A message for a narrower audience than `public` is never forwarded or quoted whole (spec section 5.4): a
+ * message that carries one inline, at any depth, is refused as the message checks refuse a part (`400
+ * invalid`, `parts`). Narrower means an `audience` other than `public`, whatever the carried message's
+ * version (one that cannot tell keeps it to itself), or a message of this version to no one with no
+ * audience, which is its author's alone. One carried by content address is not seen here; its bytes are the
+ * client's to keep to itself.
  */
 function checkCarriedAudience(m: AnyMessage): void {
   for (const inner of carriedMessages(m)) {
     const headers = inner.headers;
-    if (inner.v === 1 && isJsonObject(headers) && Object.hasOwn(headers, 'audience')) {
-      throw invalid('A message with an audience is never forwarded or quoted whole (spec section 7.1).', {
-        field: 'parts',
-      });
+    if (!isJsonObject(headers)) continue;
+    const narrower = Object.hasOwn(headers, 'audience')
+      ? headers.audience !== 'public'
+      : inner.v === VERSION && Array.isArray(inner.to) && inner.to.length === 0;
+    if (narrower) {
+      throw invalid(
+        'A message for a narrower audience than public is never forwarded or quoted whole (spec section 5.4).',
+        {
+          field: 'parts',
+        },
+      );
     }
   }
 }

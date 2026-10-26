@@ -240,6 +240,11 @@ export interface Store {
     admit?: AgentAdmission,
   ): Promise<'replaced' | 'key_in_use' | 'retired' | 'too_many_keys'>;
   keepOnlyKey(address: string, key: string, at: string): Promise<'kept' | 'not_held'>;
+  /**
+   * Move a paired agent's principal from `from` to `to`, its successor (spec section 2.2), atomically: only
+   * while the agent is not retired and its principal is still `from`. False when it is not.
+   */
+  succeedPrincipal(address: string, from: string, to: string): Promise<boolean>;
   /** Only the first retirement counts, including its unpairing evidence. */
   retireAgent(address: string, at: string, unpairing?: string): Promise<void>;
 
@@ -294,8 +299,8 @@ export interface Store {
   published(author: string, before: string | null, limit: number): Promise<Page>;
   /**
    * The messages in `address`'s inbox whose `inReplyTo` is `id`, newest first, after the one whose id is
-   * `before` (null for the newest): the relations to a published message its author may show (spec section
-   * 7.4). A record's cursor is its message id.
+   * `before` (null for the newest): the relations to a published message its author may show (publishing
+   * profile, section 4). A record's cursor is its message id.
    */
   repliesTo(address: string, id: string, before: string | null, limit: number): Promise<Page>;
 

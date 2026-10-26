@@ -13,6 +13,7 @@ import {
   signRequest,
   timestamp,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { defineConfig } from '../src/config.ts';
 import { createServer, type SimonServer } from '../src/server.ts';
@@ -56,7 +57,7 @@ class Agent {
   send(to: string, text: string) {
     const m = signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from: this.address,
         to: [to],
         inReplyTo: null,

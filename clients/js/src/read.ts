@@ -27,16 +27,17 @@ import {
   messageId,
   messageVerdict,
   normalizeAddress,
+  pairingStanding,
+  parsePairing,
+  predecessors,
   principalKey,
   PROTOCOL_HEADERS,
   readAgentDocument,
   readServerDocument,
   resolveDomain,
   verifyClaims,
-  verifyPairing,
   verifyUnpairing,
   type ActsForClaim,
-  type AgentKind,
   type AnyMessage,
   type Claim,
   type KeyEntry,
@@ -73,7 +74,6 @@ export interface VerifyOptions extends ReadOptions {
 export interface AgentRecord {
   address: string;
   server: string;
-  kind: AgentKind | 'unknown';
   keys: KeyEntry[];
   /** The signature algorithms its server verifies, from the server document. */
   algorithms: string[];
@@ -110,6 +110,19 @@ export interface PrincipalTrust {
   authoritative?: boolean;
   /** For `server-claim`: the scope the claim lists, keeping only registry-shaped names. */
   scope?: string[];
+  /** For `key-pairing`: when the pairing lapses, unless the principal renews it (spec section 2.2). */
+  until?: string;
+  /**
+   * For `key-pairing`: the principal's earlier keys, oldest first, from the message's verified `succession`
+   * (spec section 2.2). Whoever knew one of them knows this principal, unless it has seen that key succeeded
+   * by another as well.
+   */
+  succeeds?: string[];
+  /**
+   * For `key-pairing`: true when the pairing counted when the message was sent but has lapsed since. The
+   * message spoke for the principal then; act on nothing in it for the principal now.
+   */
+  lapsed?: true;
   /**
    * For `key-pairing`: true when the address's retired document carries this principal's unpairing, which
    * verifies with its key, so the pairing has ended for good (spec sections 2.2 and 4).
@@ -127,7 +140,6 @@ export interface Trust {
   authorSigned: true;
   /** The server `from`'s domain resolves to, which published that key and carried the message. */
   authorServer: string;
-  kind: AgentKind | 'unknown';
   /**
    * False for a message of a version this client does not implement, or whose `critical` header lists one
    * it does not understand (spec sections 1 and 5.4): whose key signed it is all it says. Act on nothing in
@@ -135,8 +147,8 @@ export interface Trust {
    */
   understood: boolean;
   /**
-   * The principal that counts: null for a message with no `for` header, one not understood, or one from an
-   * agent its document does not call `paired`, since a solo agent speaks for no one whatever it carries.
+   * The principal that counts: null for a message with no `for` header or one not understood, since a
+   * message that names no principal speaks for no one whatever claims it carries.
    */
   principal: PrincipalTrust | null;
   /** Whether `signedClaims` were given, and verified with the carrier's keys. Claims that do not are ignored. */
@@ -160,7 +172,8 @@ export type Verification =
         | 'bad_document'
         | 'bad_signature'
         | 'unsupported_algorithm'
-        | 'bad_pairing';
+        | 'bad_pairing'
+        | 'bad_succession';
     };
 
 const PROVES: Record<string, string> = {
@@ -250,21 +263,33 @@ export async function verifyAuthor(message: unknown, opts: VerifyOptions = {}): 
     id,
     authorSigned: true,
     authorServer: author.server,
-    kind: author.kind,
     understood,
     claims: opts.signedClaims === undefined ? 'none' : claims ? 'verified' : 'unverified',
     ...(author.retired !== undefined && { retired: author.retired }),
   } as const;
-  const forValue = understood ? claimedPrincipal(m, author.kind) : null;
+  const forValue = understood ? claimedPrincipal(m) : null;
   if (forValue === null) return { ...trust, principal: null };
   if (principalKey(forValue) !== null) {
-    if (!verifyPairing(m.from, forValue, header(m as Message, 'pairing'))) {
-      return { verified: false, id, reason: 'bad_pairing' };
-    }
-    const ended = author.unpairing !== undefined && verifyUnpairing(m.from, forValue, author.unpairing);
+    const standing = pairingStanding(m, (opts.now ?? (() => new Date()))());
+    if (standing === 'refused') return { verified: false, id, reason: 'bad_pairing' };
+    const earlier = predecessors(m);
+    if (earlier === 'refused') return { verified: false, id, reason: 'bad_succession' };
+    const lapsed = standing === 'lapsed';
+    // Unpairing always wins: one signed by a key the principal moved on from ends the agent too.
+    const ended =
+      author.unpairing !== undefined &&
+      [forValue, ...earlier].some(id => verifyUnpairing(m.from, id, author.unpairing));
     return {
       ...trust,
-      principal: { id: forValue, basis: 'key-pairing', proves: PROVES['key-pairing'], ...(ended && { ended: true }) },
+      principal: {
+        id: forValue,
+        basis: 'key-pairing',
+        until: parsePairing(header(m as Message, 'pairing'))!.until,
+        ...(earlier.length > 0 && { succeeds: earlier }),
+        proves: PROVES['key-pairing'],
+        ...(lapsed && { lapsed: true }),
+        ...(ended && { ended: true }),
+      },
     };
   }
   return { ...trust, principal: await claimedFor(m, forValue, author, claims ?? [], opts) };
@@ -303,7 +328,7 @@ async function claimedFor(
   claims: readonly Claim[],
   opts: ReadOptions,
 ): Promise<PrincipalTrust> {
-  const claim = claimsAbout(m, claims, author.kind).find(c => c.type === 'acts-for') as ActsForClaim | undefined;
+  const claim = claimsAbout(m, claims).find(c => c.type === 'acts-for') as ActsForClaim | undefined;
   if (!claim) return { id: forValue, basis: 'agent-asserted', proves: PROVES['agent-asserted'] };
   // Aligned with the author, as whoever judges authority SHOULD require (spec sections 6.2 and 11.2).
   const authoritative = await isAuthoritative(claim, author.server, domain => resolution(domain, opts), m.from);

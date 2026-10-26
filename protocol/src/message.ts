@@ -13,6 +13,7 @@
 import type { KeyObject } from 'node:crypto';
 import {
   canonicalBytes,
+  canonicalize,
   CanonicalError,
   isCanonical,
   isJsonObject,
@@ -25,7 +26,15 @@ import {
 import { isAddress, isV1Address } from './address.ts';
 import { bodyTooLarge, forbidden, invalid, unsupportedVersion } from './errors.ts';
 import { isB64url, sha256Hex, sign, signatureVerdict, type KeyEntry, type SignatureVerdict } from './keys.ts';
-import { isPrincipal, pairingBytes, principalKey, verifyPairing } from './principal.ts';
+import {
+  isPrincipal,
+  isSuccessionValue,
+  pairingBytes,
+  parsePairing,
+  principalKey,
+  readSuccession,
+  verifyPairing,
+} from './principal.ts';
 import {
   MAX_ALT_BYTES,
   MAX_HEADERS,
@@ -39,6 +48,7 @@ import {
 } from './limits.ts';
 import { parseTimestamp } from './time.ts';
 
+/** The wire version this library implements (spec section 5.2): after release, only an incompatible revision takes a new number. */
 export const VERSION = 1;
 
 /** A message of any version, as far as the invariants say. A later version's other fields ride along unread. */
@@ -53,9 +63,13 @@ export interface AnyMessage {
 /** A block's optional members (spec section 5.3): the file name its author suggests, and a one-line text version. */
 type PartLabels = { name?: string; alt?: string };
 
-export type Part = ({ type: string; data: string } | { type: string; sha256: string; size: number }) & PartLabels;
+/**
+ * A block: inline `data` (a JSON value for a JSON media type, the text itself for `text/*`, base64 for any
+ * other type), or bytes named by `sha256` and `size`.
+ */
+export type Part = ({ type: string; data: Json } | { type: string; sha256: string; size: number }) & PartLabels;
 
-/** A version 1 message. */
+/** A message of the version this library implements. */
 export interface Message extends AnyMessage {
   inReplyTo: string | null;
   parts: Part[];
@@ -64,7 +78,7 @@ export interface Message extends AnyMessage {
 
 export type Unsigned<M extends AnyMessage> = Omit<M, 'signature'>;
 
-const V1_FIELDS = ['v', 'from', 'to', 'inReplyTo', 'parts', 'headers', 'sentAt', 'signature'];
+const FIELDS = ['v', 'from', 'to', 'inReplyTo', 'parts', 'headers', 'sentAt', 'signature'];
 const HEX64 = /^[0-9a-f]{64}$/;
 /** An RFC 6838 restricted name, in lower case. */
 const NAME = '[a-z0-9][a-z0-9!#$&^_.+-]{0,126}';
@@ -74,9 +88,24 @@ const NAME = '[a-z0-9][a-z0-9!#$&^_.+-]{0,126}';
  * quoted string of printable ASCII without `"` or `\`.
  */
 const MEDIA_TYPE = new RegExp(`^${NAME}/${NAME}(; ?${NAME}=([A-Za-z0-9!#$&^_.+-]+|"[ !#-[\\]-~]*"))*$`);
-const HEADER_NAME = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+/**
+ * A name (spec section 5.4): lower-case letters and digits in groups joined by single hyphens, and for a
+ * private name, several such labels joined by dots, reverse-domain (`com.example.approve`).
+ */
+const NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*(\.[a-z0-9]+(-[a-z0-9]+)*)*$/;
+/** The longest name, header, relation, feed or signal type. */
+export const MAX_NAME_LENGTH = 128;
 /** The headers the protocol names (spec section 5.4); every other header is a registry convention. */
-export const PROTOCOL_HEADERS: readonly string[] = ['for', 'pairing', 'critical', 'rel', 'feed', 'audience', 'listed'];
+export const PROTOCOL_HEADERS: readonly string[] = [
+  'for',
+  'pairing',
+  'succession',
+  'critical',
+  'rel',
+  'feed',
+  'audience',
+  'listed',
+];
 
 /** What a part's `name` never holds: `/`, a backslash, category Cc, and the bidirectional formatting characters. */
 const NOT_IN_NAME = /[/\\\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
@@ -162,7 +191,7 @@ export function checkMessage(value: unknown, limits: Limits = MINIMUM_LIMITS): A
     });
   }
   if (m.to.length > limits.recipients) throw invalid(`At most ${limits.recipients} recipients here.`, { field: 'to' });
-  if (m.v === VERSION) checkVersion1(value as Record<string, Json>, limits);
+  if (m.v === VERSION) checkVersionRules(value as Record<string, Json>, limits);
   return m;
 }
 
@@ -185,13 +214,13 @@ export function checkInvariants(value: unknown): AnyMessage {
   return value as unknown as AnyMessage;
 }
 
-/** Version 1's own rules (spec section 5), beyond the invariants. */
-function checkVersion1(m: Record<string, Json>, limits: Limits) {
-  const extra = Object.keys(m).find(k => !V1_FIELDS.includes(k));
-  if (extra !== undefined) throw invalid(`A version 1 message has no field ${extra}.`, { field: extra });
-  if (!isV1Address(m.from)) throw invalid('from must be an ASCII address in version 1.', { field: 'from' });
+/** This version's own rules (spec section 5), beyond the invariants. */
+function checkVersionRules(m: Record<string, Json>, limits: Limits) {
+  const extra = Object.keys(m).find(k => !FIELDS.includes(k));
+  if (extra !== undefined) throw invalid(`A version ${VERSION} message has no field ${extra}.`, { field: extra });
+  if (!isV1Address(m.from)) throw invalid(`from must be an ASCII address in version ${VERSION}.`, { field: 'from' });
   const to = m.to as string[];
-  if (!to.every(isV1Address)) throw invalid('to must hold ASCII addresses in version 1.', { field: 'to' });
+  if (!to.every(isV1Address)) throw invalid(`to must hold ASCII addresses in version ${VERSION}.`, { field: 'to' });
   if (new Set(to).size !== to.length) throw invalid('An address appears twice in to.', { field: 'to' });
   if (m.inReplyTo !== null && !(typeof m.inReplyTo === 'string' && HEX64.test(m.inReplyTo))) {
     throw invalid('inReplyTo must be null or a message id (64 lower-case hex).', { field: 'inReplyTo' });
@@ -208,9 +237,12 @@ function checkVersion1(m: Record<string, Json>, limits: Limits) {
   }
   for (const [name, value] of Object.entries(m.headers)) {
     if (!isHeaderName(name)) {
-      throw invalid(`Header names are lower-case letters and digits joined by single hyphens, at most 64: ${name}`, {
-        field: 'headers',
-      });
+      throw invalid(
+        `Header names are lower-case letters and digits joined by single hyphens, or such labels joined by dots, at most ${MAX_NAME_LENGTH}: ${name}`,
+        {
+          field: 'headers',
+        },
+      );
     }
     if (typeof value !== 'string') throw invalid(`Header ${name} must be a string.`, { field: 'headers' });
   }
@@ -224,29 +256,49 @@ function checkVersion1(m: Record<string, Json>, limits: Limits) {
   if ((pairing !== undefined) !== (typeof forValue === 'string' && principalKey(forValue) !== null)) {
     throw invalid('The pairing header is present exactly when for is a simon-key: principal.', { field: 'headers' });
   }
-  if (pairing !== undefined && !isB64url(pairing)) {
-    throw invalid('The pairing header is a signature in canonical base64url.', { field: 'headers' });
+  if (pairing !== undefined && parsePairing(pairing) === null) {
+    throw invalid('The pairing header is a timestamp, one space, and a signature in canonical base64url.', {
+      field: 'headers',
+    });
+  }
+  const { succession } = m.headers;
+  if (succession !== undefined && pairing === undefined) {
+    throw invalid('The succession header goes only with a simon-key: for and its pairing.', { field: 'headers' });
+  }
+  if (succession !== undefined && !isSuccessionValue(succession)) {
+    throw invalid('The succession header is steps joined by commas: a key token and two signatures, one space apart.', {
+      field: 'headers',
+    });
   }
   if (critical !== undefined && !isCriticalValue(critical)) {
     throw invalid('The critical header is header names joined by commas, with no spaces.', { field: 'headers' });
   }
   const { rel, feed, audience } = m.headers;
-  if (rel !== undefined && !(isHeaderName(rel) && m.inReplyTo !== null)) {
-    throw invalid('The rel header is a relation name, on a message whose inReplyTo names another.', {
-      field: 'headers',
-    });
+  // A rel without inReplyTo, or a feed on a message with recipients, means nothing and is ignored; audience is
+  // security metadata, so its placement is checked (spec section 5.4).
+  if (rel !== undefined && !isHeaderName(rel)) {
+    throw invalid('The rel header is a relation name.', { field: 'headers' });
   }
   if (feed !== undefined && !isCriticalValue(feed)) {
     throw invalid('The feed header is feed names joined by commas, with no spaces.', { field: 'headers' });
   }
-  if ((feed !== undefined || audience !== undefined) && to.length > 0) {
-    throw invalid('The feed and audience headers belong only on a published message, whose to is empty.', {
+  if (audience !== undefined && to.length > 0) {
+    throw invalid('The audience header belongs only on a published message, whose to is empty.', {
       field: 'headers',
     });
   }
-  // The writer's consent to have a relation listed under the published message it names (spec section 7.4).
+  // Publishing is explicit: a message names recipients, or says who may read it (spec section 5.2).
+  if (to.length === 0 && audience === undefined) {
+    throw invalid(
+      'A message with no recipients is published, and says who may read it: an audience header, public for anyone.',
+      {
+        field: 'headers',
+      },
+    );
+  }
+  // The writer's consent to have a relation listed under the published message it names (publishing profile, section 4).
   const { listed } = m.headers;
-  if (listed !== undefined && !(isListedValue(listed) && rel !== undefined && to.length > 0)) {
+  if (listed !== undefined && !(isListedValue(listed) && rel !== undefined && m.inReplyTo !== null && to.length > 0)) {
     throw invalid('The listed header is yes, on a relation (it carries rel) whose to is not empty.', {
       field: 'headers',
     });
@@ -276,9 +328,14 @@ function checkPart(value: Json, i: number, limits: Limits) {
   // Other members are ignored, so a later one needs no flag day; the content is one of exactly two shapes.
   const content = [data, sha256, size].map(x => (x === undefined ? '-' : '+')).join('');
   if (content === '+--') {
-    if (typeof value.data !== 'string') throw invalid(`Part ${i}: data must be a string.`, { field: 'parts' });
-    if (!value.type.startsWith('text/') && !isBase64(value.data)) {
-      throw invalid(`Part ${i}: data of a non-text part is padded, canonical base64.`, { field: 'parts' });
+    // One encoding per type: a JSON value for a JSON type, the text for text/*, base64 for anything else.
+    if (!isJsonType(value.type)) {
+      if (typeof value.data !== 'string') throw invalid(`Part ${i}: data must be a string.`, { field: 'parts' });
+      if (!value.type.startsWith('text/') && !isBase64(value.data)) {
+        throw invalid(`Part ${i}: data of a part that is neither JSON nor text is padded, canonical base64.`, {
+          field: 'parts',
+        });
+      }
     }
   } else if (content === '-++') {
     if (typeof value.sha256 !== 'string' || !HEX64.test(value.sha256)) {
@@ -318,9 +375,40 @@ const between = (n: number, min: number, max: number) => n >= min && n <= max;
 const isBase64 = (s: string) =>
   /^[A-Za-z0-9+/]*={0,2}$/.test(s) && s.length % 4 === 0 && Buffer.from(s, 'base64').toString('base64') === s;
 
-/** Whether a value is a header name: lower-case letters and digits in groups joined by single hyphens, at most 64. */
+/**
+ * Whether a value is a name (a header, relation, feed or signal type): lower-case letters and digits in
+ * groups joined by single hyphens, or several such labels joined by dots for a private name, at most 128.
+ */
 export const isHeaderName = (value: unknown): value is string =>
-  typeof value === 'string' && value.length <= 64 && HEADER_NAME.test(value);
+  typeof value === 'string' && value.length <= MAX_NAME_LENGTH && NAME_RE.test(value);
+
+/**
+ * Whether a media type is a JSON type (spec section 5.3), whose inline `data` is a JSON value:
+ * `application/json`, or any type with the `+json` suffix, whatever its parameters.
+ */
+export function isJsonType(type: string): boolean {
+  const base = type.split(';', 1)[0].trim();
+  return base === 'application/json' || base.endsWith('+json');
+}
+
+/** How deep a part's `data` sits in its message: the message, its `parts` array, the part (spec 5.1). */
+const DATA_DEPTH = 3;
+
+/**
+ * Why a value cannot be a JSON block's `data`, or null when it can (spec sections 5.1 and 5.3). The value is
+ * signed inside the message, so canonical JSON limits it: integers within ±(2^53 - 1), with no fraction or
+ * exponent, and at most 64 levels of nesting counting the message's own three. Clients check a draft with
+ * this before signing, so an author learns how to write the value instead of meeting a bare encoding error.
+ */
+export function jsonDataProblem(data: unknown): string | null {
+  try {
+    canonicalize(data, DATA_DEPTH);
+    return null;
+  } catch (e) {
+    if (!(e instanceof CanonicalError)) throw e;
+    return `A JSON block's data must fit canonical JSON (spec section 5.1): ${e.message} Numbers are integers within ±(2^53 - 1), with no fraction or exponent, and values nest at most 61 levels; write 19.99 as the string "19.99" or as 1999 in a smaller unit, or send the bytes as a base64 block of another type.`;
+  }
+}
 
 /** Whether a value is a `listed` header: exactly `yes` (spec section 5.4). */
 export const isListedValue = (value: unknown): value is 'yes' => value === 'yes';
@@ -335,10 +423,14 @@ export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
 /**
  * What an agent's own server checks on `send`, beyond the message's validity (CLIENT.md). A paired agent's
  * version 1 message carries its principal as `for`; with a key principal it also carries a `pairing` that
- * verifies, and with any other it carries none. A solo agent's message carries neither. Refused as
- * `400 invalid` on `headers`. A later version's headers are not known here, so its messages pass.
+ * verifies, and with any other it carries none. A solo agent's message carries neither. A `succession` must
+ * verify; with one, a key principal's `for` may be a successor of the agent's principal, and the server then
+ * moves its record to it (spec section 2.2). The pairing must count at the message's `sentAt` and, when `now`
+ * is given (the server's clock), at `now` too, so a message backdated within the send window cannot carry a
+ * pairing that has already lapsed. Refused as `400 invalid` on `headers`. A later version's headers are not
+ * known here, so its messages pass.
  */
-export function checkPrincipal(m: AnyMessage, agent: Principal): void {
+export function checkPrincipal(m: AnyMessage, agent: Principal, now?: Date): void {
   if (m.v !== VERSION) return;
   const forValue = header(m as Message, 'for');
   const pairing = header(m as Message, 'pairing');
@@ -347,12 +439,27 @@ export function checkPrincipal(m: AnyMessage, agent: Principal): void {
     if (forValue !== null || pairing !== null) throw refuse('A solo agent speaks for no one: no for, no pairing.');
     return;
   }
-  if (forValue !== agent.for) throw refuse(`A paired agent's messages carry its principal as for: ${agent.for}.`);
-  if (principalKey(agent.for) === null) {
-    if (pairing !== null) throw refuse('Only a key principal pairs by signature: this message carries no pairing.');
-  } else if (!verifyPairing(m.from, agent.for, pairing)) {
+  const succession = header(m as Message, 'succession');
+  const steps = succession === null || forValue === null ? [] : readSuccession(succession, forValue);
+  if (steps === null) {
     throw refuse(
-      `The pairing header must be the principal's signature over ${JSON.stringify(pairingBytes(m.from, agent.for))}.`,
+      `Each succession step must be signed by both its keys over SIMON-SUCCEED, the old and the new identifier, leading to for.`,
+    );
+  }
+  if (forValue !== agent.for && !steps.some(s => s.from === agent.for)) {
+    throw refuse(`A paired agent's messages carry its principal as for, or a successor it signed: ${agent.for}.`);
+  }
+  // The agent's principal, or the successor it moves to: either way the one that must have signed the pairing.
+  const principal = forValue!;
+  if (principalKey(principal) === null) {
+    if (pairing !== null) throw refuse('Only a key principal pairs by signature: this message carries no pairing.');
+  } else if (
+    !verifyPairing(m.from, principal, pairing, parseTimestamp(m.sentAt) ?? NaN) ||
+    (now !== undefined && !verifyPairing(m.from, principal, pairing, now))
+  ) {
+    const until = parsePairing(pairing)?.until ?? '<until>';
+    throw refuse(
+      `The pairing header must be <until> <signature>: the principal's signature over ${JSON.stringify(pairingBytes(m.from, principal, until))}, valid at sentAt and now: before until, by at most 366 days. The principal renews a lapsed pairing by signing a later until.`,
     );
   }
 }
@@ -369,7 +476,9 @@ export const header = (m: Pick<Message, 'headers'>, name: string): string | null
 
 /** The text of a message's text parts (any `text/*` type), joined by `separator`. */
 export const textOf = (m: Pick<Message, 'parts'>, separator = '\n') =>
-  m.parts.flatMap(p => ('data' in p && p.type.startsWith('text/') ? [p.data] : [])).join(separator);
+  m.parts
+    .flatMap(p => ('data' in p && p.type.startsWith('text/') && typeof p.data === 'string' ? [p.data] : []))
+    .join(separator);
 
 /** The media type of a part that carries another message whole (spec section 5.3). */
 export const CARRIED_MESSAGE_TYPE = 'application/simon-message';
@@ -403,7 +512,7 @@ function readCarried(data: string): Record<string, Json> | null {
  * message invalid; without it, such a message names nothing.
  */
 function carriedParts(m: AnyMessage | Record<string, Json>, strict: boolean, depth = 0): Json[] {
-  const parts = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const parts = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(parts)) return [];
   const found: Json[] = [];
   for (const p of parts as Json[]) {
@@ -428,7 +537,7 @@ function carriedParts(m: AnyMessage | Record<string, Json>, strict: boolean, dep
         { field: 'parts' },
       );
     }
-    if (inner.v === 1 && Array.isArray(inner.parts)) found.push(...inner.parts);
+    if (inner.v === VERSION && Array.isArray(inner.parts)) found.push(...inner.parts);
     found.push(...carriedParts(inner, strict, depth + 1));
   }
   return found;
@@ -494,7 +603,7 @@ function checkCarriedFiles(m: Record<string, Json>, limits: Limits) {
  * entries are returned, so a message that skipped the checks above still names nothing unsafe.
  */
 export function namedFiles(m: AnyMessage): { sha256: string; size: number }[] {
-  const own = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const own = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(own)) return [];
   return [...(own as Json[]), ...carriedParts(m, false)]
     .filter(isFileEntry)
@@ -509,7 +618,7 @@ export function namedFiles(m: AnyMessage): { sha256: string; size: number }[] {
  * one carried by content address, is not among them: its bytes are not in the message.
  */
 export function carriedMessages(m: AnyMessage | Record<string, Json>, depth = 0): Record<string, Json>[] {
-  const parts = m.v === 1 ? (m as { parts?: unknown }).parts : undefined;
+  const parts = m.v === VERSION ? (m as { parts?: unknown }).parts : undefined;
   if (!Array.isArray(parts) || depth >= MAX_CARRIED_DEPTH) return [];
   const found: Record<string, Json>[] = [];
   for (const p of parts as Json[]) {

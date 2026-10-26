@@ -33,7 +33,9 @@ there as a general extension point.
 
 Repository integration tests (`test/integration/`) exercise handoffs between these packages. They run
 through the root `npm test` command and root typecheck, outside each package's independent test suite.
-Package boundary checks still apply to each package and its own tests.
+Package boundary checks still apply to each package and its own tests. The specification's own check
+(`test/spec/`) validates the published vectors against the JSON schemas in `spec/schemas`, with the one
+development dependency no package may import, a JSON Schema validator.
 
 ## The protocol package
 

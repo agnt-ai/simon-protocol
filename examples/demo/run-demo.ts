@@ -104,7 +104,7 @@ const reply = await bob.send({ to: [ada.address!], inReplyTo: first.id, text: 'T
 const answer = await next(ada, reply.id);
 assert.deepEqual([answer.id, answer.message.inReplyTo, answer.message.headers.for], [reply.id, sent.id, id]);
 const fromBob = await verifyAuthor(answer.message, { ...reading, signedClaims: answer.signedClaims });
-assert.ok(fromBob.verified && fromBob.kind === 'paired' && fromBob.principal?.basis === 'key-pairing');
+assert.ok(fromBob.verified && fromBob.principal?.basis === 'key-pairing');
 ok("Bob's signature verifies, and his principal's basis is key-pairing: the key's holder consented");
 
 say('Each sees how delivery went, and the inbox is read through.');

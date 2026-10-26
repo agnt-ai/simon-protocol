@@ -1,13 +1,14 @@
 /**
- * Who reads a published message, and whether its audience admits them (spec section 7.1).
+ * Who reads a published message, and whether its audience admits them (publishing profile, section 1).
  *
  * A reader proves who it is the way an author does: it signs the request with a key of its own agent
  * document and names itself in `simon-agent` (section 8). A request that is not signed, or whose signature
  * fails, asks as nobody in particular, and is answered exactly as one, so a refusal tells nothing about
  * the message.
  *
- * A message with no `audience` header is for anyone. One with a label is for whoever the extensions'
- * `admitsReader` chain admits; with no extension deciding, for no one but its author.
+ * `audience: public` is for anyone. Any other label is for whoever the extensions' `admitsReader` chain
+ * admits, and always its author; with no extension deciding, for no one but its author. A published message
+ * with no audience, which this version refuses, is its author's alone.
  */
 import { header, VERSION, WireError, type AnyMessage, type Message } from '@agnt-sdk/simon-protocol';
 import { authenticateReader, isAgentSigned } from './auth.ts';
@@ -28,7 +29,7 @@ export const asReader = (address: string): Asker => ({ reader: async () => addre
  * Who asks, settled before anything is looked up for the request: a request naming `simon-agent` is
  * authenticated at once, its reader's document fetched and charged to the client, whatever it asks for and
  * whether or not anything matches, so neither the answer nor the fetches it makes tell which ids, feeds or
- * parts hold audience-limited posts (spec section 7.1).
+ * parts hold audience-limited posts (publishing profile, section 1).
  */
 export async function askerOf(ctx: Context, req: Request): Promise<Asker> {
   if (!isAgentSigned(req)) return NOBODY;
@@ -42,14 +43,24 @@ export async function askerOf(ctx: Context, req: Request): Promise<Asker> {
   }
 }
 
-/** The audience label a published version 1 message carries, or null for anyone. */
+/** The audience label that admits anyone (publishing profile, section 1). */
+export const PUBLIC = 'public';
+
+/** The audience label a published message of a version known here carries, or null. */
 export const audienceOf = (m: AnyMessage) => (m.v === VERSION ? header(m as Message, 'audience') : null);
 
-/** Whether a published message written here may be shown to this asker. */
+/** Whether anyone may read a published message: its audience is `public`. */
+export const isPublic = (m: AnyMessage) => audienceOf(m) === PUBLIC;
+
+/**
+ * Whether a published message written here may be shown to this asker. A message without an audience
+ * label, which this version refuses, is its author's alone: closed, never open.
+ */
 export async function mayRead(ctx: Context, m: AnyMessage, asker: Asker): Promise<boolean> {
   const audience = audienceOf(m);
-  if (audience === null) return true;
+  if (audience === PUBLIC) return true;
   const reader = await asker.reader();
   if (reader === m.from) return true;
+  if (audience === null) return false;
   return (await ctx.hooks.admitsReader({ message: m, audience, reader })) === 'admit';
 }

@@ -4,7 +4,7 @@ import { it } from 'node:test';
 import { addKeyProofString, generateKey, readAgentDocument, readServerDocument, sign } from '@agnt-sdk/simon-protocol';
 import { Federation } from './harness.ts';
 
-it('keeps labels in account state and omits them from signed documents and public message keys', async () => {
+it('keeps labels in account state and omits them from signed documents, and serves no keys beside a public message', async () => {
   const fed = new Federation();
   try {
     const alpha = await fed.server('alpha');
@@ -43,7 +43,7 @@ it('keeps labels in account state and omits them from signed documents and publi
     assert.equal(sent.status, 200);
     const publicMessage = await ada.request('GET', `/simon/messages/${sent.json.id}`, { sign: false });
     assert.equal(publicMessage.status, 200);
-    assert.deepEqual(publicMessage.json.keys, expected, 'public convenience keys contain only public key-entry fields');
+    assert.equal('keys' in publicMessage.json, false, 'a public message is served without unsigned keys');
   } finally {
     await fed.close();
   }

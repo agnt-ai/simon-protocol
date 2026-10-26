@@ -37,21 +37,30 @@ from .messages import (
     check_message,
     check_principal,
     check_supported_version,
+    is_json_type,
     is_principal,
+    json_data_problem,
     message_id,
     message_verdict,
+    PAIRING_DEFAULT_MS,
+    PAIRING_MAX_MS,
     pairing_bytes,
+    parse_pairing,
     parse_message,
     sign_message,
     sign_pairing,
+    sign_succession,
     sign_unpairing,
+    succession_bytes,
+    is_succession_value,
+    read_succession,
     text_of,
     unpairing_bytes,
     verify_message,
     verify_pairing,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood, reads_as
+from .reading import claimed_principal, is_understood, pairing_standing, predecessors, reads_as
 from .provenance import RULE, invisible_in, present_delivery, present_entry, untrusted, unwrap_entry
 from .request import (
     add_key_proof,
@@ -65,7 +74,7 @@ from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .signal import check_signal_freshness, parse_signal, verify_signal
 from .wire import is_address, normalize_address, parse_timestamp, timestamp
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Agent",
@@ -98,7 +107,9 @@ __all__ = [
     "invisible_in",
     "is_address",
     "is_authoritative",
+    "is_json_type",
     "is_principal",
+    "json_data_problem",
     "is_public_key",
     "is_repeat",
     "is_retryable",
@@ -108,7 +119,12 @@ __all__ = [
     "message_verdict",
     "nonce_expiry",
     "normalize_address",
+    "PAIRING_DEFAULT_MS",
+    "PAIRING_MAX_MS",
     "pairing_bytes",
+    "pairing_standing",
+    "predecessors",
+    "parse_pairing",
     "parse",
     "parse_envelope",
     "check_envelope_beside",
@@ -129,7 +145,11 @@ __all__ = [
     "sign_message",
     "sign_pairing",
     "sign_request",
+    "sign_succession",
     "sign_unpairing",
+    "succession_bytes",
+    "is_succession_value",
+    "read_succession",
     "signature_verdict",
     "signing_bytes",
     "signing_string",

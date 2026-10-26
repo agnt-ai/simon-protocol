@@ -11,12 +11,13 @@ import {
   generateKey,
   messageId,
   serverDocument,
-  sign,
   signAgentDocument,
   signMessage,
   timestamp,
   type Message,
   type ResolverIO,
+  signPairing,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, fetchAgentDocument, verifyAuthor } from '../src/index.ts';
 
@@ -25,10 +26,10 @@ const agentKey = generateKey();
 const principal = generateKey();
 const from = 'ceo@bank.example.com';
 const forId = `simon-key:${principal.key}`;
-const pairing = sign(principal.privateKey, `SIMON-PAIR\n${from}\n${forId}`);
+const pairing = signPairing(principal.privateKey, from, forId);
 const forged = signMessage<Message>(
   {
-    v: 1,
+    v: VERSION,
     from,
     to: ['victim@example.org'],
     inReplyTo: null,

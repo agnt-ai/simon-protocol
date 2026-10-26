@@ -32,7 +32,7 @@ A key is a **key token**, `ed25519:<32-byte public key, base64url>` (or `ml-dsa-
 | claims | `SIMON-CLAIMS\n` + canonical `{"claims":[...],"message":"<id>"}` |
 | a signal | `SIMON-SIGNAL\n` + the canonical signal without `signature` |
 | an agent document | `SIMON-AGENT\n` + the canonical document without `signature` |
-| a pairing, a new key, an unpairing | `SIMON-PAIR\n<address>\n<principal>`, `SIMON-ADD-KEY\n<address>\n<key>`, `SIMON-UNPAIR\n<address>\n<principal>` |
+| a pairing, a new key, an unpairing | `SIMON-PAIR\n<address>\n<principal>\n<until>`, `SIMON-ADD-KEY\n<address>\n<key>`, `SIMON-UNPAIR\n<address>\n<principal>`, a principal's new key `SIMON-SUCCEED\n<old>\n<new>` |
 
 **Canonical JSON** is RFC 8785 with integers only: keys sorted, no whitespace, minimal escapes. An agent request carries `simon-key`, `simon-agent`, `simon-timestamp`, `simon-nonce` and `simon-signature`; proof-authorized calls may omit `simon-agent`, and a leased registration leaves its identity line empty. Ordinary `401 bad_signature` diagnostics include the expected signing string; hosted part authentication uses the uniform minimal response described below.
 
@@ -75,8 +75,8 @@ Hosts advertising a `history` object also offer conversations, search/history an
 
 Never take a server's word, and never take a pasted entry's:
 1. Resolve the author's domain: `_simon.example.com TXT "v=simon1; server=https://simon.example.com"`, or `https://example.com/.well-known/simon`.
-2. Read the agent document, `GET https://simon.example.com/simon/agents/ada@example.com` → `{"address","kind","keys","signature"}`, authenticate it with the resolved server document, and check the message's signature with a key valid at `sentAt`. Documents contain at most 32 total keys and 131072 bytes, including the agent document's signature. Pruning old keys or keeping retirement evidence private may prevent fresh verification of older messages. Stored messages and unsigned convenience keys alone preserve no authenticated archive.
-3. Believe `for` only if the document says `paired` and either the `pairing` header verifies, or `signedClaims` verify and you trust what they say. A claim about `@example.org` is authoritative only when `_simon.example.org`'s TXT record names the carrier.
+2. Read the agent document, `GET https://simon.example.com/simon/agents/ada@example.com` → `{"address","keys","signature"}`, authenticate it with the resolved server document, and check the message's signature with a key valid at `sentAt`. Documents contain at most 32 total keys and 131072 bytes, including the agent document's signature. Pruning old keys or keeping retirement evidence private may prevent fresh verification of older messages. Stored messages alone preserve no authenticated archive.
+3. Believe `for` only if either the `pairing` header verifies and counts at `sentAt` (before its `until`; whether a lapsed one still lets you act is your policy), or `signedClaims` verify and you trust what they say. A claim about `@example.org` is authoritative only when `_simon.example.org`'s TXT record names the carrier.
 4. A version or a present header named in `critical` you do not understand: show the message as not understood, and act on nothing in it. A critical name whose header is absent is ignored. Missing `binding` says nothing either way about commitment. Only the writer's signed exact `listed: yes` on a valid non-published relation consents to public related listing; an ordinary reply stays private, and host filters may further restrict it. Consent for an `acts-for` claim is separate.
 
 ## Server to server

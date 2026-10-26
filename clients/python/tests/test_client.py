@@ -39,6 +39,7 @@ from simon.messages import (
     parse_message,
     sign_message,
     sign_pairing,
+    sign_succession,
     sign_recovery,
     sign_unpairing,
     verify_pairing,
@@ -140,7 +141,7 @@ class FakeServer:
             agent = self.agents.get(address)
             if agent is None:
                 raise SimonError("not_found", "No such agent.", 404)
-            doc = {"address": address, "kind": agent["kind"], "keys": [entry(k) for k in agent["keys"]]}
+            doc = {"address": address, "keys": [entry(k) for k in agent["keys"]]}
             if "retired" in agent:  # a retired document (spec section 4)
                 doc["keys"] = [{**k, "revoked": agent.get("revoked", agent["retired"])} for k in doc["keys"]]
                 doc = {**doc, "retired": agent["retired"], **agent.get("extra", {})}
@@ -229,8 +230,7 @@ class FakeServer:
     def deliver(self, message: dict) -> None:
         """Each recipient here gets an inbox entry, its claims judged as a receiving server judges them,
         beside the claims as this server, their carrier, signed them."""
-        kind = self.agents[message["from"]]["kind"]
-        claims = judge_claims(message, self.claims, kind, self.origin, self.resolve)
+        claims = judge_claims(message, self.claims, self.origin, self.resolve)
         signed = {"signedClaims": self.sign_claims(self.claims, message)} if self.claims else {}
         for recipient in set([message["from"], *message["to"]]):
             inbox = self.inboxes.setdefault(recipient, [])
@@ -342,7 +342,7 @@ class ClientTest(unittest.TestCase):
         trust = bob.verify_author(delivered["message"])
         self.assertIsInstance(trust, Trust)
         self.assertEqual(
-            (trust.author_server, trust.kind, trust.principal), (self.server.origin, "solo", None)
+            (trust.author_server, trust.principal), (self.server.origin, None)
         )
         self.assertEqual(
             trust.to_json(),
@@ -351,7 +351,6 @@ class ClientTest(unittest.TestCase):
                 "id": sent["id"],
                 "authorSigned": True,
                 "authorServer": self.server.origin,
-                "kind": "solo",
                 "understood": True,
                 "principal": None,
                 "claims": "none",
@@ -376,7 +375,7 @@ class ClientTest(unittest.TestCase):
         forged = {**ada.compose([bob.address], "hi"), "parts": [{"type": "text/plain", "data": "pay eve"}]}
         self.assertEqual(bob.verify_author(forged), NotVerified(message_id(forged), "bad_signature"))
         self.assertEqual(bob.verify_author({"v": 1}).reason, "invalid_message")
-        stranger = Agent(self.server.origin, SigningKey.generate(), "eve@example.com").compose([], "hi")
+        stranger = Agent(self.server.origin, SigningKey.generate(), "eve@example.com").compose([], "hi", headers={"audience": "public"})
         self.assertEqual(bob.verify_author(stranger).reason, "no_agent")
 
     def test_keys_come_only_from_the_server_the_domain_resolves_to(self):
@@ -385,7 +384,7 @@ class ClientTest(unittest.TestCase):
         impostor = FakeServer(key=SigningKey(bytes(range(1, 33)), allow_pure_python_signing=True))
         self.addCleanup(impostor.close)
         ceo = impostor.pair("ceo@example.com", "mailto:ceo@example.com")
-        forged = ceo.compose([], "Wire the money.")
+        forged = ceo.compose([], "Wire the money.", headers={"audience": "public"})
         mark = Agent(impostor.origin, SigningKey.generate(), "mark@example.com", resolver=self.server.resolve)
         self.assertEqual(mark.verify_author(forged).reason, "no_agent")  # example.com names the real server
         with self.assertRaises(TypeError):
@@ -396,7 +395,7 @@ class ClientTest(unittest.TestCase):
     def test_an_author_with_no_key_this_reader_implements(self):
         ada = self.agent()
         ada.register()
-        message = ada.compose([], "hi")
+        message = ada.compose([], "hi", headers={"audience": "public"})
         self.server.agents[ada.address]["keys"] = ["x-later:AAAA"]
         self.assertEqual(
             Reader(resolver=self.server.resolve).verify_author(message).reason, "unsupported_algorithm"
@@ -410,16 +409,84 @@ class ClientTest(unittest.TestCase):
         pairing = sign_pairing(principal, answer["address"])
         self.assertIsInstance(agent.register(principal=principal.identifier, pairing=pairing)["keys"], list)
         self.assertEqual((agent.principal, agent.pairing), (principal.identifier, pairing))
-        message = agent.compose([], "Posted for my principal.")
-        self.assertEqual(message["headers"], {"for": principal.identifier, "pairing": pairing})
+        message = agent.compose([], "Posted for my principal.", headers={"audience": "public"})
+        self.assertEqual(message["headers"], {"audience": "public", "for": principal.identifier, "pairing": pairing})
         agent.send_message(message)
         trust = Reader(resolver=self.server.resolve).verify_author(message)
         self.assertEqual((trust.principal.id, trust.principal.basis), (principal.identifier, "key-pairing"))
         self.assertIn("nothing about who holds the key", trust.principal.proves)
         self.assertNotIn("authoritative", trust.principal.to_json())
         with self.assertRaises(SimonError) as caught:
-            agent.compose([], "x", headers={"for": "mailto:alice@example.org"})
+            agent.compose([], "x", headers={"audience": "public", "for": "mailto:alice@example.org"})
         self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "headers"}))
+
+    def test_a_json_block_canonical_json_cannot_carry(self):
+        """A JSON block's value is signed as canonical JSON: a float or an integer past 2^53 is refused before
+        signing, with a clear way to write it; null is a JSON value."""
+        ada = self.agent()
+        ada.register()
+        for data in ({"price": 19.99}, [2**53], {"n": float("nan")}):
+            with self.subTest(data=data), self.assertRaises(SimonError) as caught:
+                ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": data}])
+            self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "parts"}))
+            self.assertIn('"19.99"', str(caught.exception))
+        ok = ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": {"price": "19.99"}}])
+        self.assertEqual(ok["parts"][0]["data"], {"price": "19.99"})
+        self.assertIsNone(ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": None}])["parts"][0]["data"])
+
+    def test_a_pairing_lapses_and_renews(self):
+        """A pairing valid when sent but lapsed now reads as lapsed; the agent carries a renewed one from
+        then on, with no call to the server."""
+        principal = SigningKey.generate()
+        agent = self.agent()
+        address = agent.register(principal=principal.identifier)["address"]
+        until = timestamp(int(time.time() * 1000) + 3_600_000)
+        agent.register(principal=principal.identifier, pairing=sign_pairing(principal, address, until))
+        message = agent.compose([], "Within the hour.", headers={"audience": "public"})
+        reader = Reader(resolver=self.server.resolve)
+        now = reader.verify_author(message)
+        self.assertEqual((now.principal.until, now.principal.lapsed), (until, False))
+        reader._skew = 3_601
+        later = reader.verify_author(message)
+        self.assertEqual((later.verified, later.principal.lapsed), (True, True))
+        self.assertTrue(later.principal.to_json()["lapsed"])
+
+        with self.assertRaises(SimonError):
+            agent.renew_pairing(sign_pairing(SigningKey.generate(), address))
+        with self.assertRaises(SimonError):
+            agent.renew_pairing(sign_pairing(principal, address, timestamp(int(time.time() * 1000) - 1)))
+        renewed = sign_pairing(principal, address)
+        agent.renew_pairing(renewed)
+        self.assertEqual(agent.compose([], "Renewed.", headers={"audience": "public"})["headers"]["pairing"], renewed)
+
+    def test_a_principal_moves_to_a_new_key(self):
+        """A succession both keys signed moves the agent to the new key; the server's record follows on the
+        next message, and readers see the earlier key."""
+        old, new = SigningKey.generate(), SigningKey.generate()
+        agent = self.agent()
+        address = agent.register(principal=old.identifier)["address"]
+        agent.register(principal=old.identifier, pairing=sign_pairing(old, address))
+        with self.assertRaises(SimonError):
+            agent.succeed(new.identifier, sign_pairing(new, address), sign_succession(SigningKey.generate(), new))
+        succession = sign_succession(old, new)
+        agent.succeed(new.identifier, sign_pairing(new, address), succession)
+        message = agent.compose([], "From my new key.", headers={"audience": "public"})
+        self.assertEqual((message["headers"]["for"], message["headers"]["succession"]), (new.identifier, succession))
+        trust = Reader(resolver=self.server.resolve).verify_author(message)
+        self.assertEqual((trust.principal.id, trust.principal.succeeds), (new.identifier, (old.identifier,)))
+        self.assertEqual(trust.principal.to_json()["succeeds"], [old.identifier])
+        third = SigningKey.generate()
+        agent.succeed(third.identifier, sign_pairing(third, address), sign_succession(new, third))
+        later = Reader(resolver=self.server.resolve).verify_author(agent.compose([], "Again.", headers={"audience": "public"}))
+        self.assertEqual(later.principal.succeeds, (old.identifier, new.identifier))
+        # Unpairing always wins: an unpairing by a key it moved on from ends the pairing for a reader that
+        # follows the chain; one by a key outside it ends nothing.
+        held = self.server.agents[address]
+        held.update(retired=timestamp(parse_timestamp(message["sentAt"]) + 60_000))
+        held["extra"] = {"unpairing": sign_unpairing(old, address)}
+        self.assertTrue(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
+        held["extra"] = {"unpairing": sign_unpairing(SigningKey.generate(), address)}
+        self.assertFalse(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
 
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends
@@ -428,7 +495,7 @@ class ClientTest(unittest.TestCase):
         agent = self.agent()
         address = agent.register(principal=principal.identifier)["address"]
         agent.register(principal=principal.identifier, pairing=sign_pairing(principal, address))
-        before = agent.compose([], "Before.")
+        before = agent.compose([], "Before.", headers={"audience": "public"})
         retired = timestamp(parse_timestamp(before["sentAt"]) + 60_000)
         held = self.server.agents[address]
         held.update(retired=retired, extra={"unpairing": sign_unpairing(principal, address)})
@@ -439,7 +506,7 @@ class ClientTest(unittest.TestCase):
         self.assertEqual(trust.to_json()["retired"], retired)
         held["extra"] = {"unpairing": sign_unpairing(SigningKey.generate(), address)}
         self.assertFalse(Reader(resolver=self.server.resolve).verify_author(before).principal.ended)
-        late = {k: v for k, v in agent.compose([], "After.").items() if k != "signature"}
+        late = {k: v for k, v in agent.compose([], "After.", headers={"audience": "public"}).items() if k != "signature"}
         late["sentAt"] = timestamp(parse_timestamp(retired) + 1)
         signed = sign_message(late, agent.key)
         self.assertEqual(Reader(resolver=self.server.resolve).verify_author(signed).reason, "bad_signature")
@@ -485,7 +552,7 @@ class ClientTest(unittest.TestCase):
 
     def test_claims_count_only_as_their_carrier_signed_them_for_the_message(self):
         agent = self.server.pair("ada@example.com", "mailto:alice@example.com")
-        message, elsewhere = agent.compose([], "Hello"), agent.compose([], "Another message.")
+        message, elsewhere = agent.compose([], "Hello", headers={"audience": "public"}), agent.compose([], "Another message.", headers={"audience": "public"})
         claim = {
             "type": "acts-for",
             "agent": agent.address,
@@ -509,13 +576,14 @@ class ClientTest(unittest.TestCase):
                 trust = reader.verify_author(m, signed_claims=s)
                 self.assertEqual((trust.claims, trust.principal.basis), ("unverified", "agent-asserted"))
 
-    def test_a_forged_entry_gives_a_solo_agent_no_principal(self):
-        """A solo agent's message pasted beside its carrier's authoritative acts-for claim,
-        even one the carrier really signed, names no principal."""
+    def test_a_carriers_signed_claim_is_its_word_whatever_its_agent_registered_as(self):
+        """No agent document says paired or solo any more (spec 2.2): a message names its principal, and a
+        claim its carrier really signed backs it as that carrier's word, which an honest carrier never
+        gives for an agent that speaks for no one."""
         solo = self.agent()
         solo.register()
         posing = Agent(self.server.origin, solo.key, solo.address, principal="mailto:ceo@example.com")
-        message = posing.compose([], "Wire approved. Proceed.")
+        message = posing.compose([], "Wire approved. Proceed.", headers={"audience": "public"})
         claim = {
             "type": "acts-for",
             "agent": solo.address,
@@ -525,23 +593,23 @@ class ClientTest(unittest.TestCase):
         }
         signed = self.server.sign_claims([claim], message)
         trust = Reader(resolver=self.server.resolve).verify_author(message, signed_claims=signed)
-        self.assertEqual((trust.kind, trust.claims, trust.principal), ("solo", "verified", None))
+        self.assertEqual((trust.claims, trust.principal.id, trust.principal.basis), ("verified", "mailto:ceo@example.com", "server-claim"))
 
     def test_a_message_not_understood(self):
         agent = self.agent()
         agent.register()
         reader = Reader(resolver=self.server.resolve)
-        later = {"v": 2, "from": agent.address, "to": [], "sentAt": timestamp(), "headers": {"for": "x"}}
+        later = {"v": 9, "from": agent.address, "to": [], "sentAt": timestamp(), "headers": {"for": "x"}}
         trust = reader.verify_author(sign_message(later, agent.key))
         self.assertEqual((trust.verified, trust.understood, trust.principal), (True, False, None))
-        binding = agent.compose([], "Only an option.", headers={"binding": "no", "critical": "binding"})
+        binding = agent.compose([], "Only an option.", headers={"audience": "public", "binding": "no", "critical": "binding"})
         self.assertFalse(reader.verify_author(binding).understood)
-        known = agent.compose([], "Edited.", headers={"critical": "rel,pairing"})
+        known = agent.compose([], "Edited.", headers={"audience": "public", "critical": "rel,pairing"})
         self.assertTrue(reader.verify_author(known).understood)
 
     def test_a_domain_named_only_by_its_well_known_answer_grants_no_authority(self):
         agent = self.server.pair("web@example.com", "mailto:alice@example.com")
-        message = agent.compose([], "Hello")
+        message = agent.compose([], "Hello", headers={"audience": "public"})
         claim = {
             "type": "acts-for",
             "agent": agent.address,
@@ -562,7 +630,7 @@ class ClientTest(unittest.TestCase):
 
     def test_authority_follows_the_principal_domains_dns_carrier(self):
         agent = self.server.pair("ada@example.com", "mailto:alice@acme.example")
-        message = agent.compose([], "Hello")
+        message = agent.compose([], "Hello", headers={"audience": "public"})
         claim = {
             "type": "acts-for", "agent": agent.address, "for": "mailto:alice@acme.example",
             "scope": ["converse"], "verifiedAt": "2026-09-01T00:00:00Z",
@@ -576,18 +644,17 @@ class ClientTest(unittest.TestCase):
                 trust = Reader(resolver=resolved).verify_author(message, signed_claims=signed)
                 self.assertEqual(trust.principal.authoritative, authoritative)
 
-    def test_a_solo_agent_speaks_for_no_one(self):
-        agent = self.server.pair("ada@example.com", "mailto:alice@example.com")
-        message = agent.compose([], "Hello")
-        self.server.agents[agent.address]["kind"] = "solo"
+    def test_a_message_without_for_speaks_for_no_one(self):
+        agent = self.agent()
+        agent.register()
+        message = agent.compose([], "Hello", headers={"audience": "public"})
         trust = Reader(resolver=self.server.resolve).verify_author(message)
-        self.assertEqual((trust.kind, trust.principal), ("solo", None))
-        self.server.agents[agent.address]["kind"] = "x-later"
-        self.assertIsNone(Reader(resolver=self.server.resolve).verify_author(message).principal)
+        self.assertIsNone(trust.principal)
 
     def test_a_pairing_signed_for_another_address_is_refused(self):
         principal = SigningKey.generate()
-        pairing = principal.sign(pairing_bytes("someone@example.com", principal.identifier))
+        until = timestamp(int(time.time() * 1000) + 86_400_000)
+        pairing = f"{until} {principal.sign(pairing_bytes('someone@example.com', principal.identifier, until))}"
         with self.assertRaises(SimonError) as caught:
             self.agent().register("ada@example.com", principal=principal.identifier, pairing=pairing)
         self.assertEqual((caught.exception.status, caught.exception.code), (401, "bad_proof"))
@@ -634,8 +701,8 @@ class ClientTest(unittest.TestCase):
         recovered = fresh.recover_by_principal(address, at, recover, principal=principal.identifier, pairing=sign_pairing(principal, address))
         self.assertIsInstance(recovered["keys"], list)
         self.assertEqual(fresh.address, address)
-        self.assertEqual(fresh.compose([], "recovered")["headers"]["for"], principal.identifier)
-        fresh.send([], "recovered")
+        self.assertEqual(fresh.compose([], "recovered", headers={"audience": "public"})["headers"]["for"], principal.identifier)
+        fresh.send([], "recovered", headers={"audience": "public"})
         self.assertEqual([k["key"] for k in recovered["keys"]], [fresh.key.token])
         with self.assertRaises(SimonError) as caught:
             forged = sign_recovery(SigningKey.generate(), address, "x", at)
@@ -691,15 +758,15 @@ class ClientTest(unittest.TestCase):
         with self.assertRaises(SimonError) as caught:
             agent.fetch_part(part["sha256"], 9)
         self.assertEqual(caught.exception.code, "hash_mismatch")
-        message = agent.compose([], "attached", parts=[part])
+        message = agent.compose([], "attached", parts=[part], headers={"audience": "public"})
         self.assertEqual(message["parts"], [{"type": "text/plain", "data": "attached"}, part])
-        self.assertEqual(agent.compose([], parts=[part])["parts"], [part], "a file alone needs no text")
+        self.assertEqual(agent.compose([], parts=[part], headers={"audience": "public"})["parts"], [part], "a file alone needs no text")
 
     def test_a_clock_off_by_more_than_300_seconds_is_learned(self):
         self.server.skew = -1_000
         agent = self.agent()
         agent.register()
-        message = agent.compose([], "late")
+        message = agent.compose([], "late", headers={"audience": "public"})
         self.assertLess(abs(time.time() - 1_000 - parse_timestamp(message["sentAt"]) / 1000), 5)
         agent.send_message(message)
 
@@ -718,7 +785,7 @@ class ClientTest(unittest.TestCase):
     def test_a_version_the_server_does_not_implement(self):
         agent = self.agent()
         agent.register()
-        later = {"v": 2, "from": agent.address, "to": [], "sentAt": timestamp(), "signature": "AA"}
+        later = {"v": 9, "from": agent.address, "to": [], "sentAt": timestamp(), "signature": "AA"}
         later = sign_message(later, agent.key)
         with self.assertRaises(SimonError) as caught:
             agent.send_message(later)
@@ -774,7 +841,7 @@ class ClientTest(unittest.TestCase):
             self.assertEqual((caught.exception.code, caught.exception.status), ("invalid", None))
             self.assertEqual(caught.exception.details, {"field": field})
         with self.assertRaises(SimonError) as caught:
-            agent.compose([], "x")
+            agent.compose([], "x", headers={"audience": "public"})
         self.assertEqual(caught.exception.code, "not_registered")
 
     def test_network_failures_are_retryable(self):
@@ -786,7 +853,7 @@ class ClientTest(unittest.TestCase):
 
     def test_a_domain_that_resolves_to_no_server(self):
         reader = Reader(resolver=lambda domain: Resolution("not_found"))
-        message = Agent(self.server.origin, SigningKey.generate(), "eve@example.org").compose([], "hi")
+        message = Agent(self.server.origin, SigningKey.generate(), "eve@example.org").compose([], "hi", headers={"audience": "public"})
         self.assertEqual(reader.verify_author(message).reason, "no_server")
         reader = Reader(resolver=lambda domain: Resolution("temporary"))
         with self.assertRaises(SimonError) as caught:
@@ -990,12 +1057,13 @@ class CommandLine(unittest.TestCase):
         self.assertFalse((self.home / "wait.lock").exists())
 
     def leading_dash_pairing(self, local_prefix):
-        """A real fixed-seed signature; bounded fixture construction, never a skipped regression."""
+        """A real fixed-seed pairing whose signature starts with a dash, after its until and a space, so it
+        needs quoting twice over; bounded fixture construction, never a skipped regression."""
         principal = SigningKey(bytes(reversed(range(32))), allow_pure_python_signing=True)
         for suffix in range(1024):
             address = f"{local_prefix}{suffix}@example.com"
             pairing = sign_pairing(principal, address)
-            if pairing.startswith("-"):
+            if pairing.split(" ")[1].startswith("-"):
                 self.assertTrue(verify_pairing(address, principal.identifier, pairing))
                 return principal, address, pairing
         self.fail("No leading-dash pairing in the 1024 fixed synthetic address fixtures")
@@ -1019,7 +1087,7 @@ class CommandLine(unittest.TestCase):
         self.home.mkdir(parents=True, exist_ok=True)
         (self.home / "key.pem").write_text(fresh.to_pem())
         at, proof = self.leading_dash_recovery(principal, address, fresh)
-        self.assertTrue(pairing.startswith("-"))
+        self.assertTrue(pairing.split(" ")[1].startswith("-"))
         self.assertTrue(proof.startswith("-"))
         status, recovered = self.run_cli("register", "--server", self.server.origin, "--address", address,
             f"--principal-recovery={proof}", "--at", at, "--for", principal.identifier, f"--pairing={pairing}")
@@ -1032,7 +1100,7 @@ class CommandLine(unittest.TestCase):
 
     def test_mailbox_creation_and_recovery_next_commands_preserve_quoted_pairing_across_processes(self):
         principal, address, pairing = self.leading_dash_pairing("a#b%c/d?e^f`g{h|i}j'k")
-        self.assertTrue(pairing.startswith("-"))
+        self.assertTrue(pairing.split(" ")[1].startswith("-"))
         self.server.mailbox_addresses.add(address)
         original = self.workspace / "original-creation"
         fresh = self.workspace / "fresh-recovery"

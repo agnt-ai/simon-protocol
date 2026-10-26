@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
-import { canonicalize, header, namedFiles, type AnyMessage } from '@agnt-sdk/simon-protocol';
+import { canonicalize, header, namedFiles, VERSION, type AnyMessage } from '@agnt-sdk/simon-protocol';
 import { MAX_STORED_KEYS, StoreCapacityError, resolveRetractionCapacity, type RetractionCapacity } from './store.ts';
 import type {
   Agent,
@@ -100,7 +100,8 @@ const uniqueSources = <T extends PartSource & { size: number }>(sources: T[]) =>
 ];
 
 /** A version 1 message's `inReplyTo`. Other versions point at nothing the server can see. */
-const inReplyTo = (m: AnyMessage) => (m.v === 1 ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null);
+const inReplyTo = (m: AnyMessage) =>
+  m.v === VERSION ? ((m as { inReplyTo?: string | null }).inReplyTo ?? null) : null;
 
 /** A page of rows, newest first, fetched one beyond `limit` to tell whether there are more. */
 const page = (rows: Row[], limit: number, record: (r: Row) => StoredMessage): Page => ({
@@ -422,6 +423,15 @@ export class SqliteStore implements Store {
     });
   }
 
+  async succeedPrincipal(address: string, from: string, to: string) {
+    return this.#tx(() => {
+      const sql = 'UPDATE agents SET principal = ? WHERE address = ? AND principal = ? AND retired_at IS NULL';
+      if (this.#run(sql, to, address, from).changes !== 1) return false;
+      this.#bumpAuthority(address);
+      return true;
+    });
+  }
+
   async retireAgent(address: string, at: string, unpairing?: string) {
     this.#tx(() => {
       if (!this.#get('SELECT 1 FROM agents WHERE address = ? AND retired_at IS NULL', address)) return;
@@ -553,7 +563,7 @@ export class SqliteStore implements Store {
 
   #isRetraction(record: StoredMessage) {
     return (
-      record.message.v === 1 &&
+      record.message.v === VERSION &&
       header(record.message as never, 'rel') === 'retract' &&
       inReplyTo(record.message) !== null
     );

@@ -43,6 +43,8 @@ from simon.errors import SimonError, parse_problem
 from simon.keys import SigningKey, is_public_key, verify
 from simon.limits import DELIVERY_WINDOW_MS, MINIMUM_LIMITS, REPEAT_WINDOW_MS, SEND_WINDOW_MS
 from simon.messages import (
+    is_succession_value,
+    read_succession,
     check_author_signature,
     check_principal,
     is_critical_value,
@@ -51,6 +53,7 @@ from simon.messages import (
     is_principal,
     message_id,
     pairing_bytes,
+    parse_pairing,
     parse_message,
     recover_bytes,
     sign_message,
@@ -65,6 +68,8 @@ from simon.messages import (
 )
 from simon.reading import (
     claimed_principal,
+    pairing_standing,
+    predecessors,
     is_understood,
     reads_as,
 )
@@ -84,7 +89,6 @@ from simon.wire import (
     address_segment,
     b64url,
     is_address,
-    is_b64url,
     normalize_address,
     parse_timestamp,
     timestamp,
@@ -248,7 +252,8 @@ class HeaderValues(VectorCase):
     GRAMMAR = {
         "for": is_principal,
         "critical": is_critical_value,
-        "pairing": is_b64url,
+        "pairing": lambda v: parse_pairing(v) is not None,
+        "succession": is_succession_value,
         "listed": is_listed_value,
     }
 
@@ -264,13 +269,24 @@ class Pairings(VectorCase):
     def test_cases(self):
         for c in V["pairings"]["cases"]:
             with self.case(c["why"]):
-                self.assertEqual(pairing_bytes(c["agent"], c["principal"]).decode(), c["bytes"])
-                self.assertEqual(verify_pairing(c["agent"], c["principal"], c["pairing"]), c["verifies"])
+                until = parse_pairing(c["pairing"])[0]
+                self.assertEqual(pairing_bytes(c["agent"], c["principal"], until).decode(), c["bytes"])
+                at = parse_timestamp(c["at"])
+                self.assertEqual(verify_pairing(c["agent"], c["principal"], c["pairing"], at), c["verifies"])
                 token = c["principal"].removeprefix("simon-key:")
                 if c["verifies"] and token.startswith("ed25519:"):
                     for path, patch in signing_paths().items():
                         with self.subTest(path), patch:
-                            self.assertEqual(sign_pairing(signer(token), c["agent"]), c["pairing"])
+                            self.assertEqual(sign_pairing(signer(token), c["agent"], until), c["pairing"])
+
+
+class Successions(VectorCase):
+    section = "successions"
+
+    def test_cases(self):
+        for c in V["successions"]["cases"]:
+            with self.case(c["why"]):
+                self.assertEqual(read_succession(c["succession"], c["principal"]), c["steps"])
 
 
 class Signatures(VectorCase):
@@ -307,7 +323,8 @@ class Publications(VectorCase):
         p = V["publications"]
         r = p["post"]["response"]
         self.assertEqual(message_id(r["message"]), p["post"]["id"])
-        self.assertTrue(verify_message(r["message"], r["keys"]))
+        self.assertTrue(verify_message(r["message"], p["post"]["authorKeys"]))
+        self.assertNotIn("keys", r, "a published message is served without unsigned keys")
         self.assertTrue(verify_claims({"claims": r["claims"], "signature": r["claimsSignature"]}, r["message"], p["carrierKeys"]))
 
 
@@ -497,7 +514,8 @@ class Principals(VectorCase):
                 agent = c["agent"]
 
                 def check(c=c, agent=agent):
-                    check_principal(c["message"], agent["kind"], agent.get("for"))
+                    now = parse_timestamp(c["now"]) if "now" in c else None
+                    check_principal(c["message"], agent["kind"], agent.get("for"), now)
 
                 if c.get("accepted"):
                     check()
@@ -507,14 +525,13 @@ class Principals(VectorCase):
 
 class ClaimsConsidered(VectorCase):
     section = "claimsConsidered"
-    members = ("message", "kind", "claims", "considered")
+    members = ("message", "claims", "considered")
 
     def test_claims(self):
         with self.case(V["claimsConsidered"]["message"]):
             message = MESSAGES[V["claimsConsidered"]["message"]]["message"]
             claims = V["claimsConsidered"]["claims"]
-            kind = V["claimsConsidered"]["kind"]
-            self.assertEqual(claims_about(message, claims, kind), V["claimsConsidered"]["considered"])
+            self.assertEqual(claims_about(message, claims), V["claimsConsidered"]["considered"])
 
 
 class Authority(VectorCase):
@@ -561,9 +578,9 @@ class ClaimsJudged(VectorCase):
             return Resolved(r["outcome"], r.get("server"), r.get("via"))
 
         for c in j["cases"]:
-            with self.case(f"{c['message']}, from a {c['kind']} agent"):
+            with self.case(c["message"]):
                 message = MESSAGES[c["message"]]["message"]
-                judged = judge_claims(message, c["claims"], c["kind"], j["carrier"], resolved)
+                judged = judge_claims(message, c["claims"], j["carrier"], resolved)
                 self.assertEqual(judged, c["judged"])
 
 
@@ -657,7 +674,7 @@ class Recoveries(VectorCase):
 
 class Reading(VectorCase):
     section = "reading"
-    members = ("understoodHeaders", "understood", "principals", "knownRelations", "relations")
+    members = ("understoodHeaders", "understood", "principals", "pairings", "predecessors", "knownRelations", "relations")
 
     def test_understood(self):
         headers = set(V["reading"]["understoodHeaders"])
@@ -668,7 +685,17 @@ class Reading(VectorCase):
     def test_principals(self):
         for c in V["reading"]["principals"]:
             with self.case(c["name"]):
-                self.assertEqual(claimed_principal(c["message"], c["kind"]), c["principal"])
+                self.assertEqual(claimed_principal(c["message"]), c["principal"])
+
+    def test_pairings(self):
+        for c in V["reading"]["pairings"]:
+            with self.case(c["name"]):
+                self.assertEqual(pairing_standing(c["message"], parse_timestamp(c["now"])), c["standing"])
+
+    def test_predecessors(self):
+        for c in V["reading"]["predecessors"]:
+            with self.case(c["name"]):
+                self.assertEqual(predecessors(c["message"]), c["predecessors"])
 
     def test_relations(self):
         known = set(V["reading"]["knownRelations"])

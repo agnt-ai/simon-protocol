@@ -14,8 +14,13 @@ import type { Reply, Request } from './http.ts';
 import { DnsFailure, type Dns } from './net/dns.ts';
 import { Unreachable, type Http, type HttpRequest, type HttpResponse } from './net/fetch.ts';
 
+const CLOCK_START = '2026-10-15T12:00:00.000Z';
+
+/** A pairing's until a year after the test clock starts, so it counts at the clock's time, not the wall's. */
+export const CLOCK_PAIRING_UNTIL = '2027-10-15T12:00:00.000Z';
+
 export class Clock {
-  t = Date.parse('2026-10-15T12:00:00.000Z');
+  t = Date.parse(CLOCK_START);
   now = () => new Date(this.t);
   advance(ms: number) {
     this.t += ms;

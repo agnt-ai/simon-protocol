@@ -6,6 +6,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, it } from 'node:test';
 import type { Message } from '@agnt-sdk/simon-protocol';
+import { VERSION } from '@agnt-sdk/simon-protocol';
 import type { StoredMessage } from '../src/store/store.ts';
 import { SqliteStore } from '../src/store/sqlite.ts';
 import { retractionCapacityContract, storeContract } from '../src/store/contract.ts';
@@ -60,7 +61,7 @@ function stored(id: string, expiresAt = '2099-01-01T00:00:00.000Z'): StoredMessa
   return {
     id: id.repeat(64),
     message: {
-      v: 1,
+      v: VERSION,
       from: 'author@remote.test',
       to: [recipient],
       inReplyTo: null,

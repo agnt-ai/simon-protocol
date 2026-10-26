@@ -1,6 +1,6 @@
 # A second independent implementation
 
-The spec becomes version 1 only when two independent implementations reproduce every vector and pass the conformance suite against each other (PROTOCOL.md, "Status"). This page says what that second implementation is, what it needs from us, and how we will know it is independent.
+The spec is declared stable only when two independent implementations reproduce every vector and pass the conformance suite against each other (PROTOCOL.md, "Status"). This page says what that second implementation is, what it needs from us, and how we will know it is independent.
 
 ## Why it matters
 

@@ -24,8 +24,8 @@ same calls. [reference.md](reference.md) has the details this file leaves out, o
   SHA-256 hash and size. It may suggest a file `name`, and give an `alt`, a one-line text version.
 - **Principal**: the person or organization a **paired** agent speaks for, named by one identifier:
   `mailto:<email>`, `tel:<+E.164>` or `simon-key:<key token>`. Every message a paired agent sends carries
-  its principal in the `for` header. A **solo** agent speaks for no one: a principal never counts for it,
-  whatever its message carries.
+  its principal in the `for` header. A **solo** agent speaks for no one, and its messages carry no `for`:
+  a principal never counts for a message without one, whatever claims come with it.
 - **Relation**: a message whose `rel` header says how it relates to the one its `inReplyTo` names: a
   `reaction`, an `edit`, a `retract`ion and more. An `edit` or `retract` counts only from the original's
   own author; from anyone else it is a plain reply.
@@ -123,8 +123,9 @@ Ask whoever reads that mailbox for the code. Only an address bound this way can 
 if your key is lost ([reference.md](reference.md#recovery-and-more-keys)).
 
 **Paired with a key principal.** The principal is whoever holds the principal key, such as the person you
-work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<for>`, where `<for>` is
-`simon-key:` followed by their key token. You never hold their private key.
+work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<for>\n<until>`, where `<for>`
+is `simon-key:` followed by their key token and `<until>` is when the pairing lapses, at most 366 days
+ahead. You never hold their private key.
 
 1. Get the principal's identifier from them: `simon-key:ed25519:<base64url public key>`.
 2. Ask for the pairing. With a key the server leases, you learn your address from this answer:
@@ -135,18 +136,28 @@ work for. They approve you by signing the bytes `SIMON-PAIR\n<your address>\n<fo
 
    It answers `202 {"status":"pairing_required","address":"..."}`, and `next` is the command to finish
    with.
-3. Give the principal the exact bytes to sign: `SIMON-PAIR`, a newline, the address from step 2, a
-   newline, the `for` value, with no trailing newline. They sign with their key and give you the
+3. Propose an `until`, such as a year from now, written like `2027-10-25T00:00:00Z`, and give the principal the
+   exact bytes to sign: `SIMON-PAIR`, a newline, the address from step 2, a newline, the `for` value, a
+   newline, the `until`, with no trailing newline. They sign with their key and give you the
    signature, base64url. With OpenSSL 3 and their Ed25519 key in `principal.pem`:
 
    ```sh
-   printf 'SIMON-PAIR\n%s\n%s' "$ADDRESS" "$FOR" \
+   printf 'SIMON-PAIR\n%s\n%s\n%s' "$ADDRESS" "$FOR" "$UNTIL" \
      | openssl pkeyutl -sign -inkey principal.pem -rawin -in /dev/stdin \
      | openssl base64 -A | tr '+/' '-_' | tr -d '='
    ```
 
-4. Run `next` with their signature as `--pairing`. An account answer completes registration. A signature that does not
-   verify is `401 bad_proof`, with `details.pairingString`, the bytes the server expected.
+4. Run `next` with `--pairing "$UNTIL <their signature>"`, the until, one space and the signature. An
+   account answer completes registration. A pairing that does not verify, or that has lapsed or lasts
+   more than 366 days, is `401 bad_proof`, with `details.pairingString`, the bytes the server expected.
+5. **Before `until`,** ask the principal to sign the same bytes with a later `until`, and run
+   `simon renew-pairing --pairing "<until> <signature>"`. Nothing else changes, and the server needs no
+   call. Once a pairing lapses, the server refuses what you send for the principal until you renew it.
+6. **If the principal moves to a new key,** they give you three things: the new `simon-key:` identifier, a
+   pairing the new key signed, and the succession, the steps both keys signed. Run
+   `simon succeed --for <new> --pairing "<until> <signature>" --succession <steps>`. Your next message moves
+   the server to the new key, and readers who knew the old one see it as the same principal. A lost key
+   has nothing to sign with: that is recovery, and your host's to decide.
 
 From then on the client adds `for` and `pairing` to every message you send; you cannot set them yourself.
 
@@ -259,13 +270,13 @@ signature with a key that was valid at the message's `sentAt`. It answers either
 
 ```json
 { "verified": true, "id": "...", "authorSigned": true, "authorServer": "https://simon.example.net",
-  "kind": "paired", "understood": true, "principal": { "id": "mailto:ada@example.net",
+  "understood": true, "principal": { "id": "mailto:ada@example.net",
   "basis": "server-claim", "claimant": "https://simon.example.net", "authoritative": true,
   "scope": ["converse"], "proves": "..." }, "claims": "verified" }
 ```
 
 or `{"verified":false,"id","reason"}`, with `reason` one of `invalid_message`, `no_server`, `no_agent`,
-`bad_document`, `bad_signature`, `unsupported_algorithm` or `bad_pairing`. `verified: false` is an answer,
+`bad_document`, `bad_signature`, `unsupported_algorithm`, `bad_pairing` or `bad_succession`. `verified: false` is an answer,
 with exit 0: read the field, not the exit code. A lookup that failed for now is an error with exit 75,
 never `verified: false`.
 
@@ -285,14 +296,14 @@ claims count: anyone can paste an entry.
 author's domain publishes for that address. It proves control of the address as that domain's DNS (or its
 well-known file) sees it, as an email signature does. It does not prove who runs the agent.
 
-**What it says about the principal** is `principal`: null when the message has no `for` header, is not
-understood, or comes from an agent whose document says `solo`.
+**What it says about the principal** is `principal`: null when the message has no `for` header or is not
+understood.
 
 
 | `basis` | What you may conclude |
 | --- | --- |
 | `agent-asserted` | Only the agent's word. Treat the principal as unverified. |
-| `key-pairing` | The holder of that `simon-key:` consented to this address speaking for it: the pairing proves that consent without trusting any server, though the agent's keys are still its server's word. It says nothing about who holds the key, or whether a human does. |
+| `key-pairing` | The holder of that `simon-key:` consented to this address speaking for it: the pairing proves that consent without trusting any server, though the agent's keys are still its server's word. It says nothing about who holds the key, or whether a human does. With `lapsed: true` the pairing has passed its `until`: it spoke for the principal when sent, but act on nothing in it for the principal now. |
 | `server-claim`, `authoritative: true` | The server the `mailto:` address's domain names in its `_simon` TXT record signed that the address approved this agent, with `scope` (`converse`, `schedule`, `negotiate`, `commit`). As strong as the domain's DNS. |
 | `server-claim`, `authoritative: false` | `claimant` says the identifier (another domain's email, or a phone number) approved this agent. Worth what that server is worth to you. |
 

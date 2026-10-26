@@ -18,6 +18,7 @@ import {
   signMessage,
   signRequest,
   type Message,
+  VERSION,
 } from '@agnt-sdk/simon-protocol';
 import { systemDns, DnsFailure, type Lookups } from '../src/net/dns.ts';
 import { guardedHttp, Unreachable } from '../src/net/fetch.ts';
@@ -431,7 +432,7 @@ describe('the bound on lookups before a signature verifies (spec section 11.2)',
     const key = generateKey().privateKey;
     const m = signMessage<Message>(
       {
-        v: 1,
+        v: VERSION,
         from,
         to: ['ada@alpha.test'],
         inReplyTo: null,

@@ -160,7 +160,7 @@ export function fakeServer(opts: FakeOptions = {}) {
     }
     if (body.for !== undefined) {
       if (body.pairing === undefined) return { status: 'pairing_required', address };
-      if (!verifyPairing(address, body.for, body.pairing))
+      if (!verifyPairing(address, body.for, body.pairing, now()))
         throw refuse(401, 'bad_proof', 'The pairing does not verify.');
     }
     const agent: Held = { address, for: body.for, keys: [{ key: signer, added: timestamp(now()), revoked: null }] };
