@@ -370,11 +370,23 @@ async function resolution(domain: string, opts: ReadOptions): Promise<Resolution
 /**
  * The server that speaks for an identifier's holder (discovery profile, section 3): for `mailto:`, the server
  * its domain's `_simon` TXT record names, as for claims; null for a domain named only by its well-known
- * answer, one that names no server, and any `tel:`. A lookup that failed for now is a retryable error.
+ * answer, one that names no server, and any `tel:`. A domain whose `_simon` records are malformed or conflict
+ * tried to speak for itself and has no answer: `no_server`, and no directory is asked. A lookup that failed
+ * for now is a retryable error.
  */
 export async function identifierAuthority(identifier: string, opts: ReadOptions = {}): Promise<string | null> {
   if (!identifier.startsWith('mailto:')) return null;
-  const r = await resolution(domainOf(identifier.slice('mailto:'.length)), opts);
+  const domain = domainOf(identifier.slice('mailto:'.length));
+  const r = await resolution(domain, opts);
+  if (r.outcome === 'invalid_record' || r.outcome === 'conflict') {
+    throw new SimonError(
+      'no_server',
+      `${domain}'s _simon records ${r.outcome === 'conflict' ? 'conflict' : 'are malformed'}: it has no answer.`,
+      {
+        details: { domain, outcome: r.outcome },
+      },
+    );
+  }
   return r.outcome === 'server' && r.via === 'dns' ? r.server : null;
 }
 

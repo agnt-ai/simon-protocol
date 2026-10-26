@@ -26,7 +26,11 @@ import {
   isJsonType,
   jsonDataProblem,
   isListableIdentifier,
+  isJsonObject,
+  parseStrict,
   readDirectoryRecord,
+  serverOrigin,
+  MAX_DOCUMENT_BYTES,
   type DirectoryRecord,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
@@ -527,10 +531,14 @@ export class Agent {
 
   /**
    * The assistant the holder of `identifier`, an email address or a phone number, chose (discovery profile):
-   * asked of the identifier's own authority when its domain's TXT record names a server, whose answer is
-   * final, and otherwise of `directories`, the directory servers this agent trusts, in order. Each record is
-   * checked with its issuer's server document. Null when none holds one; a directory that failed for now,
-   * with none holding a record, is a retryable `unavailable`, never "nobody".
+   * asked of the identifier's own authority when its domain's TXT record names a server that answers lookups
+   * (its server document says `discovery`), whose answer is final, and otherwise of `directories`, the
+   * directory servers this agent trusts, in order, https origins only (`allowHttp` admits http for local
+   * development). Each record is checked with its issuer's server document. Null only when every server asked
+   * answered that it holds no record. A domain whose `_simon` records are malformed or conflict is `no_server`,
+   * no directory asked; a directory that answers something other than a record or `404`, a record that fails
+   * its checks included, is passed over, and when no other holds a record its failure is thrown, retryable
+   * when it may pass: never "nobody".
    */
   async findAssistant(
     identifier: string,
@@ -538,28 +546,57 @@ export class Agent {
   ): Promise<FoundAssistant | null> {
     if (!isListableIdentifier(identifier)) throw invalid('identifier', 'An identifier is mailto: or tel:.');
     const transport = { ...this.#transport, ...opts };
-    const authority = await identifierAuthority(identifier, transport);
-    const servers = authority ? [authority] : (opts.directories ?? []).map(d => originArg('directories', d));
+    const directories = (opts.directories ?? []).map(d => {
+      const origin = serverOrigin(d, !!opts.allowHttp);
+      if (!origin)
+        throw invalid('directories', `A directory is an https origin such as https://simon.example.com, not ${d}.`);
+      return origin;
+    });
+    let authority = await identifierAuthority(identifier, transport);
+    // A server that does not implement the profile does not end the search: its domain has not spoken.
+    if (authority && !(await fetchServerDocument(authority, transport)).discovery) authority = null;
+    const servers = authority ? [authority] : directories;
     let failed: SimonError | null = null;
     for (const server of servers) {
       const target = `${server}/simon/lookup?identifier=${encodeURIComponent(identifier)}`;
       try {
-        const a = await this.#signed('GET', target);
+        const a = await this.#signed('GET', target, undefined, MAX_DOCUMENT_BYTES);
         if (a.status === 404) continue;
-        const { record } = readJson<{ record: unknown }>(a, this.#transport.now());
-        const keys = (await fetchServerDocument(server, transport)).keys;
-        const read = readDirectoryRecord(record, identifier, keys, this.#transport.now(), opts.allowHttp);
-        // A record counts only from the server asked: no server answers in another's name.
-        if (read && read.issuer === server) return { address: read.address, record: read, authoritative: !!authority };
+        const found = await this.#readLookup(a, server, identifier, transport);
+        return { address: found.address, record: found, authoritative: !!authority };
       } catch (e) {
         if (!(e instanceof SimonError)) throw e;
-        // The authority's failure is final; a directory that misbehaves is passed over, one down for now remembered.
-        if (authority && !e.retryable) throw e;
-        if (e.retryable) failed = e;
+        // The authority's failure is final; a directory that misbehaves is passed over, its failure remembered,
+        // one that may pass before one that will not.
+        if (authority) throw e;
+        if (!failed || (e.retryable && !failed.retryable)) failed = e;
       }
     }
     if (failed) throw failed;
     return null;
+  }
+
+  /** The record a lookup answered, read as strictly as any signed object, from `server` alone; else `bad_response`. */
+  async #readLookup(a: Answer, server: string, identifier: string, opts: ReadOptions): Promise<DirectoryRecord> {
+    if (a.status < 200 || a.status > 299) throw failure(a, this.#transport.now());
+    const bad = (why: string) =>
+      new SimonError('bad_response', `${a.url} answered ${a.status} with ${why}.`, {
+        status: a.status,
+        details: { url: a.url },
+      });
+    if (a.body.length > MAX_DOCUMENT_BYTES) throw bad('more than a lookup answer may hold');
+    let answer: unknown;
+    try {
+      answer = parseStrict(a.body);
+    } catch {
+      throw bad('a body that is not JSON under the canonical rules');
+    }
+    const value = isJsonObject(answer) ? answer.record : undefined;
+    const keys = (await fetchServerDocument(server, opts)).keys;
+    const read = readDirectoryRecord(value, identifier, keys, this.#transport.now(), opts.allowHttp);
+    // A record counts only from the server asked: no server answers in another's name.
+    if (!read || read.issuer !== server) throw bad(`no record of ${identifier} that ${server} signed`);
+    return read;
   }
 
   /**
@@ -587,7 +624,7 @@ export class Agent {
   }
 
   /** A request to another server, signed as this agent: a reader or a directory's client (spec section 8). */
-  #signed(method: string, url: string, body?: Uint8Array): Promise<Answer> {
+  #signed(method: string, url: string, body?: Uint8Array, maxBytes?: number): Promise<Answer> {
     const signed = signRequest(this.#privateKey, {
       method,
       url,
@@ -596,7 +633,12 @@ export class Agent {
       agent: this.#requireAddress(),
     });
     const headers = body ? { ...JSON_TYPE, ...signed } : signed;
-    return exchange(this.#transport, url, { method, headers, body: body as Uint8Array<ArrayBuffer> | undefined });
+    return exchange(
+      this.#transport,
+      url,
+      { method, headers, body: body as Uint8Array<ArrayBuffer> | undefined },
+      maxBytes,
+    );
   }
 
   async #json<T>(method: string, path: string, body?: Uint8Array, headers?: Record<string, string>): Promise<T> {

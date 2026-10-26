@@ -115,6 +115,7 @@ describe('JSON-RPC', () => {
         'cancel_recovery',
         'find_assistant',
         'list_in_directory',
+        'unlist_from_directory',
         'renew_pairing',
         'succeed',
         'unpair',

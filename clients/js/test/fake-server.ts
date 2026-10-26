@@ -80,6 +80,8 @@ export interface FakeOptions {
   now?: () => Date;
   /** The claims this server keeps with a message it delivers, as a receiving server judged them. */
   claims?: (m: Message) => Claim[];
+  /** Whether it answers lookups and keeps a directory (discovery profile); default true. */
+  discovery?: boolean;
 }
 
 export function fakeServer(opts: FakeOptions = {}) {
@@ -246,8 +248,10 @@ export function fakeServer(opts: FakeOptions = {}) {
     const [, base, call, arg] = url.pathname.split('/');
     if (base !== 'simon') throw refuse(404, 'not_found', 'No such call.');
     const name = `${req.method} ${call}`;
-    if (name === 'GET server') return { json: serverDocument(origin, serverKeys) };
-    if (name === 'GET lookup' || call === 'directory') {
+    const discovery = opts.discovery ?? true;
+    if (name === 'GET server')
+      return { json: { ...serverDocument(origin, serverKeys), ...(discovery ? { discovery } : {}) } };
+    if (discovery && (name === 'GET lookup' || call === 'directory')) {
       // The discovery profile, trusting the signer's simon-agent header: a fake, not a server.
       const asker = req.headers.get('simon-agent');
       if (!asker) throw refuse(401, 'signature_required', 'Sign the request.');

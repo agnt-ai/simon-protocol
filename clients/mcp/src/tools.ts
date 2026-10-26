@@ -315,6 +315,14 @@ export const TOOLS: Tool[] = [
     run: async (args, ctx) => answer(await registered(ctx).listIn(args.directory, args.identifier, args.code)),
   },
   {
+    name: 'unlist_from_directory',
+    description:
+      'Unlist yourself in a directory as the assistant of an identifier, when the one you act for asks: it takes ' +
+      'effect at once. The answer is the same whether or not you were listed for it.',
+    inputSchema: schema({ directory: { type: 'string' }, identifier: { type: 'string' } }, ['directory', 'identifier']),
+    run: async (args, ctx) => answer(await registered(ctx).unlistFrom(args.directory, args.identifier)),
+  },
+  {
     name: 'renew_pairing',
     description:
       'Carry a renewed pairing from now on: "<until> <signature>", your key principal\'s signature over a later until. ' +
