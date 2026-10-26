@@ -1029,13 +1029,14 @@ function directoryRecords() {
     ['lasting exactly 366 days', signed({ expires: at(NOW, 366 * 24 * 60 * 60 * 1000) }), later],
     ['issued exactly 5 minutes ahead of the reader', signed({}), at(NOW, -5 * 60_000)],
     ['the largest revision', signed({ revision: Number.MAX_SAFE_INTEGER }), later],
-    ['a member no reader knows, which it drops', { ...signed({}), 'x-note': 'ignored' }, later],
+    ['a member the issuer signed, which no reader knows: signed, so kept', signed({ note: 'signed' }), later],
+    ['a member attached after signing, which no reader knows', { ...signed({}), note: 'unsigned' }, later],
     ['an issuer that is not an https origin', signed({ issuer: 'http://simon.example.com' }), later],
     ['an issuer written as resolution would not write it', signed({ issuer: 'https://SIMON.example.com/' }), later],
   ];
   return {
     about:
-      "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
+      "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature: every member it carries, known or not; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
     issuerKeys: keys,
     bytes: directoryBytes(base as never).toString(),
     cases: cases.map(([why, value, now, identifier = base.identifier]) => ({

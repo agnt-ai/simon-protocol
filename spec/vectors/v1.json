@@ -3949,7 +3949,7 @@
     ]
   },
   "directoryRecords": {
-    "about": "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
+    "about": "Directory records (discovery profile, section 1). bytes is SIMON-DIRECTORY, a newline and the canonical record without signature: every member it carries, known or not; record is what a reader takes from value at now when it asks about identifier, with the issuer's server keys issuerKeys, or null.",
     "issuerKeys": [
       {
         "key": "ed25519:ippxyKBT8yjfLhBhEr4gfohgAG0lOX7wx8OiSMR9Xt4",
@@ -4210,7 +4210,7 @@
         }
       },
       {
-        "why": "a member no reader knows, which it drops",
+        "why": "a member the issuer signed, which no reader knows: signed, so kept",
         "value": {
           "identifier": "mailto:sarah@example.org",
           "address": "sarah@assistants.example",
@@ -4218,8 +4218,8 @@
           "issued": "2026-10-14T21:00:00Z",
           "expires": "2027-10-14T21:00:00.000Z",
           "issuer": "https://simon.example.com",
-          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg",
-          "x-note": "ignored"
+          "note": "signed",
+          "signature": "x5zzS7X7L8SuAn59eCqaS4AmYsZn8SlfokeAG-G_RZCYSzO8-5uQP5ciNv9CUvXNspUu4R007ADftvB-pXyIBg"
         },
         "identifier": "mailto:sarah@example.org",
         "now": "2026-10-14T21:01:00.000Z",
@@ -4230,8 +4230,25 @@
           "issued": "2026-10-14T21:00:00Z",
           "expires": "2027-10-14T21:00:00.000Z",
           "issuer": "https://simon.example.com",
-          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg"
+          "note": "signed",
+          "signature": "x5zzS7X7L8SuAn59eCqaS4AmYsZn8SlfokeAG-G_RZCYSzO8-5uQP5ciNv9CUvXNspUu4R007ADftvB-pXyIBg"
         }
+      },
+      {
+        "why": "a member attached after signing, which no reader knows",
+        "value": {
+          "identifier": "mailto:sarah@example.org",
+          "address": "sarah@assistants.example",
+          "revision": 3,
+          "issued": "2026-10-14T21:00:00Z",
+          "expires": "2027-10-14T21:00:00.000Z",
+          "issuer": "https://simon.example.com",
+          "signature": "EgdChvOGi13BDLMoTVsUWvFBF8uEmYvolKdt0mon4j73p6TZTxg2UxXdunWeT2xLFeexeImMcTjt4FPbIr8OBg",
+          "note": "unsigned"
+        },
+        "identifier": "mailto:sarah@example.org",
+        "now": "2026-10-14T21:01:00.000Z",
+        "record": null
       },
       {
         "why": "an issuer that is not an https origin",

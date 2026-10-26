@@ -933,6 +933,7 @@ envelope-signed = %s"SIMON-ENVELOPE" LF canonical-envelope-without-signature
 claims-signed   = %s"SIMON-CLAIMS" LF canonical-claims-and-id   ; {"claims":[...],"message":"<id>"}
 signal-signed   = %s"SIMON-SIGNAL" LF canonical-signal-without-signature
 agent-signed    = %s"SIMON-AGENT" LF canonical-document-without-signature
+directory-signed = %s"SIMON-DIRECTORY" LF canonical-record-without-signature   ; discovery profile, section 1
 pairing-signed  = %s"SIMON-PAIR" LF address LF principal LF timestamp   ; the pairing's until
 unpairing-signed = %s"SIMON-UNPAIR" LF address LF principal
 succession-signed = %s"SIMON-SUCCEED" LF principal LF principal   ; the old identifier, then the new
@@ -946,6 +947,6 @@ target          = 1*(%x21-7E)                        ; the request target exactl
 LF              = %x0A
 ```
 
-Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `SIMON-HUMAN-CONSULTED`, and the discovery profile one more, `SIMON-DIRECTORY`.
+Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `SIMON-HUMAN-CONSULTED`. `directory-signed` is the discovery profile's: its canonical record keeps every member the record carries but `signature`, those the profile does not define included.
 
 In a media type, the type, subtype and parameter names are lower case, while `rname` admits upper case in parameter values. `rname` in type and subtype positions is matched in lower case only.

@@ -5,8 +5,10 @@
  *
  *   {"identifier","address","revision","issued","expires","issuer","signature"}
  *
- * signed by the issuer over `SIMON-DIRECTORY\n` and the canonical record without `signature`, with a key of
- * its server document valid at `issued`. A record lasts at most 366 days, as a pairing does.
+ * signed by the issuer over `SIMON-DIRECTORY\n` and the canonical record without `signature`: every member
+ * the record carries, those this library does not know included, so a later member is signed as the six are
+ * and nobody can attach one unsigned. Signed with a key of its server document valid at `issued`. A record
+ * lasts at most 366 days, as a pairing does.
  */
 import type { KeyObject } from 'node:crypto';
 import { isV1Address } from './address.ts';
@@ -17,6 +19,7 @@ import { serverOrigin } from './resolve.ts';
 import { parseTimestamp } from './time.ts';
 import { SENT_AT_FUTURE_MS } from './limits.ts';
 
+/** A record; members a later draft adds may ride along, signed with the rest. */
 export interface DirectoryRecord {
   /** A `mailto:` or `tel:` identifier. */
   identifier: string;
@@ -38,7 +41,7 @@ export const RECORD_MAX_MS = PAIRING_MAX_MS;
 export const isListableIdentifier = (value: unknown): value is string =>
   isPrincipal(value) && !value.startsWith('simon-key:');
 
-/** The bytes an issuer signs for a record. */
+/** The bytes an issuer signs for a record: every member but `signature`, known or not. */
 export const directoryBytes = (record: Omit<DirectoryRecord, 'signature'>) => signingBytes('SIMON-DIRECTORY', record);
 
 /** A record signed by `issuerKey`, a key of the issuer's server document. */
@@ -53,7 +56,8 @@ export function signDirectoryRecord(
  * The record `value` is, when a reader may take it at `now` for `identifier` (discovery profile, section 1):
  * every member well formed, for that identifier, issued at most 5 minutes ahead of `now`, not yet expired,
  * lasting at most 366 days, and signed by one of `issuerKeys`, the issuer's server keys, valid at `issued`.
- * Otherwise null. Members it does not know are dropped. `issuer` is an https origin, written as resolution
+ * Otherwise null. The signature covers every member but `signature`, so a member this library does not know
+ * counts only when the issuer signed it, and is then kept. `issuer` is an https origin, written as resolution
  * writes one; `allowHttp` admits http ones too, for local development only.
  */
 export function readDirectoryRecord(
@@ -83,14 +87,12 @@ export function readDirectoryRecord(
   ) {
     return null;
   }
-  const record = { identifier: id, address, revision: revision as number, issued, expires, issuer } as Omit<
-    DirectoryRecord,
-    'signature'
-  >;
+  const { signature: _, ...record } = value as Omit<DirectoryRecord, 'signature'> & { signature: string };
   try {
     if (!signedByAny(issuerKeys, new Date(from), directoryBytes(record), signature)) return null;
   } catch {
+    // A member with no canonical form was never signed.
     return null;
   }
-  return { ...record, signature: signature as string };
+  return { ...record, signature } as DirectoryRecord;
 }
