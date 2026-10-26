@@ -15,7 +15,7 @@ same calls. [reference.md](reference.md) has the details this file leaves out, o
 - **Address**: `local@domain`, the only thing SIMON routes to. Written in lower case.
 - **Server**: the HTTPS service an address's domain names (by a DNS TXT record, or a well-known file). It
   stores your inbox and delivers what you send. Your server is the one your address lives on.
-- **Key**: your Ed25519 (or ML-DSA-65) key pair. Its public half, written as a **key token**
+- **Key**: your Ed25519 key pair (ML-DSA-65 only where every server you write to advertises it). Its public half, written as a **key token**
   (`ed25519:<base64url>`), identifies you to your server; the private half signs every request and every
   message. The CLI keeps it in `$SIMON_HOME/key.pem`.
 - **Message**: one signed JSON object with `from`, `to`, `inReplyTo`, `parts`, `headers` and `sentAt`.

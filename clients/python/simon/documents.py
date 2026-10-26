@@ -105,20 +105,22 @@ def _read_object(body: bytes) -> dict[str, Any] | None:
     return value if isinstance(value, dict) else None
 
 
-#: The algorithms every version 1 server verifies, and so every server document lists (section 4).
+#: The algorithms version 1 defines (section 2.3).
 V1_ALGORITHMS = ("ed25519", "ml-dsa-65")
+#: The algorithms every server verifies, and so every server document lists; ml-dsa-65 is optional and advertised.
+REQUIRED_ALGORITHMS = ("ed25519",)
 _ALGORITHM_NAME = re.compile(r"[a-z0-9-]+")
 
 
 def _read_algorithms(value: Any) -> list[str] | None:
     """The algorithms a server document lists, in its order, or None: an array of algorithm names
-    (lower-case letters, digits and hyphens) that includes both version 1 algorithms. Names this reader
+    (lower-case letters, digits and hyphens) that includes every required algorithm. Names this reader
     does not know are kept."""
     if not isinstance(value, list) or not all(
         isinstance(a, str) and _ALGORITHM_NAME.fullmatch(a) for a in value
     ):
         return None
-    return list(value) if all(a in value for a in V1_ALGORITHMS) else None
+    return list(value) if all(a in value for a in REQUIRED_ALGORITHMS) else None
 
 
 def _read_limits(value: Any) -> dict[str, int] | None:

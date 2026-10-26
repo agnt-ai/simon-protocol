@@ -23,18 +23,10 @@
         "type": "string",
         "pattern": "^[a-z0-9-]+$"
       },
-      "allOf": [
-        {
-          "contains": {
-            "const": "ed25519"
-          }
-        },
-        {
-          "contains": {
-            "const": "ml-dsa-65"
-          }
-        }
-      ]
+      "contains": {
+        "const": "ed25519"
+      },
+      "description": "Every algorithm the server verifies: ed25519 always, ml-dsa-65 when it verifies it."
     },
     "limits": {
       "type": "object",

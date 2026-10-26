@@ -8,7 +8,7 @@ import {
   parseStrict,
   readKeys,
   serverOrigin,
-  V1_ALGORITHMS,
+  REQUIRED_ALGORITHMS,
   validAt,
   type Json,
 } from '@agnt-sdk/simon-protocol';
@@ -95,8 +95,8 @@ def(
     id: 'documents.server.algorithms',
     section: 'PROTOCOL 2.3, 4',
     level: 'must',
-    title: 'The server document lists the signature algorithms it verifies, both of version 1 among them',
-    expected: `algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ${V1_ALGORITHMS.join(' and ')}`,
+    title: 'The server document lists the signature algorithms it verifies, ed25519 among them',
+    expected: `algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ${REQUIRED_ALGORITHMS.join(' and ')}`,
   },
   async (t: T, ctx: Ctx) => {
     const res = await t.http({ method: 'GET', origin: ctx.origin, target: '/simon/server' });
@@ -106,7 +106,7 @@ def(
       Array.isArray(algorithms) && algorithms.every(a => typeof a === 'string' && /^[a-z0-9-]+$/.test(a)),
       `algorithms is ${JSON.stringify(algorithms)}`,
     );
-    const missing = V1_ALGORITHMS.filter(a => !algorithms.includes(a));
+    const missing = REQUIRED_ALGORITHMS.filter(a => !algorithms.includes(a));
     t.assert(missing.length === 0, `algorithms ${JSON.stringify(algorithms)} lacks ${missing.join(' and ')}`);
   },
 );

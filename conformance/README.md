@@ -217,7 +217,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 <!-- checks:start -->
 
-238 checks: 220 must, 18 should.
+238 checks: 209 must, 29 should.
 
 ### Documents (PROTOCOL 4)
 
@@ -226,7 +226,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `documents.server.readable` | must | PROTOCOL 4 | GET /simon/server without any signature answers 200 with a JSON object under section 5.1's rules, at most 131072 bytes, whose keys are well-formed entries, at most 32 of them not yet revoked |
 | `documents.server.origin` | must | PROTOCOL 4 | `server` equals the origin of the URL it was fetched from, compared as the URL standard serialises origins |
 | `documents.server.limits` | must | PROTOCOL 4, 9 | limits has messageBytes >= 262144, recipients >= 100, requestBodyBytes >= 1048576 and partBytes >= 26214400, each a safe integer |
-| `documents.server.algorithms` | must | PROTOCOL 2.3, 4 | algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ed25519 and ml-dsa-65 |
+| `documents.server.algorithms` | must | PROTOCOL 2.3, 4 | algorithms is an array of algorithm names (lower-case letters, digits and hyphens) that includes ed25519 |
 | `documents.server.key-valid-now` | must | PROTOCOL 2.4, 4 | at least one entry of an implemented algorithm is valid at the time of reading, or nothing the server signs can verify |
 | `documents.agent.served` | must | PROTOCOL 4 | GET /simon/agents/<address> (unsigned, `@` literal) answers 200 with the address asked for, and a signature over SIMON-AGENT that verifies with a server key valid now |
 | `documents.agent.address-segment` | must | PROTOCOL 2.1, 4, 8 | for an agent whose hosted name holds every version 1 character that is not an RFC 3986 pchar (# % / ? ^ ` { \| }), GET /simon/agents/<the address, those characters percent-encoded with upper-case hex, @ literal> answers 200 with that address, and the agent's own signed request naming its address in the path is answered as any other |
@@ -255,7 +255,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `requests.nonce-after-bad-signature` | must | PROTOCOL 8 | nonce N with a signature that does not verify: 401 bad_signature; then a good request with N: 200; then N again: 401 replayed_request |
 | `requests.nonce-after-unsigned` | must | PROTOCOL 8 | nonce N with no simon-signature: 401 signature_required; then a good request with N: 200 |
 | `requests.nonce-after-stale` | must | PROTOCOL 8 | nonce N with a timestamp outside the window: 401 stale_request; then a good request with N: 200 |
-| `requests.refusal-order` | must | PROTOCOL 8 | malformed header before stale timestamp; stale timestamp before unknown key; unknown key before bad signature; bad signature before replayed nonce |
+| `requests.refusal-order` | should | PROTOCOL 8 | malformed header before stale timestamp; stale timestamp before unknown key; unknown key before bad signature; bad signature before replayed nonce |
 | `requests.nonce-per-key` | should | PROTOCOL 8 | two agents using the same nonce, each once, both answer 200 |
 | `requests.server-time` | should | PROTOCOL 8 | a 401's details.serverTime is within 300 s of the time the suite read it |
 
@@ -279,11 +279,11 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `deliver.extras-limit` | must | PROTOCOL 6.3 step 2, PROTOCOL 6.2, 9 | 202 when canonical {"claims":..,"hints":..} is exactly 16384 bytes; 400 invalid (details.field "claims" or "hints") at 16385 |
 | `deliver.claims-signed` | must | PROTOCOL 6.3 steps 2, 7, PROTOCOL 6.2 | 400 invalid with details.field "claimsSignature" for claims without a claimsSignature, and for a claimsSignature without claims; 403 bad_signature for a claimsSignature made over other claims, though the envelope itself verifies |
 | `deliver.unknown-members` | must | PROTOCOL 6.1, 10 | 202 for an envelope carrying members this version does not define, covered by its signature |
-| `deliver.order-shape-before-canonical` | must | PROTOCOL 6.3 steps 2-3 | 400 invalid with details.field "claims" and no details.canonical, for claims that are a string and a message that is not canonical |
+| `deliver.order-shape-before-canonical` | should | PROTOCOL 6.3 steps 2-3 | 400 invalid with details.field "claims" and no details.canonical, for claims that are a string and a message that is not canonical |
 | `deliver.canonical` | must | PROTOCOL 6.3 step 3, PROTOCOL 5.1 | 400 invalid with details.canonical exactly the canonical form, for whitespace, keys out of order, an escaped solidus, and a needless \u escape |
 | `deliver.envelope-need-not-be-canonical` | must | PROTOCOL 6.1 | 202 for an envelope with whitespace and its members out of order, whose message member is canonical and whose signature is over the canonical envelope |
-| `deliver.order-canonical-before-message` | must | PROTOCOL 6.3 steps 3-4 | 400 invalid with details.canonical for a non-canonical message that also has a field version 1 does not define |
-| `deliver.order-canonical-before-signature` | must | PROTOCOL 6.3 steps 3, 7 | 400 invalid with details.canonical (not 403) for a non-canonical message in an envelope signed by a key the sender's server does not list |
+| `deliver.order-canonical-before-message` | should | PROTOCOL 6.3 steps 3-4 | 400 invalid with details.canonical for a non-canonical message that also has a field version 1 does not define |
+| `deliver.order-canonical-before-signature` | should | PROTOCOL 6.3 steps 3, 7 | 400 invalid with details.canonical (not 403) for a non-canonical message in an envelope signed by a key the sender's server does not list |
 | `deliver.invariants` | must | PROTOCOL 6.3 step 4, PROTOCOL 1 | 400 invalid with details.field naming v, from, to, sentAt or signature when it is missing or malformed: v absent, 0 or "1"; from in upper case or without @; to in upper case, not an array, or holding a non-address; sentAt with an offset or naming 30 February; signature missing or padded |
 | `deliver.version-rules` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.2-5.4 | 400 invalid with details.field naming the field at fault: an undefined field, inReplyTo missing or not an id, a repeated recipient, a non-ASCII local part, 33 parts, a part with an upper-case type or both data and sha256, non-base64 data in a binary part, 33 headers, a header name in upper case, a header that is not a string, a for that is no principal, pairing without a simon-key for, a simon-key for without pairing, and critical with spaces |
 | `deliver.any-parts` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.3 | 202 for a message with no parts, one with only a file, one whose only text is HTML, one whose text is content-addressed, a sealed message, and one of 32 parts; 400 invalid with details.field "parts" for one of 33 parts |
@@ -293,41 +293,41 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `deliver.header-placement` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.4 | 202 for a message with inReplyTo and a rel the registry does not list, for a relation marked listed: yes, for rel without inReplyTo and for feed on a message with recipients (each ignored); 400 invalid with details.field "headers" for rel in upper case, audience on a message with recipients, listed on a plain reply, and listed: Yes |
 | `deliver.pairing-signature-not-checked-by-servers` | should | PROTOCOL 2.2, 5.4 | 202 for a message with a simon-key: for and a well-formed pairing, valid or not: verifying it is for readers who rely on it |
 | `deliver.recipients-limit` | must | PROTOCOL 6.3 step 4, PROTOCOL 9 | 202 for exactly `recipients` recipients; 400 invalid with details.field "to" for one more |
-| `deliver.message-size` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.5 | 202 for a message of exactly the published messageBytes; 400 invalid with details.field "message" for one byte more |
+| `deliver.message-size` | must | PROTOCOL 6.3 step 4, PROTOCOL 5.7 | 202 for a message of exactly the published messageBytes; 400 invalid with details.field "message" for one byte more |
 | `deliver.unknown-version` | must | PROTOCOL 1, 6.3 step 4 | 202 for a version 7 message with fields version 1 does not define (and a headers member version 1 would refuse), signed by its author; and for one whose to also names a non-ASCII local part, which only version 1 forbids |
 | `deliver.unknown-version-stored` | must | PROTOCOL 1 | the version 7 message appears in the recipient's inbox with its id, byte for byte (given that a plain version 1 message from the same sender does) |
 | `deliver.unknown-version-invariants` | must | PROTOCOL 1, 6.3 step 4 | 400 invalid naming from for a version 7 message whose from is in upper case, and naming to for one without to |
-| `deliver.order-message-before-resolution` | must | PROTOCOL 6.3 steps 4, 6 | 400 invalid naming the field, not 403 or 503, for a message with an undefined field from a domain that names no server |
+| `deliver.order-message-before-resolution` | should | PROTOCOL 6.3 steps 4, 6 | 400 invalid naming the field, not 403 or 503, for a message with an undefined field from a domain that names no server |
 | `deliver.destination-server` | must | PROTOCOL 6.3 step 5, PROTOCOL 6.1 | 400 invalid with details.field "server" for an envelope signed for the simulator's own origin, and for another port of the server's host, delivered here |
 | `deliver.destination-recipients` | must | PROTOCOL 6.3 step 5, PROTOCOL 6.1 | 400 invalid with details.field "recipients" for a recipient that is not in to |
 | `deliver.served-recipients` | must | PROTOCOL 6.3 step 8, PROTOCOL 6.1 | 400 invalid with details.field "recipients" for a recipient in to on a domain the server does not serve |
 | `deliver.order-signature-before-served` | must | PROTOCOL 6.3 steps 7-8, PROTOCOL 11.2 | 403 bad_signature, not 400 on recipients, for an envelope signed by an unlisted key naming a recipient on a domain the server does not serve: no recipient is looked up for an unauthenticated caller |
 | `deliver.no-lookup-before-signature` | must | PROTOCOL 6.3 steps 5-8, PROTOCOL 11.2 | no request to the second simulator's /.well-known/simon while the server refuses a forged envelope naming a recipient on the second simulator's domain (needs a second simulator reached by its well-known answer, as behind a tunnel) |
-| `deliver.order-message-before-destination` | must | PROTOCOL 6.3 steps 4-5 | 400 invalid naming the undefined field (not server) for a message with a field version 1 does not define, in an envelope for another server |
-| `deliver.order-destination-before-resolution` | must | PROTOCOL 6.3 steps 5-6 | 400 invalid on server, not 403 or 503, for an envelope for another server carrying a message from a domain that names no server |
+| `deliver.order-message-before-destination` | should | PROTOCOL 6.3 steps 4-5 | 400 invalid naming the undefined field (not server) for a message with a field version 1 does not define, in an envelope for another server |
+| `deliver.order-destination-before-resolution` | should | PROTOCOL 6.3 steps 5-6 | 400 invalid on server, not 403 or 503, for an envelope for another server carrying a message from a domain that names no server |
 | `deliver.from-unresolvable` | must | PROTOCOL 6.3 step 6, PROTOCOL 3 | 403 bad_signature for a message from a domain whose resolution is not_found (the default, example.invalid, has no DNS at all) |
 | `deliver.from-own-domain` | must | PROTOCOL 6.3 step 6 | 403 bad_signature for a message from an address on the server's own domain, carried by the simulator |
-| `deliver.order-resolution-before-freshness` | must | PROTOCOL 6.3 steps 6, 10 | 403 bad_signature, not 400, for a stale message from a domain that names no server |
+| `deliver.order-resolution-before-freshness` | should | PROTOCOL 6.3 steps 6, 10 | 403 bad_signature, not 400, for a stale message from a domain that names no server |
 | `deliver.envelope-signature` | must | PROTOCOL 6.3 step 7, PROTOCOL 6.1 | 403 bad_signature for an envelope signed by a key the sender's server does not list, by a listed key revoked in the past, and by a listed key added in the future |
 | `deliver.envelope-covers-everything` | must | PROTOCOL 6.1, 6.2 | 403 bad_signature for an unknown member added after signing, hints changed after signing, claims: [] with its claimsSignature added to an envelope signed without claims, claims and their claimsSignature removed from one signed with claims: [], and a recipient added after signing (one the message names) |
 | `deliver.order-envelope-before-repeat` | must | PROTOCOL 6.3 steps 7, 9 | 202 for a message, then 403 bad_signature for the same message in an envelope signed by an unlisted key |
-| `deliver.order-envelope-before-freshness` | must | PROTOCOL 6.3 steps 7, 10 | 403 bad_signature, not 400, for a stale message in an envelope signed by an unlisted key |
+| `deliver.order-envelope-before-freshness` | should | PROTOCOL 6.3 steps 7, 10 | 403 bad_signature, not 400, for a stale message in an envelope signed by an unlisted key |
 | `deliver.repeat` | must | PROTOCOL 6.3 step 9, PROTOCOL 11.2 | 202 for the same message delivered twice, and the recipient's inbox holds it once |
 | `deliver.repeat-other-envelope` | should | PROTOCOL 6.3 step 9 | 202 for a message delivered again to the same recipients with different hints and claims |
-| `deliver.order-repeat-before-author` | must | PROTOCOL 6.3 steps 9, 11 | 202 for a message accepted before, delivered again after its author's document stopped being served (404) |
+| `deliver.order-repeat-before-author` | should | PROTOCOL 6.3 steps 9, 11 | 202 for a message accepted before, delivered again after its author's document stopped being served (404) |
 | `deliver.repeat-per-recipient` | must | PROTOCOL 6.3 steps 9-10, 12 | for a message to a and b first delivered to a just inside the 144-hour window: once the window closed, 202 for a again (a repeat), but 400 on sentAt for a and b, and for b alone, which are not repeats |
 | `deliver.repeat-new-recipient` | must | PROTOCOL 6.3 step 12, PROTOCOL 11.2 | for a message to a and b: 202 for an envelope to a, then 202 for one to b; b's inbox then holds the message, and a's holds it once |
 | `deliver.fan-out-recipients` | must | PROTOCOL 6.3 step 12, PROTOCOL 6.1 | for a message to a and b in an envelope listing only a: a's inbox holds it, and b's does not (read after a's has it, and again a second later) |
 | `deliver.order-repeat-before-freshness` | must | PROTOCOL 6.3 steps 9-10 | 202 for a message first delivered just inside the 144-hour window and delivered again just after it closed; 400 on sentAt for a new message with the same sentAt |
 | `deliver.freshness` | must | PROTOCOL 6.3 step 10 | 202 just inside each bound (by the clock margin); 400 invalid with details.field "sentAt" just outside each |
-| `deliver.order-freshness-before-author` | must | PROTOCOL 6.3 steps 10-11 | 400 invalid on sentAt, not 403, for a stale message whose signature does not verify |
+| `deliver.order-freshness-before-author` | should | PROTOCOL 6.3 steps 10-11 | 400 invalid on sentAt, not 403, for a stale message whose signature does not verify |
 | `deliver.author-signature` | must | PROTOCOL 6.3 step 11 | 403 bad_signature for a message signed by a key its author's document does not list, and for one altered after signing |
 | `deliver.author-strict-ed25519` | must | PROTOCOL 6.3 step 11, PROTOCOL 2.3 | 403 bad_signature for a valid signature with L added to S, which the bare verification equation still accepts |
 | `deliver.author-document-unavailable` | must | PROTOCOL 6.3 step 11, PROTOCOL 4 | 503 unavailable with retryable: true when the author's server answers the agent document with 503, 500 or 429: those are temporary |
 | `deliver.author-document-unreadable` | must | PROTOCOL 6.3 step 11, PROTOCOL 4 | 403 bad_signature when the agent document is answered 404 or 403 (no document), names another address, is signed by a key the server does not list, lists a malformed Ed25519 key, lists 33 keys, or is over 131072 bytes |
 | `deliver.author-document-extensible` | must | PROTOCOL 2.3, 4 | 202 when the author's document also lists a key of an algorithm nobody implements, when it still says kind, a member of draft 0.1, and when it has members no reader knows (the simulator's server document always has one too) |
 | `deliver.author-key-valid-at-sentAt` | must | PROTOCOL 6.3 step 11, PROTOCOL 2.4 | 202 when the key was added 299 s after sentAt or revoked 1 s after it; 403 bad_signature when added 301 s after sentAt or revoked exactly at it |
-| `deliver.author-ml-dsa` | must | PROTOCOL 6.3 step 11, PROTOCOL 2.3 | 202 for a message signed by an author whose key is ml-dsa-65 |
+| `deliver.author-ml-dsa` | must | PROTOCOL 6.3 step 11, PROTOCOL 2.3 | 202 for a message signed by an author whose key is ml-dsa-65, to a server whose document lists ml-dsa-65 |
 | `deliver.author-unsupported-algorithm` | must | PROTOCOL 6.3 step 11, PROTOCOL 2.3, 9 | 403 unsupported_algorithm when the author document lists only a key of an algorithm nobody implements, and when it also lists an Ed25519 key revoked before sentAt; 403 bad_signature, not unsupported_algorithm, when an Ed25519 key valid at sentAt is listed beside it and the signature does not verify |
 | `deliver.silence` | must | PROTOCOL 6.3 "Policy is silent" | byte-identical 202 answers for a valid message to a known agent, to an unknown name on the server's domain, and to an unknown name whose message also names an address elsewhere |
 
@@ -344,7 +344,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `register.address-taken-code` | should | CLIENT register | 409 address_taken for a new key registering an address another agent holds |
 | `register.homed-elsewhere` | must | CLIENT register | 409 address_homed_elsewhere with details.server the simulator's origin, for an address on the simulator's domain |
 | `register.no-server` | must | CLIENT register | 409 address_homed_elsewhere with details.server null, for an address on a domain that resolves to no SIMON server |
-| `register.ml-dsa` | must | CLIENT register, PROTOCOL 2.3 | registering with an ml-dsa-65 key succeeds, its document lists the key, and requests it signs answer 200 |
+| `register.ml-dsa` | must | CLIENT register, PROTOCOL 2.3 | on a server that advertises ml-dsa-65, registering with an ml-dsa-65 key succeeds, its document lists the key, and requests it signs answer 200 |
 | `register.pairing-required` | must | CLIENT register | register {"key","for"} with a simon-key: principal answers 202 {"status":"pairing_required","address"}; the same call with "pairing", <until> and the principal's signature over SIMON-PAIR\n<address>\n<for>\n<until>, answers 200 account at that address |
 | `register.paired-document` | must | CLIENT register, PROTOCOL 4 | the document is readable, has no kind member, and nothing in it names the principal's key |
 | `register.pairing-bad-proof` | must | CLIENT register, CLIENT errors | 401 bad_proof for register with for and a pairing signed for another address, one that lapsed a minute ago, and one lasting more than 366 days |
@@ -384,7 +384,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `send.order-version` | must | CLIENT send | 400 invalid with details.canonical for a non-canonical version 7 message; 400 invalid naming to for a version 7 message without to; 400 unsupported_version, not 400 on from, for another agent's version 7 message |
 | `send.order-after-message` | must | CLIENT send | 400 on from (not 401) for another agent's message with a bad signature; 401 bad_signature (not 400 on headers) for a solo agent's message with a for header and a bad signature; 400 on headers (not on sentAt) for a solo agent's message with a for header, 5 minutes ahead plus the margin; 400 on sentAt (not part_not_uploaded) for a message that far ahead naming a part never uploaded; 401 bad_signature (not part_not_uploaded) for a bad signature naming a part never uploaded |
 | `send.hints` | must | CLIENT send "Hints" | 200 with a valid simon-hints header added after signing; 400 invalid for simon-hints that is not JSON, an array, or names an address not in to |
-| `send.ml-dsa` | must | CLIENT send, PROTOCOL 2.3 | 200 for a message signed with ml-dsa-65 by an agent registered with that key |
+| `send.ml-dsa` | must | CLIENT send, PROTOCOL 2.3 | 200 for a message signed with ml-dsa-65 by an agent registered with that key, on a server that advertises ml-dsa-65 |
 
 ### Account and recovery (CLIENT)
 

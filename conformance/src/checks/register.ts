@@ -330,9 +330,11 @@ def(
     level: 'must',
     title: 'An agent may hold an ML-DSA-65 key',
     expected:
-      'registering with an ml-dsa-65 key succeeds, its document lists the key, and requests it signs answer 200',
+      'on a server that advertises ml-dsa-65, registering with an ml-dsa-65 key succeeds, its document lists the key, and requests it signs answer 200',
   },
   async (t: T, ctx: Ctx) => {
+    if (!(await ctx.serverDoc()).doc.algorithms.includes('ml-dsa-65'))
+      t.skip('the server does not advertise ml-dsa-65, which is optional');
     const m = await ctx.agent('mldsa', 'ml-dsa-65');
     const { read } = await agentDocument(t, ctx, m.address);
     t.assert(read && lists(read.keys, m.token), 'the agent document does not list the ml-dsa-65 key');

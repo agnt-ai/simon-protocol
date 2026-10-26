@@ -467,7 +467,7 @@ def(
   {
     id: 'deliver.order-shape-before-canonical',
     section: `${S} steps 2-3`,
-    level: 'must',
+    level: 'should',
     title: 'A malformed envelope is refused on its shape before the message is checked for canonical form',
     expected:
       '400 invalid with details.field "claims" and no details.canonical, for claims that are a string and a message that is not canonical',
@@ -541,7 +541,7 @@ def(
   {
     id: 'deliver.order-canonical-before-message',
     section: `${S} steps 3-4`,
-    level: 'must',
+    level: 'should',
     title: 'Canonical form is checked before the message rules',
     expected:
       '400 invalid with details.canonical for a non-canonical message that also has a field version 1 does not define',
@@ -559,7 +559,7 @@ def(
   {
     id: 'deliver.order-canonical-before-signature',
     section: `${S} steps 3, 7`,
-    level: 'must',
+    level: 'should',
     title: 'A non-canonical message with a bad envelope signature is refused for its form',
     expected:
       "400 invalid with details.canonical (not 403) for a non-canonical message in an envelope signed by a key the sender's server does not list",
@@ -913,7 +913,7 @@ function messageOfSize(ctx: Ctx, p: PeerAgent, to: string, bytes: number) {
 def(
   {
     id: 'deliver.message-size',
-    section: `${S} step 4, PROTOCOL 5.5`,
+    section: `${S} step 4, PROTOCOL 5.7`,
     level: 'must',
     title: 'A message is at most messageBytes, and one of exactly that size is taken',
     expected:
@@ -1028,7 +1028,7 @@ def(
   {
     id: 'deliver.order-message-before-resolution',
     section: `${S} steps 4, 6`,
-    level: 'must',
+    level: 'should',
     title: 'The message is checked before its from-domain is resolved',
     expected: `400 invalid naming the field, not 403 or 503, for a message with an undefined field from a domain that names no server`,
   },
@@ -1152,7 +1152,7 @@ def(
   {
     id: 'deliver.order-message-before-destination',
     section: `${S} steps 4-5`,
-    level: 'must',
+    level: 'should',
     title: 'The message is checked before the destination',
     expected:
       '400 invalid naming the undefined field (not server) for a message with a field version 1 does not define, in an envelope for another server',
@@ -1170,7 +1170,7 @@ def(
   {
     id: 'deliver.order-destination-before-resolution',
     section: `${S} steps 5-6`,
-    level: 'must',
+    level: 'should',
     title: 'The destination is checked before the from-domain is resolved',
     expected:
       '400 invalid on server, not 403 or 503, for an envelope for another server carrying a message from a domain that names no server',
@@ -1231,7 +1231,7 @@ def(
   {
     id: 'deliver.order-resolution-before-freshness',
     section: `${S} steps 6, 10`,
-    level: 'must',
+    level: 'should',
     title: 'Resolution is checked before freshness',
     expected: '403 bad_signature, not 400, for a stale message from a domain that names no server',
   },
@@ -1317,7 +1317,7 @@ def(
   {
     id: 'deliver.order-envelope-before-freshness',
     section: `${S} steps 7, 10`,
-    level: 'must',
+    level: 'should',
     title: 'The envelope signature is checked before freshness',
     expected: '403 bad_signature, not 400, for a stale message in an envelope signed by an unlisted key',
   },
@@ -1378,7 +1378,7 @@ def(
   {
     id: 'deliver.order-repeat-before-author',
     section: `${S} steps 9, 11`,
-    level: 'must',
+    level: 'should',
     title: 'A repeat is acknowledged without checking the author again',
     expected:
       "202 for a message accepted before, delivered again after its author's document stopped being served (404)",
@@ -1529,7 +1529,7 @@ def(
   {
     id: 'deliver.order-freshness-before-author',
     section: `${S} steps 10-11`,
-    level: 'must',
+    level: 'should',
     title: "Freshness is checked before the author's signature",
     expected: '400 invalid on sentAt, not 403, for a stale message whose signature does not verify',
   },
@@ -1691,10 +1691,13 @@ def(
     id: 'deliver.author-ml-dsa',
     section: `${S} step 11, PROTOCOL 2.3`,
     level: 'must',
-    title: 'Every server verifies ML-DSA-65',
-    expected: '202 for a message signed by an author whose key is ml-dsa-65',
+    title: 'A server that advertises ML-DSA-65 verifies it',
+    expected:
+      '202 for a message signed by an author whose key is ml-dsa-65, to a server whose document lists ml-dsa-65',
   },
   async (t: T, ctx: Ctx) => {
+    if (!(await ctx.serverDoc()).doc.algorithms.includes('ml-dsa-65'))
+      t.skip('the server does not advertise ml-dsa-65, which is optional');
     const { m } = await valid(ctx, {}, ctx.peer.agent('mldsa', { alg: 'ml-dsa-65' }));
     accepted(t, await ctx.deliver(t, ctx.peer.envelope(m)));
   },

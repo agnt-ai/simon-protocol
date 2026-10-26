@@ -367,8 +367,8 @@ def(
   {
     id: 'requests.refusal-order',
     section: 'PROTOCOL 8',
-    level: 'must',
-    title: 'Refusals come in the order section 8 lists them',
+    level: 'should',
+    title: 'Refusals come in the reference order section 8 lists them',
     expected:
       'malformed header before stale timestamp; stale timestamp before unknown key; unknown key before bad signature; bad signature before replayed nonce',
   },

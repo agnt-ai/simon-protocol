@@ -687,14 +687,15 @@ describe('documents', () => {
     assert.deepEqual(read({ ...ada1, kind: 'paired' }), { address: ada1.address, keys: ada1.keys });
   });
 
-  it('a server document lists the algorithms it verifies, both of version 1 among them', () => {
+  it('a server document lists the algorithms it verifies, ed25519 among them', () => {
     const doc = serverDocument('https://simon.example.com', serverKeys);
     assert.deepEqual(doc.algorithms, ['ed25519', 'ml-dsa-65']);
     const read = (algorithms: unknown) =>
       readServerDocument(body(JSON.stringify({ ...doc, algorithms })), 'https://simon.example.com', NOW)?.algorithms ??
       null;
     assert.deepEqual(read(['ml-dsa-65', 'x-later', 'ed25519']), ['ml-dsa-65', 'x-later', 'ed25519']);
-    for (const bad of [undefined, [], ['ed25519'], 'ed25519,ml-dsa-65', ['ed25519', 'ml-dsa-65', 'X']]) {
+    assert.deepEqual(read(['ed25519']), ['ed25519'], 'ml-dsa-65 is optional');
+    for (const bad of [undefined, [], ['ml-dsa-65'], 'ed25519,ml-dsa-65', ['ed25519', 'ml-dsa-65', 'X']]) {
       assert.equal(read(bad), null, String(bad));
     }
   });

@@ -523,9 +523,12 @@ def(
     section: `${S}, PROTOCOL 2.3`,
     level: 'must',
     title: 'An agent with an ML-DSA-65 key sends',
-    expected: '200 for a message signed with ml-dsa-65 by an agent registered with that key',
+    expected:
+      '200 for a message signed with ml-dsa-65 by an agent registered with that key, on a server that advertises ml-dsa-65',
   },
   async (t: T, ctx: Ctx) => {
+    if (!(await ctx.serverDoc()).doc.algorithms.includes('ml-dsa-65'))
+      t.skip('the server does not advertise ml-dsa-65, which is optional');
     const m = await ctx.agent('mldsa', 'ml-dsa-65');
     const { b } = await pair(ctx);
     t.status(await m.send(t, m.message({ to: [b.address] })), 200);
