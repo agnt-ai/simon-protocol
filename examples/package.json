@@ -14,7 +14,7 @@
     "node": ">=26"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.3.0",
-    "@agnt-sdk/simon-client": "0.3.0"
+    "@agnt-sdk/simon-protocol": "0.3.1",
+    "@agnt-sdk/simon-client": "0.3.1"
   }
 }

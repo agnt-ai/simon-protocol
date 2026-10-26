@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.1 (2026-10-26)
 
-Intended as 0.3.1. Still SIMON 1, wire `v:1`; no message, route or server change.
+Still SIMON 1, wire `v:1`; no message, route or server change.
 
 **Clients: a register member's domain may start with a digit.** The JavaScript client's `register` and the
 Python client's `register(extensions=...)` refused a host-defined member whose domain prefix starts with a

@@ -6,7 +6,7 @@
     "url": "git+https://github.com/agnt-ai/simon-protocol.git",
     "directory": "conformance"
   },
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Black-box conformance suite for any SIMON Protocol server: a peer simulator, every observable rule, a JSON report.",
   "type": "module",
@@ -24,6 +24,6 @@
     "readme": "node scripts/write-readme.ts"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.3.0"
+    "@agnt-sdk/simon-protocol": "0.3.1"
   }
 }
