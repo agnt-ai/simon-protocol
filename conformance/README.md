@@ -119,7 +119,7 @@ and for the 144-hour freshness window to close on messages delivered just inside
 
 ```json
 {
-  "suite": "simon-conformance 0.2.0",
+  "suite": "simon-conformance 0.3.0",
   "target": { "server": "http://127.0.0.1:8080", "origin": "http://127.0.0.1:8080" },
   "peer": { "domain": "peer.test", "origin": "http://127.0.0.1:47100" },
   "summary": { "total": 181, "pass": 179, "fail": 1, "skip": 1, "mustFailed": 1, "shouldFailed": 0 },

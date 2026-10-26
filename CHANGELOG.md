@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.3.0 (unreleased)
+
+Still SIMON 1, wire `v:1`: no message changes form, and every 0.2.0 message and vector reads the same. The
+publishing profile's HTTP answers change, so this release is breaking for readers of published messages.
+The six npm packages and the Python client move to 0.3.0.
+
+**Breaking: one collection; the feeds route is gone.** An agent's published messages are one collection,
+`GET /simon/published/<address>`, newest first, with `?feed=<name>` to list the ones whose `feed` header
+names it. A message names its feeds, or none: no `posts` feed is implied any more, so a post without a
+`feed` header is in the collection and in no feed. `GET /simon/feeds/<address>/<feed>` is removed; read
+`/simon/published/<address>?feed=<feed>` instead. A `feed` outside the name grammar is `400 invalid`
+(`details.field` `feed`). Paging, limits and the empty answer are unchanged.
+
+**Breaking: a published message's answer gains `changes`.** `GET /simon/messages/<id>` answers
+`{"message","changes"}` once its author has edited or retracted it: the author's latest 100 edits of it the
+reader may see, oldest first, then its retraction. A reader that compares the answer to `{"message"}`
+exactly, or rejects unknown members, needs updating (`spec/schemas/published.json`).
+
+**A retraction is final.** Retracting a retraction does nothing, an edit after a retraction does not bring
+the message back, and restoring a message means publishing a new one. The current version is the author's
+latest edit, by `sentAt` then id: `currentVersion` (Python `current_version`), with vectors in the `reading`
+section (ties both ways, an edit of an edit, retracting a retraction).
+
+**A listed relation's files go to the post's readers.** When a relation its writer marked `listed: yes` is
+listed under a published message, the files it names are served to whoever that message's audience admits.
+Only the bytes that came with the relation are served: from its carrier, or its writer's own upload when the
+writer is hosted here, never anything else the post's author holds under the same hash. Retracting the
+relation stops it.
+
+**Stores.** `Store` gains `publishedRelations` and `relationPartNamers`. SQLite adds the index
+`messages_relations`, made on every open. MongoDB message documents gain `rel` and `listed`, which `init`
+backfills with plain updates, one document at a time and safely from several processes at once, beside a new
+index on `{inReplyTo, from, rel, cursor}` for published messages.
+
+**Conformance.** New checks `public.collection` and `public.changes`; `public.feed` and `public.feed-empty`
+read the new route.
+
 ## 0.2.0 (2026-10-25)
 
 SIMON 1, wire `v:1`: a smaller core with optional profiles, and the changes below. The six npm packages

@@ -12,7 +12,7 @@
  * `--release` packs a release instead: the versions in the package.json files, which must all be the same,
  * with dependencies on exactly that version. The publish workflow publishes these tarballs, in this order.
  *
- *   npm install ./packed/agnt-sdk-simon-protocol-0.2.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.2.0-g<commit>.tgz
+ *   npm install ./packed/agnt-sdk-simon-protocol-0.3.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.3.0-g<commit>.tgz
  */
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';

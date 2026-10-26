@@ -23,16 +23,16 @@
     "openapi": "node scripts/write-openapi.ts"
   },
   "dependencies": {
-    "@agnt-sdk/simon-protocol": "0.2.0",
-    "@agnt-sdk/simon-client": "0.2.0",
-    "@agnt-sdk/simon-server": "0.2.0",
-    "@agnt-sdk/simon-store-mongo": "0.2.0",
+    "@agnt-sdk/simon-protocol": "0.3.0",
+    "@agnt-sdk/simon-client": "0.3.0",
+    "@agnt-sdk/simon-server": "0.3.0",
+    "@agnt-sdk/simon-store-mongo": "0.3.0",
     "mongodb": "7.6.0",
     "nodemailer": "10.0.12",
     "zod": "4.6.5"
   },
   "devDependencies": {
-    "simon-conformance": "0.2.0",
+    "simon-conformance": "0.3.0",
     "mongodb-memory-server": "11.2.0",
     "prettier": "3.6.2"
   }

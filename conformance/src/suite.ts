@@ -39,7 +39,7 @@ import { fetchServerKeys, type Peer } from './peer.ts';
 
 export { catalog, DEFAULTS, type CheckResult, type CheckSpec, type Options, type Report };
 
-export const SUITE = 'simon-conformance 0.2.0';
+export const SUITE = 'simon-conformance 0.3.0';
 export const SPEC = 'SIMON Protocol version 1 (draft): spec/PROTOCOL.md, spec/CLIENT.md';
 
 const selected = (id: string, only: string[]) =>
