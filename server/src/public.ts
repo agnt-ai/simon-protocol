@@ -36,7 +36,7 @@ import type { Agent } from './store/store.ts';
  */
 export async function ownDocument(
   ctx: Context,
-): Promise<ServerDocument & { syncDays: number; history: false; discovery: true }> {
+): Promise<ServerDocument & { syncDays: number; history: false; discovery?: true }> {
   const now = iso(ctx.now());
   const keys: KeyEntry[] = [];
   for (const k of [ctx.config.serverKey, ctx.config.nextServerKey]) {
@@ -48,8 +48,9 @@ export async function ownDocument(
     ...serverDocument(ctx.config.origin, keys, ctx.config.limits),
     syncDays: ctx.config.syncDays,
     history: false,
-    // It answers lookups (discovery profile, section 2), for its own domains at least.
-    discovery: true,
+    // It answers lookups (discovery profile, section 2) when it can list someone: it needs a mailbox to send
+    // codes to. Without one its domains have not spoken, and readers ask their directories.
+    ...(ctx.mailbox ? { discovery: true as const } : {}),
   };
 }
 

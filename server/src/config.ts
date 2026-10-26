@@ -70,6 +70,12 @@ export const DEFAULT_RATES = {
   register: { limit: 20, seconds: 3600 },
   /** Codes asked for, per address; directory listing codes, per identifier and per asking agent. */
   code: { limit: 5, seconds: 3600 },
+  /**
+   * Directory unlisting codes minted, per identifier, whoever asks (discovery profile, section 4). Only one is
+   * outstanding at a time and nobody else can end it early, so this bounds the mail without locking the holder
+   * out.
+   */
+  unlistCode: { limit: 5, seconds: 3600 },
   /** Codes asked for, per client IP, so no one client spends the allowance of every address. */
   codeClient: { limit: 20, seconds: 3600 },
   /** Messages sent, per agent. */

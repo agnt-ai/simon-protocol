@@ -14,12 +14,15 @@
  * record for answers the same 404, and asking for an unlisting code answers and works alike whether or not
  * the identifier is listed.
  *
- * Codes. A code lasts CODE_TTL_MS. Each client may guess wrong CODE_ATTEMPTS times at one code, and every
- * client together CODE_GUESSES times, after which the code is dropped so a fresh one can be sent: no third
- * party can lock the holder out of the code it was sent. An unexpired unlisting code is never replaced, so a
- * request from anyone else cannot spoil the holder's, and an identifier is sent at most one unlisting code
- * at a time, which is what keeps unlisting requests from flooding it with no per-identifier limit a third
- * party could spend.
+ * Codes. A code lasts CODE_TTL_MS.
+ *  - A listing code is 8 digits. Each client may guess wrong CODE_ATTEMPTS times at one, and every client
+ *    together CODE_GUESSES times, after which it is dropped: whoever burns it only delays a listing, and a new
+ *    listing request mints another, within the identifier's `code` bound.
+ *  - An unlisting code is a 128-bit secret, which no guessing finds, so it is never dropped for guesses: each
+ *    attempt counts against the client making it (`codeClient`), and nothing else. An unexpired one is never
+ *    replaced, so a request from anyone else cannot spoil the holder's, and a new one is minted only when none
+ *    is outstanding, at most `unlistCode` an hour per identifier: that bound is what keeps the mail in check,
+ *    and since nobody but the holder can end a code early, it never stands between the holder and a code.
  */
 import crypto from 'node:crypto';
 import {
@@ -85,6 +88,12 @@ async function lists(ctx: Context, identifier: string): Promise<boolean> {
   return ctx.config.directory || ctx.resolver.servesHere(domainOf(identifier.slice('mailto:'.length)));
 }
 
+/** A fresh unlisting code: 128 random bits, base64url, so guessing it is no way to burn or to use it. */
+function freshSecret(): { code: string; stored: StoredCode } {
+  const code = crypto.randomBytes(16).toString('base64url');
+  return { code, stored: { hash: sha256(code), nonce: crypto.randomUUID() } };
+}
+
 interface StoredCode {
   hash: string;
   nonce: string;
@@ -96,6 +105,20 @@ function freshCode(): { code: string; stored: StoredCode } {
   return { code, stored: { hash: sha256(code), nonce: crypto.randomUUID() } };
 }
 
+/**
+ * Whether the identifier's bound on unlisting secrets allows minting one more, counted when it does. Past it
+ * the answer is still `202`: a refusal would differ from an unlisted identifier's, which counts alike.
+ */
+function mintAllowed(ctx: Context, identifier: string): boolean {
+  try {
+    ctx.rate.hit('unlistCode', identifier);
+    return true;
+  } catch (e) {
+    if (e instanceof WireError && e.status === 429) return false;
+    throw e;
+  }
+}
+
 /** Send `note` to the identifier's mailbox, after the answer. */
 function mail(ctx: Context, identifier: string, note: MailboxNote) {
   const address = identifier.slice('mailto:'.length);
@@ -103,8 +126,8 @@ function mail(ctx: Context, identifier: string, note: MailboxNote) {
 }
 
 /**
- * Spend the code sent for `purpose`, or `401 bad_proof`. Every attempt counts against the client making it;
- * a client's wrong guesses lock only that client out of the code, and all clients' together, past
+ * Spend the listing code sent for `purpose`, or `401 bad_proof`. Every attempt counts against the client
+ * making it; a client's wrong guesses lock only that client out of the code, and all clients' together, past
  * CODE_GUESSES, drop it.
  */
 async function spendCode(ctx: Context, req: Request, purpose: string, code: string): Promise<void> {
@@ -122,6 +145,21 @@ async function spendCode(ctx: Context, req: Request, purpose: string, code: stri
     // Wrong or locked, the answer is the profile's one refusal of a code.
     throw e instanceof WireError ? refuse() : e;
   });
+  // Spent once: of two spending it together, one wins.
+  if (!(await ctx.store.releaseValue(CODES, purpose, sent))) throw refuse();
+}
+
+/**
+ * Spend the unlisting secret sent for `purpose`, or `401 bad_proof`. Each attempt counts against the client
+ * making it, and no number of wrong ones ends the secret: with 128 bits, guessing is not a way in.
+ */
+async function spendSecret(ctx: Context, req: Request, purpose: string, code: string): Promise<void> {
+  ctx.rate.hitClient('codeClient', req.ip);
+  const now = ctx.now();
+  const refuse = () => unauthorized('bad_proof', 'That is not the code sent, or it expired.', now);
+  const sent = await ctx.store.value<StoredCode>(CODES, purpose, iso(now));
+  const given = Buffer.from(sha256(code));
+  if (!sent || !crypto.timingSafeEqual(given, Buffer.from(sent.hash))) throw refuse();
   // Spent once: of two spending it together, one wins.
   if (!(await ctx.store.releaseValue(CODES, purpose, sent))) throw refuse();
 }
@@ -223,17 +261,21 @@ export function directoryRoutes(ctx: Context): Route[] {
         // record standing now, so one minted for an earlier record or for none never stands in its way.
         const purpose = `unlist\n${identifier}\n${record?.revision ?? 0}`;
         if (body.code === undefined) {
-          // The same count and the same work whether or not the identifier is listed: one client bound, one
-          // code minted and kept unless one is outstanding, and only the sending told apart, after the answer.
+          // The same counts and the same work whether or not the identifier is listed: one client bound, a
+          // secret minted only when none is outstanding and the identifier's bound allows, and only the
+          // sending told apart, after the answer.
           ctx.rate.hitClient('codeClient', req.ip);
           const reaches = await lists(ctx, identifier);
-          const { code, stored } = freshCode();
-          const kept = await ctx.store.valueOnce(CODES, purpose, stored, later(ctx.now(), CODE_TTL_MS), iso(ctx.now()));
-          // An outstanding code is never replaced: it is the one in the holder's mailbox, whoever asked for it.
-          if (kept.nonce === stored.nonce && record && reaches) mail(ctx, identifier, { type: 'unlisting', code });
+          const now = ctx.now();
+          // An outstanding secret is never replaced: it is the one in the holder's mailbox, whoever asked for it.
+          if (!(await ctx.store.value<StoredCode>(CODES, purpose, iso(now))) && mintAllowed(ctx, identifier)) {
+            const { code, stored } = freshSecret();
+            const kept = await ctx.store.valueOnce(CODES, purpose, stored, later(now, CODE_TTL_MS), iso(now));
+            if (kept.nonce === stored.nonce && record && reaches) mail(ctx, identifier, { type: 'unlisting', code });
+          }
           return json({ status: 'code_sent' }, 202);
         }
-        await spendCode(ctx, req, purpose, body.code);
+        await spendSecret(ctx, req, purpose, body.code);
         await unlist();
         return json({ status: 'unlisted' });
       },

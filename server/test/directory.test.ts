@@ -171,6 +171,60 @@ describe('discovery (discovery profile)', async () => {
     assert.equal((await lookup(at, identifier)).status, 404);
   });
 
+  it('sends a long secret to unlist, which guesses from any number of networks never burn', async () => {
+    const rates = { codeClient: { limit: 20, seconds: 3600 } };
+    const at = await fed.server('burn', { config: { directory: true, rates } });
+    const identifier = 'mailto:lou@webmail.example';
+    await list(at, bob, identifier);
+    assert.equal((await askUnlist(at, identifier, '198.51.100.9')).status, 202);
+    await fed.work();
+    const [note] = unlistingCodes(at, identifier);
+    const code = note?.type === 'unlisting' ? note.code : '';
+    assert.match(code, /^[A-Za-z0-9_-]{22}$/, '128 bits, base64url');
+    // Twenty /64s of one /48, each guessing wrong until its client bound refuses it.
+    for (let net = 0; net < 20; net++) {
+      for (let i = 0; i < 21; i++) {
+        const ip = `2001:db8:1:${net.toString(16)}::1`;
+        const guess = await call(at, 'DELETE', '/simon/directory', null, { identifier, code: 'x'.repeat(22) }, ip);
+        assert.equal(guess.status, i < 20 ? 401 : 429);
+      }
+    }
+    // And their requests for a new one meanwhile neither replace it nor send another.
+    for (let net = 0; net < 20; net++) await askUnlist(at, identifier, `2001:db8:2:${net.toString(16)}::1`);
+    await fed.work();
+    assert.equal(unlistingCodes(at, identifier).length, 1, 'no second secret sent');
+    const done = await call(at, 'DELETE', '/simon/directory', null, { identifier, code }, '198.51.100.9');
+    assert.deepEqual([done.status, done.json], [200, { status: 'unlisted' }]);
+  });
+
+  it('bounds the unlisting mail an identifier gets, and sends the holder a new secret once theirs expired', async () => {
+    const rates = { unlistCode: { limit: 2, seconds: 3600 } };
+    const at = await fed.server('flood', { config: { directory: true, rates } });
+    const identifier = 'mailto:max@webmail.example';
+    await list(at, bob, identifier);
+    const sent = async () => {
+      await fed.work();
+      return unlistingCodes(at, identifier).length;
+    };
+    for (let i = 0; i < 10; i++) await askUnlist(at, identifier, `2001:db8:3:${i}::1`);
+    assert.equal(await sent(), 1, 'one secret outstanding, however many ask');
+    fed.clock.advance(16 * 60_000);
+    await askUnlist(at, identifier, '198.51.100.9');
+    assert.equal(await sent(), 2, 'once it expired, the next request sends a new one');
+    fed.clock.advance(16 * 60_000);
+    for (let i = 0; i < 10; i++) await askUnlist(at, identifier, `2001:db8:4:${i}::1`);
+    assert.equal(await sent(), 2, 'past the bound, nothing more is sent this hour');
+    fed.clock.advance(30 * 60_000);
+    const asked = await askUnlist(at, identifier, '198.51.100.9');
+    assert.deepEqual([asked.status, await sent()], [202, 3], 'and the holder gets one again when the hour turns');
+    const note = unlistingCodes(at, identifier).at(-1)!;
+    const done = await call(at, 'DELETE', '/simon/directory', null, {
+      identifier,
+      code: note.type === 'unlisting' ? note.code : '',
+    });
+    assert.equal(done.status, 200);
+  });
+
   it('keeps the higher revision when two listings complete together', async () => {
     let release: () => void = () => {};
     let first = true;
@@ -212,9 +266,12 @@ describe('discovery (discovery profile)', async () => {
     assert.deepEqual((await lookup(at, identifier)).json.record, highest);
   });
 
-  it('says in its server document that it answers lookups', async () => {
+  it('says in its server document that it answers lookups, only when it can list someone', async () => {
     const doc = await call(alpha, 'GET', '/simon/server', null);
     assert.equal(readServerDocument(doc.bytes, alpha.origin, fed.clock.now())?.discovery, true);
+    const mute = await fed.server('mute', { codes: false });
+    const none = await call(mute, 'GET', '/simon/server', null);
+    assert.equal(readServerDocument(none.bytes, mute.origin, fed.clock.now())?.discovery, undefined);
   });
 
   it('lets a record lapse after a year', async () => {

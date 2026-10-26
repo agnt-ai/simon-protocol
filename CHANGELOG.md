@@ -24,9 +24,10 @@ unlisted identifier answers the same `404`. The reference server answers `GET /s
   failure, never "nobody", when none holds a record. Both clients read lookup answers under the canonical
   rules and at most 131072 bytes.
 - Asking for an unlisting code answers, counts and works alike whether or not the identifier is listed.
-  Unlisting codes have their own bound, apart from listing codes; an outstanding one is never replaced; a
-  client's wrong guesses lock only that client out of a code. Codes SHOULD expire within minutes and allow
-  a few attempts.
+  An unlisting code is a 128-bit secret: guesses count per client and never end it, an outstanding one is
+  never replaced, and a new one is minted at most five times an hour per identifier (`unlistCode`). Codes
+  SHOULD expire within minutes; an unlisting code SHOULD be at least 96 bits. The server document says
+  `discovery` only when the server can send codes.
 - The reference server keeps the higher revision when two listings complete together, and bounds lookups
   per registrable domain of the asking agents and per client (`directoryLookupDomain`,
   `directoryLookupClient`).
