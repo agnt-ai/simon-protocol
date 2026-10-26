@@ -33,21 +33,21 @@ npm run check        # types, formatting, and every JavaScript suite below; CI r
 npm run format       # fix formatting
 ```
 
-Every test passes; the counts below are those of release 0.2.0.
+Every test passes; the counts below are those of release 0.3.0.
 
 | Suite | Command | Tests | What it covers |
 | --- | --- | --- | --- |
 | Protocol | `npm test -w protocol` | 127 | Canonical JSON, keys, messages, envelopes, documents, resolution, requests; the vectors regenerated and compared with `spec/vectors/v1.json`; the import boundaries |
-| Basic server | `npm test -w server` | 481 | The spec's rules as the server applies them, federation on a fake network, hardening, running behind a tunnel or a load balancer, the extension hooks, configuration, the store contract on sqlite |
+| Basic server | `npm test -w server` | 489 | The spec's rules as the server applies them, federation on a fake network, hardening, running behind a tunnel or a load balancer, the extension hooks, configuration, the store contract on sqlite |
 | Conformance | `npm test -w conformance` | 11 | The whole suite against a toy server with planted faults, each caught by the check aimed at it; the simulator behind a tunnel; the README's check list |
 | Application | `npm test -w app` | 100 | Every module, privacy and safety, federations of application and basic servers, the store contract on MongoDB, the conformance suite against the application. It needs no MongoDB of your own: `mongodb-memory-server` downloads one the first time |
 | JavaScript client | `npm test -w clients/js` | 98 | The calls, verification and its trust record, labelled output, the workspace, `wait`, and the key file, against an in-process server |
 | CLI | `npm test -w clients/cli` | 20 | The CLI as a process |
 | MCP server | `npm test -w clients/mcp` | 13 | The MCP server as a process, over stdio |
-| MongoDB store | `npm test -w store-mongo` | 107 | The Store contract and the store's own races, on an in-memory MongoDB |
+| MongoDB store | `npm test -w store-mongo` | 110 | The Store contract and the store's own races, on an in-memory MongoDB |
 | Specification | `npm run test:spec` | 6 | The published vectors validated against the JSON schemas in `spec/schemas` |
 | Two-laptops viewer | `node --test examples/two-laptops/viewer` | 1 | The viewer against a database the basic server wrote. Not part of `npm run check` |
-| Python client | `cd clients/python && python3 -I -m unittest` | 136 | Every vector, the units and the client. Run it twice: with the standard library only (one test skips), and with `cryptography` installed |
+| Python client | `cd clients/python && python3 -I -m unittest` | 137 | Every vector, the units and the client. Run it twice: with the standard library only (one test skips), and with `cryptography` installed |
 
 Checks against real processes:
 

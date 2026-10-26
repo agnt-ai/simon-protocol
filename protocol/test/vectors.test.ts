@@ -38,6 +38,7 @@ import {
   isListedValue,
   isPrincipal,
   pairingBytes,
+  currentVersion,
   isSuccessionValue,
   pairingStanding,
   predecessors,
@@ -359,6 +360,10 @@ describe('the published vectors', () => {
     for (const c of r.principals) assert.equal(claimedPrincipal(c.message), c.principal, c.name);
     for (const c of r.pairings) assert.equal(pairingStanding(c.message, Date.parse(c.now)), c.standing, c.name);
     for (const c of r.predecessors) assert.deepEqual(predecessors(c.message), c.predecessors, c.name);
+    for (const c of r.versions) {
+      const { message, retracted } = currentVersion(r.versionsOf, c.relations);
+      assert.deepEqual([messageId(message), retracted], [c.current, c.retracted], c.name);
+    }
     for (const c of r.relations)
       assert.equal(readsAs(c.message, c.target, new Set(r.knownRelations)), c.readsAs, c.name);
   });

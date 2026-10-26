@@ -1,6 +1,6 @@
 {
   "name": "@agnt-sdk/simon-protocol",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The SIMON Protocol, version 1: canonical JSON, messages, envelopes, documents, resolution and request signing.",
   "license": "Apache-2.0",
   "keywords": [

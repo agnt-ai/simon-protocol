@@ -60,7 +60,7 @@ from .messages import (
     verify_pairing,
     verify_unpairing,
 )
-from .reading import claimed_principal, is_understood, pairing_standing, predecessors, reads_as
+from .reading import claimed_principal, current_version, is_understood, pairing_standing, predecessors, reads_as
 from .provenance import RULE, invisible_in, present_delivery, present_entry, untrusted, unwrap_entry
 from .request import (
     add_key_proof,
@@ -74,7 +74,7 @@ from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .signal import check_signal_freshness, parse_signal, verify_signal
 from .wire import is_address, normalize_address, parse_timestamp, timestamp
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Agent",
@@ -123,6 +123,7 @@ __all__ = [
     "PAIRING_MAX_MS",
     "pairing_bytes",
     "pairing_standing",
+    "current_version",
     "predecessors",
     "parse_pairing",
     "parse",

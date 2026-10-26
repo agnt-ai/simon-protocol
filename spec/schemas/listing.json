@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "listing.json",
   "title": "SIMON feed or relations listing",
-  "description": "GET /simon/feeds/<address>/<feed> and /simon/messages/<id>/related. Newest first; limit 1..200, default 50. Related listing requires exact writer-signed listed: yes; ordinary replies remain private. Audience and host policy still apply, and same-author retraction suppression is not undone by dropping retained target bytes. Cursor is an opaque listing cursor, separate from sync token.",
+  "description": "GET /simon/published/<address> (optionally ?feed=) and /simon/messages/<id>/related. Newest first; limit 1..200, default 50. Related listing requires exact writer-signed listed: yes; ordinary replies remain private. Audience and host policy still apply, and same-author retraction suppression is not undone by dropping retained target bytes. Cursor is an opaque listing cursor, separate from sync token.",
   "type": "object",
   "required": ["messages", "cursor", "more"],
   "properties": {

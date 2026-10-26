@@ -182,7 +182,7 @@ Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles
 (`@agnt-sdk/simon-protocol`, `@agnt-sdk/simon-server`, `@agnt-sdk/simon-store-mongo`, this one,
 `@agnt-sdk/simon-cli` and `@agnt-sdk/simon-mcp`) to JavaScript
 with type declarations, and packs each as a tarball in `packed/`. Each commit's build is its own version,
-`0.2.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
+`0.3.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
 later, the first with ML-DSA-65 keys, and their declarations use `@types/node`. A release publishes the
 same build, at the release's version, to npm (CONTRIBUTING.md, "Releasing").
 
@@ -191,7 +191,7 @@ serves stands in for the build:
 
 ```sh
 echo '@agnt-sdk:registry=https://registry.invalid/' >> .npmrc
-npm install ./packed/agnt-sdk-simon-protocol-0.2.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.2.0-g<commit>.tgz
+npm install ./packed/agnt-sdk-simon-protocol-0.3.0-g<commit>.tgz ./packed/agnt-sdk-simon-client-0.3.0-g<commit>.tgz
 ```
 
 ## Tests

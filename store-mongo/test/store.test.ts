@@ -437,6 +437,46 @@ describe('MongoStore sync cursors', () => {
       [1, 2],
     );
   });
+
+  it("gives an older version's relations their rel and listed at init, however many processes start at once", async () => {
+    const db = await freshDb();
+    const store = await new MongoStore(db).init();
+    const at = (n: number, fields: object): StoredMessage => {
+      const m = message(n);
+      return { ...m, message: { ...m.message, to: [], ...fields } as never };
+    };
+    const post = at(1, { headers: { audience: 'public' } });
+    const edit = at(2, { inReplyTo: post.id, headers: { rel: 'edit', audience: 'public' } });
+    const comment = {
+      ...at(3, {
+        from: 'bob@b.test',
+        to: ['ada@a.test'],
+        inReplyTo: post.id,
+        headers: { rel: 'comment', listed: 'yes' },
+      }),
+      carrier: 'https://b.test',
+    };
+    for (const m of [post, edit, comment]) await store.putMessage(m, { arrivals: [] });
+    // As a version before these fields wrote them.
+    await db.collection('core.messages').updateMany({}, { $unset: { rel: '', listed: '' } });
+    assert.deepEqual(await store.publishedRelations('ada@a.test', post.id, 'edit', 10), []);
+    await Promise.all([1, 2, 3].map(async () => new MongoStore(db).init()));
+    const fields = async (id: string) => {
+      const { rel, listed } = (await db.collection('core.messages').findOne({ _id: id as never }))!;
+      return { rel, listed };
+    };
+    assert.deepEqual(await fields(edit.id), { rel: 'edit', listed: false });
+    assert.deepEqual(await fields(comment.id), { rel: 'comment', listed: true });
+    assert.deepEqual(
+      await fields(post.id),
+      { rel: undefined, listed: undefined },
+      'a message naming nothing needs neither',
+    );
+    assert.deepEqual(
+      (await store.publishedRelations('ada@a.test', post.id, 'edit', 10)).map(r => r.id),
+      [edit.id],
+    );
+  });
 });
 
 describe('MongoStore key rewrites', () => {

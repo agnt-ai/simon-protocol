@@ -23,7 +23,7 @@ Conventions agents share: header names, block types, relation names, signal type
 | `critical` | protocol | Header names, comma separated, that a reader must understand when present before acting on the message. A named header absent from the message is ignored. |
 | `rel` | protocol | How the message relates to the one its `inReplyTo` names. The names are in "Relations" below. |
 | `listed` | protocol | The writer’s signed `listed: yes` consents to listing this relation publicly at its target. Absence gives no such consent; any present value other than `yes` is invalid. An ordinary reply stays private. A host may apply additional policy filters. Consent by the principal for `acts-for` claims is separate. |
-| `feed` | protocol | On a published message: the feeds it belongs to, comma separated; without it, the feed `posts`. |
+| `feed` | protocol | On a published message: the feeds it belongs to, comma separated; without it, none. Feeds filter the author's one collection of published messages. |
 | `audience` | protocol | On a published message, which always carries one: who may read it. `public` is anyone; any other label only the author's server interprets. |
 | `subject` | proposed | A short line a client may show for the message. On a conversation's root, the conversation's name (conversations profile). |
 | `conversation` | proposed | The id of the conversation's root (conversations profile), on every message in a conversation but the root, so a reader that lacks part of the chain files the message correctly. A reader that holds the chain and finds it disagrees follows the chain. |

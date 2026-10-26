@@ -304,4 +304,31 @@ describe('the sqlite schema', () => {
       fs.rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  it('makes the index for relations on every open, so a store already at this schema version gets it', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'simon-relations-index-'));
+    const file = path.join(dir, 'simon.sqlite');
+    const has = () => {
+      const db = new DatabaseSync(file);
+      try {
+        return (
+          db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'messages_relations'").get() !==
+          undefined
+        );
+      } finally {
+        db.close();
+      }
+    };
+    try {
+      await new SqliteStore(file).close();
+      const db = new DatabaseSync(file);
+      db.exec('DROP INDEX messages_relations;');
+      db.close();
+      assert.equal(has(), false, 'as a store this version made before the index');
+      await new SqliteStore(file).close();
+      assert.equal(has(), true);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

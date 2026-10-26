@@ -197,7 +197,7 @@ retention rules are in [app/README.md](app/README.md), "Privacy".
 
 ## Status
 
-**SIMON 1** (wire `v:1`), a public draft; the packages here are release 0.2.0. It is declared stable when two
+**SIMON 1** (wire `v:1`), a public draft; the packages here are release 0.3.0. It is declared stable when two
 independent implementations reproduce every test vector and pass the conformance suite against each other. Until then any rule may change, except the
 invariants of spec section 1, which need an overwhelming reason. Today there is one server
 implementation (this repository's, in two forms) and a Python client (`clients/python`) that reproduces

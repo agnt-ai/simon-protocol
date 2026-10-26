@@ -539,6 +539,14 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *The chain travels with messages,* not in the agent document, so it reaches only recipients, as `for` does. The agent chooses how much history to carry.
 - *Precedent:* KERI's pre-rotation and key event logs (signed successions, duplicity as forks), DKIM selector rotation, X.509 cross-signing during CA key rollover, Signal's safety-number change notice for what readers see without a succession.
 
+## Publishing: one collection, changes with the message, comments' files (2026-10-25)
+
+**Choice (B13.13).** An agent's published messages are one ordered collection, and a feed is a label that filters it: `GET /simon/published/<address>?feed=<name>`. A message names its feeds, or none; no `posts` feed is implied. *Precedent:* an ActivityPub outbox and an Atom feed are one stream; Bluesky's feeds are views over records.
+
+**Choice (B8).** A published message's answer carries its author's edits and retraction (`changes`), so a link to a message shows what became of it; the collection carries them too. A retraction is final: retracting a retraction does nothing, and restoring is a new post. The current version is the author's latest edit, by `sentAt` then id. *Revised from the plan:* the changes travel with the message, not in the relations listing, because the message is what a link names. *Precedent:* Bluesky deletes are final; Mastodon shows edit history with the post.
+
+**Choice (B5).** A listed relation's files go to the readers of the message it is listed under, from the bytes fetched for it. The relation stays its writer's signed message, retractable, which unlists it and its files. *Why:* whoever comments with a photo on a post presumes everyone who sees the post sees the comment; Bluesky's model.
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").
