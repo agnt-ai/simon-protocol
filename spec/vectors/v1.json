@@ -2851,6 +2851,18 @@
         "accepted": true
       },
       {
+        "name": "a JSON block whose data is null, which is a JSON value",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"See below.\",\"type\":\"text/plain\"},{\"data\":null,\"type\":\"application/json\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"jmc9oWPHTx54ASDTPNG39LjuR7a9hPDlB7jMMMzHk_L01EuwGM0xyHqoUAHUiUd4zA_ABZPj5A9ExzI9PcymCw\",\"to\":[\"bob@example.net\"],\"v\":1}",
+        "accepted": true
+      },
+      {
+        "name": "a part with null data that is not a JSON type is refused",
+        "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"See below.\",\"type\":\"text/plain\"},{\"data\":null,\"type\":\"image/png\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"BSoBWLSNjp60JgkKNPZ7BMGgBqWKgjW5riDYOylrCqHOZ7Ul3f55H4HAtX1laTyg1PAMlNMWaF3H8zSqbcDkAw\",\"to\":[\"bob@example.net\"],\"v\":1}",
+        "status": 400,
+        "code": "invalid",
+        "field": "parts"
+      },
+      {
         "name": "a text/*+json block is a JSON type: its data is a JSON value",
         "bytes": "{\"from\":\"ada@example.com\",\"headers\":{\"for\":\"mailto:alice@example.org\",\"subject\":\"Thursday\"},\"inReplyTo\":null,\"parts\":[{\"data\":\"See below.\",\"type\":\"text/plain\"},{\"data\":{\"a\":1},\"type\":\"text/x-notes+json\"}],\"sentAt\":\"2026-10-14T21:00:00Z\",\"signature\":\"j1eyjtjtioJN2EwYSjtlBVI4QqTg3LrIfWI98IxPNG-wqhWo9TwaZa23gHoXddmZQ9IvI7V_495W5jvXcL87AA\",\"to\":[\"bob@example.net\"],\"v\":1}",
         "accepted": true

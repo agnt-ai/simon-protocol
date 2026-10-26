@@ -33,7 +33,8 @@
     "clients/*/test",
     "clients/*/scripts",
     "examples",
-    "test/integration"
+    "test/integration",
+    "test/spec"
   ],
   "exclude": ["examples/model-agent"]
 }

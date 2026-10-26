@@ -100,8 +100,9 @@ const PART = {
     type: { type: 'string' },
     // A JSON value for a JSON type, the text for any other text/*, base64 otherwise (spec section 5.3).
     data: {
+      type: ['string', 'integer', 'boolean', 'object', 'array', 'null'],
       description:
-        'A JSON value for a JSON type (application/json, or any +json subtype, text/*+json included), the text for any other text/*, base64 otherwise.',
+        'A JSON value for a JSON type (application/json, or any +json subtype, text/*+json included), the text for any other text/*, base64 otherwise. A JSON value is signed as canonical JSON: numbers are whole numbers within ±(2^53 - 1), never fractions or exponents (write 19.99 as "19.99" or 1999 cents), nested at most 61 levels.',
     },
     sha256: { type: 'string' },
     size: { type: 'integer' },

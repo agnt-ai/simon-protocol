@@ -330,6 +330,19 @@ describe('send and inbox', () => {
     assert.deepEqual([e.code, e.details], ['invalid', { field: 'headers' }]);
   });
 
+  it('refuses a JSON block whose value canonical JSON cannot carry, saying how to write it', async () => {
+    const { agent } = setup();
+    const ada = await registered(agent);
+    const json = (data: unknown) => ({ to: ['bob@agents.test'], parts: [{ type: 'application/json', data }] });
+    for (const data of [{ price: 19.99 }, [1e21], { n: 2 ** 53 }]) {
+      const e = await failure(() => ada.compose(json(data) as never));
+      assert.deepEqual([e.code, e.details], ['invalid', { field: 'parts' }], JSON.stringify(data));
+      assert.match(e.message, /canonical JSON.*"19\.99"/s);
+    }
+    assert.equal(ada.compose(json({ price: '19.99', cents: 1999 }) as never).parts[0].type, 'application/json');
+    assert.equal((ada.compose(json(null) as never).parts[0] as { data: unknown }).data, null, 'null is a JSON value');
+  });
+
   it('sends a composed message again with the same answer', async () => {
     const { agent } = setup();
     const ada = await registered(agent);

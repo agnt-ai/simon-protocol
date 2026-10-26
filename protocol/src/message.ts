@@ -13,6 +13,7 @@
 import type { KeyObject } from 'node:crypto';
 import {
   canonicalBytes,
+  canonicalize,
   CanonicalError,
   isCanonical,
   isJsonObject,
@@ -388,6 +389,25 @@ export const isHeaderName = (value: unknown): value is string =>
 export function isJsonType(type: string): boolean {
   const base = type.split(';', 1)[0].trim();
   return base === 'application/json' || base.endsWith('+json');
+}
+
+/** How deep a part's `data` sits in its message: the message, its `parts` array, the part (spec 5.1). */
+const DATA_DEPTH = 3;
+
+/**
+ * Why a value cannot be a JSON block's `data`, or null when it can (spec sections 5.1 and 5.3). The value is
+ * signed inside the message, so canonical JSON limits it: integers within ±(2^53 - 1), with no fraction or
+ * exponent, and at most 64 levels of nesting counting the message's own three. Clients check a draft with
+ * this before signing, so an author learns how to write the value instead of meeting a bare encoding error.
+ */
+export function jsonDataProblem(data: unknown): string | null {
+  try {
+    canonicalize(data, DATA_DEPTH);
+    return null;
+  } catch (e) {
+    if (!(e instanceof CanonicalError)) throw e;
+    return `A JSON block's data must fit canonical JSON (spec section 5.1): ${e.message} Numbers are integers within ±(2^53 - 1), with no fraction or exponent, and values nest at most 61 levels; write 19.99 as the string "19.99" or as 1999 in a smaller unit, or send the bytes as a base64 block of another type.`;
+  }
 }
 
 /** Whether a value is a `listed` header: exactly `yes` (spec section 5.4). */

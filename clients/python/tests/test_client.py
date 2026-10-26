@@ -420,6 +420,20 @@ class ClientTest(unittest.TestCase):
             agent.compose([], "x", headers={"audience": "public", "for": "mailto:alice@example.org"})
         self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "headers"}))
 
+    def test_a_json_block_canonical_json_cannot_carry(self):
+        """A JSON block's value is signed as canonical JSON: a float or an integer past 2^53 is refused before
+        signing, with a clear way to write it; null is a JSON value."""
+        ada = self.agent()
+        ada.register()
+        for data in ({"price": 19.99}, [2**53], {"n": float("nan")}):
+            with self.subTest(data=data), self.assertRaises(SimonError) as caught:
+                ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": data}])
+            self.assertEqual((caught.exception.code, caught.exception.details), ("invalid", {"field": "parts"}))
+            self.assertIn('"19.99"', str(caught.exception))
+        ok = ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": {"price": "19.99"}}])
+        self.assertEqual(ok["parts"][0]["data"], {"price": "19.99"})
+        self.assertIsNone(ada.compose(["bob@example.com"], parts=[{"type": "application/json", "data": None}])["parts"][0]["data"])
+
     def test_a_pairing_lapses_and_renews(self):
         """A pairing valid when sent but lapsed now reads as lapsed; the agent carries a renewed one from
         then on, with no call to the server."""

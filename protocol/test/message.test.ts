@@ -20,6 +20,7 @@ import {
   verifyMessage,
   WireError,
   type AnyMessage,
+  jsonDataProblem,
   type Json,
   type Message,
 } from '../src/index.ts';
@@ -205,6 +206,14 @@ describe('the message', () => {
     );
     assert.equal(code(part({ type: 'application/pdf', data: { a: 1 } })), '400 invalid parts');
     assert.equal(code(part({ type: 'text/plain', data: 1 })), '400 invalid parts');
+    assert.equal(code(part({ type: 'application/json', data: null })), 'accepted', 'null is a JSON value');
+    // What canonical JSON cannot carry is named before signing, with how to write it.
+    assert.equal(jsonDataProblem({ a: [1, 'b', null] }), null);
+    let deep: unknown = 1;
+    for (let i = 0; i < 61; i++) deep = [deep];
+    assert.equal(jsonDataProblem(deep), null, '61 levels inside a part, 64 in all');
+    for (const bad of [19.99, { n: 2 ** 53 }, [deep], -0])
+      assert.match(jsonDataProblem(bad) ?? '', /canonical JSON.*"19\.99"/s, JSON.stringify(bad));
     for (const sentAt of [
       '2026-10-14 21:00:00',
       '2026-10-14T21:00:00+02:00',

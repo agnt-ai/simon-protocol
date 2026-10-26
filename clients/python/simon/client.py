@@ -44,6 +44,8 @@ from .limits import (
 )
 from .messages import (
     is_header_name,
+    is_json_type,
+    json_data_problem,
     PAIRING_DEFAULT_MS,
     PROTOCOL_HEADERS,
     VERSION,
@@ -668,13 +670,20 @@ class Agent(Reader):
             headers["pairing"] = self.pairing
         if self.succession is not None:
             headers["succession"] = self.succession
+        parts = ([{"type": "text/plain", "data": text}] if text is not None else []) + list(parts)
+        # A JSON block's value is signed as canonical JSON: say how to write one that is not, before signing.
+        for part in parts:
+            if isinstance(part.get("type"), str) and is_json_type(part["type"]) and "data" in part:
+                problem = json_data_problem(part["data"])
+                if problem is not None:
+                    raise _invalid("parts", problem)
         message = sign_message(
             {
                 "v": VERSION,
                 "from": self._address(),
                 "to": [_address_arg(f"to[{i}]", a) for i, a in enumerate(to)],
                 "inReplyTo": in_reply_to,
-                "parts": ([{"type": "text/plain", "data": text}] if text is not None else []) + list(parts),
+                "parts": parts,
                 "headers": headers,
                 "sentAt": timestamp(self._now_ms()),
             },

@@ -485,14 +485,14 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Reason:* nothing but pre-release packages ever carried the earlier draft, so there is no deployed version 1 to protect. A clean break at the first real release costs less than a version number that only marks a draft.
 - *Precedent:* HTTP/2 drafts used `h2-NN` identifiers that were dropped at publication; the published protocol is `h2`.
 
-**Choice (B9).** A name without a dot is the registry's. Anyone else's is reverse-domain (`com.example.approve`), so the grammar allows dots, and every name is at most 128 characters. A name never changes its meaning incompatibly; a new meaning takes a new name.
+**Choice (B9).** For headers, relations and signal types, a name without a dot is the registry's. Anyone else's is private: a domain its author controls in reversed label order, then the name (`com.example.approve`), so the grammar allows dots, and every name is at most 128 characters. Claim types and hint names follow the same convention, though servers check no grammar on them. Feed names are exempt: a feed is its author's own, so any feed name, with or without a dot, is the author's. A name never changes its meaning incompatibly; a new meaning takes a new name.
 
 - *Alternatives:* everything namespaced, as AT Protocol's NSIDs are (unreadable for the common entries); an `x-` prefix (RFC 6648 retired it, because experimental names became permanent).
 
 **Choice (B10).** One encoding for each media type: a JSON type (`application/json`, or a `+json` subtype) carries `data` as a JSON value; `text/*` as the text; anything else base64. A JSON block is then readable on the wire and checkable by its schema.
 
 - *Alternatives:* base64 for everything that is not text, as version 1 had (unreadable); letting an author choose either encoding for JSON (two ways to say one thing).
-- *Limit:* the value obeys section 5.1, so its numbers are integers.
+- *Limit:* the value obeys section 5.1: integers within ±(2^53 − 1), no fractions or exponents, nesting at most 64 deep. A value outside them is written as a string, an integer in a smaller unit, or a base64 block of another type; libraries refuse it before signing with a clear error. `data: null` is a JSON value, and allowed.
 
 ## Publishing is explicit; only `audience` placement is checked (2026-10-25)
 

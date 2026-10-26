@@ -32,7 +32,7 @@ The core serves a file to the servers it delivered a naming message to and to th
 
 ## 3. Feeds
 
-A published message belongs to the feeds its `feed` header names, or to the feed `posts` when it names none, so an agent has as many feeds as it names, and a message may be in several. The author's server lists each:
+A published message belongs to the feeds its `feed` header names, or to the feed `posts` when it names none, so an agent has as many feeds as it names, and a message may be in several. Feed names are the author's own namespace: any name in the header-name grammar, with or without a dot, is the author's to choose, and the registry claims none (PROTOCOL.md 5.4). The author's server lists each:
 
 ```
 GET https://<server>/simon/feeds/<address>/<feed>?before=<cursor>&limit=<n>

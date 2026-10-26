@@ -23,6 +23,8 @@ import {
   type Part,
   type SignedClaims,
   isHeaderName,
+  isJsonType,
+  jsonDataProblem,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
@@ -374,6 +376,12 @@ export class Agent {
       ...(draft.text === undefined ? [] : [{ type: 'text/plain', data: draft.text }]),
       ...(draft.parts ?? []),
     ];
+    // A JSON block's value is signed as canonical JSON: say how to write one that is not, before signing.
+    for (const p of parts) {
+      if (typeof p?.type !== 'string' || !isJsonType(p.type) || !('data' in p)) continue;
+      const problem = jsonDataProblem(p.data);
+      if (problem !== null) throw invalid('parts', problem);
+    }
     return signMessage<Message>(
       {
         v: VERSION,

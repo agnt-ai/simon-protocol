@@ -712,6 +712,14 @@ function messageChecks() {
       v1({ parts: [TEXT, { type: 'application/json', data: 'yes' }] }),
     ],
     [
+      'a JSON block whose data is null, which is a JSON value',
+      v1({ parts: [TEXT, { type: 'application/json', data: null }] }),
+    ],
+    [
+      'a part with null data that is not a JSON type is refused',
+      v1({ parts: [TEXT, { type: 'image/png', data: null }] }),
+    ],
+    [
       'a text/*+json block is a JSON type: its data is a JSON value',
       v1({ parts: [TEXT, { type: 'text/x-notes+json', data: { a: 1 } }] }),
     ],

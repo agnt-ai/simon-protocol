@@ -437,6 +437,29 @@ def is_header_name(value: object) -> bool:
     return isinstance(value, str) and len(value) <= MAX_NAME_LENGTH and _HEADER_NAME.fullmatch(value) is not None
 
 
+#: How deep a part's ``data`` sits in its message: the message, its ``parts`` list, the part (spec 5.1).
+_DATA_DEPTH = 3
+
+
+def json_data_problem(data: Any) -> str | None:
+    """Why a value cannot be a JSON block's ``data``, or None when it can (spec sections 5.1 and 5.3). The
+    value is signed inside the message, so canonical JSON limits it: integers within +/-(2^53 - 1), no
+    floats, and at most 64 levels of nesting counting the message's own three."""
+    nested: Any = data
+    for _ in range(_DATA_DEPTH):
+        nested = [nested]
+    try:
+        canonical(nested)
+        return None
+    except (ValueError, TypeError) as e:
+        return (
+            f"A JSON block's data must fit canonical JSON (spec section 5.1): {e} Numbers are integers "
+            "within +/-(2^53 - 1), with no fraction or exponent, and values nest at most 61 levels; write "
+            '19.99 as the string "19.99" or as 1999 in a smaller unit, or send the bytes as a base64 block '
+            "of another type."
+        )
+
+
 def is_json_type(media_type: str) -> bool:
     """Whether a media type is a JSON type (spec section 5.3), whose inline ``data`` is a JSON value:
     ``application/json``, or any type with the ``+json`` suffix, whatever its parameters."""

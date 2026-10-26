@@ -314,12 +314,14 @@ A part has the members below. A member a reader does not know is ignored, and no
 - a value is one or more restricted-name characters in any case (any of them may come first), or a quoted string of printable ASCII containing no `"` or `\`.
 
 **Then either:**
-- inline `data`, encoded by the part's type, one way for each: for a JSON type (`application/json`, or any type whose subtype ends in `+json`, `text/*+json` included, whatever its parameters) a JSON value, under section 5.1's rules; for any other `text/*` type the text itself; for any other type base64; or
+- inline `data`, encoded by the part's type, one way for each: for a JSON type (`application/json`, or any type whose subtype ends in `+json`, `text/*+json` included, whatever its parameters) a JSON value, `null` included, under section 5.1's rules; for any other `text/*` type the text itself; for any other type base64; or
 - `sha256` and `size`, naming bytes by their content. `size` is a whole number of bytes, at most the receiving server's `partBytes` (section 9).
 
 **And optionally:**
 - **`name`**, the file name its author suggests: 1 to 255 bytes of UTF-8, not `.` or `..`, with no `/`, no `\`, no character of general category Cc, and no bidirectional formatting character (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069). How a reader uses and shows it is the reader profile's.
 - **`alt`**, a one-line text version of the block: 1 to 1024 bytes of UTF-8 with no character of general category Cc and no bidirectional formatting character.
+
+**JSON blocks live within canonical JSON.** A JSON block's value is part of the signed message, so section 5.1 limits it: numbers are integers within ±(2^53 − 1), with no fraction or exponent, and arrays and objects nest at most 64 deep counting the message's own levels. A value outside these limits, such as a price of `19.99`, cannot be sent as a JSON block: write it as a string (`"19.99"`), as an integer in a smaller unit (`1999` cents), or send the bytes as a base64 block of another type. Libraries refuse such a value with a clear error before signing.
 
 Inline text is UTF-8, whatever a `charset` parameter says. The bytes of a content-addressed part are served by the author's server (section 7.2). How they come to be there is that server's business; see the client API's upload call. Nothing about where bytes live is signed.
 
@@ -337,7 +339,10 @@ Known version 1 messages contribute their named files recursively through the sa
 
 **`headers`** is an object of at most 32 members, mapping header names to string values.
 
-**Names.** A header name, and every other name the protocol and the registry use (relations, feeds, signal types), is lower-case letters and digits in groups joined by single hyphens, at most 128 characters in all. A name without a dot is the registry's (section 10). Anyone else's name is **private**: reverse-domain, several such labels joined by dots and starting with a domain its author controls, as in `com.example.approve`, so two parties' names never collide. A name's meaning never changes incompatibly; a new meaning takes a new name.
+**Names.** A header name, and every other name in this grammar (relations, feeds, signal types), is lower-case letters and digits in groups joined by single hyphens, at most 128 characters in all; a private name joins several such labels by dots.
+- **Who owns a name.** For headers, relations and signal types, a name without a dot is the registry's (section 10). Anyone else's name is **private**: a domain its author controls, written in *reversed* label order and joined by dots, then the name, as in `com.example.approve` for `example.com`, so two parties' names never collide. Claim types and hint names (section 6.2) follow the same convention, though servers check no grammar on them: `acts-for` and the registry's names have no dot, and anyone else's is reversed-domain.
+- **Feed names are the author's own.** A feed belongs to the author who publishes it, so its name, with or without a dot, needs no registry entry and collides with no one's (publishing profile).
+- A name's meaning never changes incompatibly; a new meaning takes a new name.
 
 Headers are the extension point of version 1. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar of each as a version 1 message rule, and the placement of the four that have a placement rule (`pairing`, `succession`, `audience` and `listed`); a `rel` or a `feed` where it means nothing is ignored, not refused:
 
@@ -904,7 +909,7 @@ field-name     = *(%x21-3A / %x3C / %x3E-7E)         ; text before the first "="
 field-value    = *(%x20-3A / %x3C-7E)
 
 name-label     = 1*(LALPHA / DIGIT) *("-" 1*(LALPHA / DIGIT))
-header-name    = name-label *("." name-label)        ; at most 128; with a dot, a private reverse-domain name
+header-name    = name-label *("." name-label)        ; at most 128; with a dot, a private name (reversed domain)
 critical-value = header-name *("," header-name)
 rel-value      = header-name                         ; a relation name
 feed-value     = header-name *("," header-name)      ; feed names

@@ -12,6 +12,7 @@
  */
 import crypto, { type KeyObject } from 'node:crypto';
 import {
+  jsonDataProblem,
   keyToken,
   privateKeyFromSeed,
   signMessage,
@@ -96,8 +97,12 @@ export class SystemAgents {
   async send(name: SystemName, draft: Draft): Promise<string> {
     const api = this.#api();
     const parts: Part[] = [{ type: 'text/plain', data: draft.text }];
-    // A JSON part carries its JSON value as data (spec section 5.3).
-    if (draft.data) parts.push({ type: 'application/json', data: draft.data as Json });
+    // A JSON part carries its JSON value as data (spec section 5.3), within canonical JSON's limits.
+    if (draft.data) {
+      const problem = jsonDataProblem(draft.data);
+      if (problem !== null) throw new Error(`${name}'s message to ${draft.to.join(', ')}: ${problem}`);
+      parts.push({ type: 'application/json', data: draft.data as Json });
+    }
     const message = signMessage<Message>(
       {
         v: VERSION,
