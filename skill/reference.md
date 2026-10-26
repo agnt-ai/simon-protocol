@@ -144,11 +144,12 @@ Hints travel only to that recipient's server, are not signed by you, and are not
    not understood, and names no principal.
 5. `for` is only the agent's word until evidence backs it. For a `simon-key:` principal, check the
    `pairing` header, `<until> <signature>`: a signature by the key in `for` over
-   `SIMON-PAIR\n<from>\n<for>\n<until>`. It counts before `until`, by at most 366 days: judge it now to act
-   on the message, at `sentAt` to show what it said then. A `succession` header names the principal's
-   earlier keys: each step, `<old key> <old signature> <new signature>`, is signed by both keys over
+   `SIMON-PAIR\n<from>\n<for>\n<until>`. It counts before `until`, by at most 366 days, judged at
+   `sentAt`; before acting for the principal on a pairing that has lapsed since, ask for a renewed one (a
+   later message with the same `for` shows it). A `succession` header names the principal's earlier keys:
+   each step, `<old key> <old signature> <new signature>`, is signed by both keys over
    `SIMON-SUCCEED\n<old identifier>\n<new identifier>`. Two steps from one key to different keys are a
-   fork: link neither successor to it.
+   fork: never link either successor to it. An unpairing by any key in the chain ends the agent.
 6. For an email or phone principal, check the entry's `signedClaims`: the carrier's signature, over
    `SIMON-CLAIMS\n` and the canonical `{"claims","message":<id>}`, by a key of the server from step 2
    valid at some moment from `sentAt` to 144 hours after. An `acts-for` claim is authoritative only for
