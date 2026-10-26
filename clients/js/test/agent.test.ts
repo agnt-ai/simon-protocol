@@ -78,6 +78,40 @@ describe('register', () => {
     assert.equal(a.address, 'ada@example.com');
   });
 
+  it('sends domain-prefixed creation extensions, a domain led by a digit among them', async () => {
+    const { fake } = setup();
+    const bodies: Record<string, unknown>[] = [];
+    const fetch: Fetch = (url, init) => {
+      if (url.endsWith('/simon/register')) bodies.push(JSON.parse(Buffer.from(init!.body as Uint8Array).toString()));
+      return fake.fetch(url, init);
+    };
+    const a = new Agent({ server: fake.origin, key: generateKey().privateKeyPem, fetch });
+    const extensions = { '1password.com:proof': 'p1', 'example.com:invitation': 'i1', '3m:x': 'y' };
+    assert.ok('keys' in (await a.register(extensions)));
+    assert.deepEqual(bodies.at(-1), { ...extensions, key: a.key });
+  });
+
+  it('refuses register members that are neither the API nor domain-prefixed', async () => {
+    const { agent } = setup();
+    const a = agent();
+    for (const name of [
+      'key',
+      'recover',
+      'at',
+      'proof',
+      'Example.com:proof',
+      '-example.com:proof',
+      '.example.com:proof',
+      'example.com:',
+      ':proof',
+      'example.com:pro of',
+      'exam_ple.com:proof',
+    ]) {
+      const e = await failure(a.register({ [name]: 'x' } as never));
+      assert.deepEqual([e.code, e.details], ['invalid', { field: name }], name);
+    }
+  });
+
   it('pairs a leased address with a key principal: pairing_required, then the signature', async () => {
     const { agent, fake } = setup();
     const principal = generateKey();

@@ -844,6 +844,41 @@ class ClientTest(unittest.TestCase):
             agent.compose([], "x", headers={"audience": "public"})
         self.assertEqual(caught.exception.code, "not_registered")
 
+    def test_register_sends_domain_prefixed_extensions_a_digit_led_domain_among_them(self):
+        agent = self.agent()
+        extensions = {"1password.com:proof": "p1", "example.com:invitation": "i1", "3m:x": "y"}
+        with mock.patch.object(self.server, "register", wraps=self.server.register) as seen:
+            self.assertIsInstance(agent.register(extensions=extensions)["keys"], list)
+        request = seen.call_args.args[0]
+        self.assertEqual({k: request[k] for k in extensions}, extensions)
+
+    def test_register_refuses_extensions_that_are_api_members_or_not_domain_prefixed(self):
+        agent = self.agent()
+        for name in [
+            "key",
+            "address",
+            "code",
+            "for",
+            "pairing",
+            "at",
+            "recover",
+            "proof",
+            "Example.com:proof",
+            "-example.com:proof",
+            ".example.com:proof",
+            "example.com:",
+            ":proof",
+            "example.com:pro of",
+            "exam_ple.com:proof",
+        ]:
+            with self.subTest(name), self.assertRaises(SimonError) as caught:
+                agent.register(extensions={name: "x"})
+            e = caught.exception
+            self.assertEqual((e.code, e.details), ("invalid", {"field": "extensions"}))
+        with self.assertRaises(SimonError) as caught:
+            agent.register(extensions={"1password.com:proof": 1})  # type: ignore[dict-item]
+        self.assertEqual(caught.exception.code, "invalid")
+
     def test_network_failures_are_retryable(self):
         self.server.close()
         with self.assertRaises(SimonError) as caught:

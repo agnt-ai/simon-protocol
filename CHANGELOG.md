@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+Intended as 0.3.1. Still SIMON 1, wire `v:1`; no message, route or server change.
+
+**Clients: a register member's domain may start with a digit.** The JavaScript client's `register` and the
+Python client's `register(extensions=...)` refused a host-defined member whose domain prefix starts with a
+digit, such as `1password.com:proof`, so a host on such a domain could not be sent its own creation proofs.
+A domain label may start with a digit, as the name grammar's labels do (PROTOCOL.md, section 5.4). Both
+clients now accept it. API members, unprefixed names and malformed prefixes are still refused before sending.
+
 ## 0.3.0 (2026-10-26)
 
 Still SIMON 1, wire `v:1`: no message changes form, and every 0.2.0 message and vector reads the same. The

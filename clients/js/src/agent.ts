@@ -237,7 +237,7 @@ export class Agent {
   async register(opts: RegisterOptions = {}): Promise<Registration> {
     const address = opts.address === undefined ? undefined : addressArg('address', opts.address);
     for (const name of Object.keys(opts)) {
-      if (!['address', 'code', 'for', 'pairing'].includes(name) && !/^[a-z][a-z0-9.-]*:[a-zA-Z0-9._-]+$/.test(name))
+      if (!['address', 'code', 'for', 'pairing'].includes(name) && !/^[a-z0-9][a-z0-9.-]*:[a-zA-Z0-9._-]+$/.test(name))
         throw invalid(name, 'Creation extensions must be namespaced; recovery uses recover().');
     }
     const body = withoutUndefined({ ...opts, key: this.key, address });

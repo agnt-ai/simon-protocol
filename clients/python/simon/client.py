@@ -502,7 +502,7 @@ class Agent(Reader):
         """
         body: dict[str, str] = dict(extensions or {})
         reserved = {"key", "address", "code", "for", "pairing", "at", "recover"}
-        if any(k in reserved or re.fullmatch(r"[a-z][a-z0-9.-]*:[a-zA-Z0-9._-]+", k) is None or not isinstance(v, str) for k, v in body.items()):
+        if any(k in reserved or re.fullmatch(r"[a-z0-9][a-z0-9.-]*:[a-zA-Z0-9._-]+", k) is None or not isinstance(v, str) for k, v in body.items()):
             raise _invalid("extensions", "Host extensions are strings and cannot replace API members.")
         body["key"] = self._key().token
         if address is not None:
