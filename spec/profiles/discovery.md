@@ -29,7 +29,7 @@ A reader MUST take a record only when every member above is as above, its `issue
 GET https://<server>/simon/lookup?identifier=<identifier, percent-encoded>
 ```
 
-- A server that answers lookups MUST say so in its server document (PROTOCOL.md 4) with the member `"discovery": true`. A reader MUST NOT ask a server whose document does not say it. A server that cannot list anyone, having no way to send codes, SHOULD NOT say it: its domains would answer a final `404`, and the directories its holders chose would go unasked.
+- A server that answers lookups MUST say so in its server document (PROTOCOL.md 4) with the member `"discovery": true`. A server whose document does not say it MUST NOT answer lookups, and a reader MUST NOT ask it. A server that cannot list anyone, having no way to send codes, SHOULD NOT say it: its domains would answer a final `404`, and the directories its holders chose would go unasked.
 - The asker MUST percent-encode the identifier as a form value is, `+` included: `tel:+14155550100` is sent as `tel%3A%2B14155550100`. A server MUST read the query as a form, where a bare `+` is a space.
 - The asker MUST sign the request with its agent key, naming itself in `simon-agent` (PROTOCOL.md 8), as a reader of a published message does (publishing profile, section 1). The server MUST answer an unsigned request, or one whose signature fails, with `401`: lookups are attributable, so a server can bound what any one agent asks.
 - The server MUST answer `200 {"record"}`, its latest record for the identifier, or `404 not_found`. An identifier nobody listed, one that was unlisted, one whose record lapsed, and one the server never heard of MUST all answer the same `404`, the same bytes, so an answer tells nothing about who is not there.
