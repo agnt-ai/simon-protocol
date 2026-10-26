@@ -48,7 +48,7 @@ export type Resolution =
 export type Resolve = (domain: string) => Promise<Resolution>;
 
 /**
- * How long a resolver may cache an outcome (spec section 3), given the lifetime its source allows (the TXT
+ * How long this library caches an outcome, within the bounds of spec section 3 (docs/HOST-NOTES.md), given the lifetime its source allows (the TXT
  * record's TTL, or the well-known answer's HTTP freshness, RFC 9111): a `server` for that, at most an hour;
  * `not_found` ten minutes; `temporary` a minute. The spec allows no caching of the other outcomes.
  */

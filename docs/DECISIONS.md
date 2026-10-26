@@ -51,7 +51,7 @@ Servers route versions they do not know. An agent's own server refuses to accept
 
 **Choice.**
 - Keys are written as tokens, `alg:base64url`.
-- Version 1 defines `ed25519` and `ml-dsa-65`, and every server implements both.
+- Version 1 defines `ed25519` and `ml-dsa-65`. Every server implements `ed25519`; `ml-dsa-65` is optional, and a server that verifies it says so in `algorithms` (B13.15, below).
 - A signature names no algorithm. A verifier tries each of the signer's valid keys whose algorithm it implements, against signatures well formed for that algorithm.
 - Servers publish the algorithms they verify, in `algorithms`.
 - A missing algorithm is its own error, `unsupported_algorithm`, never mistaken for a forgery.
@@ -557,6 +557,21 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Precedent:* keys.openpgp.org (verify before listing, after the SKS keyservers' squatting), WebFinger (one identifier, one answer), Bluesky handle verification (the domain speaks for itself).
 - *Every member is signed:* a record is signed over all its members but `signature`, as a message is, so a later draft can add one under the issuer's signature and nobody can attach one unsigned. Signing only the six known members would have frozen the record.
 - *A domain speaks only when its server says so:* a server advertises lookups with `discovery` in its server document. A domain whose server has not taken up this optional profile has not spoken, and directories answer for it; a domain whose `_simon` records are malformed or conflict has spoken badly, and nobody answers for it.
+
+## Key words for rules, a table of their tests, and a smaller core (2026-10-26)
+
+**Choice (B12).** Every rule carries a BCP 14 key word, MUST, SHOULD or MAY. Definitions, formats and grammars are normative as definitions; other prose explains. The convention that an indicative sentence has the force of MUST is gone, in PROTOCOL.md, CLIENT.md and the profiles alike. Appendix B of PROTOCOL.md maps each rule to the vector sections and conformance checks that test it, and a spec test fails when a vector section or a conformance check on a core rule is missing from it.
+
+- *Why:* "a server refuses" read as a description to anyone who had not read the conventions, and the strength of a rule hid in its mood. Key words make every requirement findable by search, and the table shows which rules nothing tests yet.
+- *Precedent:* RFC 8174, and every IETF protocol since.
+
+**Choice (B13, the editorial cuts).**
+- *Check order (B13.1):* the numbered checks of deliver, signal and signed requests are a reference order that a server SHOULD follow. Only their dependencies are MUST: bound the body before parsing; verify the carrier's signature before any recipient or third-party work, a repeat's recognition included; recognise a repeat before judging freshness; record a nonce only once every other check has passed; change nothing before every check passes. The conformance checks of the rest of the order are `should`.
+- *Time windows (B13.2):* section 9 derives every window from two constants, the delivery horizon (144 hours) and the clock skew (300 seconds). No value changes.
+- *Hint names (B13.5)* are the registry's; the core keeps only the signed per-recipient container.
+- *Resolution (B13.7)* has three outcomes, a server, no server, or try again, with the five reasons kept as names. Try again never becomes no server. Caching is bounded by the source's lifetime; the reference library's caps move to `docs/HOST-NOTES.md`, and their vectors say so.
+- *Host advice (B13.8, B13.9, B13.14):* how to name paired agents, carrying identifiers that change, cache caps and lookup limits move to `docs/HOST-NOTES.md`. What retirement means and that an address is never paired again stay in the core, as do the SSRF and redirect guards, which protect third parties.
+- *Algorithms (B13.15):* every implementation implements `ed25519`; `ml-dsa-65` is optional and advertised in `algorithms`. A signer with no key the verifier implements fails explicitly, `403 unsupported_algorithm`, and never downgrades. A server signs what it sends other servers with an `ed25519` key, and its document must list `ed25519`; an agent's own server refuses a principal key it cannot check. The conformance checks of `ml-dsa-65` skip a server that does not advertise it. *Precedent:* TLS 1.3 and MLS each make one suite mandatory and the rest negotiated.
 
 ## Revisions and reconciliation (2026-10-22)
 

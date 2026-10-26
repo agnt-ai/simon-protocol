@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+Still SIMON 1, wire `v:1`; no message changes form.
+
 **Discovery profile.** `spec/profiles/discovery.md`: an agent finds the assistant the holder of an email
 address or phone number chose. An identifier's own domain answers for its addresses when its `_simon` TXT
 record names a server; directories the reader trusts answer for everything else. A directory lists an
@@ -33,6 +35,27 @@ unlisted identifier answers the same `404`. The reference server answers `GET /s
   `directoryLookupClient`).
 - A `+` in an identifier is sent as `%2B`. Normative wording loosened where it was host policy: a default
   directory list is a MAY, and what an agent does when it finds no record is a note.
+
+**Key words for every rule.** PROTOCOL.md, CLIENT.md and the profiles state each requirement with a BCP 14
+key word (MUST, SHOULD, MAY); the convention that an indicative sentence means MUST is gone. Definitions,
+formats and grammars stay normative as definitions. Appendix B of PROTOCOL.md maps each rule to the vector
+sections and conformance checks that test it, and `test/spec/appendix.test.ts` keeps the table complete.
+
+**`ml-dsa-65` is optional.** Every implementation implements `ed25519`; a server that verifies `ml-dsa-65`
+lists it in `algorithms`, as before, and every server signs what it sends other servers with an `ed25519` key. Both libraries now read a server document that lists only `ed25519`
+(the vector `listing only ed25519` reads; `listing only ml-dsa-65` is refused). The conformance checks of
+`ml-dsa-65` skip a server that does not advertise it.
+
+**Check order is a reference, not a rule.** Deliver, signals and signed requests keep their numbered checks
+as a reference order that servers SHOULD follow; only the dependencies are MUST (bound before parsing, the
+carrier's signature before recipient or third-party work, a repeat before freshness, a nonce recorded only
+once every other check has passed). Ten deliver order checks and `requests.refusal-order` move from `must` to
+`should`.
+
+**A smaller core.** Section 9 derives every time window from the delivery horizon (144 hours) and the clock
+skew (300 seconds), with no value changed. Resolution reads as three outcomes, a server, no server or try
+again, keeping its reason names. Cache caps, how hosts name paired agents, identifiers that change and lookup
+limits move to the new `docs/HOST-NOTES.md`.
 
 ## 0.3.1 (2026-10-26)
 

@@ -36,8 +36,11 @@ export interface ServerDocument {
   discovery?: true;
 }
 
-/** The algorithms every version 1 server verifies, and so every server document lists. */
+/** The algorithms version 1 defines (spec section 2.3). */
 export const V1_ALGORITHMS: readonly string[] = Object.freeze(['ed25519', 'ml-dsa-65']);
+
+/** The algorithms every server verifies, and so every server document lists; `ml-dsa-65` is optional and advertised. */
+export const REQUIRED_ALGORITHMS: readonly string[] = Object.freeze(['ed25519']);
 
 /**
  * What an agent is (spec section 2.2), fixed for the life of its address, as its own server records it:
@@ -116,12 +119,12 @@ export function readServerDocument(body: Uint8Array, origin: string, now: Date):
 
 /**
  * The algorithms a server document lists, or null: an array of algorithm names (lower-case letters, digits
- * and hyphens) that includes both version 1 algorithms. Names this reader does not know are kept.
+ * and hyphens) that includes every required algorithm. Names this reader does not know are kept.
  */
 function readAlgorithms(value: Json | undefined): string[] | null {
   if (!Array.isArray(value) || !value.every(a => typeof a === 'string' && /^[a-z0-9-]+$/.test(a))) return null;
   const names = value as string[];
-  return V1_ALGORITHMS.every(a => names.includes(a)) ? names : null;
+  return REQUIRED_ALGORITHMS.every(a => names.includes(a)) ? names : null;
 }
 
 /** The four published limits, each a safe integer at least its minimum, or null. Other members are ignored. */

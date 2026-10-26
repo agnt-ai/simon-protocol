@@ -1421,6 +1421,7 @@ function documents() {
       text({ ...doc, algorithms: ['x-later', 'ml-dsa-65', 'ed25519'] }),
     ],
     ['listing only ed25519', text({ ...doc, algorithms: ['ed25519'] })],
+    ['listing only ml-dsa-65', text({ ...doc, algorithms: ['ml-dsa-65'] })],
     ['with algorithms as one string', text({ ...doc, algorithms: 'ed25519,ml-dsa-65' })],
     ['with an algorithm name in upper case', text({ ...doc, algorithms: ['ed25519', 'ML-DSA-65'] })],
     ['with 33 keys', text({ ...doc, keys: many(33, () => keyEntry(exampleCom.key)) })],
@@ -1509,7 +1510,7 @@ function documents() {
   ];
   return {
     about:
-      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and both of version 1 among them, and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
+      'Documents (section 4) as fetched bytes. server: what a reader reads at now from each body fetched from origin, or null (its keys read as keyLists says); a server document needs its algorithms, every one it verifies and ed25519 among them (ml-dsa-65 is optional), and its four limits. agent: what a reader reads from each body when it asked for address, holding the server keys given, at now; null when it refuses the document. A retired document (a retired address’s) reads with its retired and its unpairing when it has one; it is unreadable unless retired is a timestamp, unpairing when present a base64url string, and every key revoked at or before retired.',
     now: NOW,
     server: server.map(([name, body, origin = ORIGIN]) => ({
       name,
@@ -2538,7 +2539,7 @@ async function resolution() {
   ];
   return {
     about:
-      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _simon.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/simon: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest a resolver may cache each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime).',
+      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _simon.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/simon: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest this library caches each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime); these caps are the reference library’s (docs/HOST-NOTES.md), within the bounds section 3 sets.',
     cases: await Promise.all(cases.map(async c => ({ ...c, result: await resolveCase(c) }))),
     origins: [
       'https://simon.example.com',
