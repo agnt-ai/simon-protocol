@@ -297,6 +297,10 @@
         },
         "unpairing": {
           "$ref": "common.json#/$defs/base64url"
+        },
+        "succession": {
+          "$ref": "common.json#/$defs/succession",
+          "description": "When a key the principal moved on from signed the unpairing: the succession from that key to the principal the server holds (PROTOCOL.md 2.2, unpairing always wins)."
         }
       },
       "required": ["address", "unpairing"],

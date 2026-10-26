@@ -11,8 +11,10 @@ import {
   readAgentDocument,
   readServerDocument,
   sha256Hex,
+  signMessage,
   signRequest,
   type AnyMessage,
+  type Message,
 } from '@agnt-sdk/simon-protocol';
 import type { Extension } from '../src/extensions.ts';
 import { replyBody } from '../src/testing.ts';
@@ -433,5 +435,60 @@ describe('readers of a published message with an audience (spec sections 7.1 and
     const [bobHere, eveHere] = [await alpha.agent('bob'), await alpha.agent('eve')];
     assert.equal((await fetchAs(bobHere)).status, 200, 'an agent here its audience admits');
     assert.equal((await fetchAs(eveHere)).status, 404, 'an agent here its audience refuses');
+  });
+});
+
+describe('a published message without an audience, as a pre-release server stored it (spec section 5.4)', async () => {
+  const fed = new Federation();
+  after(() => fed.close());
+  // A policy that would admit anyone to any labelled audience: it is never asked about a message with none.
+  const everyone: Extension = { name: 'everyone', admitsReader: () => 'admit' };
+  const alpha = await fed.server('alpha', { extensions: [everyone] });
+  const beta = await fed.server('beta');
+  const ada = await alpha.agent('ada');
+  const bob = await beta.agent('bob');
+
+  it("is its author's alone: closed, never open, whatever the server's policy, and so are its parts", async () => {
+    const bytes = Buffer.from('a picture kept to its author');
+    await ada.upload(bytes);
+    const sha256 = sha256Hex(bytes);
+    const { signature: _, ...posted } = ada.message([], 'no audience', {
+      parts: [
+        { type: 'text/plain', data: 'no audience' },
+        { type: 'image/png', sha256, size: bytes.length },
+      ],
+    });
+    const m = signMessage<Message>({ ...posted, headers: {} }, ada.key);
+    const id = messageId(m);
+    const now = new Date(fed.clock.t).toISOString();
+    await alpha.store.putMessage(
+      {
+        id,
+        message: m,
+        carrier: alpha.origin,
+        claims: [],
+        signedClaims: null,
+        receivedAt: now,
+        expiresAt: '2099-01-01T00:00:00.000Z',
+      },
+      { deliveries: [] },
+    );
+    const as = (signer: TestAgent, path: string) => {
+      const url = new URL(alpha.origin + path);
+      const headers = signRequest(signer.key, {
+        method: 'GET',
+        url: url.href,
+        now: fed.clock.t,
+        agent: signer.address,
+      });
+      return alpha.server.handle(toRequest('GET', url, { ...headers }, Buffer.alloc(0), '192.0.2.9'));
+    };
+    const message = `/simon/messages/${id}`;
+    const part = `/simon/parts/${sha256}`;
+    assert.equal((await ada.request('GET', message, { sign: false })).status, 404, 'to nobody in particular');
+    assert.equal((await as(bob, message)).status, 404, 'to a reader the policy would admit to any label');
+    assert.equal((await as(ada, message)).status, 200, 'to its author');
+    assert.equal((await ada.request('GET', part, { sign: false })).status, 404, 'its part, to nobody in particular');
+    assert.equal((await as(bob, part)).status, 404, 'its part, to another reader');
   });
 });

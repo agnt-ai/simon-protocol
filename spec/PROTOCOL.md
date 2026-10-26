@@ -339,7 +339,7 @@ Known version 1 messages contribute their named files recursively through the sa
 
 **Names.** A header name, and every other name the protocol and the registry use (relations, feeds, signal types), is lower-case letters and digits in groups joined by single hyphens, at most 128 characters in all. A name without a dot is the registry's (section 10). Anyone else's name is **private**: reverse-domain, several such labels joined by dots and starting with a domain its author controls, as in `com.example.approve`, so two parties' names never collide. A name's meaning never changes incompatibly; a new meaning takes a new name.
 
-Headers are the extension point of version 1. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar and placement of each as a version 1 message rule:
+Headers are the extension point of version 1. A reader ignores a header it does not know, unless the message lists that header as critical. The protocol names eight headers. Every server checks the grammar of each as a version 1 message rule, and the placement of the four that have a placement rule (`pairing`, `succession`, `audience` and `listed`); a `rel` or a `feed` where it means nothing is ignored, not refused:
 
 - **`for`** names the principal of a paired agent: a `mailto:`, `tel:` or `simon-key:` identifier (section 2.2).
   - Every message from a paired agent carries it, always with the same value, until a succession moves a key principal on to its new key (section 2.2). A message from a solo agent never does.
@@ -358,7 +358,7 @@ Headers are the extension point of version 1. A reader ignores a header it does 
 - **`audience`** labels who may read a published message. Every message whose `to` is empty carries one, and only such a message does; a server refuses a message to no one that has none (`400 invalid`, `headers`). Its value is any string: `public` admits anyone, and only the author's server interprets any other. A message to no one without one, met anywhere, is readable by its author alone: closed, never open. **A copy carries its audience:** an agent or a server that holds a message whose `audience` is anything but `public` MUST NOT forward it, quote it whole or serve it to anyone its author's server would not admit, and one that cannot tell keeps it to itself.
 - **`listed`** is the author's consent for public relation listing. Its only value is `yes`, and it is valid only on a relation with a valid `rel`, a non-null `inReplyTo` and a non-empty `to`. It does not compel a host to display the relation.
 
-The [publishing profile](profiles/publishing.md) says what `feed`, `audience` and `listed` mean; every server checks their grammar and placement all the same.
+The [publishing profile](profiles/publishing.md) says what `feed`, `audience` and `listed` mean; every server checks their grammar, and the placement of `audience` and `listed`, all the same.
 
 Every other convention is a registry entry (section 10).
 
@@ -449,7 +449,7 @@ A receiving server checks in this order, and answers with the first failure. A `
 1. **Parse.** The body is no larger than the server's `requestBodyBytes` (`413 body_too_large`, checked before parsing), and parses under section 5.1's rules (`400 invalid`).
 2. **Envelope shape.** The envelope is an object. `message` is an object, `signature` is a base64url string, `server` is an origin, and `recipients` is as in section 6.1. `claims`, `claimsSignature` and `hints` are as in section 6.2. Otherwise `400 invalid`, with `details.field`.
 3. **Canonical form.** The message is in canonical form. Otherwise `400 invalid`, with `details.canonical`.
-4. **Message.** The invariants hold. The size is within `messageBytes` (`details.field` is then `message`), and `to` is within `recipients` in the limits. For a version the server knows, the version's own rules hold, including the grammar and placement of the headers the protocol names, every part's `size` within `partBytes`, and the files of every message carried inline (section 5.3). Otherwise `400 invalid`, with `details.field`.
+4. **Message.** The invariants hold. The size is within `messageBytes` (`details.field` is then `message`), and `to` is within `recipients` in the limits. For a version the server knows, the version's own rules hold, including the grammar of the headers the protocol names and the placement rules of section 5.4, every part's `size` within `partBytes`, and the files of every message carried inline (section 5.3). Otherwise `400 invalid`, with `details.field`.
 5. **Destination.** `server` is this server's own origin, and every address in `recipients` is in `to`. Otherwise `400 invalid`, with `details.field`. Nothing is resolved for this step.
 6. **Resolution.** The `from` domain resolves. A `temporary` outcome is `503 unavailable`. Any outcome other than `server`, or a server that is the receiver itself, is `403 bad_signature`.
 7. **Envelope signature.** The carrier's document is readable: a fetch that failed for now is `503 unavailable`. The envelope, and `claimsSignature` when present, verify with a key of the carrier valid now. Otherwise `403 bad_signature`.
@@ -591,7 +591,7 @@ SIMON-REQUEST
 
 **What every 401 carries:**
 - The header `WWW-Authenticate: SIMON`.
-- `details.serverTime`.
+- `details.serverTime`: the server's clock, an integer of whole seconds since the Unix epoch, as `simon-timestamp` is written.
 - On a `bad_signature`, also `details.signingString`: the string the server expected, so a signer can fix its string or its clock without reading documentation.
 
 **Exceptions.**
@@ -849,7 +849,7 @@ All of these are server features or services built on top.
   - message ids, signatures and transmitted bytes;
   - refused messages with their statuses and codes, and accepted messages at every limit, including messages with no parts, part names and alts, a message carried whole, a sealed message, and the placement of `rel`, `feed` and `audience`;
   - messages of a version this one does not know, valid on their invariants.
-- **Reading** ([reader profile](profiles/reader.md)): which relations a reader applies and which it shows as replies, which principals count (never a solo agent's), and which messages a reader presents as not understood (an unknown version, an unknown critical header).
+- **Reading** ([reader profile](profiles/reader.md)): which relations a reader applies and which it shows as replies, which principals count (never one on a message without evidence: a pairing, or a trusted claim), and which messages a reader presents as not understood (an unknown version, an unknown critical header).
 - **Signatures and pairings:**
   - keys valid and not valid at `sentAt`, at the boundaries;
   - signatures every verifier must refuse, though the bare equation holds;

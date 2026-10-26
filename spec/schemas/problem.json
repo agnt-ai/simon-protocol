@@ -40,7 +40,8 @@
           "type": "string"
         },
         "serverTime": {
-          "type": "string"
+          "type": "integer",
+          "description": "On every 401: the server's clock, in whole seconds since the Unix epoch, as simon-timestamp is written (PROTOCOL.md 8)."
         },
         "signingString": {
           "type": "string"

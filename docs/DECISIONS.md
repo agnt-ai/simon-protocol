@@ -499,6 +499,7 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 **Choice (B4).** A message carries a non-empty `to` or an `audience` header. `audience: public` is world-readable; any other label is the author's server's to interpret. A server refuses a message to no one without an audience, and anything that meets one anyway treats it as its author's alone: closed, never open.
 
 - *Why:* forgetting the recipients used to publish a message to the world. Agents are the users, so the extra field costs nothing, and it removes a whole class of accidental leaks.
+- *`public` is reserved:* it is the one label every reader and server reads the same way, world-readable, and the one a copy may be forwarded or quoted under whole. Every other label means only what the author's server says, so no server may give `public` another meaning, and no other label is ever read as world-readable.
 - *Precedent:* ActivityPub addresses `Public` explicitly; Mastodon marks visibility on every post.
 
 **Choice (B13.4).** A server no longer refuses a misplaced `rel` (on a message whose `inReplyTo` is null) or `feed` (on a message with recipients): each then means nothing and is ignored. It still refuses an `audience` on a message with recipients, because audience is security metadata and placement is what makes it mean something. "Never widen an audience" applies to every label but `public`.
@@ -516,7 +517,10 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 ## Pairings lapse within a year (2026-10-25)
 
-**Choice (B6).** Every key pairing signs an `until`, and counts only before it, by at most 366 days. The principal sets it; an agent may propose one, but cannot set or extend it alone. The principal renews by signing a later `until`; the agent carries the new pairing, and since its server checks each message's pairing against `for`, renewal needs no call. A reader acting on a message judges the pairing now; one showing an old message may judge it at `sentAt`, the sender's word.
+**Choice (B6).** Every key pairing signs an `until`, and counts only before it, by at most 366 days. The principal sets it; an agent may propose one, but cannot set or extend it alone. The principal renews by signing a later `until`; the agent carries the new pairing, and since its server checks each message's pairing against `for`, renewal needs no call. Verification judges the pairing at the message's `sentAt`; the agent's own server judges it at both `sentAt` and its own clock, so a message backdated within the 24-hour send window cannot carry a lapsed pairing. Whether a reader also requires the pairing to count now before acting is its policy (at most a SHOULD), and it may take a later message with the same address and `for` as evidence of renewal.
+
+- *The lapsed state:* a lapsed agent keeps its address and keeps receiving; its sends are refused until the principal renews, and renewal after a lapse is allowed. If the principal's key is lost, the host MAY retire the address, and a new key pairs new addresses.
+- *Leeway:* libraries sign 365 days by default against the 366-day cap, a day for clocks and leap years.
 
 - *Why:* a pairing used to bind an address to a principal for good, and whoever later controlled the domain could present it. A year bounds that, and bounds a compromised agent the principal never unpaired.
 - *The cap stands in for an issue time,* which a reader cannot check: judged against the reader's own clock, no `until` reaches more than 366 days ahead.
@@ -525,7 +529,10 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 ## A key principal moves to a new key by a succession (2026-10-25)
 
-**Choice (B7).** Planned rotation only. The old key and the new both sign `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; each step names the one before it, and messages carry the chain, oldest first, as the `succession` header. The agent's own server moves its record along the chain on the first message that carries it and holds the agent to the new key from then on; readers that knew any key in the chain know the principal. Two steps from one key to different keys are a fork, and a reader that holds both links neither successor. A lost key is recovery, and stays host policy.
+**Choice (B7).** Planned rotation only. The old key and the new both sign `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; each step names the one before it, and messages carry the chain, oldest first, as the `succession` header. The agent's own server moves its record along the chain on the first message that carries it and holds the agent to the new key from then on; readers that knew any key in the chain know the principal. Two steps from one key to different keys are a fork: a reader that holds both MUST NOT link either successor to that key; how it shows them, and whether that is permanent, is its policy. A lost key cannot sign a succession: its pairings lapse, and a new key pairs new addresses. A chain has at most 16 steps.
+
+- *Unpairing always wins:* an unpairing signed by any key in the chain, a key the principal moved on from included, ends the agent, at its server (the unpairing carries the chain to the principal the server holds) and at readers. A move never shields an agent from its earlier key; a principal whose old key was copied ends its agents and pairs new addresses with a new key.
+- *The record moves once the message is stored,* so a message that is refused or lost moves nothing; an agent that never sends stays on the old principal at its server. Once the server has accepted the move, a client may drop the chain or keep it for readers.
 
 - *Why:* without it, a principal who replaces a key becomes a stranger to everyone who knew it, and every agent paired with it must start again under new addresses.
 - *Both keys sign:* the old consents to pass its place on, the new to take it. Neither alone can attach a principal's history to a key, or pass it to a key the principal doesn't hold.

@@ -7,8 +7,7 @@
   "required": ["message", "server", "recipients", "signature"],
   "properties": {
     "message": {
-      "type": "object",
-      "description": "A message of any version; message.json for version 1."
+      "$ref": "common.json#/$defs/anyMessage"
     },
     "server": {
       "$ref": "common.json#/$defs/origin"

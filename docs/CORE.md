@@ -40,7 +40,7 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 | Signals and `POST /simon/signal` | core | 6.4 | A new server-to-server call: every server must implement it to receive signals, and none exists to reuse, since signals must never be stored. |
 | `typing`, `collected`, `read` | registry | Signal types | The signals the path exists for, decades old. Servers pass on types without reading them. |
 | Published messages, feed listings, relations listings | publishing profile | profiles/publishing.md | Optional: a server that publishes implements all of it. |
-| `feed`, `audience` and `listed` headers | core grammar, publishing meaning | 5.4; publishing profile | Every server checks their grammar and placement; the author's server reads `feed` to list feeds, `audience` to refuse readers, and `listed` to know which relations their writers let it list. |
+| `feed`, `audience` and `listed` headers | core grammar, publishing meaning | 5.4; publishing profile | Every server checks their grammar, and the placement of `audience` and `listed`; the author's server reads `feed` to list feeds, `audience` to refuse readers, and `listed` to know which relations their writers let it list. |
 | What an audience label means | registry (or the author's app) | Audience labels | Opaque to the protocol by design. |
 | Following | registry | `follow` header, `followers` label | Can start as a convention: a reader polls a feed. |
 | Interactive UI is data, never code | core (security rule) | 11.2 | A safety rule every reader must obey. The UI block format itself is reserved in the registry. |

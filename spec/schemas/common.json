@@ -105,6 +105,42 @@
         }
       },
       "description": "A statement a carrier makes about a message's author (PROTOCOL.md 6.2). acts-for has agent, for, verifiedAt and scope; other types are the registry's."
+    },
+    "anyMessage": {
+      "type": "object",
+      "required": ["v", "from", "to", "sentAt", "signature"],
+      "properties": {
+        "v": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sentAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "signature": {
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "v": {
+            "const": 1
+          }
+        }
+      },
+      "then": {
+        "$ref": "message.json"
+      },
+      "description": "A message of any version: the invariants every version keeps (PROTOCOL.md 1), and message.json for version 1. A server routes a version it does not know on these alone."
     }
   }
 }

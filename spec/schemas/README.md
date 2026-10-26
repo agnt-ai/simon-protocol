@@ -4,7 +4,7 @@ Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLI
 
 | File | Object |
 | --- | --- |
-| `message.json` | Version 1 message; unsupported versions require the protocol's separate reading rules |
+| `message.json` | Version 1 message; `common.json#/$defs/anyMessage` is a message of any version (the section 1 invariants), which unsupported versions are judged by |
 | `envelope.json`, `signal.json` | Server-to-server delivery and transient signal |
 | `server-document.json`, `agent-document.json` | Documents, including optional sync/history advertisement and retirement evidence |
 | `published.json`, `listing.json` | Published message and feed/related listing |
@@ -29,4 +29,4 @@ Document `keys` has at most 32 total entries, retained revoked entries included.
 
 The `origin` grammar accepts production HTTPS only; explicit development HTTP origins do not match. The URL and address patterns are shape aids, not complete transport or IDNA validation. `unsignedSendRequest` intentionally leaves message semantics to the protocol validator.
 
-This revision has not been run through a schema validator, vectors, server integration checks or syntax checks. Earlier branch claims about checked inbox/register answers do not verify these updated dedicated lifecycle and sync shapes. No readiness or interoperability result is asserted here.
+`protocol/test/schemas.test.ts` validates the vectors against these schemas with a draft 2020-12 validator: every message, envelope, signal, document, published answer and problem the vectors accept is valid under its schema, and every one they refuse is invalid unless the test names the rule a schema cannot state (a size, canonical bytes, a calendar date, a signature, the receiving server's context, or a carried message's interior). The client API shapes beyond those are not checked against server answers; no readiness or interoperability result is asserted here.

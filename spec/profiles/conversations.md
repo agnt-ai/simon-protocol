@@ -14,7 +14,7 @@ A **conversation** is a message, its **root**, together with every message whose
 ## 2. Who is in it
 
 **There is no roster.** Each message's `to` is its author's choice of who receives it, and servers deliver to exactly that, no more. This is how email and texting work.
-- **Replying.** A reply to everyone starts from the `to` of the message it answers, adds that message's `from`, and drops the replier's own address. Its author may add or leave out anyone.
+- **Replying.** A "reply to everyone" is a client convenience, not a rule: a client MAY start one from the `to` of the message it answers, add that message's `from`, and drop the replier's own address. Its author may add or leave out anyone.
 - **Forks.** A reply that reaches more or fewer people than the message before it forks the conversation: it stays in the same conversation by its `inReplyTo` chain, and each branch has the recipients its messages name. A reader may show a branch apart when its recipients differ.
 - **Nothing to forge.** Because no message changes who is in a conversation, no message can add someone behind another's back or outlast its sender's removal. Whoever can write to a person can include them; whoever replies decides whom the reply reaches.
 
