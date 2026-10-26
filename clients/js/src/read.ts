@@ -367,6 +367,17 @@ async function resolution(domain: string, opts: ReadOptions): Promise<Resolution
   return r;
 }
 
+/**
+ * The server that speaks for an identifier's holder (discovery profile, section 3): for `mailto:`, the server
+ * its domain's `_simon` TXT record names, as for claims; null for a domain named only by its well-known
+ * answer, one that names no server, and any `tel:`. A lookup that failed for now is a retryable error.
+ */
+export async function identifierAuthority(identifier: string, opts: ReadOptions = {}): Promise<string | null> {
+  if (!identifier.startsWith('mailto:')) return null;
+  const r = await resolution(domainOf(identifier.slice('mailto:'.length)), opts);
+  return r.outcome === 'server' && r.via === 'dns' ? r.server : null;
+}
+
 /** The server a domain resolves to, or `no_server`. */
 async function resolveServer(domain: string, opts: ReadOptions): Promise<string> {
   const r = await resolution(domain, opts);

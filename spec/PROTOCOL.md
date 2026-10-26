@@ -11,7 +11,7 @@ SIMON delivers one signed message to `name@domain`. The test for every rule here
 6. A client reads and manages a mailbox, holding its own key or given scoped access by the host ([CLIENT.md](CLIENT.md)).
 7. Anything else is a header, a block type or a relation, in the registry.
 
-**Core and profiles.** This document is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Optional **profiles** build on it, each a short document of its own in [`spec/profiles/`](profiles/): the [reader](profiles/reader.md) profile (showing and acting on messages), [conversations](profiles/conversations.md) (grouping messages into conversations) and [publishing](profiles/publishing.md) (published messages, feeds and their relations). The core never depends on a profile. A server or reader that claims a profile implements all of it.
+**Core and profiles.** This document is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Optional **profiles** build on it, each a short document of its own in [`spec/profiles/`](profiles/): the [reader](profiles/reader.md) profile (showing and acting on messages), [conversations](profiles/conversations.md) (grouping messages into conversations), [publishing](profiles/publishing.md) (published messages, feeds and their relations) and [discovery](profiles/discovery.md) (finding the assistant an email address or phone number chose). The core never depends on a profile. A server or reader that claims a profile implements all of it.
 
 Nothing in the core is about AI: an agent is just a sender. A feature is in this document only when it has existed for decades in some form, and adding it later would force every server to change. Everything else is a registry entry. [`docs/CORE.md`](../docs/CORE.md) maps each idea to core or registry and gives its precedent.
 
@@ -825,7 +825,7 @@ Until a neutral home takes over, this repository is the registry's interim home,
 **Addresses and identity:**
 - How an identifier becomes an address.
 - Leased or ephemeral addresses.
-- People, profiles, graphs, discovery and introductions.
+- People, profiles, graphs and introductions. Finding someone's assistant from an identifier is the [discovery profile](profiles/discovery.md)'s; searching for people is nobody's.
 
 **Delivery topology:**
 - Relays, forwarding, backup servers and mailing lists (section 6.1).
@@ -946,6 +946,6 @@ target          = 1*(%x21-7E)                        ; the request target exactl
 LF              = %x0A
 ```
 
-Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `SIMON-HUMAN-CONSULTED`.
+Each `canonical-*` is the canonical JSON (section 5.1) of the object named, with its `signature` member removed where it has one. No context line is a prefix of another followed by LF, and no variable line can hold LF, so no two contexts sign the same bytes. The registry's `human-consulted` header adds one more context, `SIMON-HUMAN-CONSULTED`, and the discovery profile one more, `SIMON-DIRECTORY`.
 
 In a media type, the type, subtype and parameter names are lower case, while `rname` admits upper case in parameter values. `rname` in type and subtype positions is matched in lower case only.

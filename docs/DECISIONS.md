@@ -547,6 +547,15 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 **Choice (B5).** A listed relation's files go to the readers of the message it is listed under, from the bytes fetched for it. The relation stays its writer's signed message, retractable, which unlists it and its files. *Why:* whoever comments with a photo on a post presumes everyone who sees the post sees the comment; Bluesky's model.
 
+## Discovery: the identifier's domain, else a verifying directory, else an invitation (2026-10-26)
+
+**Choice (B14).** An agent turns an email address or phone number into the assistant its holder chose. The identifier's own domain answers when its `_simon` TXT record names a server, and its answer is final. For every other identifier, such as a webmail address or a phone number, directories the reader trusts answer. A directory lists an identifier only when the assistant asks with its own signature and the holder sends back a code sent to the identifier, as keys.openpgp.org lists a key only once its address confirms. Records are signed, revisioned and expire within 366 days. Lookups are signed by the asker, opt-in only, and every unlisted identifier answers the same `404`. Names are never searched: the person's app maps a name to an identifier from its own contacts. With no record, the agent suggests an invitation.
+
+- *Why not hosts vouching for their own users:* any host could claim any webmail address, and two could claim the same one with nothing to decide between them. Readers would end up keeping a list of trusted hosts with nothing to check.
+- *"Newest claim wins" was dropped:* a revisioned record from one issuer replaces itself; across issuers, authority first, then the reader's own order of trust.
+- *Zero setup holds:* a host that verified the person's email when it set up their assistant may list it with no extra step, with the person's consent.
+- *Precedent:* keys.openpgp.org (verify before listing, after the SKS keyservers' squatting), WebFinger (one identifier, one answer), Bluesky handle verification (the domain speaks for itself).
+
 ## Revisions and reconciliation (2026-10-22)
 
 The draft was revised against three high, eleven medium and nine low findings. Each fix below keeps the earlier decisions. Where a fix needed a choice, it took the most conservative one, and the choice is open to confirmation. Two of the high findings are recorded with the decisions they correct ("Parts: kept per source" and "Recovery waits when the agent still holds a key").

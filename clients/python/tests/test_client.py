@@ -26,6 +26,7 @@ from simon import cli
 from simon import keys as keys_module
 from simon.canonical import canonical_bytes, parse, signing_bytes
 from simon.client import Agent, NotVerified, Reader, Trust
+from simon.directory import sign_directory_record
 from simon.envelope import claims_bytes, judge_claims
 from simon.errors import SimonError
 from simon.keys import SigningKey
@@ -78,6 +79,7 @@ class FakeServer:
         self.deliveries: dict[str, dict] = {}  # id -> the sent report
         self.claims: list[dict] = []  # claims "carried" with every message sent here
         self.hints: str | None = None  # the last send's simon-hints header, as it arrived
+        self.directory: dict[str, dict] = {}  # identifier -> its directory record
         self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), self.handler())
         self.origin = f"http://127.0.0.1:{self.httpd.server_address[1]}"
         self.resolve = lambda domain: Resolution("server", self.origin, "dns")
@@ -127,6 +129,37 @@ class FakeServer:
         return Handler
 
     def route(self, method: str, target: str, body: bytes, headers) -> tuple[int, object]:
+        if target.startswith("/simon/lookup") or target == "/simon/directory":
+            # The discovery profile, trusting the signer's simon-agent header: a fake, not a server.
+            asker = headers.get("simon-agent")
+            if not asker:
+                raise SimonError("signature_required", "Sign the request.", 401)
+            if method == "GET":
+                identifier = unquote(target.split("identifier=", 1)[1])
+                if identifier not in self.directory:
+                    raise SimonError("not_found", "No record for this identifier.", 404)
+                return 200, {"record": self.directory[identifier]}
+            request = json.loads(body)
+            identifier = request["identifier"]
+            if method == "DELETE":
+                if self.directory.get(identifier, {}).get("address") == asker:
+                    del self.directory[identifier]
+                return 200, {"status": "unlisted"}
+            if "code" not in request:
+                return 202, {"status": "code_sent"}
+            if request["code"] != CODE:
+                raise SimonError("bad_proof", "That is not the code sent.", 401)
+            issued = int(self.now() * 1000)
+            record = {
+                "identifier": identifier,
+                "address": asker,
+                "revision": self.directory.get(identifier, {}).get("revision", 0) + 1,
+                "issued": timestamp(issued),
+                "expires": timestamp(issued + 365 * 86_400_000),
+                "issuer": self.origin,
+            }
+            self.directory[identifier] = sign_directory_record(record, self.key)
+            return 200, {"record": self.directory[identifier]}
         if (method, target) == ("GET", "/simon/server"):
             limits = {
                 "messageBytes": 262144,
@@ -487,6 +520,24 @@ class ClientTest(unittest.TestCase):
         self.assertTrue(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
         held["extra"] = {"unpairing": sign_unpairing(SigningKey.generate(), address)}
         self.assertFalse(Reader(resolver=self.server.resolve).verify_author(message).principal.ended)
+
+    def test_finds_the_assistant_an_identifier_chose(self):
+        """From the identifier's own domain, whose answer is final, or for a phone number from a directory."""
+        bob = self.agent()
+        bob.register()
+        self.assertEqual(bob.list_in(self.server.origin, "mailto:sarah@agents.test"), {"status": "code_sent"})
+        record = bob.list_in(self.server.origin, "mailto:sarah@agents.test", CODE)["record"]
+        ada = self.agent()
+        ada.register()
+        found = ada.find_assistant("mailto:sarah@agents.test")
+        self.assertEqual(found, {"address": bob.address, "record": record, "authoritative": True})
+        self.assertIsNone(ada.find_assistant("mailto:nobody@agents.test", directories=[self.server.origin]))
+        bob.list_in(self.server.origin, "tel:+14155550100", CODE)
+        self.assertIsNone(ada.find_assistant("tel:+14155550100"), "no directory trusted")
+        by_directory = ada.find_assistant("tel:+14155550100", directories=[self.server.origin])
+        self.assertEqual((by_directory["address"], by_directory["authoritative"]), (bob.address, False))
+        bob.unlist_from(self.server.origin, "tel:+14155550100")
+        self.assertIsNone(ada.find_assistant("tel:+14155550100", directories=[self.server.origin]))
 
     def test_a_retired_address(self):
         """A retired document: what the agent signed before keeps verifying, the unpairing it carries ends

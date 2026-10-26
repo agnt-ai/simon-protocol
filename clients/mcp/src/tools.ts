@@ -30,6 +30,8 @@ export interface Context {
   home: string;
   /** The server to register with, before the address file names one. */
   server?: string;
+  /** The directories the agent trusts, in order (discovery profile, section 3): SIMON_DIRECTORIES. */
+  directories?: string[];
   timeoutMs?: number;
   /** The directory files are read from and written to: SIMON_WORKSPACE, or the server's working directory. */
   workspace?: Workspace;
@@ -289,6 +291,28 @@ export const TOOLS: Tool[] = [
       }
       return answer(await registered(ctx).cancelRecovery());
     },
+  },
+  {
+    name: 'find_assistant',
+    description:
+      'The assistant the holder of an email address or phone number chose, so you can write to it: from the ' +
+      "address's own domain when its DNS names a server, otherwise from the directories you trust. Turn a name " +
+      'into an identifier from the contacts of the one you act for first; nothing here searches by name. null ' +
+      'when no record exists: then suggest the one you act for send their contact an invitation.',
+    inputSchema: schema({ identifier: { type: 'string' } }, ['identifier']),
+    run: async (args, ctx) =>
+      answer(await registered(ctx).findAssistant(args.identifier, { directories: ctx.directories ?? [] })),
+  },
+  {
+    name: 'list_in_directory',
+    description:
+      'List yourself in a directory as the assistant of an identifier, only when the one you act for asks: ' +
+      'the directory sends a code there; call again with the code once they read it to you.',
+    inputSchema: schema({ directory: { type: 'string' }, identifier: { type: 'string' }, code: { type: 'string' } }, [
+      'directory',
+      'identifier',
+    ]),
+    run: async (args, ctx) => answer(await registered(ctx).listIn(args.directory, args.identifier, args.code)),
   },
   {
     name: 'renew_pairing',

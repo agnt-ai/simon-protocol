@@ -25,9 +25,13 @@ import {
   isHeaderName,
   isJsonType,
   jsonDataProblem,
+  isListableIdentifier,
+  readDirectoryRecord,
+  type DirectoryRecord,
 } from '@agnt-sdk/simon-protocol';
 import { SimonError, addressArg, invalid, originArg } from './errors.ts';
 import { DEFAULT_TIMEOUT_MS, exchange, failure, readJson, type Answer, type Transport } from './http.ts';
+import { fetchServerDocument, identifierAuthority, type ReadOptions } from './read.ts';
 
 export interface AgentOptions extends Transport {
   /** The agent's own server, as an origin: `https://simon.example.com`. `http:` is for local development. */
@@ -42,6 +46,14 @@ export interface AgentOptions extends Transport {
   pairing?: string;
   /** With a key principal that moved to a new key: its signed succession, written into every message. */
   succession?: string;
+}
+
+/** The assistant an identifier's holder chose, by whose record (discovery profile). */
+export interface FoundAssistant {
+  address: string;
+  record: DirectoryRecord;
+  /** Whether the identifier's own domain issued the record, rather than a directory this agent trusts. */
+  authoritative: boolean;
 }
 
 /** Account state, answered by register on success and by account/key operations. */
@@ -511,6 +523,80 @@ export class Agent {
     const bytes = body === undefined ? undefined : raw ? body : Buffer.from(JSON.stringify(body));
     const type = bytes === undefined ? {} : raw ? BYTES_TYPE : JSON_TYPE;
     return this.#json<T>(method.toUpperCase(), path, bytes, { ...type, ...opts.headers });
+  }
+
+  /**
+   * The assistant the holder of `identifier`, an email address or a phone number, chose (discovery profile):
+   * asked of the identifier's own authority when its domain's TXT record names a server, whose answer is
+   * final, and otherwise of `directories`, the directory servers this agent trusts, in order. Each record is
+   * checked with its issuer's server document. Null when none holds one; a directory that failed for now,
+   * with none holding a record, is a retryable `unavailable`, never "nobody".
+   */
+  async findAssistant(
+    identifier: string,
+    opts: ReadOptions & { directories?: readonly string[] } = {},
+  ): Promise<FoundAssistant | null> {
+    if (!isListableIdentifier(identifier)) throw invalid('identifier', 'An identifier is mailto: or tel:.');
+    const transport = { ...this.#transport, ...opts };
+    const authority = await identifierAuthority(identifier, transport);
+    const servers = authority ? [authority] : (opts.directories ?? []).map(d => originArg('directories', d));
+    let failed: SimonError | null = null;
+    for (const server of servers) {
+      const target = `${server}/simon/lookup?identifier=${encodeURIComponent(identifier)}`;
+      try {
+        const a = await this.#signed('GET', target);
+        if (a.status === 404) continue;
+        const { record } = readJson<{ record: unknown }>(a, this.#transport.now());
+        const keys = (await fetchServerDocument(server, transport)).keys;
+        const read = readDirectoryRecord(record, identifier, keys, this.#transport.now(), opts.allowHttp);
+        // A record counts only from the server asked: no server answers in another's name.
+        if (read && read.issuer === server) return { address: read.address, record: read, authoritative: !!authority };
+      } catch (e) {
+        if (!(e instanceof SimonError)) throw e;
+        // The authority's failure is final; a directory that misbehaves is passed over, one down for now remembered.
+        if (authority && !e.retryable) throw e;
+        if (e.retryable) failed = e;
+      }
+    }
+    if (failed) throw failed;
+    return null;
+  }
+
+  /**
+   * Ask `directory` to list this agent as the assistant of `identifier` (discovery profile, section 4): without
+   * a code, it sends one to the identifier; with the code its holder read, it lists this agent and answers
+   * the record.
+   */
+  async listIn(
+    directory: string,
+    identifier: string,
+    code?: string,
+  ): Promise<{ status: 'code_sent' } | { record: DirectoryRecord }> {
+    this.#requireAddress();
+    const body = Buffer.from(JSON.stringify(withoutUndefined({ identifier, code })));
+    const target = `${originArg('directory', directory)}/simon/directory`;
+    return readJson(await this.#signed('POST', target, body), this.#transport.now());
+  }
+
+  /** Unlist this agent as the assistant of `identifier` in `directory`; the answer is the same either way. */
+  async unlistFrom(directory: string, identifier: string): Promise<{ status: 'unlisted' }> {
+    this.#requireAddress();
+    const body = Buffer.from(JSON.stringify({ identifier }));
+    const target = `${originArg('directory', directory)}/simon/directory`;
+    return readJson(await this.#signed('DELETE', target, body), this.#transport.now());
+  }
+
+  /** A request to another server, signed as this agent: a reader or a directory's client (spec section 8). */
+  #signed(method: string, url: string, body?: Uint8Array): Promise<Answer> {
+    const signed = signRequest(this.#privateKey, {
+      method,
+      url,
+      body,
+      now: this.#transport.now().getTime(),
+      agent: this.#requireAddress(),
+    });
+    const headers = body ? { ...JSON_TYPE, ...signed } : signed;
+    return exchange(this.#transport, url, { method, headers, body: body as Uint8Array<ArrayBuffer> | undefined });
   }
 
   async #json<T>(method: string, path: string, body?: Uint8Array, headers?: Record<string, string>): Promise<T> {

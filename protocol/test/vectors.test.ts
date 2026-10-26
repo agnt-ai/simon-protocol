@@ -39,7 +39,9 @@ import {
   isPrincipal,
   pairingBytes,
   currentVersion,
+  directoryBytes,
   isSuccessionValue,
+  readDirectoryRecord,
   pairingStanding,
   predecessors,
   readSuccession,
@@ -169,6 +171,15 @@ describe('the published vectors', () => {
     }
     for (const c of vectors.successions.cases) {
       assert.deepEqual(readSuccession(c.succession, c.principal), c.steps, c.why);
+    }
+    const d = vectors.directoryRecords;
+    assert.equal(
+      directoryBytes(withoutSignature(d.cases[0].value)).toString(),
+      d.bytes,
+      'directory record signing bytes',
+    );
+    for (const c of d.cases) {
+      assert.deepEqual(readDirectoryRecord(c.value, c.identifier, d.issuerKeys, new Date(c.now)), c.record, c.why);
     }
   });
 
@@ -393,3 +404,8 @@ describe('the published vectors', () => {
     }
   });
 });
+
+function withoutSignature(o: Record<string, unknown>) {
+  const { signature: _, ...rest } = o;
+  return rest as never;
+}

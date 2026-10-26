@@ -51,6 +51,7 @@ Every variable, read once at startup; an invalid value throws. Source: `src/conf
 | `SIMON_RECOVERY_WAIT` | Seconds a recovery by code waits while the agent still holds a valid key; the agent is told, and the address is sent a code that cancels it | `259200` (72 h) |
 | `SIMON_MAX_CONNECTIONS` | Connections served at once | `1024` |
 | `SIMON_RETENTION_DAYS` | Days messages are kept (at least 7) | `30` |
+| `SIMON_DIRECTORY` | `1` keeps a directory for email addresses on any domain (discovery profile); it always lists those of domains it serves | `0` |
 | `SIMON_DEV_RESOLVE` | Development only: `domain=origin,...` answered without DNS | none |
 | `SIMON_TRUSTED_NETWORKS` | Private networks outbound calls may reach, in CIDR notation, comma separated. Each is `/8` or narrower; `0.0.0.0/0`, `::/0` and anything broader than `/8` stop the server at startup. Calls stay https only | none: public addresses only |
 | `SIMON_TLS_CERT_FILE`, `SIMON_TLS_KEY_FILE` | Serve https directly with this PEM certificate chain and private key. Both or neither; the origin must then be https | plain http (put TLS in front) |
