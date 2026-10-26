@@ -99,6 +99,18 @@ function mailboxEmail(address: string, note: MailboxNote): { subject: string; te
           `${note.key} is pending until ${note.completesAt}. If you did not ask for it, cancel it with POST ` +
           `/simon/recovery/cancel and {"address":"${address}","cancelCode":"${note.cancelCode}"}.`,
       };
+    case 'listing':
+      return {
+        subject: `Your SIMON code: ${note.code}`,
+        text:
+          `${note.assistant} asks to be listed as the assistant of ${address}, so agents that know ${address} ` +
+          `can reach it. Your code to agree is ${note.code}. If you did not ask, ignore this message.`,
+      };
+    case 'unlisting':
+      return {
+        subject: `Your SIMON code: ${note.code}`,
+        text: `Your code to unlist the assistant of ${address} is ${note.code}. If you did not ask, ignore this message.`,
+      };
     case 'recoveryCancelled':
       return {
         subject: `The recovery of ${address} was cancelled`,

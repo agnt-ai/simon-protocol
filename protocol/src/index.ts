@@ -4,6 +4,7 @@
  */
 export * from './address.ts';
 export * from './canonical.ts';
+export * from './directory.ts';
 export * from './documents.ts';
 export * from './envelope.ts';
 export * from './errors.ts';

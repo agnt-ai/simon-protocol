@@ -23,6 +23,7 @@ import { Outbox } from './outbox.ts';
 import { Fetcher, partRoutes } from './parts.ts';
 import { ownDocument, publicRoutes } from './public.ts';
 import { publishedRoutes } from './published.ts';
+import { directoryRoutes } from './directory.ts';
 import { RateLimiter } from './rate.ts';
 import { recover, register } from './register.ts';
 import { Resolver } from './resolver.ts';
@@ -187,6 +188,7 @@ export function createServer(opts: ServerOptions): SimonServer {
   for (const route of [
     ...publicRoutes(ctx, retiredAgentDocuments),
     ...publishedRoutes(ctx),
+    ...directoryRoutes(ctx),
     ...partRoutes(ctx),
     ...webhookRoutes(ctx),
     ...ctx.hooks.routes,

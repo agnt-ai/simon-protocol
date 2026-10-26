@@ -30,6 +30,7 @@
  *   SIMON_MAX_CONNECTIONS         connections served at once (default 1024)
  *   SIMON_RETENTION_DAYS          how long messages are kept (default 30, at least 7)
  *   SIMON_SYNC_DAYS               how long sync shows what entered an agent's stream (default 7, at most the retention)
+ *   SIMON_DIRECTORY               1 to keep a directory for identifiers on any domain (discovery profile); default 0
  *   SIMON_DEV_RESOLVE             development only: domain=origin,... answered without DNS
  *   SIMON_TRUSTED_NETWORKS        private networks outbound calls may reach, CIDR, comma separated (/8 or narrower)
  *   SIMON_TLS_CERT_FILE           serve https with this PEM certificate chain                   with ..._KEY_FILE
@@ -73,6 +74,10 @@ export const DEFAULT_RATES = {
   codeClient: { limit: 20, seconds: 3600 },
   /** Messages sent, per agent. */
   send: { limit: 600, seconds: 3600 },
+  /** Directory lookups, per asking agent (discovery profile, section 6). */
+  directoryLookup: { limit: 300, seconds: 3600 },
+  /** Directory lookups, per domain of the asking agents, so minting agents buys no more. */
+  directoryLookupServer: { limit: 6000, seconds: 3600 },
   /** Distinct recipient domains written to, per agent: what spam needs most. */
   destinations: { limit: 100, seconds: 3600 },
   /** Part uploads, per agent. */
@@ -134,6 +139,11 @@ export interface Config {
   retentionDays: number;
   /** How long `sync` shows what entered an agent's stream, published as `syncDays` (CLIENT.md sync). */
   syncDays: number;
+  /**
+   * Whether this server keeps a directory for identifiers on any domain (discovery profile, section 4). It
+   * always lists the email addresses of domains it serves, for which it is the authority.
+   */
+  directory: boolean;
   /** The limits this server publishes and enforces. */
   limits: Limits;
   /**
@@ -261,6 +271,7 @@ export function defineConfig(input: ConfigInput): Config {
     maxConnections: whole(input.maxConnections ?? 1024, 'maxConnections', 1),
     retentionDays: whole(input.retentionDays ?? 30, 'retentionDays', 7),
     syncDays: whole(input.syncDays ?? 7, 'syncDays', 1),
+    directory: input.directory ?? false,
     limits,
     fetchBytesPerHour: whole(input.fetchBytesPerHour ?? 256 * 1024 ** 2, 'fetchBytesPerHour', 0),
     envelopeExtrasBytes: whole(
@@ -328,6 +339,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     maxConnections: number('SIMON_MAX_CONNECTIONS'),
     retentionDays: number('SIMON_RETENTION_DAYS'),
     syncDays: number('SIMON_SYNC_DAYS'),
+    directory: env.SIMON_DIRECTORY === undefined ? undefined : flag(env.SIMON_DIRECTORY, 'SIMON_DIRECTORY'),
     devResolve: Object.fromEntries(list('SIMON_DEV_RESOLVE').map(pair => pair.split('=', 2))),
     trustedNetworks: list('SIMON_TRUSTED_NETWORKS'),
     tls: readTls(env),
@@ -391,6 +403,11 @@ function parseRate(entry: string): [string, Rate] {
   const m = /^([a-zA-Z]+)=(\d+)\/(\d+)$/.exec(entry);
   if (!m) fail(`SIMON_RATES: ${entry} is not name=count/seconds.`);
   return [m![1], { limit: Number(m![2]), seconds: Number(m![3]) }];
+}
+
+function flag(value: string, name: string): boolean {
+  if (value !== '1' && value !== '0') fail(`${name} is 1 or 0.`);
+  return value === '1';
 }
 
 function retiredPolicy(value: unknown, name: string): 'public' | 'private' {

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+**Discovery profile.** `spec/profiles/discovery.md`: an agent finds the assistant the holder of an email
+address or phone number chose. An identifier's own domain answers for its addresses when its `_simon` TXT
+record names a server; directories the reader trusts answer for everything else. A directory lists an
+identifier only once the assistant asks (signed) and the holder sends back a code; records are signed
+(`SIMON-DIRECTORY`), revisioned and last at most 366 days; lookups are signed by the asker, and every
+unlisted identifier answers the same `404`. The reference server answers `GET /simon/lookup` and keeps
+`/simon/directory` for its own domains, and for any domain with `SIMON_DIRECTORY=1`. `findAssistant`,
+`listIn` and `unlistFrom` (Python `find_assistant`, `list_in`, `unlist_from`); `find`, `list-in` and
+`unlist-from` in both CLIs; `find_assistant` and `list_in_directory` in MCP; `SIMON_DIRECTORIES` names the
+directories a client trusts.
+
 ## 0.3.1 (2026-10-26)
 
 Still SIMON 1, wire `v:1`; no message, route or server change.
