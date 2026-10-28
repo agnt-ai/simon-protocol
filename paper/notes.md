@@ -17,6 +17,8 @@ Written 27 October 2026 against branch `docs/readme-cleanup` (commit 8b92a4c). T
 11. **Within the spec: succession at readers.** Section 2.2 says a reader that knew any key in a succession chain MAY treat `for` as the same principal; the reader profile ("Successions") makes it MUST for a reader that remembers principals, once every step verifies. The paper says "may", following the core. Confirm the intended strength, or make the core say "a reader that remembers principals MUST".
 12. **Related-work table in decisions.md** says SIMON shares "TXT-then-well-known handle resolution" with AT Protocol and "server dialback" with XMPP. Both are accurate as resemblances; the paper words them as shared ideas, not shared mechanisms.
 
+13. **Depends on PR #20.** P6 and P8 now describe text that PR #20 adds to section 11.2. Until #20 merges, those two passages state more than `spec/protocol.md` on this branch does.
+
 ## 2. Claims in the paper that are derived, not stated in the spec
 
 These follow from the spec's rules but no sentence of the spec says them. Confirm or cut.
@@ -75,8 +77,8 @@ A separate reviewer, who had not seen the paper written, checked it sentence by 
 8. **Neutral home and IETF.** The roadmap intends a foundation and an IETF submission. The paper omits both as intentions, not status. Include a sentence?
 9. **Figures.** The two code-block diagrams should become real figures for a typeset version.
 10. **Reader profile.** P7 and P9 rest on reader rules that only bind readers claiming the reader profile in some cases (`critical`, relations). The paper states them as the core states them; confirm that is the framing you want.
-11. **Unpairing reaches no reader (design question, not only wording).** A principal's unpairing goes to the agent's host (`POST /simon/unpair`); readers learn of it only if the host chooses to serve retirement evidence (spec section 4, "host policy"). So a host that ignores an unpairing keeps the agent speaking for its principal, to every reader, until the pairing's `until`, up to 366 days. The paper now states this under P6. Should the spec close it: require retired documents to be served, let a principal publish an unpairing somewhere readers already look, or shorten the default `until`?
-12. **Request-lookup amplification.** P8 now says plainly that an unsigned envelope makes a receiver resolve any `from` domain and fetch a document from the host it names, bounded only by host policy. Should the core fix a minimum bound, as it fixes the size minimums?
+11. **Unpairing reaches no reader. Decided: no rule, stated in the spec.** A host that ignores an unpairing keeps its agent speaking for the principal until `until`. A publication rule would bind only honest hosts and costs privacy (a published unpairing can be tested against candidate keys); the 366-day cap bounds the exposure, and a principal that doubts its host signs short pairings. Section 11.2 says so in PR #20 (issue #19), and P6 matches it. Open: whether the libraries should default to a pairing shorter than 365 days.
+12. **Lookups before any signature. Decided: no number in the core, stated in the spec.** Per request the work is a fixed small set (one resolution, one document, bounded answers, no redirects, no chained records), so a receiver is a reflector, not an amplifier, and rate limiting is the host's, as no value affects interoperability. Section 11.2 says so in PR #20, and P8 matches it.
 
 ## 7. Cold review by an outside referee
 
