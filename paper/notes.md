@@ -67,7 +67,7 @@ A separate reviewer, who had not seen the paper written, checked it sentence by 
 
 1. **Byline.** "The SIMON Protocol maintainers" is a placeholder. Named authors and affiliations?
 2. **Length.** About 7,000 words of body plus one table, two diagrams and 36 references: roughly 11 to 12 pages single-column at 11 pt, or about 8 in two columns. Cut further, or keep the threat model at full length?
-3. **Is "SIMON" an acronym?** If it expands, the title and abstract should say so once.
+3. **Name and dedication.** The title and abstract spell out Simple Interoperable Messages Over Network, and a dedication to Simon Baumer closes the paper before the references, in the readme's words (PR #18). Should the dedication say more, or sit under the title instead, as some papers place it?
 4. **Thread or conversation** (item 1.5).
 5. **Claims issued-at.** The paper calls it an open proposal. Is it still live, or dropped?
 6. **Formal models.** Is there a plan, owner or date for ProVerif/Tamarin work that the paper can state?
