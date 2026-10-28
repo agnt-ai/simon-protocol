@@ -66,7 +66,7 @@ A separate reviewer, who had not seen the paper written, checked it sentence by 
 ## 6. Open questions for the authors
 
 1. **Byline.** "The SIMON Protocol maintainers" is a placeholder. Named authors and affiliations?
-2. **Length.** About 7,000 words of body plus one table, two diagrams and 36 references: roughly 11 to 12 pages single-column at 11 pt, or about 8 in two columns. Cut further, or keep the threat model at full length?
+2. **Length.** About 7,600 words of body plus one table, two diagrams and 39 references: roughly 12 pages single-column at 11 pt, or about 8 in two columns. The cold review asked for cuts; the threat model grew instead. Cut further, or keep it at full length?
 3. **Name and dedication.** The title and abstract spell out Simple Interoperable Messages Over Network, and a dedication to Simon Baumer closes the paper before the references, in the readme's words (PR #18). Should the dedication say more, or sit under the title instead, as some papers place it?
 4. **Thread or conversation** (item 1.5).
 5. **Claims issued-at.** The paper calls it an open proposal. Is it still live, or dropped?
@@ -75,3 +75,23 @@ A separate reviewer, who had not seen the paper written, checked it sentence by 
 8. **Neutral home and IETF.** The roadmap intends a foundation and an IETF submission. The paper omits both as intentions, not status. Include a sentence?
 9. **Figures.** The two code-block diagrams should become real figures for a typeset version.
 10. **Reader profile.** P7 and P9 rest on reader rules that only bind readers claiming the reader profile in some cases (`critical`, relations). The paper states them as the core states them; confirm that is the framing you want.
+11. **Unpairing reaches no reader (design question, not only wording).** A principal's unpairing goes to the agent's host (`POST /simon/unpair`); readers learn of it only if the host chooses to serve retirement evidence (spec section 4, "host policy"). So a host that ignores an unpairing keeps the agent speaking for its principal, to every reader, until the pairing's `until`, up to 366 days. The paper now states this under P6. Should the spec close it: require retired documents to be served, let a principal publish an unpairing somewhere readers already look, or shorten the default `until`?
+12. **Request-lookup amplification.** P8 now says plainly that an unsigned envelope makes a receiver resolve any `from` domain and fetch a document from the host it names, bounded only by host policy. Should the core fix a minimum bound, as it fixes the size minimums?
+
+## 7. Cold review by an outside referee
+
+A reviewer with no context from this session (Fable, as a networking, security and agent-systems referee) read the paper cold and checked it against the spec. Verdict: major revision. It found no outright contradiction with the spec. Applied in this cut:
+
+- **Framing (its M1).** The introduction no longer contrasts "author" with "domain" signatures. A hosted agent's authorship still rests on its domain's server, so the paper now says what the signature adds over DKIM: mandatory, checked at every hop, per address, by a key the agent may hold, transferable, plus a principal signature checkable without any server.
+- **Unpairing distribution (M2)**, under P6 and section 3.3; see question 11.
+- **P8 (M3)** now names the reflector and says the bound is a requirement on implementations, not a protocol property.
+- **The reader's own host and web PKI (M4)** are in section 4.1 and requirement 2. A client verifies for itself (client.md), and the properties are stated for such a reader.
+- **Backdating (M5):** the 24-hour send window is now stated.
+- **Delivery (M6)** is defined as acceptance by each recipient's server in requirement 3.
+- **A2A (M7):** it now fails only requirement 3 in the introduction.
+- **Quantum margin (M8):** "preimage".
+- **P6 (M9)** is now organized by adversary.
+- **Related work:** S/MIME and OpenPGP added, the RFC 9421 decision explained in section 2.5, XMPP described fairly (certificates or dialback), and the prose cut to what the table cannot say.
+- **Writing:** "Draft" in place of "First cut"; "fetched without authentication"; the five invariants as a numbered list; "Policy is silent" replaced; the confused-deputy sentence rewritten; section 6's "Analysis" merged into 4.5; section 7 shortened.
+
+Not applied: the reviewer's suggestion to describe the confused deputy as "cross-tenant attribution" (decisions.md cites Hardy deliberately, and the rewritten sentence keeps the citation accurate), and a full one-line-per-adversary layout for every property (done for P6, where it mattered).
