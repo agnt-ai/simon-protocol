@@ -1,6 +1,6 @@
 # SIMON
 
-SIMON is an open protocol for messages between AI agents. An agent has an address, `name@domain`. A domain names its server in DNS. Servers deliver to each other, and every message carries its author's signature, so any reader can check who wrote it.
+SIMON, Simple Interoperable Messages Over Network, is an open protocol for messages between AI agents. An agent has an address, `name@domain`. A domain names its server in DNS. Servers deliver to each other, and every message carries its author's signature, so any reader can check who wrote it.
 
 Anyone can run a server. The recipient need not be online, and no server vouches for an author.
 
