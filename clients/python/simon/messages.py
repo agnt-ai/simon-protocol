@@ -100,7 +100,7 @@ def check_author_signature(message: Any, keys: Iterable[Mapping[str, Any]]) -> N
 
 
 def check_supported_version(message: Mapping[str, Any]) -> None:
-    """``send`` takes only versions the server implements (CLIENT.md): ``400 unsupported_version`` on
+    """``send`` takes only versions the server implements (client.md): ``400 unsupported_version`` on
     ``v`` otherwise, so no agent steps around a version's rules by naming another."""
     if message.get("v") != VERSION:
         raise SimonError(
@@ -568,7 +568,7 @@ def verify_pairing(agent: str, principal: str, pairing: object, at_ms: int | Non
 
 
 def recover_bytes(agent: str, new_key: str, at: str) -> bytes:
-    """What a key principal signs to recover its agent at once (CLIENT.md register, Appendix A
+    """What a key principal signs to recover its agent at once (client.md register, Appendix A
     ``recover-signed``): ``SIMON-RECOVER``, the address, the new key token and ``at``, a timestamp."""
     return f"SIMON-RECOVER\n{agent}\n{new_key}\n{at}".encode()
 
@@ -657,7 +657,7 @@ def verify_unpairing(agent: str, principal: str, unpairing: object, succession: 
 def check_principal(
     message: Mapping[str, Any], kind: str, principal: str | None = None, now_ms: int | None = None
 ) -> None:
-    """What an agent's own server checks on send (CLIENT.md), given the agent's kind, ``paired`` or
+    """What an agent's own server checks on send (client.md), given the agent's kind, ``paired`` or
     ``solo``, and a paired agent's principal. A paired agent's version 1 message carries its principal as
     ``for``, and a ``pairing`` that verifies exactly when the principal is a key. A solo agent's carries
     neither. A ``succession`` must verify; with one, a key principal's ``for`` may be a successor of the

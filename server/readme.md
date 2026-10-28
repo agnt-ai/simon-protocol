@@ -1,6 +1,6 @@
 # @agnt-sdk/simon-server
 
-The basic SIMON server: everything in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md) and [`spec/CLIENT.md`](../spec/CLIENT.md), and nothing else. No people, directory, graph, blocklists, webhooks or bridges; those are extensions. Runtime dependencies: `@agnt-sdk/simon-protocol` and Node's standard library (`node:http`, `node:sqlite`, `node:crypto`, `node:dns`). Node 26 runs it from this repository's TypeScript sources; the npm package is compiled and runs on Node 24.6.0 or later.
+The basic SIMON server: everything in [`spec/protocol.md`](../spec/protocol.md) and [`spec/client.md`](../spec/client.md), and nothing else. No people, directory, graph, blocklists, webhooks or bridges; those are extensions. Runtime dependencies: `@agnt-sdk/simon-protocol` and Node's standard library (`node:http`, `node:sqlite`, `node:crypto`, `node:dns`). Node 26 runs it from this repository's TypeScript sources; the npm package is compiled and runs on Node 24.6.0 or later.
 
 ```sh
 npm install @agnt-sdk/simon-server   # the library, and the simon-server binary
@@ -12,7 +12,7 @@ npm install @agnt-sdk/simon-server   # the library, and the simon-server binary
 | `@agnt-sdk/simon-server/contract` | `storeContract` and `retractionCapacityContract`: the Store contract as `node:test` suites |
 | `@agnt-sdk/simon-server/testing` | `Clock`, `FakeDns`, `FakeNet`, `toRequest`, `replyBody`: the outside world as test doubles |
 
-`node:sqlite` is loaded only when a `SqliteStore` is made, so an application on another Store (such as [`@agnt-sdk/simon-store-mongo`](../store-mongo/README.md)) never loads it. `simon-server help` lists the main settings.
+`node:sqlite` is loaded only when a `SqliteStore` is made, so an application on another Store (such as [`@agnt-sdk/simon-store-mongo`](../store-mongo/readme.md)) never loads it. `simon-server help` lists the main settings.
 
 ## Run
 
@@ -170,7 +170,7 @@ laptop's name.
 
 Two laptops with no tailnet in common can federate over public Cloudflare quick tunnels instead, with the
 server behind the tunnel (`SIMON_LISTEN_HOST=127.0.0.1`, `SIMON_CLIENT_IP_HEADER=cf-connecting-ip`):
-[examples/two-laptops](../examples/two-laptops/README.md) does it in one script.
+[examples/two-laptops](../examples/two-laptops/readme.md) does it in one script.
 
 ## Layout
 
@@ -242,7 +242,7 @@ createServer({ config, store: new SqliteStore(config.database), extensions: [qui
 ## Storage
 
 The ordinary SQLite Store refuses legacy standalone schema2. The separate
-[offline candidate conversion tool](SQLITE-V2-MIGRATION.md) preserves a WAL-aware core/app-outbox
+[offline candidate conversion tool](sqlite-v2-migration.md) preserves a WAL-aware core/app-outbox
 cohort and validates a new current-schema copy under explicit maintenance prerequisites. Its output stays
 blocked for activation, with no operational promotion/reset override; passing source, CLI and synthetic
 tests says nothing about readiness of real data, hosts or runtimes.
@@ -262,7 +262,7 @@ import { storeContract } from '@agnt-sdk/simon-server/contract';
 storeContract('mongo', async () => new MongoStore(await freshDb()).init());
 ```
 
-[`@agnt-sdk/simon-store-mongo`](../store-mongo/README.md) is the Store on MongoDB and Amazon DocumentDB. Before running several processes on one store, read "Running several copies" in [docs/REFERENCE-SERVER.md](../docs/REFERENCE-SERVER.md): elect one of them to run the worker loop.
+[`@agnt-sdk/simon-store-mongo`](../store-mongo/readme.md) is the Store on MongoDB and Amazon DocumentDB. Before running several processes on one store, read "Running several copies" in [docs/reference-server.md](../docs/reference-server.md): elect one of them to run the worker loop.
 
 ## Testing
 
@@ -286,9 +286,9 @@ node server/src/main.ts
 ```
 
 and, in another terminal, `node conformance/src/cli.ts --server http://127.0.0.1:8080 --hosted-domain sut.test --format text`.
-[conformance/README.md](../conformance/README.md) explains every option, including the code-flow checks,
+[conformance/readme.md](../conformance/readme.md) explains every option, including the code-flow checks,
 which read the register codes this server logs in development. How the server runs recovery and keys, and
-its other choices, are in [docs/REFERENCE-SERVER.md](../docs/REFERENCE-SERVER.md).
+its other choices, are in [docs/reference-server.md](../docs/reference-server.md).
 
 ### Client lifecycle and wakeups
 

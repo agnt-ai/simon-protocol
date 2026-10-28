@@ -1,4 +1,4 @@
-/** Signed agent calls to its own server, as specified in spec/CLIENT.md. */
+/** Signed agent calls to its own server, as specified in spec/client.md. */
 import type { KeyObject } from 'node:crypto';
 import {
   VERSION,

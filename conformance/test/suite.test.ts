@@ -230,10 +230,10 @@ describe('the simulator behind a tunnel', () => {
 
 describe('the README', () => {
   it('lists the checks as the code declares them', () => {
-    const readme = fs.readFileSync(new URL('../README.md', import.meta.url), 'utf8');
+    const readme = fs.readFileSync(new URL('../readme.md', import.meta.url), 'utf8');
     const start = readme.indexOf('<!-- checks:start -->');
     const end = readme.indexOf('<!-- checks:end -->');
-    assert.ok(start >= 0 && end > start, 'README.md has the check markers');
+    assert.ok(start >= 0 && end > start, 'readme.md has the check markers');
     assert.equal(
       readme.slice(start + '<!-- checks:start -->'.length, end).trim(),
       catalogMarkdown().trim(),

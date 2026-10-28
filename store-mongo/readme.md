@@ -1,6 +1,6 @@
 # @agnt-sdk/simon-store-mongo
 
-The [SIMON reference server](../server/README.md)'s `Store` on MongoDB and Amazon DocumentDB. It passes
+The [SIMON reference server](../server/readme.md)'s `Store` on MongoDB and Amazon DocumentDB. It passes
 the same Store contract as the server's own SQLite store (`@agnt-sdk/simon-server/contract`).
 
 ```sh
@@ -67,7 +67,7 @@ key pattern or, when a server sends none, from the index's default name (`isDupl
 
 What the server's background work claims through the store is safe to run in several processes at once;
 some of it is not claimed yet. See "Running several copies" in
-[docs/REFERENCE-SERVER.md](../docs/REFERENCE-SERVER.md) before running more than one worker.
+[docs/reference-server.md](../docs/reference-server.md) before running more than one worker.
 
 ## Exports
 

@@ -287,7 +287,7 @@ def judge_claims(
     resolve: Callable[[str], Resolution],
 ) -> list[dict[str, Any]]:
     """The claims a receiver considers, each ``acts-for`` claim marked with ``authoritative``, the
-    receiving server's judgement, which it passes to its agents with the claim (CLIENT.md, inbox), and each
+    receiving server's judgement, which it passes to its agents with the claim (client.md, inbox), and each
     ``identifier`` claim judged the same way by its ``identifier``. A received claim's own
     ``authoritative`` member means nothing (the carrier cannot judge itself), so it is dropped from every
     claim, and only the judged types get one back."""

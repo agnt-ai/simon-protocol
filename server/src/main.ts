@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * The server as a process: `node server/src/main.ts`, or `simon-server` installed from npm. Configuration
- * comes from the environment (see config.ts or README.md); storage is the sqlite file SIMON_DB.
+ * comes from the environment (see config.ts or readme.md); storage is the sqlite file SIMON_DB.
  * `simon-server help` prints how to run it and exits.
  */
 import { loadConfig } from './config.ts';

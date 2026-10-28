@@ -1,5 +1,5 @@
 /**
- * CLIENT.md `send` and `sent`, and spec section 8 (signed requests) as agents meet it.
+ * client.md `send` and `sent`, and spec section 8 (signed requests) as agents meet it.
  */
 import assert from 'node:assert/strict';
 import { after, describe, it } from 'node:test';
@@ -23,7 +23,7 @@ import { CLOCK_PAIRING_UNTIL, Federation, type TestAgent } from './harness.ts';
 
 const TEXT = { type: 'text/plain', data: 'x' };
 
-describe('send (CLIENT.md)', async () => {
+describe('send (client.md)', async () => {
   const fed = new Federation();
   after(() => fed.close());
   const alpha = await fed.server('alpha');
@@ -371,7 +371,7 @@ describe('a principal that moves to a new key (spec section 2.2)', async () => {
   });
 });
 
-describe('sent (CLIENT.md)', async () => {
+describe('sent (client.md)', async () => {
   const fed = new Federation();
   after(() => fed.close());
   const alpha = await fed.server('alpha');

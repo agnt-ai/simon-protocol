@@ -2,7 +2,7 @@
 
 How readers group messages into conversations. Servers keep no conversation state, and nothing about a conversation is replicated between servers, so there is nothing for two servers to disagree about.
 
-**A profile is optional.** The core ([PROTOCOL.md](../PROTOCOL.md)) never depends on one. A reader that claims this profile MUST implement all of it, as the reader profile's conventions say.
+**A profile is optional.** The core ([protocol.md](../protocol.md)) never depends on one. A reader that claims this profile MUST implement all of it, as the reader profile's conventions say.
 
 ## 1. A conversation
 
@@ -18,7 +18,7 @@ A **conversation** is a message, its **root**, together with every message whose
 - **Forks.** A reply that reaches more or fewer people than the message before it forks the conversation: it stays in the same conversation by its `inReplyTo` chain, and each branch has the recipients its messages name. A reader MAY show a branch apart when its recipients differ.
 - **Nothing to forge.** Because no message changes who is in a conversation, no message can add someone behind another's back or outlast its sender's removal. Whoever can write to a person can include them; whoever replies decides whom the reply reaches.
 
-A conversation's reach is bounded by each receiving server's `recipients` limit. Larger groups, list addresses and end-to-end encrypted groups (MLS, PROTOCOL.md 10) are not part of this draft.
+A conversation's reach is bounded by each receiving server's `recipients` limit. Larger groups, list addresses and end-to-end encrypted groups (MLS, protocol.md 10) are not part of this draft.
 
 ## 3. Side threads
 

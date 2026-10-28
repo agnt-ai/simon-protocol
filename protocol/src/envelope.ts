@@ -220,7 +220,7 @@ export function checkEnvelopeShape(value: Json, allowHttp = false): Envelope {
 /**
  * A server's own bound on everything in an envelope but its message, in canonical bytes, so checking an
  * envelope costs little more than checking its message. Not a protocol rule: the reference server
- * applies it with `MAX_ENVELOPE_BESIDE_MESSAGE_BYTES` as its default (docs/REFERENCE-SERVER.md).
+ * applies it with `MAX_ENVELOPE_BESIDE_MESSAGE_BYTES` as its default (docs/reference-server.md).
  */
 export function checkEnvelopeBeside(envelope: Envelope, maxBytes = MAX_ENVELOPE_BESIDE_MESSAGE_BYTES): void {
   const { message: _, ...beside } = envelope as unknown as Record<string, Json>;

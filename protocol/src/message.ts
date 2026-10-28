@@ -145,7 +145,7 @@ export function checkAuthorSignature(m: AnyMessage, keys: readonly KeyEntry[]): 
   }
 }
 
-/** `send` takes only versions this server implements (CLIENT.md), so no version steps around another's rules. */
+/** `send` takes only versions this server implements (client.md), so no version steps around another's rules. */
 export function checkSupportedVersion(m: AnyMessage): asserts m is Message {
   if (m.v !== VERSION) throw unsupportedVersion(m.v);
 }
@@ -421,7 +421,7 @@ export const isCriticalValue = (value: unknown): value is string =>
 export type Principal = { kind: 'paired'; for: string } | { kind: 'solo' };
 
 /**
- * What an agent's own server checks on `send`, beyond the message's validity (CLIENT.md). A paired agent's
+ * What an agent's own server checks on `send`, beyond the message's validity (client.md). A paired agent's
  * version 1 message carries its principal as `for`; with a key principal it also carries a `pairing` that
  * verifies, and with any other it carries none. A solo agent's message carries neither. A `succession` must
  * verify; with one, a key principal's `for` may be a successor of the agent's principal, and the server then

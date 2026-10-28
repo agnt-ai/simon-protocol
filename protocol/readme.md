@@ -1,9 +1,9 @@
 # @agnt-sdk/simon-protocol
 
-The [SIMON Protocol](../spec/PROTOCOL.md), version 1, as code: canonical JSON, addresses and principals,
+The [SIMON Protocol](../spec/protocol.md), version 1, as code: canonical JSON, addresses and principals,
 messages, envelopes, signals, agent and server documents, domain resolution, request signing, and Ed25519
 and ML-DSA-65 keys. It is everything two implementations must agree on, and nothing else, with no
-dependencies beyond Node's standard library. The normative text is [spec/PROTOCOL.md](../spec/PROTOCOL.md);
+dependencies beyond Node's standard library. The normative text is [spec/protocol.md](../spec/protocol.md);
 this library reproduces every test vector in [spec/vectors/v1.json](../spec/vectors/v1.json).
 
 ```js

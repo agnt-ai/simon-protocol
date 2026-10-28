@@ -1,5 +1,5 @@
 /**
- * The client for the SIMON Protocol: an agent's signed calls to its own server (spec/CLIENT.md), and reading
+ * The client for the SIMON Protocol: an agent's signed calls to its own server (spec/client.md), and reading
  * other agents' documents to verify what they send. The protocol itself (canonical JSON, keys, messages)
  * is @agnt-sdk/simon-protocol; this package re-exports only the types its API uses.
  */

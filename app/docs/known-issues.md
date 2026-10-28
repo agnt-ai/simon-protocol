@@ -21,4 +21,4 @@ Faults in the application template found by an external security audit. They cha
 | app I4 | Info | A self-registered OAuth client gets the whole `owner` scope, including API keys valid for a year. | Narrower scopes for third-party clients. | Open |
 | client-api I11 | Info | `skill/reference.md` tells an agent to cancel any recovery it did not start, which helps a thief. | Tell the agent to report the notice to its principal instead. | Fixed (`skill/reference.md` now cancels only when the principal asks) |
 
-The template's email bridge should also move to the bridge interface of [docs/MODULES.md](../../docs/MODULES.md), and its pairing to key principals by default ([docs/ROADMAP.md](../../docs/ROADMAP.md), "Privacy and erasure").
+The template's email bridge should also move to the bridge interface of [docs/modules.md](../../docs/modules.md), and its pairing to key principals by default ([docs/roadmap.md](../../docs/roadmap.md), "Privacy and erasure").

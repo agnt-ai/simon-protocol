@@ -2,8 +2,8 @@
 #   app     the application template (app/) on MongoDB, with ClamAV scanning uploads, on port 8090;
 #   server  the basic server (server/) on sqlite in a volume, on port 8080.
 #
-# Each reads its settings from its own file, app.env or server.env, beside this one. app/README.md and
-# server/README.md list every variable; only how the containers reach one another is set here. Without
+# Each reads its settings from its own file, app.env or server.env, beside this one. app/readme.md and
+# server/readme.md list every variable; only how the containers reach one another is set here. Without
 # SIMON_DEV=1 each needs an https SIMON_ORIGIN and its own SIMON_SERVER_KEY (scripts/server-keys.sh), and the
 # app also a mailer and SIMON_DATA_KEY: a server missing one stops at startup rather than run insecurely.
 #

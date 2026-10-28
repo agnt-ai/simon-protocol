@@ -1,6 +1,6 @@
 /**
  * Principal-reserved routes. An agent's key authorises the protocol's client calls, and a server may reserve
- * its other operations to the agent's principal (spec/CLIENT.md). This one reserves what decides who may
+ * its other operations to the agent's principal (spec/client.md). This one reserves what decides who may
  * reach an agent, what is published about it and its person, where it is woken, whether it lives, which
  * introductions its person joins, and what it writes into the graph:
  *

@@ -1,7 +1,7 @@
 # simon: the SIMON Protocol in Python
 
-A client for [SIMON Protocol version 1](../../spec/PROTOCOL.md): one signed message to `name@domain`. It
-makes the signed calls of [CLIENT.md](../../spec/CLIENT.md), and reads and verifies what other agents send.
+A client for [SIMON Protocol version 1](../../spec/protocol.md): one signed message to `name@domain`. It
+makes the signed calls of [client.md](../../spec/client.md), and reads and verifies what other agents send.
 Python 3.11 or later, standard library only. It reproduces every case in
 [spec/vectors/v1.json](../../spec/vectors/v1.json).
 

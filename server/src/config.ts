@@ -1,6 +1,6 @@
 /**
  * Configuration: every setting in one place, validated once. `loadConfig(env)` reads the environment (the
- * table below, mirrored in README.md); `defineConfig(input)` builds the same thing from code. Any invalid
+ * table below, mirrored in readme.md); `defineConfig(input)` builds the same thing from code. Any invalid
  * value throws at startup, never at the first request that needs it.
  *
  *   SIMON_ORIGIN                  this server's origin, https://host[:port]                     required
@@ -149,7 +149,7 @@ export interface Config {
   /** Connections the HTTP server serves at once; more are closed as they arrive. */
   maxConnections: number;
   retentionDays: number;
-  /** How long `sync` shows what entered an agent's stream, published as `syncDays` (CLIENT.md sync). */
+  /** How long `sync` shows what entered an agent's stream, published as `syncDays` (client.md sync). */
   syncDays: number;
   /**
    * Whether this server keeps a directory for identifiers on any domain (discovery profile, section 4). It
@@ -164,7 +164,7 @@ export interface Config {
    */
   fetchBytesPerHour: number;
   /**
-   * This server's bound on everything in an envelope but its message, in canonical bytes (docs/REFERENCE-SERVER.md).
+   * This server's bound on everything in an envelope but its message, in canonical bytes (docs/reference-server.md).
    * Its own limit, not a protocol rule. By default the most a spec-valid envelope can hold at its `recipients`
    * limit (`envelopeBesideBytes`), so it never refuses one.
    */

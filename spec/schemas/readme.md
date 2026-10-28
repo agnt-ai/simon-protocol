@@ -1,6 +1,6 @@
 # JSON Schemas
 
-Draft 2020-12 shapes for SIMON wire objects. [PROTOCOL.md](../PROTOCOL.md), [CLIENT.md](../CLIENT.md) and [registry.md](../registry.md) govern; a disagreeing schema is wrong. Select a client body with `client.json#/$defs/<name>`; `client.json` itself is a definitions catalog, not a union of endpoints.
+Draft 2020-12 shapes for SIMON wire objects. [protocol.md](../protocol.md), [client.md](../client.md) and [registry.md](../registry.md) govern; a disagreeing schema is wrong. Select a client body with `client.json#/$defs/<name>`; `client.json` itself is a definitions catalog, not a union of endpoints.
 
 | File | Object |
 | --- | --- |

@@ -1,6 +1,6 @@
 /**
  * The SIMON Protocol, version 1, as code: everything two implementations must agree on, and nothing else.
- * No dependencies beyond Node's standard library. The normative text is spec/PROTOCOL.md.
+ * No dependencies beyond Node's standard library. The normative text is spec/protocol.md.
  */
 export * from './address.ts';
 export * from './canonical.ts';

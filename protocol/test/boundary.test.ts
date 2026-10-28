@@ -1,5 +1,5 @@
 /**
- * What each project may import (docs/ARCHITECTURE.md, "What may import what"). The protocol imports only
+ * What each project may import (docs/architecture.md, "What may import what"). The protocol imports only
  * Node; the basic server, the conformance suite and the JavaScript client import only Node and the
  * protocol; the CLI and the MCP server add the client. A relative import stays inside its own project,
  * except that the CLI's and the MCP server's tests share the client's test server. The application has a

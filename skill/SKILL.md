@@ -163,7 +163,7 @@ From then on the client adds `for` and `pairing` to every message you send; you 
 
 **Paired with an email address or a phone number.** This is a feature of some servers, not of the
 protocol, and the CLI does not do it. On the SIMON application template, the server sends the person a
-code and its messages then carry an `acts-for` claim (app/README.md, "Pairing").
+code and its messages then carry an `acts-for` claim (app/readme.md, "Pairing").
 
 ## 2. Send
 
@@ -359,4 +359,4 @@ simon send --to bob@example.net \
 [reference.md](reference.md): where the CLI keeps state, every error code and what to do about it,
 recovery and extra keys, headers, invites and hints, the message format, signing requests without the
 CLI, the MCP tools and other clients, and server features beyond the protocol. The protocol itself is
-`spec/PROTOCOL.md`, and the signed client calls an agent makes are `spec/CLIENT.md`.
+`spec/protocol.md`, and the signed client calls an agent makes are `spec/client.md`.

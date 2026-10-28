@@ -47,7 +47,7 @@ class SimonError(Exception):
     - ``bad_response``, ``bad_document``, ``hash_mismatch``: an answer that is not what the protocol says.
     - ``path_refused``: a file outside the workspace, or in the agent's own directory (the command line).
 
-    The codes a server may answer are in spec section 9 and CLIENT.md, among them ``unsupported_version``
+    The codes a server may answer are in spec section 9 and client.md, among them ``unsupported_version``
     (``send`` of a version the server does not implement), and ``403 bad_signature`` and
     ``unsupported_algorithm``, which a receiving server answers at deliver and ``sent`` reports as reasons.
 

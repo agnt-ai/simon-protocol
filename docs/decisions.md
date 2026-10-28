@@ -119,7 +119,7 @@ Naming the recipients, as SMTP's RCPT TO does, closes all three. The cost is one
 
 ## Parts: kept per source, fetched whatever policy decides
 
-*Revised 2026-10-21:* when a server fetches is now its own choice. Section 7.2 keeps four rules, it SHOULD fetch on arrival, and section 12 states what each choice reveals. The reference server still fetches for every accepted message (`docs/REFERENCE-SERVER.md`).
+*Revised 2026-10-21:* when a server fetches is now its own choice. Section 7.2 keeps four rules, it SHOULD fetch on arrival, and section 12 states what each choice reveals. The reference server still fetches for every accepted message (`docs/reference-server.md`).
 
 *Revised 2026-10-22:* keeping bytes per source is now normative. When section 7.2 was cut to four rules, "per source" went with the cut rules, and rule 2 alone ("to a server it delivered such a message to") let a server serve one tenant's bytes for another tenant's message: Mallory, on Ada's server, forwards a junk carried message naming the hash of Ada's private upload to a server she runs, which fetches it. Rule 2 now says whose bytes each path serves, the author of the message naming the file, and `send` checks the files of carried messages as it checks the message's own. The reference server already behaved this way; the spec now requires it.
 
@@ -211,7 +211,7 @@ Principal recovery is host policy; the spec defines the shape, not the obligatio
 
 **Earlier rationale (superseded where it differs):**
 
-> *Revised 2026-10-22:* recovery and key management are host policy. The client API standardises only the calls; the delay below is historical design rationale, not a client API requirement. CLIENT.md is maintained separately; consult the implementation and host documentation for the recovery practice actually offered.
+> *Revised 2026-10-22:* recovery and key management are host policy. The client API standardises only the calls; the delay below is historical design rationale, not a client API requirement. client.md is maintained separately; consult the implementation and host documentation for the recovery practice actually offered.
 >
 > **Historical practice.** When an agent still held a valid key, the reference design proposed that recovery by code wait:
 > - the reference server waits 72 hours;
@@ -258,7 +258,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 **Signed plaintext that cannot be denied, and erasure.**
 - *Why:* see "Accountable, not deniable". A `mailto:` or `tel:` identifier in `for` is signed into every message, so a copy cannot be redacted without breaking its signature and id.
-- *Meanwhile:* hosts whose principals may ask to be forgotten name them by key (`simon-key:`), held for them if need be, and carry their identifiers as claims, which travel beside the message and are not signed into it (PROTOCOL.md section 12). Erasure then means deleting the claims and the key's link to the person; the signed messages name only a key.
+- *Meanwhile:* hosts whose principals may ask to be forgotten name them by key (`simon-key:`), held for them if need be, and carry their identifiers as claims, which travel beside the message and are not signed into it (protocol.md section 12). Erasure then means deleting the claims and the key's link to the person; the signed messages name only a key.
 - *Left to:* hosts, through the client layer and the application template.
 
 **One server per domain, with no backup.**
@@ -269,7 +269,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 **No groups past a receiving server's `recipients` limit (at least 100).**
 - *Why:* a group is a conversation whose every message is addressed to its members (conversations profile). There is no list exploder, because a relay could not carry another domain's messages.
 - *Meanwhile:* a larger audience is a published feed with an `audience` label (section 7). A large private group is an MLS group, when the encryption profile exists.
-- *Left to:* the encryption profile, and a list-address module (docs/MODULES.md).
+- *Left to:* the encryption profile, and a list-address module (docs/modules.md).
 
 **Forwarding.**
 - *Was:* claims could not be forwarded verifiably, so agents pasted inbox entries, which was an attack surface.
@@ -297,7 +297,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 - allowlists and invites;
 - how much to trust which carriers.
 
-**What it does not solve:** the economics of spam from senders whose marginal cost is zero. No postage, proof of work or global reputation is defined. The reference application's policy module shows one set of choices (app/docs/POLICY.md).
+**What it does not solve:** the economics of spam from senders whose marginal cost is zero. No postage, proof of work or global reputation is defined. The reference application's policy module shows one set of choices (app/docs/policy.md).
 
 ## Three projects
 
@@ -307,7 +307,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 
 ## The core, finished (2026-10-21)
 
-**Choice.** The core is what the seven sentences at the top of PROTOCOL.md say, and nothing more: a feature enters only when it has existed for decades in some form and adding it later would force every server to change. [`docs/CORE.md`](CORE.md) maps every idea to core or registry and gives its precedent. The decisions that needed a choice between alternatives:
+**Choice.** The core is what the seven sentences at the top of protocol.md say, and nothing more: a feature enters only when it has existed for decades in some form and adding it later would force every server to change. [`docs/core.md`](core.md) maps every idea to core or registry and gives its precedent. The decisions that needed a choice between alternatives:
 
 - **Claims stay checkable end to end by a carrier signature over the claims and the message id** (`SIMON-CLAIMS`), carried into inbox entries. *Alternative:* a client trusts claims only from its own inbox call, which needs no wire change but makes every forwarded claim worthless; forwarding is exactly where agents will paste entries. The signature costs one more signature per envelope with claims, and gives what ARC gives email without re-signing at every hop.
 - **Email authority comes only from the `_simon` TXT record.** *Alternatives:* TXT and the well-known answer both, as MTA-STS requires; or keep the fallback with a flag a domain can set to refuse it. Requiring both would make authority depend on a website as well as DNS for no gain against DNS attacks. A flag would leave every domain that never heard of SIMON exposed by default, which is the case that was demonstrated.
@@ -331,7 +331,7 @@ Each stated limitation gets a "meanwhile", because implementers left without gui
 | WebFinger (RFC 7033, `acct:`) | looking up `name@domain` over HTTPS | one fixed well-known answer per domain, not per account |
 | DIDComm v2 | agent-to-agent signed messaging through mediators | no DIDs or DID resolution; no encryption in version 1 |
 | A2A, MCP | AI agents interoperating | A2A carries tasks and MCP carries tools; SIMON carries messages between addresses |
-| draft-li-atp, WIMSE/SPIFFE, OAuth on-behalf-of | agent identity and delegation | SIMON's principal model is paired and solo agents, with claims carried per message |
+| WIMSE/SPIFFE, OAuth on-behalf-of | agent identity and delegation | SIMON's principal model is paired and solo agents, with claims carried per message |
 | KERI, did:plc, KEYTRANS, CONIKS | key history and transparency | not in the core (see "Lasting forty years") |
 | MLS and MIMI | interoperable group messaging | groups are a `to` list; MLS is the planned encryption profile |
 
@@ -466,7 +466,7 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 ## A small core, optional profiles, and no roster (2026-10-24)
 
-**Choice (B0).** PROTOCOL.md is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Short optional profiles in `spec/profiles/` build on it: the reader profile (showing and acting on messages), conversations, and publishing. A server or reader that claims a profile implements all of it; the core never depends on one, and moved sections keep their numbers as pointers.
+**Choice (B0).** protocol.md is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Short optional profiles in `spec/profiles/` build on it: the reader profile (showing and acting on messages), conversations, and publishing. A server or reader that claims a profile implements all of it; the core never depends on one, and moved sections keep their numbers as pointers.
 
 **Choice (B1).** A conversation has no roster. Each message's `to` is its author's choice; a reply may reach more or fewer people than the one before, which forks the conversation, as email and texting do. The `add`, `leave`, `remove` and `rename` relations, the `members` header and the reader's roster rule are gone. A side thread is marked by a `thread` header naming its anchor, so `inReplyTo` can name the message actually answered (B11).
 
@@ -479,7 +479,7 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 ## One version counter, private names, JSON blocks (2026-10-25)
 
-**Choice (B2).** `v` counts incompatible wire revisions *after release*. Unreleased drafts share version 1: the format the 0.2.0 packages implement is SIMON 1 (`"v":1`), and a draft that changes before release changes version 1 itself. The npm 0.1.x packages implemented an earlier pre-release draft of the same version; that format is deprecated, not versioned, and its data and peers are not compatible with 0.2.0 (CHANGELOG, 0.2.0). Once released, a version never changes incompatibly: an incompatible revision takes the next number, and servers route it on its invariants (PROTOCOL.md section 1). Sending still refuses a version the agent's own server does not implement (`unsupported_version`); server-to-server delivery accepts unknown versions on their invariants, for forward compatibility.
+**Choice (B2).** `v` counts incompatible wire revisions *after release*. Unreleased drafts share version 1: the format the 0.2.0 packages implement is SIMON 1 (`"v":1`), and a draft that changes before release changes version 1 itself. The npm 0.1.x packages implemented an earlier pre-release draft of the same version; that format is deprecated, not versioned, and its data and peers are not compatible with 0.2.0 (CHANGELOG, 0.2.0). Once released, a version never changes incompatibly: an incompatible revision takes the next number, and servers route it on its invariants (protocol.md section 1). Sending still refuses a version the agent's own server does not implement (`unsupported_version`); server-to-server delivery accepts unknown versions on their invariants, for forward compatibility.
 
 - *Alternatives:* a new number for every draft, as QUIC gave each draft its own wire number (it spends numbers on formats nobody deploys, and makes the first stable release something other than 1); every draft as `v:0` (decided 2026-10-22 and reversed here: a released 1 would still have to follow a 0 that meant several things); a reserved range for drafts, as QUIC's `0xff0000NN` (two numbering schemes).
 - *Reason:* nothing but pre-release packages ever carried the earlier draft, so there is no deployed version 1 to protect. A clean break at the first real release costs less than a version number that only marks a draft.
@@ -560,7 +560,7 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 
 ## Key words for rules, a table of their tests, and a smaller core (2026-10-26)
 
-**Choice (B12).** Every rule carries a BCP 14 key word, MUST, SHOULD or MAY. Definitions, formats and grammars are normative as definitions; other prose explains. The convention that an indicative sentence has the force of MUST is gone, in PROTOCOL.md, CLIENT.md and the profiles alike. Appendix B of PROTOCOL.md maps each rule to the vector sections and conformance checks that test it, and a spec test fails when a vector section or a conformance check on a core rule is missing from it.
+**Choice (B12).** Every rule carries a BCP 14 key word, MUST, SHOULD or MAY. Definitions, formats and grammars are normative as definitions; other prose explains. The convention that an indicative sentence has the force of MUST is gone, in protocol.md, client.md and the profiles alike. Appendix B of protocol.md maps each rule to the vector sections and conformance checks that test it, and a spec test fails when a vector section or a conformance check on a core rule is missing from it.
 
 - *Why:* "a server refuses" read as a description to anyone who had not read the conventions, and the strength of a rule hid in its mood. Key words make every requirement findable by search, and the table shows which rules nothing tests yet.
 - *Precedent:* RFC 8174, and every IETF protocol since.
@@ -569,8 +569,8 @@ Each is agreed and recorded. The principles behind them are the bar: as vanilla,
 - *Check order (B13.1):* the numbered checks of deliver, signal and signed requests are a reference order that a server SHOULD follow. Only their dependencies are MUST: bound the body before parsing; verify the carrier's signature before any recipient or third-party work, a repeat's recognition included; recognise a repeat before judging freshness; record a nonce only once every other check has passed; change nothing before every check passes. The conformance checks of the rest of the order are `should`.
 - *Time windows (B13.2):* section 9 derives every window from two constants, the delivery horizon (144 hours) and the clock skew (300 seconds). No value changes.
 - *Hint names (B13.5)* are the registry's; the core keeps only the signed per-recipient container.
-- *Resolution (B13.7)* has three outcomes, a server, no server, or try again, with the five reasons kept as names. Try again never becomes no server. Caching is bounded by the source's lifetime; the reference library's caps move to `docs/HOST-NOTES.md`, and their vectors say so.
-- *Host advice (B13.8, B13.9, B13.14):* how to name paired agents, carrying identifiers that change, cache caps and lookup limits move to `docs/HOST-NOTES.md`. What retirement means and that an address is never paired again stay in the core, as do the SSRF and redirect guards, which protect third parties.
+- *Resolution (B13.7)* has three outcomes, a server, no server, or try again, with the five reasons kept as names. Try again never becomes no server. Caching is bounded by the source's lifetime; the reference library's caps move to `docs/host-notes.md`, and their vectors say so.
+- *Host advice (B13.8, B13.9, B13.14):* how to name paired agents, carrying identifiers that change, cache caps and lookup limits move to `docs/host-notes.md`. What retirement means and that an address is never paired again stay in the core, as do the SSRF and redirect guards, which protect third parties.
 - *Algorithms (B13.15):* every implementation implements `ed25519`; `ml-dsa-65` is optional and advertised in `algorithms`. A signer with no key the verifier implements fails explicitly, `403 unsupported_algorithm`, and never downgrades. A server signs what it sends other servers with an `ed25519` key, and its document must list `ed25519`; an agent's own server refuses a principal key it cannot check. The conformance checks of `ml-dsa-65` skip a server that does not advertise it. *Precedent:* TLS 1.3 and MLS each make one suite mandatory and the rest negotiated.
 
 ## Revisions and reconciliation (2026-10-22)
@@ -715,7 +715,7 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 > **Choice.** `GET /simon/parts/<sha256>` tells its caller by the request's signature. An agent the server hosts gets the client API's rules and answers (`401`, `503` while a fetch is underway), and also the files of published messages on the server it may read. Another server, asking with `simon-server`, gets the files of messages delivered to it. Anyone else gets the files of published messages it may read. Every refusal outside the first kind is the same `404`.
 >
-> **Reason.** Section 7.2 answered every refusal `404` while CLIENT.md gave `401` and `503` on the same path, and a local agent admitted to a local post's audience could fetch its files under one and not the other. The client API's answers tell an agent only about its own requests, so they stay; everything a stranger can see stays one `404`.
+> **Reason.** Section 7.2 answered every refusal `404` while client.md gave `401` and `503` on the same path, and a local agent admitted to a local post's audience could fetch its files under one and not the other. The client API's answers tell an agent only about its own requests, so they stay; everything a stranger can see stays one `404`.
 
 ### Inbox cursors become visible in order (M10)
 
@@ -729,13 +729,13 @@ The draft was revised against three high, eleven medium and nine low findings. E
 
 ### Stale text brought in line with the decisions (M11)
 
-**Current rule.** Received signals appear in `sync` for at most five minutes, the bound section 6.4 defers to, and the reference server holds each that long and passes it to its extensions (REFERENCE-SERVER.md, "Signals"). The signing string has eight lines. Fair sharing between carriers is reference-server policy, not a MUST. Dropped as protocol rules: a required text block, signals only between parties who had both written, bounds stated as requirements, Unicode 17.0, public relation listings and fair fetching.
+**Current rule.** Received signals appear in `sync` for at most five minutes, the bound section 6.4 defers to, and the reference server holds each that long and passes it to its extensions (reference-server.md, "Signals"). The signing string has eight lines. Fair sharing between carriers is reference-server policy, not a MUST. Dropped as protocol rules: a required text block, signals only between parties who had both written, bounds stated as requirements, Unicode 17.0, public relation listings and fair fetching.
 
 ### Low findings (L1 to L9)
 
 Each is a statement the draft left open or got slightly wrong; none changes a decision.
 - **L1. The signing string's origin and target.** The origin line is the serialised origin, so `HTTPS://X/` in a record signs as `https://x`; the `simon-server` header carries the same form. The target line is the request line's raw bytes, checked before any decoding, and an address in a path percent-encodes exactly the characters that are not RFC 3986 `pchar`, with upper-case hex.
-- **L2. Rosters.** A newcomer that lacks the root starts from the latest `add` naming it, in both PROTOCOL.md section 5.6 and the registry, which had said it two ways. That a removed member can backdate an `add` is stated as a known limit, not fixed: it depends on who may change a roster, which is an open question.
+- **L2. Rosters.** A newcomer that lacks the root starts from the latest `add` naming it, in both protocol.md section 5.6 and the registry, which had said it two ways. That a removed member can backdate an `add` is stated as a known limit, not fixed: it depends on who may change a roster, which is an open question.
 - **L3. Timing of gated reads.** A server SHOULD read a signed reader's document whether or not the message asked for exists or has an audience.
 - **L4. `authoritative` in received claims** is dropped from the judged claims only; the signed claims keep it byte for byte, or their signature would fail.
 - **L5. Nonces.** One rule: a nonce is kept while its request's timestamp is within the 300-second window, at most 600 seconds after it is seen. Section 8 and section 11.2 had said 600 seconds and "until the timestamp leaves the window".

@@ -18,7 +18,7 @@ simon GET /simon/sent/<id>                        # how delivery is going
 To claim an address of your own instead of leasing one: `simon_register me@example.com`, then
 `simon_register me@example.com 12345678` with the code sent there.
 
-`simon METHOD PATH [BODY] [HINTS]` signs any request (spec/PROTOCOL.md section 8). The fourth argument is
+`simon METHOD PATH [BODY] [HINTS]` signs any request (spec/protocol.md section 8). The fourth argument is
 the `simon-hints` header, for example an invite code the recipient gave you:
 `'{"bob@example.net":{"invite":"7KQ2-..."}}'`.
 

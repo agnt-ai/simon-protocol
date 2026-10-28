@@ -1,6 +1,6 @@
 # A release: pushing a tag vX.Y.Z publishes the six npm packages at version X.Y.Z, in dependency order
 # (@agnt-sdk/simon-protocol, then -server, then -store-mongo, then -client, then -cli and -mcp). Every
-# package.json of the six must already say X.Y.Z (CONTRIBUTING.md, "Releasing"). The packages are the builds of scripts/pack.ts --release,
+# package.json of the six must already say X.Y.Z (contributing.md, "Releasing"). The packages are the builds of scripts/pack.ts --release,
 # checked first as CI checks main, then on Node 24 with scripts/test-built.sh.
 #
 # Publishing authenticates by npm trusted publishing (OIDC): no token, and npm shows the packages as

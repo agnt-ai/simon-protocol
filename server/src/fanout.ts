@@ -24,7 +24,7 @@ export const trustsClaimsOf = (ctx: Context, carrier: string) =>
   carrier === ctx.config.origin || ctx.config.trustedClaimServers.includes(carrier);
 
 /**
- * The claims an agent here is shown with a message (CLIENT.md sync): the authoritative ones always, and
+ * The claims an agent here is shown with a message (client.md sync): the authoritative ones always, and
  * the others only from a carrier this server trusts. Each acts-for and identifier claim carries `authoritative`.
  */
 export const shownClaims = (ctx: Context, carrier: string, claims: Claim[]) =>

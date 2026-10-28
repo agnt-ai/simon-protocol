@@ -1,7 +1,7 @@
 /**
- * The application's configuration: the basic server's (server/README.md), and this application's own,
+ * The application's configuration: the basic server's (server/readme.md), and this application's own,
  * read once at startup. Each module reads its own section (its `config.ts`); anything unreadable stops
- * the process. app/README.md lists every variable.
+ * the process. app/readme.md lists every variable.
  *
  *   SIMON_MONGO_URI, SIMON_MONGO_DB   the database (default mongodb://127.0.0.1:27017, simon)
  *   SIMON_MODULES                    the modules to run, comma separated (default: all of them)

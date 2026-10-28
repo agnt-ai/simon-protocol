@@ -1,8 +1,8 @@
 # SIMON registry
 
-Conventions agents share: header names, block types, relation names, signal types, claim types, hints, document members, algorithms and error codes, each with a one-line meaning. Nothing in it is required beyond what [PROTOCOL.md](PROTOCOL.md) requires. Servers need none of it to interoperate, except the entries the specs name for them: a receiving server judges the `identifier` claim as it judges `acts-for` (PROTOCOL.md section 6.2).
+Conventions agents share: header names, block types, relation names, signal types, claim types, hints, document members, algorithms and error codes, each with a one-line meaning. Nothing in it is required beyond what [protocol.md](protocol.md) requires. Servers need none of it to interoperate, except the entries the specs name for them: a receiving server judges the `identifier` claim as it judges `acts-for` (protocol.md section 6.2).
 
-**How an entry's status works.** An entry moves from **proposed** to **registered** when two independent implementations use it (the rule Nostr's NIPs follow). Entries marked **protocol** are defined in PROTOCOL.md itself and are listed here so the registry is complete. Entries marked **reserved** hold a name for an extension being specified.
+**How an entry's status works.** An entry moves from **proposed** to **registered** when two independent implementations use it (the rule Nostr's NIPs follow). Entries marked **protocol** are defined in protocol.md itself and are listed here so the registry is complete. Entries marked **reserved** hold a name for an extension being specified.
 
 **Header names** are lower case on the wire. When they travel as email headers, where mail software may re-case them, they are matched without regard to case.
 
@@ -10,7 +10,7 @@ Conventions agents share: header names, block types, relation names, signal type
 
 | Name | Status | Meaning |
 | --- | --- | --- |
-| `ed25519` | protocol | RFC 8032 Ed25519 with the strict verification rules of PROTOCOL.md section 2.3. |
+| `ed25519` | protocol | RFC 8032 Ed25519 with the strict verification rules of protocol.md section 2.3. |
 | `ml-dsa-65` | protocol | FIPS 204 ML-DSA-65, pure, empty context string. |
 
 ## Message headers (`headers` map)
@@ -18,7 +18,7 @@ Conventions agents share: header names, block types, relation names, signal type
 | Name | Status | Meaning |
 | --- | --- | --- |
 | `for` | protocol | The principal of a paired agent, as one `mailto:`, `tel:` or `simon-key:` identifier, the same on every message it sends until a succession moves a key principal on. Absent from a solo agent's messages. Only the agent's word unless a `pairing` signature or a trusted `acts-for` claim backs it: never a verified principal on a message without that evidence. |
-| `succession` | protocol | With a `simon-key:` principal that moved to a new key: the chain of steps, each signed by both its keys over `SIMON-SUCCEED\n<old>\n<new>`, from earlier keys on to `for` (PROTOCOL.md 2.2, 5.4). |
+| `succession` | protocol | With a `simon-key:` principal that moved to a new key: the chain of steps, each signed by both its keys over `SIMON-SUCCEED\n<old>\n<new>`, from earlier keys on to `for` (protocol.md 2.2, 5.4). |
 | `pairing` | protocol | With a `simon-key:` principal: `<until> <signature>`, the principal's signature over `SIMON-PAIR\n<from>\n<for>\n<until>`, so any recipient can verify the pairing; it counts before `until`, by at most 366 days. |
 | `critical` | protocol | Header names, comma separated, that a reader must understand when present before acting on the message. A named header absent from the message is ignored. |
 | `rel` | protocol | How the message relates to the one its `inReplyTo` names. The names are in "Relations" below. |
@@ -40,7 +40,7 @@ Conventions agents share: header names, block types, relation names, signal type
 
 ## Relations (`rel` header)
 
-A relation names the message it relates to in `inReplyTo` (PROTOCOL.md section 5.5). A reader that does not know a relation shows the message as a reply (reader profile). **Author-only** relations count only when both messages have the same `from`; from anyone else they are shown as replies and never applied. A relation that does not **stay in its conversation** points at a message without joining its conversation (conversations profile).
+A relation names the message it relates to in `inReplyTo` (protocol.md section 5.5). A reader that does not know a relation shows the message as a reply (reader profile). **Author-only** relations count only when both messages have the same `from`; from anyone else they are shown as replies and never applied. A relation that does not **stay in its conversation** points at a message without joining its conversation (conversations profile).
 
 | Name | Status | Author-only | Stays in its conversation | Meaning |
 | --- | --- | --- | --- | --- |
@@ -50,7 +50,7 @@ A relation names the message it relates to in `inReplyTo` (PROTOCOL.md section 5
 | `comment` | proposed | no | no | A comment on a published message, sent to its author, which its author's server may show under it. |
 | `vote` | proposed | no | yes | A vote in a poll the message named offers. The text is the choice; a `choice` header names it. Of one author's votes in a poll, the latest by `sentAt`, then lowest id, counts. |
 | `response` | proposed | no | yes | The answer to an interactive block in the message named: what a reader sends when its person or agent makes a choice, in place of calling any URL. A `choice` header names the choice, and the text says it in words. |
-| `forward` | proposed | no | no | Passes the message named on. The forwarded message travels whole as an `application/simon-message` part, so its signature can be checked while authenticated key evidence remains available; inline when it names files, since a message carried by content address names none for the forward (PROTOCOL.md section 5.3); its carried claims, when there are any, as an `application/simon-claims+json` part, so they can be checked while the required authenticated evidence remains available; and its content-addressed parts stay inside it, named by the forwarded message and served as files of the forward (PROTOCOL.md section 5.3), so a message of 32 parts can be forwarded. |
+| `forward` | proposed | no | no | Passes the message named on. The forwarded message travels whole as an `application/simon-message` part, so its signature can be checked while authenticated key evidence remains available; inline when it names files, since a message carried by content address names none for the forward (protocol.md section 5.3); its carried claims, when there are any, as an `application/simon-claims+json` part, so they can be checked while the required authenticated evidence remains available; and its content-addressed parts stay inside it, named by the forwarded message and served as files of the forward (protocol.md section 5.3), so a message of 32 parts can be forwarded. |
 | `quote` | proposed | no | no | Answers part of the message named, quoting it in the text. |
 | `pin` | proposed | no | yes | Pins the message named in its conversation. Its author unpins it by retracting the pin. |
 
@@ -60,8 +60,8 @@ A relation names the message it relates to in `inReplyTo` (PROTOCOL.md section 5
 
 | Member | Status | Meaning |
 | --- | --- | --- |
-| `name` | protocol | The file name its author suggests (PROTOCOL.md section 5.3). |
-| `alt` | protocol | A one-line text version of the block (PROTOCOL.md section 5.3). |
+| `name` | protocol | The file name its author suggests (protocol.md section 5.3). |
+| `alt` | protocol | A one-line text version of the block (protocol.md section 5.3). |
 
 ## Block types (part media types)
 
@@ -72,10 +72,10 @@ Any media type is a block type. A structured block names the published schema it
 | `text/plain` | protocol | Plain text. |
 | `text/markdown` | protocol | Markdown (RFC 7763), with `variant` naming the dialect (`CommonMark`, `GFM`). No embedded HTML is rendered, links show their destination, and nothing is fetched on display. |
 | `application/simon-reference+json` | proposed | A reference to something kept elsewhere: a big file, a live document, anything that may be revoked. `{"url","name"?,"type"?,"size"?,"sha256"?,"expires"?}`: an `https:` URL; a file name; the media type found there; its size in bytes; its SHA-256 when the bytes are fixed, which the reader checks; and a timestamp after which the link may stop working. Nothing is fetched until the reader asks. The shape follows the MIMI content format's external parts and MIME's `message/external-body`. |
-| `application/simon-message` | protocol | A whole message, as the canonical bytes of the message with its signature, for `forward`. Its parts stay inside it (PROTOCOL.md section 5.3). |
-| `application/simon-claims+json` | proposed | Claims as their carrier signed them, `{"claims","signature"}` (PROTOCOL.md section 6.2), beside a forwarded message. |
-| `application/simon-ui+json` | proposed | A declarative interactive block: choices, buttons, a form, a poll. Specified under "Interactive blocks" below. Drawn by the reader with its own components; a choice is a `response` relation, never a URL (PROTOCOL.md section 11.2). |
-| `application/simon-sealed` | protocol (reserved) | Ciphertext under the end-to-end encryption profile. Servers carry it unchanged (PROTOCOL.md sections 5.3 and 10). |
+| `application/simon-message` | protocol | A whole message, as the canonical bytes of the message with its signature, for `forward`. Its parts stay inside it (protocol.md section 5.3). |
+| `application/simon-claims+json` | proposed | Claims as their carrier signed them, `{"claims","signature"}` (protocol.md section 6.2), beside a forwarded message. |
+| `application/simon-ui+json` | proposed | A declarative interactive block: choices, buttons, a form, a poll. Specified under "Interactive blocks" below. Drawn by the reader with its own components; a choice is a `response` relation, never a URL (protocol.md section 11.2). |
+| `application/simon-sealed` | protocol (reserved) | Ciphertext under the end-to-end encryption profile. Servers carry it unchanged (protocol.md sections 5.3 and 10). |
 
 ## Signal types (`POST /simon/signal`)
 
@@ -91,15 +91,15 @@ The protocol gives a label no meaning; the author's server does. These are label
 
 | Label | Status | Meaning |
 | --- | --- | --- |
-| `public` | protocol | Anyone (PROTOCOL.md section 5.4). A message to no one always carries an audience, so publishing to the world is a choice the author signs. |
+| `public` | protocol | Anyone (protocol.md section 5.4). A message to no one always carries an audience, so publishing to the world is a choice the author signs. |
 | `followers` | proposed | Agents that asked to follow (the `follow` header) and whom the author admitted. |
 
 ## Claim types (`claims[].type` in the transport envelope)
 
 | Type | Status | Meaning |
 | --- | --- | --- |
-| `acts-for` | protocol | The carrier verified that the principal in the message's `for` header approved this agent: `agent`, `for`, `verifiedAt`, and `scope`, whose common values are `converse`, `schedule`, `negotiate` and `commit`. Authoritative only when the identifier's domain names the carrier by TXT record. Defined in PROTOCOL.md section 6.2. |
-| `identifier` | proposed | The carrier verified that an identifier belongs to the agent or to its principal, typically by a code sent to it: `agent`, `of` (`agent` or `principal`), `identifier` (a `mailto:` or `tel:` identifier) and `verifiedAt`. It shows the address an agent or its person is also known by: an agent's own email on a domain that runs no SIMON server, or the current email of a principal whose `for` header names a key. Because it travels per message, an identifier can change without the address or the pairing changing. A carrier sends it only when the agent chose to show that identifier. A receiver ignores the claim unless `agent` is the message's `from`; `of` is `agent`, or `principal` on a message whose `for` header names a key (`simon-key:`); `identifier` is a `mailto:` or `tel:` identifier in the form of PROTOCOL.md section 2.2, exactly as written; and `verifiedAt` is a timestamp. It judges authority as for `acts-for` (PROTOCOL.md section 6.2), by the identifier. An `of: principal` claim describes the principal the `for` header names, which a reader verifies by the `pairing` signature (PROTOCOL.md section 2.2); a receiving server passes the claim on without checking that pairing. |
+| `acts-for` | protocol | The carrier verified that the principal in the message's `for` header approved this agent: `agent`, `for`, `verifiedAt`, and `scope`, whose common values are `converse`, `schedule`, `negotiate` and `commit`. Authoritative only when the identifier's domain names the carrier by TXT record. Defined in protocol.md section 6.2. |
+| `identifier` | proposed | The carrier verified that an identifier belongs to the agent or to its principal, typically by a code sent to it: `agent`, `of` (`agent` or `principal`), `identifier` (a `mailto:` or `tel:` identifier) and `verifiedAt`. It shows the address an agent or its person is also known by: an agent's own email on a domain that runs no SIMON server, or the current email of a principal whose `for` header names a key. Because it travels per message, an identifier can change without the address or the pairing changing. A carrier sends it only when the agent chose to show that identifier. A receiver ignores the claim unless `agent` is the message's `from`; `of` is `agent`, or `principal` on a message whose `for` header names a key (`simon-key:`); `identifier` is a `mailto:` or `tel:` identifier in the form of protocol.md section 2.2, exactly as written; and `verifiedAt` is a timestamp. It judges authority as for `acts-for` (protocol.md section 6.2), by the identifier. An `of: principal` claim describes the principal the `for` header names, which a reader verifies by the `pairing` signature (protocol.md section 2.2); a receiving server passes the claim on without checking that pairing. |
 | `operator` | proposed | The carrier runs this agent itself, as its own product: `agent` and `operator`, the product's name. Absent for an agent the carrier only hosts. It lets a recipient tell a provider's own assistants from the agents its users bring. It is never authoritative: it is the carrier's word, shown only from carriers the receiver trusts. |
 
 ## Transport hints (`hints[<recipient>]` in the envelope, and the `simon-hints` request header)
@@ -112,31 +112,31 @@ The protocol gives a label no meaning; the author's server does. These are label
 
 | Document | Member | Status | Meaning |
 | --- | --- | --- | --- |
-| agent | `retired` | protocol | When the address retired, on optional signed retirement evidence a host chooses to publish (PROTOCOL.md section 4). |
-| agent | `unpairing` | protocol | The key principal's unpairing that retired it, when present in optional signed retirement evidence (PROTOCOL.md section 4). |
+| agent | `retired` | protocol | When the address retired, on optional signed retirement evidence a host chooses to publish (protocol.md section 4). |
+| agent | `unpairing` | protocol | The key principal's unpairing that retired it, when present in optional signed retirement evidence (protocol.md section 4). |
 | agent | `encryptionKeys` | reserved | Keys for the end-to-end encryption profile. |
 
 ## Error codes (`code` in problem details)
 
-The codes PROTOCOL.md section 9 and CLIENT.md define, and any registered later. A client that does not know a code acts on the HTTP status and `retryable` (PROTOCOL.md 9), so a new code breaks no one.
+The codes protocol.md section 9 and client.md define, and any registered later. A client that does not know a code acts on the HTTP status and `retryable` (protocol.md 9), so a new code breaks no one.
 
 | Code | Status | Defined in | Meaning |
 | --- | --- | --- | --- |
-| `invalid` | 400 | PROTOCOL.md 9 | Parse, shape, canonical form, destination, limits or freshness; `details.field` names the member at fault. |
-| `signature_required`, `stale_request`, `unknown_key`, `key_revoked`, `bad_signature`, `replayed_request` | 401 | PROTOCOL.md 8 | A request signature is missing, old, by an unknown or revoked key, wrong, or replayed. |
-| `bad_signature` | 403 | PROTOCOL.md 6.3 | An envelope or message signature does not verify. |
-| `unsupported_algorithm` | 403 | PROTOCOL.md 6.3 | The author has no key this server can verify. |
-| `not_found` | 404 | PROTOCOL.md 9 | An unknown or undisclosed agent, message or part, or a published message its reader may not see. |
-| `body_too_large` | 413 | PROTOCOL.md 9 | A body over the server's cap. |
-| `rate_limited` | 429 | PROTOCOL.md 9 | Slow down; `Retry-After` says when. |
-| `unavailable` | 503 | PROTOCOL.md 9 | The server temporarily cannot complete the operation, including a failed lookup or fetch, or exhausted host capacity. |
-| `address_required`, `too_many_keys`, `part_not_uploaded`, `unsupported_version` | 400 | CLIENT.md | No address leased, too many keys, a part not held, a version not implemented. |
-| `bad_proof` | 401 | CLIENT.md | An add-key proof, pairing, recovery signature or unpairing does not verify. |
-| `scope_required` | 403 | CLIENT.md | A grant lacks the scope the call needs. |
-| `address_taken`, `address_homed_elsewhere`, `key_in_use`, `address_not_served`, `no_signing_key` | 409 | CLIENT.md | The address or key cannot be had here (a key the agent held before, or one serving another address where the host allows one address per key), or the server cannot send for the agent. |
-| `key_senior`, `last_key`, `recovery_not_cancellable`, `too_many_webhooks` | 409 | CLIENT.md | The host's policy refuses a revocation or a cancel, or its webhook allowance is full. |
-| `code_expired`, `code_locked`, `token_expired` | 410 | CLIENT.md | A code too old or locked, or an unknown, expired or gapped sync token. A migrated account may report `details.reason: history_migration` with an explicit-resume token (CLIENT.md, "sync"). |
-| `wrong_code` | 422 | CLIENT.md | A code that is not the one sent, or a cancel code that cancels nothing. |
+| `invalid` | 400 | protocol.md 9 | Parse, shape, canonical form, destination, limits or freshness; `details.field` names the member at fault. |
+| `signature_required`, `stale_request`, `unknown_key`, `key_revoked`, `bad_signature`, `replayed_request` | 401 | protocol.md 8 | A request signature is missing, old, by an unknown or revoked key, wrong, or replayed. |
+| `bad_signature` | 403 | protocol.md 6.3 | An envelope or message signature does not verify. |
+| `unsupported_algorithm` | 403 | protocol.md 6.3 | The author has no key this server can verify. |
+| `not_found` | 404 | protocol.md 9 | An unknown or undisclosed agent, message or part, or a published message its reader may not see. |
+| `body_too_large` | 413 | protocol.md 9 | A body over the server's cap. |
+| `rate_limited` | 429 | protocol.md 9 | Slow down; `Retry-After` says when. |
+| `unavailable` | 503 | protocol.md 9 | The server temporarily cannot complete the operation, including a failed lookup or fetch, or exhausted host capacity. |
+| `address_required`, `too_many_keys`, `part_not_uploaded`, `unsupported_version` | 400 | client.md | No address leased, too many keys, a part not held, a version not implemented. |
+| `bad_proof` | 401 | client.md | An add-key proof, pairing, recovery signature or unpairing does not verify. |
+| `scope_required` | 403 | client.md | A grant lacks the scope the call needs. |
+| `address_taken`, `address_homed_elsewhere`, `key_in_use`, `address_not_served`, `no_signing_key` | 409 | client.md | The address or key cannot be had here (a key the agent held before, or one serving another address where the host allows one address per key), or the server cannot send for the agent. |
+| `key_senior`, `last_key`, `recovery_not_cancellable`, `too_many_webhooks` | 409 | client.md | The host's policy refuses a revocation or a cancel, or its webhook allowance is full. |
+| `code_expired`, `code_locked`, `token_expired` | 410 | client.md | A code too old or locked, or an unknown, expired or gapped sync token. A migrated account may report `details.reason: history_migration` with an explicit-resume token (client.md, "sync"). |
+| `wrong_code` | 422 | client.md | A code that is not the one sent, or a cancel code that cancels nothing. |
 
 ## Email and text hints
 
@@ -158,7 +158,7 @@ Conventions applications share beyond what the core needs. They use the core's r
 
 ### Interactive blocks (`application/simon-ui+json`)
 
-This specifies the block type reserved above. A UI block is a description that the reader draws with its own components, as Slack's Block Kit, Adaptive Cards and RCS rich cards are, and never code (PROTOCOL.md section 11.2). It is JSON under PROTOCOL.md 5.1's rules, so numbers are whole, and an amount with a fraction is a decimal string (`"12.50"`). Members a reader does not know are ignored. The message's text block says the same thing in words, and the block SHOULD carry `alt`, so a reader that draws no UI loses nothing it needs.
+This specifies the block type reserved above. A UI block is a description that the reader draws with its own components, as Slack's Block Kit, Adaptive Cards and RCS rich cards are, and never code (protocol.md section 11.2). It is JSON under protocol.md 5.1's rules, so numbers are whole, and an amount with a fraction is a decimal string (`"12.50"`). Members a reader does not know are ignored. The message's text block says the same thing in words, and the block SHOULD carry `alt`, so a reader that draws no UI loses nothing it needs.
 
 Every UI block has `kind` and `prompt`. Choice ids are 1 to 64 lower-case letters, digits and hyphens, so a `choice` header can name several, joined by commas.
 
@@ -174,14 +174,14 @@ Every UI block has `kind` and `prompt`. Choice ids are 1 to 64 lower-case letter
 
 ### Other blocks
 
-These are JSON blocks named by the core's `schema` media-type parameter (PROTOCOL.md 5.3), with a short registry token until a neutral home can give them URLs: `application/json; schema=simon.preview`.
+These are JSON blocks named by the core's `schema` media-type parameter (protocol.md 5.3), with a short registry token until a neutral home can give them URLs: `application/json; schema=simon.preview`.
 
 | Type | Status | Meaning |
 | --- | --- | --- |
 | `application/json; schema=simon.ui-response` | proposed | The values of a `form` answer (above). |
 | `application/json; schema=simon.preview` | proposed | A link preview its sender supplies, so a recipient never fetches the link to draw one: `{"url","title","description"?,"siteName"?,"image"?}`, where `image` is the `sha256` of an image part of the same message. A reader shows it as the sender's word, with the link's real host beside it. |
 | `application/json; schema=simon.chart` | proposed | A chart drawn by the reader: `{"kind","title","units"?,"series"}`, where `kind` is `bar`, `line`, `pie` or `table`, and each series is `{"name","points"}` with points `[<label>,<decimal string>]`. `alt` is required. |
-| `application/json; schema=simon.container` | reserved | Blocks inside a block, for layouts, once the core allows nesting (PROTOCOL.md 5.3). |
+| `application/json; schema=simon.container` | reserved | Blocks inside a block, for layouts, once the core allows nesting (protocol.md 5.3). |
 
 ### More relations
 
@@ -213,17 +213,17 @@ A `reaction`'s text is usually one emoji: any sequence Unicode's emoji data (UTS
 | --- | --- | --- | --- |
 | Header | `lang` | proposed | The BCP 47 language tag of the message's text blocks. |
 | Header | `a2a-agent` | proposed | On a message from an A2A bridge's puppet: the A2A endpoint it stands for (a bridge module). Only the bridge's word. |
-| Document member | `history` (server) | proposed | Present when this server keeps its agents' history and offers the client history API (CLIENT.md, "History"): `{"retentionDays"}`, the days it keeps a message unless the agent removes it, or `null` for until removed; how long is the host's policy. A server that hosts people's agents carries this object. An absent member or `false` advertises no history API. Readers that do not know it ignore it. |
+| Document member | `history` (server) | proposed | Present when this server keeps its agents' history and offers the client history API (client.md, "History"): `{"retentionDays"}`, the days it keeps a message unless the agent removes it, or `null` for until removed; how long is the host's policy. A server that hosts people's agents carries this object. An absent member or `false` advertises no history API. Readers that do not know it ignore it. |
 | Document member | `discovery` (server) | proposed | `true` when this server answers lookups ([discovery profile](profiles/discovery.md), section 2). A reader asks a domain's server about its addresses only when its document says so, and otherwise asks the directories it trusts. An absent member, or any value but `true`, advertises no lookups. Readers that do not know it ignore it. |
-| Document member | `syncDays` (server) | proposed | How many days `sync` holds what it delivers (CLIENT.md, "sync"): the host's policy, published so a client knows how often it must sync to miss nothing. Unknown checkpoints and checkpoints spanning any retention gap answer `410 token_expired`. Readers that do not know it ignore it. |
-| Well-known member | `mcp` | proposed | In a domain's well-known answer (`https://<domain>/.well-known/simon`, PROTOCOL.md 3), beside `server`: the `https:` URL of the remote MCP server (Streamable HTTP) through which an assistant uses agents on this domain as tools, signing in with OAuth as CLIENT.md's "Delegated access" says, including the one-approval setup (`prompt=create`). It is per domain, because one server may host many applications' domains, each with its own connector; whoever runs the domain serves it. An assistant that cannot make section 8 signatures, such as a chat assistant, starts from a domain or an address on it: it fetches the well-known answer and adds the connector. The endpoint signs for the agent with the host's signing key (PROTOCOL.md 11.2); how it holds its own tokens is the host's policy. Resolvers ignore it. |
+| Document member | `syncDays` (server) | proposed | How many days `sync` holds what it delivers (client.md, "sync"): the host's policy, published so a client knows how often it must sync to miss nothing. Unknown checkpoints and checkpoints spanning any retention gap answer `410 token_expired`. Readers that do not know it ignore it. |
+| Well-known member | `mcp` | proposed | In a domain's well-known answer (`https://<domain>/.well-known/simon`, protocol.md 3), beside `server`: the `https:` URL of the remote MCP server (Streamable HTTP) through which an assistant uses agents on this domain as tools, signing in with OAuth as client.md's "Delegated access" says, including the one-approval setup (`prompt=create`). It is per domain, because one server may host many applications' domains, each with its own connector; whoever runs the domain serves it. An assistant that cannot make section 8 signatures, such as a chat assistant, starts from a domain or an address on it: it fetches the well-known answer and adds the connector. The endpoint signs for the agent with the host's signing key (protocol.md 11.2); how it holds its own tokens is the host's policy. Resolvers ignore it. |
 | Document member | `transparency` (agent) | reserved | Signed timestamps from key-transparency logs for this version of the document (a key-transparency module). |
-| TXT field | `tenant` | proposed | In a domain's `_simon` record: the token a host gave its customer, proving the customer controls the domain (a custom-domains module). Servers resolving the record ignore it (PROTOCOL.md 3). |
+| TXT field | `tenant` | proposed | In a domain's `_simon` record: the token a host gave its customer, proving the customer controls the domain (a custom-domains module). Servers resolving the record ignore it (protocol.md 3). |
 
 ### How an entry is registered
 
 - **Proposing.** A pull request adds a row: the name, `proposed`, and a one-line meaning, linking to the text that specifies it in full. It comes with a test case or an implementation.
-- **Names** are first come, first served. The designated experts refuse a name that misleads, or that duplicates an entry under another name. A registry name has no dot. A name with dots is private: a domain its author controls in reversed label order, then the name (`com.example.approve` for `example.com`), used without asking anyone and never registered here (PROTOCOL.md section 5.4). This holds for header, relation and signal-type names, and by the same convention for claim types and hint names. Feed names are not registry names at all: each author's feeds are its own namespace. A private convention that two implementations come to share may be proposed under a short name. Tokens inside a media type's parameters, such as the `schema` tokens below, are parameter values, not names, and may hold dots.
+- **Names** are first come, first served. The designated experts refuse a name that misleads, or that duplicates an entry under another name. A registry name has no dot. A name with dots is private: a domain its author controls in reversed label order, then the name (`com.example.approve` for `example.com`), used without asking anyone and never registered here (protocol.md section 5.4). This holds for header, relation and signal-type names, and by the same convention for claim types and hint names. Feed names are not registry names at all: each author's feeds are its own namespace. A private convention that two implementations come to share may be proposed under a short name. Tokens inside a media type's parameters, such as the `schema` tokens below, are parameter values, not names, and may hold dots.
 - **Registering.** An entry becomes `registered` when two independent implementations use it, and the row then links to both. Only registered entries join a profile.
 - **Deprecating.** An entry no one should use any more is marked `deprecated`, with the reason. Its name is never given to anything else.
-- **The neutral home.** Until one exists, this repository's maintainers are the designated experts (PROTOCOL.md section 13). When the registry moves, to the IANA registries that section requests or to the neutral body of [docs/ROADMAP.md](../docs/ROADMAP.md), it moves whole, every name keeps its meaning, and this file points there.
+- **The neutral home.** Until one exists, this repository's maintainers are the designated experts (protocol.md section 13). When the registry moves, to the IANA registries that section requests or to the neutral body of [docs/roadmap.md](../docs/roadmap.md), it moves whole, every name keeps its meaning, and this file points there.

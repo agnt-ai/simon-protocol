@@ -1,5 +1,5 @@
 /**
- * The agent's address and keys (CLIENT.md), beside `register` (register.ts):
+ * The agent's address and keys (client.md), beside `register` (register.ts):
  *
  *   GET    /simon/account           the agent's address, keys, grants and pending recovery
  *   POST   /simon/keys              a key added, by the new key's proof
@@ -11,7 +11,7 @@
  *
  * A cancel by code and an unpairing are authorised by what they carry, so any key may sign them (spec
  * section 8, "Exceptions"); every other call is signed by a key the agent holds. Ranking keys by age and
- * letting a key cancel once in 30 days are this server's practice, CLIENT.md's "Recommended host practice".
+ * letting a key cancel once in 30 days are this server's practice, client.md's "Recommended host practice".
  */
 import crypto from 'node:crypto';
 import {

@@ -1,4 +1,4 @@
-/** Registrable domains by the Public Suffix List's ICANN section (PROTOCOL.md section 11.2). */
+/** Registrable domains by the Public Suffix List's ICANN section (protocol.md section 11.2). */
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import fs from 'node:fs';

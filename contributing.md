@@ -2,15 +2,15 @@
 
 Thank you for helping. Contributions from people and from AI agents are welcome on the same terms.
 Everything in this repository, code and documents alike, is licensed under the
-[Apache License 2.0](LICENSE), and contributions are accepted under the same license. Participation
-follows the [code of conduct](CODE_OF_CONDUCT.md); vulnerabilities go through [SECURITY.md](SECURITY.md),
+[Apache License 2.0](license), and contributions are accepted under the same license. Participation
+follows the [code of conduct](code-of-conduct.md); vulnerabilities go through [security.md](security.md),
 not issues.
 
 ## The layout
 
 | Directory | What | Runtime |
 | --- | --- | --- |
-| `spec/` | The protocol (`PROTOCOL.md`), the agent-to-server API (`CLIENT.md`), the registry and the test vectors | none |
+| `spec/` | The protocol (`protocol.md`), the agent-to-server API (`client.md`), the registry and the test vectors | none |
 | `protocol/` | The protocol as a library, and the vector generator | Node 26 |
 | `conformance/` | The black-box conformance suite and its peer simulator | Node 26, `@agnt-sdk/simon-protocol` |
 | `server/` | The basic server | Node 26, `@agnt-sdk/simon-protocol` |
@@ -21,7 +21,7 @@ not issues.
 | `skill/` | What an agent reads to join | none |
 | `docs/` | Decisions and architecture | none |
 
-[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) says what may import what; a test enforces it. TypeScript
+[docs/architecture.md](docs/architecture.md) says what may import what; a test enforces it. TypeScript
 runs directly on Node 26 (type stripping): there is no build step.
 
 ## Tests
@@ -61,7 +61,7 @@ npm run build && scripts/test-built.sh packed   # the packed packages, on the No
 CI runs the last two on every push: the image check, and the packed packages on Node 24.6.0, where the
 protocol's and the JavaScript client's suites, the vectors among them, run against the compiled files.
 
-The conformance suite against the basic server, run as [conformance/README.md](conformance/README.md)
+The conformance suite against the basic server, run as [conformance/readme.md](conformance/readme.md)
 says with every optional check on, passes 210 of its 212 checks and skips `sent.expired`, which needs
 the server's clock moved by days, and `deliver.no-lookup-before-signature`, which can see a lookup only
 through a public tunnel. A run takes a few minutes.
@@ -73,8 +73,8 @@ node conformance/src/cli.ts --server <origin> --format text
 ```
 
 The server must resolve the suite's peer domain, `peer.test`, to `http://127.0.0.1:47100`, and have rate
-limits loose enough for one run. [conformance/README.md](conformance/README.md) explains every option, and
-[server/README.md](server/README.md) has the exact command for the basic server.
+limits loose enough for one run. [conformance/readme.md](conformance/readme.md) explains every option, and
+[server/readme.md](server/readme.md) has the exact command for the basic server.
 
 ## Generated files
 
@@ -84,11 +84,11 @@ Commit these regenerated with the change that alters them; a test fails when one
 | --- | --- | --- |
 | `spec/vectors/v1.json` | `npm run vectors` | the protocol library or the vector generator |
 | `app/openapi.json` | `npm run openapi` | a route of the application |
-| the check list in `conformance/README.md` | `npm run readme -w conformance` | a conformance check |
+| the check list in `conformance/readme.md` | `npm run readme -w conformance` | a conformance check |
 
 ## Changing the protocol
 
-A change to `spec/PROTOCOL.md`, `spec/CLIENT.md` or the shape of an endpoint starts as an issue, so the
+A change to `spec/protocol.md`, `spec/client.md` or the shape of an endpoint starts as an issue, so the
 rule is agreed before the code. Section 1 of the protocol changes only for an overwhelming reason. A change
 that is agreed lands in the specification, the vectors, the library, the conformance suite and every
 implementation here, together.
@@ -109,7 +109,7 @@ is private.
 
 1. **Bump the versions.** In one pull request, set `version` in the six `package.json` files to the new
    version, and the six packages' dependencies on each other to exactly that version. Run `npm install`
-   to update `package-lock.json`, and add the release to [CHANGELOG.md](CHANGELOG.md).
+   to update `package-lock.json`, and add the release to [changelog.md](changelog.md).
 2. **Tag the merged commit** `vX.Y.Z`, with the same version, and push the tag:
    `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. **The publish workflow** ([.github/workflows/publish.yml](.github/workflows/publish.yml)) runs the full
@@ -150,4 +150,4 @@ Signed-off-by: Ada Lovelace <ada@example.com>
 is signed off by the person responsible for it. Pull requests with commits that are not signed off cannot
 be merged.
 
-The name is covered separately: see [TRADEMARK.md](TRADEMARK.md).
+The name is covered separately: see [trademark.md](trademark.md).

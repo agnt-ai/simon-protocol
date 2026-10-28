@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "client.json",
   "title": "SIMON client API shapes",
-  "description": "CLIENT.md lifecycle, sync and selected optional history/delegation bodies under $defs. Requests use PROTOCOL.md section 8. These open shapes do not enforce cryptography, authorization, endpoint availability or all semantic rules. Errors use problem.json except OAuth exchange errors.",
+  "description": "client.md lifecycle, sync and selected optional history/delegation bodies under $defs. Requests use protocol.md section 8. These open shapes do not enforce cryptography, authorization, endpoint availability or all semantic rules. Errors use problem.json except OAuth exchange errors.",
   "$defs": {
     "recoveryState": {
       "type": "object",
@@ -300,7 +300,7 @@
         },
         "succession": {
           "$ref": "common.json#/$defs/succession",
-          "description": "When a key the principal moved on from signed the unpairing: the succession from that key to the principal the server holds (PROTOCOL.md 2.2, unpairing always wins)."
+          "description": "When a key the principal moved on from signed the unpairing: the succession from that key to the principal the server holds (protocol.md 2.2, unpairing always wins)."
         }
       },
       "required": ["address", "unpairing"],

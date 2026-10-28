@@ -1,6 +1,6 @@
 # The core, and what stays out of it
 
-A design note of 2026-10-21. It records how the core of the SIMON Protocol, the server-to-server specification in [`spec/PROTOCOL.md`](../spec/PROTOCOL.md), reached a historical design milestone, what went into it and what went into the registry, and where each idea comes from. The client layer ([`spec/CLIENT.md`](../spec/CLIENT.md)), servers and applications build on it and are designed separately.
+A design note of 2026-10-21. It records how the core of the SIMON Protocol, the server-to-server specification in [`spec/protocol.md`](../spec/protocol.md), reached a historical design milestone, what went into it and what went into the registry, and where each idea comes from. The client layer ([`spec/client.md`](../spec/client.md)), servers and applications build on it and are designed separately.
 
 ## The protocol in seven sentences
 
@@ -45,7 +45,7 @@ Everything else is a header, a block (part) type or a relation name in [`spec/re
 | Following | registry | `follow` header, `followers` label | Can start as a convention: a reader polls a feed. |
 | Interactive UI is data, never code | core (security rule) | 11.2 | A safety rule every reader must obey. The UI block format itself is reserved in the registry. |
 | Identity modes | core (statement) | 2.2, 12 | No new mechanism: `for` already says which mode a message is in. |
-| Files: content-addressed parts, `name`, forwarding received parts | core | 5.3, 7.2, CLIENT.md | Servers store, serve and check them. |
+| Files: content-addressed parts, `name`, forwarding received parts | core | 5.3, 7.2, client.md | Servers store, serve and check them. |
 | Big, live or revocable files | registry | `application/simon-reference+json` | A link with a hash; readers only. |
 | Chunked or resumable upload | neither | 14 | Not added. Big things travel by reference. |
 | Carrier-signed claims | core | 6.2 | Part of the envelope that servers check. |
@@ -107,7 +107,7 @@ A conversation is its root message and everything whose `inReplyTo` chain leads 
 
 ### Signals
 
-`POST /simon/signal` carries `typing`, `collected` and `read` between servers. A signal is signed by the sender's server, as an envelope is, and is never stored or put in any history. *Revised:* any receiving server may drop any signal, `read` is sent only when reading is shared by choice, and the rule that signals pass only between parties who have both written to each other is gone. Each is sent only by the one it is about, and only when that agent asks for it, never as a side effect of fetching. Whom a server passes signals to is its own policy (docs/REFERENCE-SERVER.md).
+`POST /simon/signal` carries `typing`, `collected` and `read` between servers. A signal is signed by the sender's server, as an envelope is, and is never stored or put in any history. *Revised:* any receiving server may drop any signal, `read` is sent only when reading is shared by choice, and the rule that signals pass only between parties who have both written to each other is gone. Each is sent only by the one it is about, and only when that agent asks for it, never as a side effect of fetching. Whom a server passes signals to is its own policy (docs/reference-server.md).
 
 **Precedent.** BSD `talk` (1983) showed the other party typing, keystroke by keystroke. X.400 (1984) had receipt notifications; mail has had Message Disposition Notifications since RFC 2298 (1998, now RFC 8098), sent only with the user's consent. RFC 3994 (2005) defined the "is composing" indication that RCS uses, and RFC 5438 (2009) the delivery and display notifications. XMPP has chat states (XEP-0085) and receipts (XEP-0184, XEP-0333). Matrix sends typing and receipts as ephemeral events that are never persisted in the room, and has a private read receipt for those who do not want to share. Signals need a path of their own because deliver stores what it carries and remembers repeats for a week.
 
@@ -147,7 +147,7 @@ Content-addressed parts stay for small files; parts gain `name`; an agent can fo
 
 ### The client layer, later
 
-Sentence 6 leaves the slot. JMAP (RFC 8620, 8621) shows how a mailbox API can be one batch call plus a push channel; Nostr's NIP-46 shows a client using a signer it does not hold; OAuth shows delegated, scoped access. CLIENT.md is designed separately; this work only adds the small pieces the core needs there: forwarding received parts, inbox entries that carry the carrier's signed claims, unpairing, and a placeholder for signals.
+Sentence 6 leaves the slot. JMAP (RFC 8620, 8621) shows how a mailbox API can be one batch call plus a push channel; Nostr's NIP-46 shows a client using a signer it does not hold; OAuth shows delegated, scoped access. client.md is designed separately; this work only adds the small pieces the core needs there: forwarding received parts, inbox entries that carry the carrier's signed claims, unpairing, and a placeholder for signals.
 
 ### Conformance and profiles
 
@@ -159,9 +159,9 @@ The core-level findings of an external security review, and how the core answers
 
 - **Claims.** Claims are signed for their message (`claimsSignature`, context `SIMON-CLAIMS`) and travel into inbox entries as `signedClaims`, so a claim stays checkable wherever a message goes. A principal never counts for a message without `for`, whatever its claims say.
 - **Email authority.** Email authority comes only from the `_simon` TXT record; the well-known answer still routes.
-- **Key management and recovery** are host policy: other servers see only the keys and revocations in the agent document. CLIENT.md defines dedicated account/recovery calls; host practice remains separate from core interoperability.
+- **Key management and recovery** are host policy: other servers see only the keys and revocations in the agent document. client.md defines dedicated account/recovery calls; host practice remains separate from core interoperability.
 - **Fetching and signals.** When a server fetches parts is its own choice; it SHOULD fetch on arrival, never on read, and section 12 states what each choice reveals. The reference server fetches for every accepted message. Signals are explicit and opt-in.
-- **Sender protection.** The historical ordering requirement stays: no recipient lookups before carrier authentication. The subsequent review also requires bounded unauthenticated lookup work, with mechanisms and values chosen by the host. Fair fetching, counting repeats, an envelope size bound and separate lookup budgets are the reference server's notes (`docs/REFERENCE-SERVER.md`).
+- **Sender protection.** The historical ordering requirement stays: no recipient lookups before carrier authentication. The subsequent review also requires bounded unauthenticated lookup work, with mechanisms and values chosen by the host. Fair fetching, counting repeats, an envelope size bound and separate lookup budgets are the reference server's notes (`docs/reference-server.md`).
 - **Unpairing.** A key principal can end its pairing.
 - **`human-consulted`** signs over the message itself.
 - **Accountability and trusted carriers.** The limits of accountability and of trusted carriers are stated; no transparency log in version 1.

@@ -1,4 +1,4 @@
-"""An agent and its own server: the calls of spec/CLIENT.md, and reading other agents.
+"""An agent and its own server: the calls of spec/client.md, and reading other agents.
 
     register      POST /simon/register
     send          POST /simon/send
@@ -483,7 +483,7 @@ class Agent(Reader):
     def __repr__(self) -> str:
         return f"Agent({self.origin!r}, {self.key!r}, {self.address!r})"
 
-    # The calls of CLIENT.md.
+    # The calls of client.md.
 
     def register(
         self,

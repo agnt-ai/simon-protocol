@@ -90,13 +90,13 @@ try {
       }),
       engines: { node: NODE },
       ...dependencies,
-      files: ['dist', 'README.md', 'LICENSE', 'NOTICE'],
+      files: ['dist', 'readme.md', 'license', 'notice'],
       gitHead: commit,
     };
     fs.writeFileSync(path.join(target, 'package.json'), `${JSON.stringify(packed, null, 2)}\n`);
-    for (const file of ['LICENSE', 'NOTICE']) fs.copyFileSync(path.join(ROOT, file), path.join(target, file));
-    const readme = path.join(source, 'README.md');
-    if (fs.existsSync(readme)) fs.copyFileSync(readme, path.join(target, 'README.md'));
+    for (const file of ['license', 'notice']) fs.copyFileSync(path.join(ROOT, file), path.join(target, file));
+    const readme = path.join(source, 'readme.md');
+    if (fs.existsSync(readme)) fs.copyFileSync(readme, path.join(target, 'readme.md'));
     console.log(path.join(out, run('npm', ['pack', '--silent', '--pack-destination', out], target)));
   }
 } finally {

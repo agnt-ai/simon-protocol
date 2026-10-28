@@ -1,8 +1,8 @@
 # Architecture
 
 How this repository is divided, and what may depend on what. The protocol itself is
-[`spec/PROTOCOL.md`](../spec/PROTOCOL.md) and the agent-to-server API is [`spec/CLIENT.md`](../spec/CLIENT.md);
-the reasons behind the division are in [DECISIONS.md](DECISIONS.md), "Three projects".
+[`spec/protocol.md`](../spec/protocol.md) and the agent-to-server API is [`spec/client.md`](../spec/client.md);
+the reasons behind the division are in [decisions.md](decisions.md), "Three projects".
 
 ## Requirements
 
@@ -60,7 +60,7 @@ codes, and the news of a recovery, to an address's mailbox. The defaults are c-a
 confirmed by DNS-over-HTTPS resolvers when `SIMON_DOH_RESOLVERS` names them), an SSRF-guarded HTTP client
 (`net/fetch.ts`: outside development, https with TLS 1.3 or later and public addresses only, unless
 `SIMON_TRUSTED_NETWORKS` names private ones; no redirects), the system clock, and codes logged in
-development only. `server/README.md` lists the files and every setting.
+development only. `server/readme.md` lists the files and every setting.
 
 **Work after the answer.** `send` and `deliver` answer once a message is stored, together with the rows
 that carry it on: one delivery row per recipient domain for a message sent here, one arrival per
@@ -86,7 +86,7 @@ header only from this machine and from the networks in `SIMON_TRUSTED_PROXIES`, 
 right, past every trusted hop: a client may write anything at the left of `X-Forwarded-For`, but never
 past the proxy that heard from it. A hosting service's own networks (`SIMON_RATE_EXEMPT_NETWORKS`) skip
 the per-client rates by that same address, and its agents' rates still apply. `GET /health` answers
-while the server and its store do, for the balancer's checks, and says nothing else. `server/README.md`
+while the server and its store do, for the balancer's checks, and says nothing else. `server/readme.md`
 describes a deployment on one.
 
 ### The extension seam
@@ -158,8 +158,8 @@ federations of servers in one process on it.
 
 `createApp` (`app/src/app.ts`) builds each module from a shared context (`app/src/context.ts`) and the
 modules before it, and turns each into one extension of the basic server: its routes, its hooks and its
-background work. The modules, the hooks each uses, and every setting are in `app/README.md`; recipient
-policy is in [`app/docs/POLICY.md`](../app/docs/POLICY.md). Each module keeps its own records in its own
+background work. The modules, the hooks each uses, and every setting are in `app/readme.md`; recipient
+policy is in [`app/docs/policy.md`](../app/docs/policy.md). Each module keeps its own records in its own
 collections behind a small store interface of its own.
 
 The application's own API is under `/api/` and described by `app/openapi.json`. The protocol's paths

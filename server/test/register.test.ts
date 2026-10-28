@@ -1,5 +1,5 @@
 /**
- * CLIENT.md `register`: leasing, hosted names, the code exchange, recovery by the mailbox and by a key
+ * client.md `register`: leasing, hosted names, the code exchange, recovery by the mailbox and by a key
  * principal, pairing with a key principal, and the limits on codes.
  */
 import assert from 'node:assert/strict';
@@ -21,7 +21,7 @@ import {
 import { replyBody } from '../src/testing.ts';
 import { CLOCK_PAIRING_UNTIL, Federation, toRequest, type TestAgent } from './harness.ts';
 
-describe('register (CLIENT.md)', async () => {
+describe('register (client.md)', async () => {
   const fed = new Federation();
   after(() => fed.close());
   const alpha = await fed.server('alpha');
@@ -693,7 +693,7 @@ describe('register (CLIENT.md)', async () => {
     });
   });
 
-  describe('limits on codes (CLIENT.md, "Recommended host practice")', () => {
+  describe('limits on codes (client.md, "Recommended host practice")', () => {
     it('counts the codes asked for per address and per client network, never a call that answers one', async () => {
       const rates = {
         code: { limit: 2, seconds: 3600 },
@@ -925,7 +925,7 @@ describe('register (CLIENT.md)', async () => {
       assert.deepEqual([again.json.retired, again.json.unpairing], [read.retired, unpair]);
     });
 
-    it('lets a key principal recover its agent at once, ending a waiting recovery (CLIENT.md)', async () => {
+    it('lets a key principal recover its agent at once, ending a waiting recovery (client.md)', async () => {
       const principal = generateKey();
       const forValue = `simon-key:${principal.key}`;
       const address = 'rescued@mail.example';

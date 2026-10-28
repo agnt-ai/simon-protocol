@@ -23,7 +23,7 @@ const SCHEMES = {
     in: 'header',
     name: 'simon-signature',
     description:
-      'A signed request (spec/PROTOCOL.md section 8): simon-key, simon-timestamp, simon-nonce and simon-signature.',
+      'A signed request (spec/protocol.md section 8): simon-key, simon-timestamp, simon-nonce and simon-signature.',
   },
   ownerBearer: {
     type: 'http',
@@ -41,7 +41,7 @@ export function openApiDocument(routes: ApiRoute[], origin: string) {
   const components: Record<string, JsonSchema> = {
     Problem: {
       type: 'object',
-      description: "RFC 9457 problem details, the protocol's error shape (spec/PROTOCOL.md section 9).",
+      description: "RFC 9457 problem details, the protocol's error shape (spec/protocol.md section 9).",
       properties: {
         type: { type: 'string' },
         title: { type: 'string' },
@@ -132,7 +132,7 @@ export function openApiDocument(routes: ApiRoute[], origin: string) {
       title: 'SIMON application',
       version: '0.1.0',
       description:
-        "The API of the SIMON application template, beside the protocol's own calls under /simon/ (spec/CLIENT.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge.",
+        "The API of the SIMON application template, beside the protocol's own calls under /simon/ (spec/client.md): a directory, recipient policy, introductions, an owner window, webhooks and an email bridge.",
     },
     servers: [{ url: origin }],
     paths: Object.fromEntries(Object.entries(paths).sort(([a], [b]) => a.localeCompare(b))),

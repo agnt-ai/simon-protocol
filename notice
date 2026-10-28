@@ -4,7 +4,7 @@ Copyright 2026 3Gen Internet Corporation
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
 "AGNT" is a trademark of 3Gen Internet Corporation. The license does not grant permission to use it;
-see TRADEMARK.md.
+see trademark.md.
 
 This product includes a snapshot of the ICANN section of the Public Suffix List
 (server/src/net/public-suffixes.ts), from https://publicsuffix.org/, which is subject to the terms of

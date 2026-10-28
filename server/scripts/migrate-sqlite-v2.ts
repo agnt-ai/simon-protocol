@@ -19,7 +19,7 @@ holds. Exit4: the same verified copy, but releasing the source handles failed af
 source files and host before anything else. Exit1: refused/incomplete conversion. A successful copy
 is NOT migration/activation readiness.
 No --promote, recovery cancellation, queue drain, reset or force override is supported.
-See server/SQLITE-V2-MIGRATION.md before any separately authorized execution.
+See server/sqlite-v2-migration.md before any separately authorized execution.
 `;
 
 async function main(args: string[]) {

@@ -6,7 +6,7 @@
 # server on MongoDB answering its health check without loading node:sqlite, the `simon-server`, `simon` and
 # `simon-mcp` binaries run, and every package's own suite, the test vectors and the Store contract on
 # MongoDB among them, run against the compiled files.
-# The project installs with no @agnt-sdk package reachable from a registry, as clients/js/README.md advises, so
+# The project installs with no @agnt-sdk package reachable from a registry, as clients/js/readme.md advises, so
 # only the tarballs given can satisfy the packages and their exact-version dependencies on each other.
 # CI runs it on Node 24.6.0, the oldest the packages support.
 #   scripts/test-built.sh packed/

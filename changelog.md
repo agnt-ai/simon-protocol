@@ -17,7 +17,7 @@ unlisted identifier answers the same `404`. The reference server answers `GET /s
 
 - A record is signed over every member but `signature`, those the profile does not define included, as a
   message is; a reader keeps a member its issuer signed and refuses a record with one attached after
-  (`directory-signed` in PROTOCOL.md Appendix A; two new `directoryRecords` vectors).
+  (`directory-signed` in protocol.md Appendix A; two new `directoryRecords` vectors).
 - A server that answers lookups says `"discovery": true` in its server document (registry). A domain's server
   is its addresses' authority only when it does; otherwise readers ask their directories. A domain whose
   `_simon` records are malformed or conflict has no answer, and no directory is asked. Conformance's
@@ -36,9 +36,9 @@ unlisted identifier answers the same `404`. The reference server answers `GET /s
 - A `+` in an identifier is sent as `%2B`. Normative wording loosened where it was host policy: a default
   directory list is a MAY, and what an agent does when it finds no record is a note.
 
-**Key words for every rule.** PROTOCOL.md, CLIENT.md and the profiles state each requirement with a BCP 14
+**Key words for every rule.** protocol.md, client.md and the profiles state each requirement with a BCP 14
 key word (MUST, SHOULD, MAY); the convention that an indicative sentence means MUST is gone. Definitions,
-formats and grammars stay normative as definitions. Appendix B of PROTOCOL.md maps each rule to the vector
+formats and grammars stay normative as definitions. Appendix B of protocol.md maps each rule to the vector
 sections and conformance checks that test it, and `test/spec/appendix.test.ts` keeps the table complete.
 
 **`ml-dsa-65` is optional.** Every implementation implements `ed25519`; a server that verifies `ml-dsa-65`
@@ -55,7 +55,7 @@ once every other check has passed). Ten deliver order checks and `requests.refus
 **A smaller core.** Section 9 derives every time window from the delivery horizon (144 hours) and the clock
 skew (300 seconds), with no value changed. Resolution reads as three outcomes, a server, no server or try
 again, keeping its reason names. Cache caps, how hosts name paired agents, identifiers that change and lookup
-limits move to the new `docs/HOST-NOTES.md`.
+limits move to the new `docs/host-notes.md`.
 
 ## 0.3.1 (2026-10-26)
 
@@ -64,7 +64,7 @@ Still SIMON 1, wire `v:1`; no message, route or server change.
 **Clients: a register member's domain may start with a digit.** The JavaScript client's `register` and the
 Python client's `register(extensions=...)` refused a host-defined member whose domain prefix starts with a
 digit, such as `1password.com:proof`, so a host on such a domain could not be sent its own creation proofs.
-A domain label may start with a digit, as the name grammar's labels do (PROTOCOL.md, section 5.4). Both
+A domain label may start with a digit, as the name grammar's labels do (protocol.md, section 5.4). Both
 clients now accept it. API members, unprefixed names and malformed prefixes are still refused before sending.
 
 ## 0.3.0 (2026-10-26)
@@ -118,15 +118,15 @@ author's alone (closed, never open), JSON parts it holds read as strings of base
 a key pairing without an `until` no longer pass the header rules. Upgrade peers together. The 0.1.x packages will be deprecated on npm.
 
 **One version, numbered once.** `v` counts incompatible wire revisions after release; unreleased drafts
-share version 1 (`docs/DECISIONS.md`, B2). Sending a version the agent's server does not implement is still
+share version 1 (`docs/decisions.md`, B2). Sending a version the agent's server does not implement is still
 refused (`unsupported_version`); server-to-server delivery still routes unknown versions on their
 invariants. The status no longer promises a "1.0": version 1 is declared stable when two independent
 implementations reproduce every vector and pass the conformance suite against each other.
 
-**A small core and optional profiles.** PROTOCOL.md is now the transport core. Three optional profiles in
+**A small core and optional profiles.** protocol.md is now the transport core. Three optional profiles in
 `spec/profiles/` take what only some parties implement: `reader.md` (showing and acting on messages, the
-reading rules CLIENT.md used to list), `conversations.md` and `publishing.md` (published messages, feeds and
-relations listings, moved from PROTOCOL.md section 7). Moved sections keep their numbers as pointers.
+reading rules client.md used to list), `conversations.md` and `publishing.md` (published messages, feeds and
+relations listings, moved from protocol.md section 7). Moved sections keep their numbers as pointers.
 
 **No roster.** A conversation's membership is each message's `to`, its author's choice; a reply that reaches
 more or fewer people forks the conversation, as email and texting do. The registry's `add`, `leave`,
@@ -231,7 +231,7 @@ moved to the protocol's name. Nothing reads the old names; there is no compatibi
   DocumentDB refuses because another is underway on the collection is tried again after a jittered wait.
 - **`SqliteStore` loads `node:sqlite` only when made,** so an application on another store never loads it.
 - **`simon-server help`** prints how to run the server.
-- **"Running several copies"** in `docs/REFERENCE-SERVER.md` states what is safe on a shared store today
+- **"Running several copies"** in `docs/reference-server.md` states what is safe on a shared store today
   (deliveries, fetches and webhooks are leased) and what is not (arrivals and inbox events: one process
   runs the worker loop).
 
@@ -247,12 +247,12 @@ moved to the protocol's name. Nothing reads the old names; there is no compatibi
 
 ### Core review reconciliation (2026-10-22)
 
-The spec reconciles review findings and the core-versus-host boundary. `docs/DECISIONS.md` distinguishes current choices from earlier proposals.
+The spec reconciles review findings and the core-versus-host boundary. `docs/decisions.md` distinguishes current choices from earlier proposals.
 
 - **Files** are served only from the bytes held for the author of the message naming them, and `send`
   checks the files of carried messages. `GET /simon/parts` has one set of rules for each kind of
   caller.
-- **Recovery** is in CLIENT.md: cancel by code, a key cancels once in 30 days as recommended practice, a key
+- **Recovery** is in client.md: cancel by code, a key cancels once in 30 days as recommended practice, a key
   principal's `SIMON-RECOVER`, a status read, and codes bound to the key that asked for them, so wrong guesses
   lock only the guesser's own request; cancel codes are never locked.
 - **Retirement evidence** is optional host publication policy with shared interpretation; the reference server keeps retired identity/unpairing records private.
@@ -269,8 +269,8 @@ The spec reconciles review findings and the core-versus-host boundary. `docs/DEC
 
 ### Historical core design milestone (2026-10-21)
 
-The historical server-to-server core milestone was assessed against the seven sentences now at the top of `spec/PROTOCOL.md`, and
-against an external security audit. [`docs/CORE.md`](docs/CORE.md) says what went into the core, what
+The historical server-to-server core milestone was assessed against the seven sentences now at the top of `spec/protocol.md`, and
+against an external security audit. [`docs/core.md`](docs/core.md) says what went into the core, what
 went into the registry, and where each idea comes from.
 
 - **Blocks.** Parts are an ordered, open-ended list of blocks typed by media type, with optional `name`
@@ -297,12 +297,12 @@ went into the registry, and where each idea comes from.
   read, a message naming it, from the bytes held for that message's author; a recipient's server SHOULD
   copy files on arrival, never on read; anything bigger or revocable is a link. A file over `partBytes` is
   refused at deliver, and an agent can forward a file it received. When and how fairly a server fetches is
-  its own; the reference server fetches for every accepted message (`docs/REFERENCE-SERVER.md`).
+  its own; the reference server fetches for every accepted message (`docs/reference-server.md`).
 - **One sender-protection rule**: recipients' domains are resolved only after the carrier's
   signature verifies, and the lookups that must come first are bounded. The envelope's 32768-byte bound,
   repeats counted against a carrier, and separate lookup pools are the reference server's own.
 - **Key history only grows forward**, and recovery and key management are host policy, with the
-  calls and a recommended practice in CLIENT.md.
+  calls and a recommended practice in client.md.
 - **Forward compatibility:** a later version adds signatures in its own members (no array `signature`);
   readers present unknown versions as not understood; routers no longer judge NFC, and the Unicode 17.0
   pin is dropped.
@@ -311,7 +311,7 @@ went into the registry, and where each idea comes from.
 
 ### First half: the rebuild
 
-The protocol as `spec/PROTOCOL.md` and `spec/CLIENT.md` defined it then, and the repository rebuilt around
+The protocol as `spec/protocol.md` and `spec/client.md` defined it then, and the repository rebuilt around
 it as three projects. Changes from the earlier wire:
 
 **What never changes.** Section 1 freezes how a message is encoded, identified, signed, addressed,
@@ -353,7 +353,7 @@ published. Documents are at most 131072 bytes and 32 keys, and an agent document
 `conflict`, `temporary` among them). A temporary outcome is never cached, a DNSSEC validation failure is
 temporary, and section 11.1 recommends authenticated, multi-vantage DNS and key continuity.
 
-**The client API** moved to `spec/CLIENT.md`: six calls, `register` (leasing, hosted names, codes,
+**The client API** moved to `spec/client.md`: six calls, `register` (leasing, hosted names, codes,
 recovery, added keys, key-principal pairing through `pairing_required`), `send`, `inbox`, `sent` (delivery
 status per recipient server) and part upload and fetch.
 
@@ -372,7 +372,7 @@ status per recipient server) and part upload and fetch.
 
 ### Second half: after external review and the first run between two laptops
 
-**Wire** (`spec/PROTOCOL.md`, `spec/CLIENT.md`, the protocol library and the vectors).
+**Wire** (`spec/protocol.md`, `spec/client.md`, the protocol library and the vectors).
 - **Errors are RFC 9457 problem details,** sent as `application/problem+json`: `type`, `title`, `status`,
   `detail`, and the protocol's `code`, `retryable` (true exactly for `429` and `5xx`) and optional
   `details`. They replace the earlier error object. A `429`, and a `503` that knows when to retry, carry
@@ -418,7 +418,7 @@ status per recipient server) and part upload and fetch.
 - **Key continuity by possession** (section 11.1): a server trusts a domain's new keys because a key it
   remembers signed for them, not because a document lists a remembered key.
 - Local parts are in Normalization Form C. Nonces are kept until their timestamp leaves the window. The
-  specification gained honest DNS, privacy and IANA sections, and the reasons are in `docs/DECISIONS.md`.
+  specification gained honest DNS, privacy and IANA sections, and the reasons are in `docs/decisions.md`.
 
 **Servers** (the basic server; the application's `MongoStore` follows its store).
 - **Atomic, claimed work.** A message is stored together with its delivery rows or its arrivals, and a
@@ -445,7 +445,7 @@ status per recipient server) and part upload and fetch.
   `SIMON_RATE_EXEMPT_NETWORKS` spares a hosting service's own networks the per-client `request` and
   `register` rates; its agents' rates still apply.
 - **Changing address on one server** takes a new key, since a key belongs to one address there for good;
-  CLIENT.md now says so, and how the old address shows the continuity before it retires.
+  client.md now says so, and how the old address shows the continuity before it retires.
 - **Identifier claims are judged.** A registry `identifier` claim is considered only when well formed:
   about the author; `of: principal` only when the `for` header names a key; a `mailto:` or `tel:`
   identifier exactly as written; a timestamp `verifiedAt`. It is marked authoritative as an `acts-for`
@@ -540,7 +540,7 @@ status per recipient server) and part upload and fetch.
 
 **Examples.**
 - **`examples/two-laptops`** puts two people's laptops on SIMON across two public Cloudflare quick
-  tunnels, with no shared network, account or name: `start.sh`, which the person runs; `JOIN-SIMON.md`,
+  tunnels, with no shared network, account or name: `start.sh`, which the person runs; `join-simon.md`,
   which a coding agent follows to prepare the laptop and hand a fresh session the conversation; and a
   read-only live viewer. It replaced an earlier version over Tailscale.
 - The demo and the model-driven agent follow the revised clients.

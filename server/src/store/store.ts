@@ -40,7 +40,7 @@ export function resolveRetractionCapacity(input: Partial<RetractionCapacity> = {
 
 /**
  * The most keys, revoked ones included, that adding a key may leave an agent with: four published
- * documents' worth (PROTOCOL.md section 4 lists at most 32). A revoked key is kept so it never returns, which
+ * documents' worth (protocol.md section 4 lists at most 32). A revoked key is kept so it never returns, which
  * leaves history unbounded without a cap, and a Mongo agent document is limited to 16 MiB. Recovery is never
  * refused for it: a recovery replaces every key with one, and refusing it would let a key holder block it.
  */
@@ -112,7 +112,7 @@ export interface SyncEntry {
   receivedAt: string;
 }
 
-/** A signal held for an agent here (CLIENT.md Signals), in its place in the agent's sync stream. */
+/** A signal held for an agent here (client.md Signals), in its place in the agent's sync stream. */
 export interface HeldSignal {
   cursor: number;
   type: string;
@@ -130,7 +130,7 @@ export interface SyncPage {
   more: boolean;
 }
 
-/** A URL that wakes an agent here when something new reaches it (CLIENT.md sync, "Webhooks"). */
+/** A URL that wakes an agent here when something new reaches it (client.md sync, "Webhooks"). */
 export interface Webhook {
   id: string;
   address: string;

@@ -29,9 +29,9 @@
   },
   "files": [
     "dist",
-    "README.md",
-    "LICENSE",
-    "NOTICE"
+    "readme.md",
+    "license",
+    "notice"
   ],
   "engines": {
     "node": ">=26"
@@ -43,6 +43,6 @@
   "scripts": {
     "test": "node --test 'test/**/*.test.ts'",
     "vectors": "node scripts/write-vectors.ts",
-    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (contributing.md, Releasing).\" >&2 && exit 1"
   }
 }

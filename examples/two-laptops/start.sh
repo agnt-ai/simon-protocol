@@ -19,12 +19,12 @@ say() { printf '%s\n' "$*"; }
 fail() { say "start.sh: $*" >&2; exit 1; }
 
 [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh" >/dev/null 2>&1 && nvm use 26 >/dev/null 2>&1 || true
-NODE=$(command -v node) || fail "Node is not installed; the setup agent installs it (JOIN-SIMON.md step 1)."
+NODE=$(command -v node) || fail "Node is not installed; the setup agent installs it (join-simon.md step 1)."
 [ "$("$NODE" -p 'process.versions.node.split(".")[0]')" -ge 26 ] || fail "Node 26 or later is needed; $NODE is $("$NODE" --version). Other nodes on the PATH: $(which -a node | tr '\n' ' ')"
 PATH="$(dirname "$NODE"):$PATH"   # every node this script and its helpers start is this one
 CLOUDFLARED=$(command -v cloudflared || true)
 [ -n "$CLOUDFLARED" ] || CLOUDFLARED="$SIMON/bin/cloudflared"
-[ -x "$CLOUDFLARED" ] || fail "cloudflared is not installed; the setup agent installs it (JOIN-SIMON.md step 1)."
+[ -x "$CLOUDFLARED" ] || fail "cloudflared is not installed; the setup agent installs it (join-simon.md step 1)."
 [ -f "$REPO/server/src/main.ts" ] || fail "the repository is not at $REPO (the setup agent clones it there)."
 if lsof -nP -iTCP:$PORT -iTCP:$VIEWER_PORT -sTCP:LISTEN >/dev/null 2>&1; then
   fail "port $PORT or $VIEWER_PORT is in use: $(lsof -nP -iTCP:$PORT -iTCP:$VIEWER_PORT -sTCP:LISTEN | tail -n +2)"
@@ -106,7 +106,7 @@ if [ -n "$OLD_ADDRESS" ] && [ "$OLD_ADDRESS" != "$ADDRESS" ]; then
   say ""
   say "  THE ADDRESS CHANGED. It was $OLD_ADDRESS."
   say "  Messages sent to the old address will never arrive. Send the new one to the other person,"
-  say "  and redo steps 4 and 5 of JOIN-SIMON.md: the agent's CLAUDE.md still names the old address."
+  say "  and redo steps 4 and 5 of join-simon.md: the agent's CLAUDE.md still names the old address."
 fi
 say ""
 say "  Send the address to the other person. Keep this window open: closing it takes this laptop off SIMON."

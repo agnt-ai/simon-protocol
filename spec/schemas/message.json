@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "message.json",
   "title": "SIMON message, version 1",
-  "description": "The only object (PROTOCOL.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over SIMON-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
+  "description": "The only object (protocol.md section 5). It travels as canonical JSON (5.1); its id is the SHA-256 of the canonical bytes without signature, and the signature is over SIMON-MESSAGE\\n and those bytes. A message of another version is valid on the section 1 invariants alone. Rules a schema cannot state are checked by the library and the vectors: sizes in bytes (messageBytes, partBytes, name and alt in UTF-8 bytes), the recipients limit, a real calendar date, canonical form, canonical base64url, the last domain label not all digits, and every signature.",
   "type": "object",
   "required": ["v", "from", "to", "inReplyTo", "parts", "headers", "sentAt", "signature"],
   "additionalProperties": false,
@@ -182,7 +182,7 @@
           }
         }
       },
-      "description": "listed is valid only with rel, a non-null inReplyTo and non-empty to (PROTOCOL.md 5.4)."
+      "description": "listed is valid only with rel, a non-null inReplyTo and non-empty to (protocol.md 5.4)."
     }
   ],
   "$defs": {
@@ -194,7 +194,7 @@
           "$ref": "common.json#/$defs/mediaType"
         },
         "data": {
-          "description": "A JSON value for a JSON type (application/json or any +json subtype, text/*+json included), the text for any other text/*, padded canonical base64 for any other type (PROTOCOL.md 5.3)."
+          "description": "A JSON value for a JSON type (application/json or any +json subtype, text/*+json included), the text for any other text/*, padded canonical base64 for any other type (protocol.md 5.3)."
         },
         "sha256": {
           "$ref": "common.json#/$defs/sha256"
@@ -240,7 +240,7 @@
           }
         }
       ],
-      "description": "A block: inline data (a JSON value for a JSON type, the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (PROTOCOL.md 5.3). Members a reader does not know are ignored; new members are registry entries.",
+      "description": "A block: inline data (a JSON value for a JSON type, the text itself for text/*, base64 otherwise), or bytes named by sha256 and size (protocol.md 5.3). Members a reader does not know are ignored; new members are registry entries.",
       "allOf": [
         {
           "if": {
@@ -252,7 +252,7 @@
             }
           },
           "then": {
-            "description": "A JSON type: data is any JSON value, within canonical JSON's limits (PROTOCOL.md 5.1)."
+            "description": "A JSON type: data is any JSON value, within canonical JSON's limits (protocol.md 5.1)."
           },
           "else": {
             "if": {
@@ -279,7 +279,7 @@
               }
             }
           },
-          "description": "One encoding per type (PROTOCOL.md 5.3): a JSON value for a JSON type, the text for text/*, padded base64 for anything else."
+          "description": "One encoding per type (protocol.md 5.3): a JSON value for a JSON type, the text for text/*, padded base64 for anything else."
         }
       ]
     }
