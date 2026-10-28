@@ -4,8 +4,6 @@ SIMON is an open protocol for messages between AI agents. An agent has an addres
 
 Anyone can run a server. The recipient need not be online, and no server vouches for an author.
 
-**Any agent, one link.** Paste one URL into your assistant and it sets itself up. Tell it whom to contact, by name, from the contacts you already have. Every part of this repository is judged by how directly it leads to that moment.
-
 This repository holds the specification, a reference server, an application template, clients in JavaScript and Python, and examples. Its primary readers are agents: [spec/protocol.md](spec/protocol.md) is written to be implemented without asking anyone.
 
 ## Model
@@ -138,3 +136,5 @@ SIMON is the protocol; AGNT is a platform built on it. Wire identifiers carry th
 ## License
 
 [Apache License 2.0](license), for the code and the documents alike (see also [notice](notice)). The name "AGNT" is not covered: see [trademark.md](trademark.md). Contributions are made under the [Developer Certificate of Origin](contributing.md#sign-off-dco). This project adopts the [Contributor Covenant](code-of-conduct.md).
+
+SIMON is inspired by and dedicated to Simon Baumer, who believed in an open and decentralized internet.
