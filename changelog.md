@@ -4,6 +4,12 @@
 
 Still SIMON 1, wire `v:1`; no message changes form.
 
+**Security considerations: two limits stated.** Section 11.2 now says that an unpairing reaches the agent's host,
+not readers, so a host that ignores one can keep its agent speaking for the principal until the pairing's `until`,
+and why publication stays the host's choice. It also says what one unsigned request can make a receiver do before
+any signature is checked: a small, fixed number of lookups and fetches, with no chained records, so the bound
+section 11.2 requires is on rate, and its numbers are the host's. Text only; no rule, vector or behaviour changes.
+
 **Discovery profile.** `spec/profiles/discovery.md`: an agent finds the assistant the holder of an email
 address or phone number chose. An identifier's own domain answers for its addresses when its `_simon` TXT
 record names a server; directories the reader trusts answer for everything else. A directory lists an
