@@ -13,7 +13,9 @@ Written 27 October 2026 against branch `docs/readme-cleanup` (commit 8b92a4c). T
 7. **Release numbers.** `spec/protocol.md` Status and `readme.md` say the packages are release 0.3.0. `protocol/package.json`, `server/package.json` and `clients/python/pyproject.toml` are at 0.3.1 (changelog: 0.3.1, client-only fix, wire unchanged). The paper says "the 0.3 series".
 8. **Node version.** `readme.md` Install says Node 24.6.0 or later; its Quickstart says Node 26. Not used in the paper.
 9. **Historical text in decisions.md.** Several entries describe superseded designs in the present tense: `listed` as "a seventh protocol header" (the spec now names eight), roster rules under L2 (rosters were removed in B1), the `kind` member (removed in B13.3), and "fair fetching" as a MUST (now reference-server policy). The paper uses none of them, but a reader following the paper's link to decisions.md will meet them.
-10. **Related-work table in decisions.md** says SIMON shares "TXT-then-well-known handle resolution" with AT Protocol and "server dialback" with XMPP. Both are accurate as resemblances; the paper words them as shared ideas, not shared mechanisms.
+10. **Within the spec: probing limits.** `spec/protocol.md` section 4 says a server MAY limit agent-document reads for addresses with no agent; section 12 says it SHOULD. The paper follows section 12 ("should"). One of the two should change.
+11. **Within the spec: succession at readers.** Section 2.2 says a reader that knew any key in a succession chain MAY treat `for` as the same principal; the reader profile ("Successions") makes it MUST for a reader that remembers principals, once every step verifies. The paper says "may", following the core. Confirm the intended strength, or make the core say "a reader that remembers principals MUST".
+12. **Related-work table in decisions.md** says SIMON shares "TXT-then-well-known handle resolution" with AT Protocol and "server dialback" with XMPP. Both are accurate as resemblances; the paper words them as shared ideas, not shared mechanisms.
 
 ## 2. Claims in the paper that are derived, not stated in the spec
 
@@ -23,6 +25,11 @@ These follow from the spec's rules but no sentence of the spec says them. Confir
 - P2: a reply proves only that its author knew an identifier, not that the earlier message exists or was received.
 - P3: a replay to the same server is a repeat for 168 hours and stale after 144 (both stated separately; the combination is the paper's).
 - P6: "the safe end of a stolen principal key is the end of its agents" is spec 11.2's wording; the surrounding enumeration of five limits is the paper's grouping.
+- Section 2.2: the reason Unicode normalization is not part of the local-part rule (from decisions.md; the spec gives only Unicode's stability policy for control characters).
+- Section 2.3: why a failed TXT lookup must not fall back to the well-known answer (decisions.md M5; the spec states the rule, not the reason).
+- P3: "abuse is attributable to a domain and a server" (decisions.md, abuse model; spec 6.1 says peering, limits and claims rest on the envelope signature).
+- P7: the Usenet forged-cancel precedent (decisions.md and core.md).
+- Section 4.4: the operator's runtime is not isolated between pairs (decisions.md, "Paired and solo agents").
 - Section 5: "the two compose" (A2A over a connection a SIMON exchange arranged). This mirrors the roadmap's live-session direction but is not specified.
 
 ## 3. Claims I could not verify, or verified only through secondary sources
@@ -45,7 +52,18 @@ These follow from the spec's rules but no sentence of the spec says them. Confir
 - No proofs. Section 4.5 says no formal model exists and points to the roadmap's ProVerif/Tamarin item and the external review that named it.
 - No description of the client API beyond submission, the publishing and discovery profiles beyond one sentence, recovery beyond its risk, or the application template.
 
-## 5. Open questions for the authors
+## 5. Independent check of this cut
+
+A separate reviewer, who had not seen the paper written, checked it sentence by sentence against the spec. Its three contradictions (caching of *try again*, the value of asking several resolvers from one host, and P3 omitting the DNS adversary), its overstatements (permanent proof, claims checkable forever, the delivery condition, the trials, the Python port's authorship) and most of its gaps are fixed in the paper. Left out for length, and worth considering for a second cut:
+
+- Section 6 timing detail: the envelope key must be valid now, the message key at `sentAt`, the claims key at any moment from `sentAt` to the horizon; a new server key is listed ten minutes before use.
+- Receivers ignore claims whose `agent` or `for` do not match the message, and drop any `authoritative` member from their judged copy.
+- Hints are not signed by the author and are never stored.
+- A lapsed pairing: sends refused, receiving continues; a lost principal key cannot renew; the principal should keep an old key until every agent has sent once; successions are at most 16 steps.
+- Custodial keys should be kept apart from the SIMON server and disclosed; decoded content encodings must be bounded; a principal whose key may have been copied should unpair rather than move.
+- Appendix B gaps: the MUST check dependencies have no vectors, the file rules have no vectors, and author-only relations have no conformance check.
+
+## 6. Open questions for the authors
 
 1. **Byline.** "The SIMON Protocol maintainers" is a placeholder. Named authors and affiliations?
 2. **Length.** About 7,000 words of body plus one table, two diagrams and 36 references: roughly 11 to 12 pages single-column at 11 pt, or about 8 in two columns. Cut further, or keep the threat model at full length?
