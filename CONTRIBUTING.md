@@ -62,9 +62,10 @@ CI runs the last two on every push: the image check, and the packed packages on 
 protocol's and the JavaScript client's suites, the vectors among them, run against the compiled files.
 
 The conformance suite against the basic server, run as [conformance/readme.md](conformance/readme.md)
-says with every optional check on, passes 210 of its 212 checks and skips `sent.expired`, which needs
-the server's clock moved by days, and `deliver.no-lookup-before-signature`, which can see a lookup only
-through a public tunnel. A run takes a few minutes.
+says with every optional check on, passes 260 of its 264 checks and skips `sent.expired`, which needs
+the server's clock moved by days, `deliver.no-lookup-before-signature`, which can see a lookup only
+through a public tunnel, and `security.tls-version` and `security.tls-certificate`, which need an
+`https:` origin. A run takes a few minutes.
 
 ## Running the conformance suite against a server
 
@@ -85,6 +86,7 @@ Commit these regenerated with the change that alters them; a test fails when one
 | `spec/vectors/v1.json` | `npm run vectors` | the protocol library or the vector generator |
 | `app/openapi.json` | `npm run openapi` | a route of the application |
 | the check list in `conformance/readme.md` | `npm run readme -w conformance` | a conformance check |
+| `spec/vectors/independent.json` | `python3 -I spec/vectors/derive-independent.py rfc8032.txt rfc8785.txt` (see [spec/vectors/independent.md](spec/vectors/independent.md)) | the independent vectors; never from the library, so no test regenerates it |
 
 ## Changing the protocol
 

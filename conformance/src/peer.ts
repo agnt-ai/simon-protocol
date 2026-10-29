@@ -6,6 +6,7 @@
  *   GET  /simon/agents/<address>    documents for the agents it controls, each with its own faults
  *   POST /simon/deliver             records every envelope; answers 202, or 503 or 400 for chosen recipients
  *   GET  /simon/parts/<sha256>      part bytes, only to a server request signed by a server it delivered to
+ *   POST /hooks/<name>              a webhook: records every post and whether its server signature verified
  *
  * Its server keys come from fixed seeds, so a server under test that cached its document from an earlier
  * run still verifies it. Its agents get new addresses every run, so no agent document is ever stale.
@@ -58,7 +59,9 @@ export type DocMode =
   | 'too-many-keys'
   | 'too-large'
   | 'extra-members'
-  | 'legacy-kind';
+  | 'legacy-kind'
+  /** Answers 302 to a path that serves the valid document; a server that follows it was redirected. */
+  | 'redirect';
 
 export interface PeerAgent {
   name: string;
@@ -109,6 +112,21 @@ export interface PartFetch {
   answer: number;
 }
 
+/** One post the server under test made to a webhook of this simulator. */
+export interface HookPost {
+  at: Date;
+  name: string;
+  headers: Record<string, string>;
+  target: string;
+  raw: Buffer;
+  /** The body as JSON, or undefined when it is not. */
+  json: any;
+  /** null when the signed server request verified as section 8 says; otherwise why not. */
+  refusal: string | null;
+  server: string | null;
+  answer: number;
+}
+
 const json = (res: http.ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) => {
   res.writeHead(status, { 'content-type': 'application/json', ...headers });
   res.end(typeof body === 'string' ? body : JSON.stringify(body));
@@ -133,6 +151,10 @@ export class Peer {
   readonly received: Received[] = [];
   readonly requests: { at: Date; method: string; target: string }[] = [];
   readonly partFetches: PartFetch[] = [];
+  /** Every post to a webhook, in the order they arrived. */
+  readonly hookPosts: HookPost[] = [];
+  /** How a webhook answers: a status (200 by default), or `redirect` for a 307 to a path of its own. */
+  readonly hookAnswers = new Map<string, number | 'redirect'>();
   /** Part bytes it serves: to the servers named in `servers`, or wrong bytes when `wrong` is set. */
   readonly parts = new Map<string, { bytes: Buffer; servers: Set<string>; wrong?: Buffer }>();
   /** Fetches a server document, for checking signed server requests. */
@@ -197,6 +219,21 @@ export class Peer {
     };
     this.agents.set(a.address, a);
     return a;
+  }
+
+  /** The URL of the webhook `name` here (a new one each run). */
+  hookUrl(name: string) {
+    return `${this.origin}/hooks/${this.runId}-${name}`;
+  }
+
+  /** Make the webhook `name` answer `answer` from now on. */
+  answerHook(name: string, answer: number | 'redirect') {
+    this.hookAnswers.set(`${this.runId}-${name}`, answer);
+  }
+
+  /** Posts to the webhook `name`. */
+  postsTo(name: string) {
+    return this.hookPosts.filter(p => p.name === `${this.runId}-${name}`);
   }
 
   /** An address here that the simulator answers for by its local part: `x503-` and `x400-` misbehave. */
@@ -348,9 +385,21 @@ export class Peer {
       const address = decodeURIComponent(path.slice('/simon/agents/'.length));
       const a = this.agents.get(address);
       if (!a) return wireError(res, new WireError(404, 'not_found', 'No such agent.'));
+      if (a.doc === 'redirect') {
+        res.writeHead(302, { location: `/simon/agents-moved/${encodeURIComponent(address)}` });
+        return res.end();
+      }
       const d = this.agentDocument(a);
       return json(res, d.status, d.body, d.status === 503 || d.status === 429 ? { 'retry-after': '1' } : {});
     }
+    if (req.method === 'GET' && path.startsWith('/simon/agents-moved/')) {
+      const a = this.agents.get(decodeURIComponent(path.slice('/simon/agents-moved/'.length)));
+      if (!a) return wireError(res, new WireError(404, 'not_found', 'No such agent.'));
+      const d = this.agentDocument({ ...a, doc: 'ok' });
+      return json(res, d.status, d.body);
+    }
+    if (req.method === 'POST' && path.startsWith('/hooks/')) return this.hook(at, headers, target, path, body, res);
+    if (path.startsWith('/hooks-moved/')) return json(res, 200, {});
     if (req.method === 'POST' && path === '/simon/deliver') return this.deliver(at, headers, body, res);
     if (req.method === 'GET' && path.startsWith('/simon/parts/')) return this.part(at, headers, target, path, res);
     return wireError(res, new WireError(404, 'not_found', 'Nothing here.'));
@@ -387,6 +436,57 @@ export class Peer {
       res,
       new WireError(400, 'invalid', 'This simulator refuses this recipient.', false, { field: 'message' }),
     );
+  }
+
+  private async hook(
+    at: Date,
+    headers: Record<string, string>,
+    target: string,
+    path: string,
+    raw: Buffer,
+    res: http.ServerResponse,
+  ) {
+    const name = path.slice('/hooks/'.length);
+    const post: HookPost = {
+      at,
+      name,
+      headers,
+      target,
+      raw,
+      json: undefined,
+      refusal: null,
+      server: null,
+      answer: 200,
+    };
+    try {
+      post.json = JSON.parse(raw.toString('utf8'));
+    } catch {
+      // Recorded as not JSON; the checks say what was wrong with it.
+    }
+    try {
+      // A local run has the simulator and the server under test on http origins.
+      const h = readSignedHeaders(headers, at, { server: true, allowHttp: true });
+      post.server = h['simon-server']!;
+      const keys = await this.keysOf(post.server);
+      const entry = keys?.find(k => k.key === h['simon-key']) ?? null;
+      await checkSignedRequest({ method: 'POST', origin: this.origin, actor: actorOf(headers), target, body: raw }, h, {
+        now: at,
+        entry,
+        nonceSeen: (k, n) => this.#nonces.seen(k, n, at),
+      });
+      this.#nonces.record(h['simon-key'], h['simon-nonce'], h['simon-timestamp'], at);
+    } catch (e) {
+      post.refusal = e instanceof WireError ? `${e.status} ${e.code}: ${e.message}` : String(e);
+    }
+    const answer = this.hookAnswers.get(name) ?? 200;
+    this.hookPosts.push(post);
+    if (answer === 'redirect') {
+      post.answer = 307;
+      res.writeHead(307, { location: `/hooks-moved/${name}` });
+      return res.end();
+    }
+    post.answer = answer;
+    return json(res, answer, answer < 300 ? { received: true } : { error: 'not now' });
   }
 
   private async part(

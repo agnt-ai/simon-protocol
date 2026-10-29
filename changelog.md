@@ -1,5 +1,40 @@
 # Changelog
 
+## Unreleased
+
+Still SIMON 1, wire `v:1`. Tests and documents only: no rule, message, vector of `v1.json` or behaviour changes,
+except that the reference server takes an `http:` webhook URL in development (`SIMON_DEV=1`), as it takes `http:`
+origins there.
+
+**Conformance gaps closed.** The suite grows from 240 checks to 264 (232 must, 32 should), after an audit
+of the specification against what the suite tests:
+
+- **Webhooks** (`webhooks.*`, CLIENT webhooks): a webhook is created and deleted; the server first posts
+  `{"type":"verify","code"}`, accepts only the code it posted, sends nothing else until then, then posts
+  `{"type":"changed","agent"}` when something arrives, at most once a second, signed as a server request
+  (section 8) and as `application/json`, and posts no more once the webhook is deleted. The allowance is
+  `409 too_many_webhooks`. The simulator receives the posts and checks each signature. A server that answers
+  `404` to `POST /simon/webhooks` offers none and skips them.
+- **sync** (`sync.sync-days`, `sync.order`, `sync.no-missed`, `sync.wait-holds`, `sync.wait-wakes`): the server
+  document publishes `syncDays`; entries come in the order the server took them; a client that continues from
+  its last token misses no entry written concurrently by two paths; `wait` holds a request and wakes it.
+- **Transport and security** (`security.*`, PROTOCOL 9, 11.2): the server's TLS version and certificate when the
+  suite is pointed at an `https:` origin; no redirect followed when it fetches an agent document or posts a
+  webhook; `application/json` on JSON bodies, the server's own deliveries included; compressed bodies that
+  decode to 48 MiB refused and survived; at most one refetch of a server document after twenty bad
+  signatures. What a live server cannot be asked is listed, with the reason and what an operator can do, in
+  `conformance/readme.md`, "What the suite cannot test"; protocol.md section 15 and Appendix B say the same.
+- **Readers** (`reading.*`): a server carries a message with an unknown `critical` header, and one with
+  unknown headers, whole. `test/integration/reader-live.test.ts` runs the JavaScript client's reader
+  (`verifyAuthor`) and `readsAs` over what the reference server kept: `critical`, an unknown relation, a
+  `rel` that names nothing.
+- **Independent vectors** (`spec/vectors/independent.json`): RFC 8032 section 7.1, NIST SHA-256 examples, RFC 4648
+  and RFC 8785 cases, and two messages and two requests with hand-written canonical bytes signed with OpenSSL,
+  derived by `spec/vectors/derive-independent.py` and described in `spec/vectors/independent.md`. `v1.json` is
+  untouched. `test/spec/independent.test.ts` checks the file with Node's crypto alone;
+  `protocol/test/independent.test.ts` checks the library against it.
+- The simulator (`conformance/src/peer.ts`) receives webhook posts and can serve an agent document that redirects.
+
 ## 0.4.0 (2026-10-29)
 
 Still SIMON 1, wire `v:1`; no message changes form.

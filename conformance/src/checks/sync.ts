@@ -7,6 +7,7 @@ import {
   parseTimestamp,
   verifyClaims,
 } from '@agnt-sdk/simon-protocol';
+import type { TargetAgent } from '../agent.ts';
 import { buildFrom, type Ctx } from '../context.ts';
 import type { T } from '../harness.ts';
 import { awaitSync, def, readSync, type SyncEntry } from './common.ts';
@@ -504,5 +505,178 @@ def(
       entry.carrier === ctx.origin && canonicalize(entry.message) === canonicalize(m),
       'outgoing entry differs from the sent message or carrier',
     );
+  },
+);
+
+/** The token a sync read to its end gives: the position after everything the agent holds now. */
+async function tail(t: T, a: TargetAgent) {
+  let since: string | undefined;
+  for (let page = 0; page < 20; page++) {
+    const res = await a.sync(t, `limit=200${since === undefined ? '' : `&since=${encodeURIComponent(since)}`}`, 'sync');
+    t.status(res, 200, 'reading sync to its end');
+    if (!res.json?.more) return res.json.token as string;
+    since = res.json.token;
+  }
+  t.fail('sync still reports more after 20 pages of 200; refusing to find its end');
+}
+
+def(
+  {
+    id: 'sync.sync-days',
+    section: `${S}, registry syncDays`,
+    level: 'must',
+    title: 'The server document publishes how long sync holds what it delivers',
+    expected: 'syncDays in the server document is a positive integer, the number of days sync holds its entries',
+  },
+  async (t: T, ctx: Ctx) => {
+    const { res } = await ctx.serverDoc();
+    const days = res.json?.syncDays;
+    t.assert(
+      Number.isSafeInteger(days) && days > 0,
+      `syncDays is ${JSON.stringify(days)}; a server MUST publish how long it holds what sync delivers`,
+    );
+  },
+);
+
+def(
+  {
+    id: 'sync.order',
+    section: S,
+    level: 'must',
+    title: 'Messages come in the order the server took them',
+    expected:
+      'six messages an agent sends itself, one after another, appear in its sync in the order they were accepted, when read in one page and when read after a token taken before the first',
+  },
+  async (t: T, ctx: Ctx) => {
+    const a = await ctx.agent('sync-order');
+    const before = await tail(t, a);
+    const sent: string[] = [];
+    for (let i = 0; i < 6; i++) {
+      const m = a.message({ to: [a.address], text: `order ${i}` });
+      t.status(await a.send(t, m, {}, `send ${i}`), 200);
+      sent.push(messageId(m));
+    }
+    const last = await awaitSync(t, a, sent.at(-1)!, ctx.opts.deliveryWaitMs);
+    t.assert(last, 'the last message never reached the sync');
+    const res = await a.sync(t, `limit=200&since=${encodeURIComponent(before)}`, 'sync since before the first');
+    t.status(res, 200);
+    // A message an agent sends itself may be shown twice, as sent and as received; the first place counts.
+    const got = [...new Set((res.json?.messages as SyncEntry[]).map(e => e.id))].filter(id => sent.includes(id));
+    t.assert(
+      JSON.stringify(got) === JSON.stringify(sent),
+      `sync shows the messages as ${JSON.stringify(got.map(id => sent.indexOf(id)))}, they were accepted in the order 0 to 5`,
+    );
+  },
+);
+
+def(
+  {
+    id: 'sync.no-missed',
+    section: `${S} "Entries become visible in order"`,
+    level: 'must',
+    title: 'A client that continues from its last token misses nothing, however entries are written',
+    expected:
+      'twenty-four messages written to an agent at once while a client reads from its last token, page by page: every one of them is in what the client read, with no entry skipped because it became visible below a token already returned',
+  },
+  async (t: T, ctx: Ctx) => {
+    await requireControl(ctx);
+    const a = await ctx.agent('sync-writers');
+    const start = await tail(t, a);
+    const poller = t.scratch();
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    let since = start;
+    let writing = true;
+    const deadline = Date.now() + ctx.opts.deliveryWaitMs;
+    const reader = (async () => {
+      for (;;) {
+        const res = await a.sync(
+          poller,
+          `limit=5&since=${encodeURIComponent(since)}`,
+          'continuing from the last token',
+        );
+        if (res.status !== 200) return res;
+        for (const e of res.json.messages as SyncEntry[]) seen.add(e.id);
+        since = res.json.token;
+        if (res.json.more) continue;
+        if (!writing && (ids.every(id => seen.has(id)) || Date.now() > deadline)) return null;
+        await new Promise(r => setTimeout(r, 50));
+      }
+    })();
+    // Half are written by the agent itself, half arrive from the simulator, so two paths write at once.
+    const p = ctx.peer.agent('sync-writer');
+    await Promise.all(
+      Array.from({ length: 24 }, async (_, i) => {
+        const m = i % 2 ? a.message({ to: [a.address], text: `race ${i}` }) : buildFrom(p, [a.address], ctx.now());
+        ids.push(messageId(m));
+        const res =
+          i % 2
+            ? await a.send(t.scratch(), m, {}, `send ${i}`)
+            : await ctx.deliver(t.scratch(), ctx.peer.envelope(m as never), `deliver ${i}`);
+        t.assert(res.status === 200 || res.status === 202, `message ${i} was answered ${res.status}`);
+      }),
+    );
+    writing = false;
+    const bad = await reader;
+    if (bad) t.fail(`sync was answered ${bad.status} while continuing from a token it returned`);
+    t.adopt(poller.exchanges.slice(-2));
+    const all = new Set((await readSync(t, a)).map(e => e.id));
+    const absent = ids.filter(id => !all.has(id));
+    if (absent.length === ids.length) t.skip('none of the messages reached the sync (a policy may hold them)');
+    const missed = ids.filter(id => all.has(id) && !seen.has(id));
+    t.assert(
+      missed.length === 0,
+      `${missed.length} of ${ids.length} messages are in the sync but were never in what a client read by continuing from its last token`,
+    );
+  },
+);
+
+def(
+  {
+    id: 'sync.wait-holds',
+    section: `${S} "wait"`,
+    level: 'should',
+    title: 'With nothing new, a request with wait is held until wait passes',
+    expected:
+      'GET /simon/sync?since=<last token>&wait=3 on an agent with nothing new answers 200 with no messages after at least two seconds, and within wait plus five',
+  },
+  async (t: T, ctx: Ctx) => {
+    const a = await ctx.agent('sync-waiter');
+    const token = await tail(t, a);
+    const began = Date.now();
+    const res = await a.sync(t, `since=${encodeURIComponent(token)}&wait=3`, 'sync with wait=3 and nothing new');
+    const took = Date.now() - began;
+    t.status(res, 200);
+    t.assert(res.json?.messages?.length === 0, 'the held request answered messages that were not new');
+    t.assert(took >= 2000, `a request with wait=3 and nothing new was answered after ${took} ms, not held`);
+    t.assert(took <= 8000, `a request with wait=3 was held ${took} ms`);
+  },
+);
+
+def(
+  {
+    id: 'sync.wait-wakes',
+    section: `${S} "wait"`,
+    level: 'should',
+    title: 'A held request answers when something arrives',
+    expected:
+      'a request with wait=30 held open answers within five seconds of a message reaching the agent, and shows that message',
+  },
+  async (t: T, ctx: Ctx) => {
+    const a = await ctx.agent('sync-waker');
+    const token = await tail(t, a);
+    const m = a.message({ to: [a.address], text: 'wake the waiter' });
+    const held = a.sync(t, `since=${encodeURIComponent(token)}&wait=30`, 'sync with wait=30');
+    await new Promise(r => setTimeout(r, 1000));
+    const sentAt = Date.now();
+    t.status(await a.send(t.scratch(), m, {}, 'send while a request is held'), 200);
+    const res = await held;
+    const took = Date.now() - sentAt;
+    t.status(res, 200);
+    t.assert(
+      res.json?.messages?.some((e: SyncEntry) => e.id === messageId(m)),
+      'the held request answered without the message that arrived',
+    );
+    t.assert(took <= 5000, `the held request answered ${took} ms after the message arrived`);
   },
 );
