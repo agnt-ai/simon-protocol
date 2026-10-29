@@ -81,7 +81,7 @@ from .resolution import Resolution, resolution_cache_ms, resolve, server_origin
 from .signal import check_signal_freshness, parse_signal, verify_signal
 from .wire import is_address, normalize_address, parse_timestamp, timestamp
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 __all__ = [
     "Agent",

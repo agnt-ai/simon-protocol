@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-10-29)
 
 Still SIMON 1, wire `v:1`; no message changes form.
 
