@@ -60,7 +60,10 @@ export function webhookRoutes(ctx: Context): Route[] {
         } catch {
           throw invalid('url must be an HTTPS URL.', { field: 'url' });
         }
-        if (url.protocol !== 'https:' || url.username || url.password || url.hash || url.href.length > 2000) {
+        // Development accepts http: here as it does for origins (protocol.md section 3), so the conformance
+        // suite's simulator, which listens on a local port, can receive wakeups.
+        const scheme = url.protocol === 'https:' || (ctx.config.dev && url.protocol === 'http:');
+        if (!scheme || url.username || url.password || url.hash || url.href.length > 2000) {
           throw invalid('url must be an HTTPS URL without credentials or a fragment, at most 2000 characters.', {
             field: 'url',
           });

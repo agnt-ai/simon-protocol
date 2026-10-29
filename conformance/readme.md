@@ -44,7 +44,7 @@ basic server is in step 1 below.
      --second-peer-domain peer2.test \
      --code-address "c$(date +%s)@mail.sut.test" \
      --code-command 'sleep 0.5; grep "register code" server.log | grep "\"address\":\"$1\"" | tail -1 | sed -E "s/.*\"code\":\"([0-9]+)\".*/\1/"' \
-     --cancel-code-command 'sleep 0.5; grep "recovery cancel code" server.log | grep "\"address\":\"$1\"" | tail -1 | sed -E "s/.*\"code\":\"([A-Za-z0-9_-]+)\".*/\1/"' \
+     --cancel-code-command 'sleep 0.5; grep "recovery (development" server.log | grep "\"address\":\"$1\"" | tail -1 | sed -E "s/.*\"cancelCode\":\"([A-Za-z0-9_-]+)\".*/\1/"' \
      --retire-command "sqlite3 conformance.sqlite \"UPDATE agent_keys SET revoked=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE address='\$1' AND revoked IS NULL; UPDATE agents SET retired_at=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE address='\$1'\""
    ```
 
@@ -71,7 +71,7 @@ basic server is in step 1 below.
    `--recovery-wait` (30 s); run the server with a short wait for that (the basic server:
    `SIMON_RECOVERY_WAIT=5`). `register.cancel-code` also needs `--cancel-code-command <command>`, which
    prints the cancel code your server sent to the address with the news of a recovery (CLIENT
-   "Cancelling a recovery"); the basic server logs it in development as `recovery cancel code`.
+   "Cancelling a recovery"); the basic server logs it in development, as `cancelCode` on the `recovery (development: not sent)` line.
 
 6. **Optional: retiring an agent.** `public.retired` needs `--retire-command <command>`, run with an
    address as `$1` and `SIMON_ADDRESS`, that retires the agent there, as your server's principal-only
@@ -108,6 +108,18 @@ basic server is in step 1 below.
    gets a new name each time, so the server has never seen the simulator before a run (item 4). Every
    request then reaches the server from this machine's address, so item 3's rate limits apply to it, and
    `--code-command` and `--retire-command` (items 5 and 6) must reach the server where it runs.
+
+10. **Optional: webhooks.** The `webhooks.` checks (and `security.no-redirect-webhook`) create webhooks that
+    point at the simulator, which records every post and checks its signature. A server that answers `404`
+    to `POST /simon/webhooks` offers none, and they skip. A server that takes only `https:` webhook URLs
+    (the basic server does, outside development) skips them for a simulator at an `http:` origin; give the
+    simulator an https origin (item 9) and they run. The basic server accepts `http:` webhook URLs under
+    `SIMON_DEV=1`, as it accepts `http:` origins.
+
+11. **Optional: an https origin.** `security.tls-version` and `security.tls-certificate` connect to the
+    origin you gave with `--server`, and skip when it is `http:`, as a local run is (section 3 allows it
+    for development). To run them, pass the `https:` address your deployment serves; a certificate the
+    system does not trust fails the second. They need nothing else from the server.
 
 Time: a run takes three to five minutes. Most of it is waiting, while the other checks run: for the
 server to fetch the parts of a received message, which it may delay by a few minutes (up to
@@ -206,10 +218,55 @@ Where the spec leaves a choice, the suite takes the reading most consistent with
   meet a failure that passes. `sent` reporting `expired` cannot be observed without moving your server's
   clock by days, so `sent.expired` always skips.
 
+- **Waits and quiet windows are fixed.** A webhook must send nothing before it is verified, and nothing after
+  it is deleted: the suite listens for three seconds, since a server posts within a second of a change. At
+  most once a second is read as no two `changed` posts less than 0.75 s apart as the simulator sees them.
+  `sync.wait-holds` and `sync.wait-wakes` are `should`, as the spec's wait is.
+- **Redirects are tested on two calls,** an agent document and a webhook, by what the simulator is asked
+  afterwards: a server that followed the redirect asks for the path it led to.
+- **A compressed body is judged by its refusal and its survival.** `security.content-encoding` sends
+  bodies of under 100 KB that decode to 48 MiB; the spec lets a server refuse the encoding or bound the
+  decoded size, so any 4xx passes, and an answer other than a 4xx, or a server that stops answering, fails.
+
 Recovery uses `POST /simon/recovery`, `GET /simon/recovery` and `POST /simon/recovery/cancel`.
 Registration creates or pairs an address; account and key operations return `{address, keys, grants, recovery}`.
 The client stream uses `GET /simon/sync` and opaque server-issued tokens; tokens are stored and returned unchanged.
 A core reference host may keep retired agent documents private or serve a valid signed retirement record.
+
+## What the suite cannot test
+
+The suite plays a peer over HTTP against a server set up for it, so some rules cannot be shown from outside.
+Each is listed with what stops the suite, what it does instead, and how an operator can check the rest.
+`spec/protocol.md` section 15 points here.
+
+**Transport and security (PROTOCOL 9, 11.2).**
+
+| Rule | Why the suite cannot test it | What it does, and what to do |
+| --- | --- | --- |
+| Connections use TLS 1.3 or later, and authenticate their peer as RFC 9525 says | A local run is `http:`, which section 3 allows for development. | `security.tls-version` and `security.tls-certificate` test the server's own endpoint when `--server` is `https:`. |
+| The same, for the connections the server makes | The simulator is reached over `http:`, or through a tunnel whose certificate the tunnel provider holds, so it cannot present a certificate that is wrong for its name, and no certificate authority is shared with the server. | Nothing. To check it, point a test agent at a host with an expired or wrong-name certificate (a deliver to an address whose domain resolves to one) and confirm the server refuses it and delivers nothing. |
+| A server does not connect to loopback, private or link-local addresses unless its operator configured them | Running the suite needs the operator to allow the simulator's loopback address, so the refusal is never in force. | Nothing. To check it, run the server without that setting and confirm it can no longer fetch from or deliver to the simulator. |
+| A server does not follow redirects | The suite tests it only where it can observe it cheaply. | `security.no-redirect-agent-document` and `security.no-redirect-webhook`. Not tested: a redirect from the server document, the resolution answers, a part fetch, a delivery or a signal. |
+| Lookup work caused by unauthenticated requests is bounded | The numbers, and whether the bound holds across a deployment, are the host's (section 11.2). | `security.refetch-bounded` tests the one numbered bound: a server document is refetched at most once a minute after a bad signature. |
+| A decoded body is bounded, not only the transferred one | Memory a server spends is not visible from outside. | `security.content-encoding` shows the refusal and that the server survives. |
+| Errors and JSON are `application/problem+json` and `application/json` | Tested. | `errors.content-type` and `security.json-content-type`. |
+
+**Webhooks and sync (CLIENT).**
+
+| Rule | Why the suite cannot test it | What it does, and what to do |
+| --- | --- | --- |
+| A webhook that has failed for 3 days is switched off | The suite cannot move the server's clock by days (as for `sent.expired`). | Nothing. A host can test it with a clock it controls: fail a webhook, advance the clock past 3 days, and check that no post follows. |
+| A webhook made through a grant ends with the grant | A grant comes from the agent's principal through the OAuth flow; a black-box suite is not one, and has no way to obtain a grant. | Nothing. A host can create a webhook through a client key, end the grant, and check that the posts stop. |
+| A webhook URL is `https:` | A server in development takes `http:` for the simulator. | Nothing in production mode: run the suite against a server with `SIMON_DEV` unset and the simulator behind a tunnel (item 9). |
+| A token older than the server's retention is `410 token_expired`; an upgrade's gap is `410` with `history_migration` | They need the server's clock moved by days, or a migrated account. | `sync.unknown-token` shows the `410` for a token the server never issued. |
+
+**Readers (the reader profile, PROTOCOL 5.4, 5.5, 2.2).** A reader is not a server, so the suite cannot ask a
+reader whether it obeys `critical`, reads an unknown relation as a reply, or believes a principal only on
+evidence. It checks what a server owes readers: `reading.critical-carried` and `reading.headers-carried`
+(a server routes, stores and syncs such a message whole), with `deliver.header-placement` and
+`deliver.unknown-version-stored`. `test/integration/reader-live.test.ts` runs the JavaScript client's reader
+over what the reference server kept. The vectors (`reading`) and each client's tests cover the rest; a
+reader in another language runs the vectors.
 
 ## The checks
 
@@ -217,7 +274,7 @@ Generated from the declarations in `src/checks/`, in the order they run.
 
 <!-- checks:start -->
 
-240 checks: 211 must, 29 should.
+264 checks: 232 must, 32 should.
 
 ### Documents (PROTOCOL 4)
 
@@ -428,6 +485,26 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | `sync.unknown-token` | must | CLIENT sync | 410 token_expired for a token the server never issued |
 | `sync.paging` | must | CLIENT sync | passing each token as since with limit=1 gives the same messages in the same order as reading with limit=200, without losing entries |
 | `sync.sent` | must | CLIENT sync | sync includes an accepted outgoing message with this server as carrier and exactly the message sent |
+| `sync.sync-days` | must | CLIENT sync, registry syncDays | syncDays in the server document is a positive integer, the number of days sync holds its entries |
+| `sync.order` | must | CLIENT sync | six messages an agent sends itself, one after another, appear in its sync in the order they were accepted, when read in one page and when read after a token taken before the first |
+| `sync.no-missed` | must | CLIENT sync "Entries become visible in order" | twenty-four messages written to an agent at once while a client reads from its last token, page by page: every one of them is in what the client read, with no entry skipped because it became visible below a token already returned |
+| `sync.wait-holds` | should | CLIENT sync "wait" | GET /simon/sync?since=<last token>&wait=3 on an agent with nothing new answers 200 with no messages after at least two seconds, and within wait plus five |
+| `sync.wait-wakes` | should | CLIENT sync "wait" | a request with wait=30 held open answers within five seconds of a message reaching the agent, and shows that message |
+
+### Webhooks (CLIENT)
+
+| Check | Level | Section | Expected |
+| --- | --- | --- | --- |
+| `webhooks.create` | must | CLIENT webhooks | 200 or 201 {"id"} for POST /simon/webhooks {"url"} signed by the agent; 400 invalid with details.field "url" for a value that is not a URL; 2xx for DELETE /simon/webhooks/<id>, and 404 not_found for a verify of that id afterwards |
+| `webhooks.verify-first` | must | CLIENT webhooks "Verification" | a post to the webhook URL with the body {"type":"verify","code":"<non-empty string>"} and no other member, within the delivery wait of creating it |
+| `webhooks.verify-code` | must | CLIENT webhooks "Verification" | 4xx for POST /simon/webhooks/<id>/verify with a code that was not posted; 200 for the code that was, answering {"id","verified":true} |
+| `webhooks.silent-until-verified` | must | CLIENT webhooks "Verification" | after the verify post, and after a wrong code was refused, a message that reaches the agent makes the server post nothing more to the URL for three seconds, and the verify post is not repeated with another code |
+| `webhooks.changed` | must | CLIENT webhooks "Waking" | once verified, a message that reaches the agent is followed by a post {"type":"changed","agent":"<the agent’s address>"} with no other member; the message is then in the agent’s sync |
+| `webhooks.signed` | must | CLIENT webhooks "Signing", PROTOCOL 8 | the verify post and the changed post each carry simon-server equal to the server’s origin and a signature that verifies, with the origin line of the webhook URL’s origin, against a key in the server’s document valid now; neither carries simon-agent |
+| `webhooks.json` | must | CLIENT webhooks "Signing", PROTOCOL 9 | the verify post and the changed post each have Content-Type application/json (parameters allowed) and a JSON object as body |
+| `webhooks.rate` | must | CLIENT webhooks "Waking" | twelve messages delivered to the agent in two bursts make no two changed posts less than 0.75 s apart (a second, less the jitter of the suite’s own clock) |
+| `webhooks.delete` | must | CLIENT webhooks | after DELETE /simon/webhooks/<id>, a message that reaches the agent makes the server post nothing to that URL for three seconds |
+| `webhooks.allowance` | should | CLIENT webhooks, CLIENT errors | creating webhooks without limit ends, within twelve, with 409 too_many_webhooks (the host’s allowance is its own; a server that takes twelve skips this check) |
 
 ### Signals, received from the simulator (PROTOCOL 6.4)
 
@@ -521,6 +598,25 @@ Generated from the declarations in `src/checks/`, in the order they run.
 | --- | --- | --- | --- |
 | `discovery.signed` | must | discovery profile, section 2 | 401 for an unsigned GET /simon/lookup?identifier=<identifier> |
 | `discovery.not-found` | must | discovery profile, section 2 | byte-identical 404 not_found, signed, for an email address on the server's own domain nobody listed and for a phone number; 400 invalid with details.field "identifier" for a value that is not one |
+
+### Messages a server leaves to readers (PROTOCOL 5.4, reader profile)
+
+| Check | Level | Section | Expected |
+| --- | --- | --- | --- |
+| `reading.critical-carried` | must | PROTOCOL 5.4 "critical", reader profile 2 | 202 for a delivery and 200 for a send of a message with critical: "x-future-feature,com.example.absent", x-future-feature present and com.example.absent not; the message in the recipient’s sync byte for byte (critical binds readers only) |
+| `reading.headers-carried` | must | PROTOCOL 5.4, PROTOCOL 10 | 202 for a delivery and 200 for a send of a message with a header the registry does not list and one with a private reversed-domain name; the message in the recipient’s sync byte for byte |
+
+### Transport and security (PROTOCOL 9, 11.2)
+
+| Check | Level | Section | Expected |
+| --- | --- | --- | --- |
+| `security.tls-version` | must | PROTOCOL 9 "HTTP", PROTOCOL 11.2 "Transport" | a handshake offering TLS 1.3 only completes as TLS 1.3; a handshake offering TLS 1.2 at most fails (needs an https origin; skipped for a local http run) |
+| `security.tls-certificate` | must | PROTOCOL 9 "HTTP", PROTOCOL 11.2 "Transport" | the certificate the server presents verifies, against the system's trusted roots, for the host name (or address) of the origin the suite was given (needs an https origin; skipped for a local http run) |
+| `security.no-redirect-agent-document` | must | PROTOCOL 9 "HTTP", PROTOCOL 11.2 "Transport", PROTOCOL 6.3 | a delivery from an agent whose document the simulator answers with a 302 to a path that serves the valid document is not accepted, and the simulator sees no request for the path it redirected to |
+| `security.no-redirect-webhook` | must | PROTOCOL 9 "HTTP", PROTOCOL 11.2 "Transport", CLIENT webhooks | a webhook URL that answers the verify post with a 307 is posted to once; the simulator sees no request for the path it redirected to |
+| `security.json-content-type` | must | PROTOCOL 9 "HTTP" | the server document, an agent document, a sync answer, the 202 of a delivery and the delivery the server makes to the simulator each have Content-Type application/json (parameters allowed) |
+| `security.content-encoding` | must | PROTOCOL 11.2 "Resource exhaustion" | a delivery whose gzip, deflate or Brotli body is under 100 KB and decodes to 48 MiB is refused with a 4xx (the encoding refused, or the decoded size), is answered promptly, and leaves the server answering |
+| `security.refetch-bounded` | must | PROTOCOL 11.2, PROTOCOL 4 | twenty envelopes naming the simulator, signed by a key its document does not list, are all refused, and the simulator sees at most one request for its server document while they are sent |
 
 ### Errors (PROTOCOL 9, CLIENT errors)
 

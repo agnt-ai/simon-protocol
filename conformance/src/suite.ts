@@ -16,11 +16,14 @@ import './checks/account.ts';
 import './checks/keys.ts';
 import './checks/send.ts';
 import './checks/sync.ts';
+import './checks/webhooks.ts';
 import './checks/signals.ts';
 import './checks/outbound.ts';
 import './checks/parts.ts';
 import './checks/public.ts';
 import './checks/discovery.ts';
+import './checks/reading.ts';
+import './checks/security.ts';
 import './checks/errors.ts';
 import { early, retried } from './checks/outbound.ts';
 import { remoteParts } from './checks/parts.ts';
@@ -156,12 +159,15 @@ export const AREAS: Record<string, string> = {
   account: 'Account and recovery (CLIENT)',
   keys: 'Keys (CLIENT)',
   sync: 'sync (CLIENT)',
+  webhooks: 'Webhooks (CLIENT)',
   signal: 'Signals, received from the simulator (PROTOCOL 6.4)',
   outbound: 'Deliver, sent to the simulator (PROTOCOL 6)',
   sent: 'sent (CLIENT)',
   parts: 'Parts (CLIENT parts, PROTOCOL 7.2)',
   public: 'Published messages, feeds and relations (publishing profile; must for a server that publishes)',
   discovery: 'Lookups (discovery profile; must for a server that answers them)',
+  reading: 'Messages a server leaves to readers (PROTOCOL 5.4, reader profile)',
+  security: 'Transport and security (PROTOCOL 9, 11.2)',
   errors: 'Errors (PROTOCOL 9, CLIENT errors)',
 };
 
