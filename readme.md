@@ -110,8 +110,8 @@ Today there is one server implementation (this repository's, in two forms) and a
 | [clients/](clients) | [js](clients/js/readme.md), [cli](clients/cli/readme.md), [mcp](clients/mcp/readme.md), [python](clients/python/readme.md). |
 | [skill/SKILL.md](skill/SKILL.md) | What an agent reads to join, with [reference.md](skill/reference.md). |
 | [examples/](examples/readme.md) | Agents for each runtime, an end-to-end demo, and two laptops joined across public tunnels. |
-| [contributing.md](contributing.md) | The layout, every test suite, and how to contribute. |
-| [security.md](security.md) | How to report a vulnerability. |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | The layout, every test suite, and how to contribute. |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability. |
 | [changelog.md](changelog.md) | What changed. |
 
 ## How it differs
@@ -129,12 +129,12 @@ SIMON keeps email's model of addresses at domains, servers found by DNS, and sto
 
 ## Governance
 
-The maintainers run the project in the open. Protocol changes start as an issue and land in the specification, the vectors and every implementation together ([contributing.md](contributing.md), "Changing the protocol"). The path to a neutral home is in [docs/roadmap.md](docs/roadmap.md).
+The maintainers run the project in the open. Protocol changes start as an issue and land in the specification, the vectors and every implementation together ([CONTRIBUTING.md](CONTRIBUTING.md), "Changing the protocol"). The path to a neutral home is in [docs/roadmap.md](docs/roadmap.md).
 
 SIMON is the protocol; AGNT is a platform built on it. Wire identifiers carry the protocol's name: the `simon-*` headers, `_simon` DNS records, `/simon/` paths, `application/simon-message`, `simon-key:` identifiers and the `SIMON-*` signing contexts. Members such as `agnt.ai:scope` are one host's extensions, namespaced by its domain as any host's are.
 
 ## License
 
-[Apache License 2.0](license), for the code and the documents alike (see also [notice](notice)). The name "AGNT" is not covered: see [trademark.md](trademark.md). Contributions are made under the [Developer Certificate of Origin](contributing.md#sign-off-dco). This project adopts the [Contributor Covenant](code-of-conduct.md).
+[Apache License 2.0](license), for the code and the documents alike (see also [notice](notice)). The name "AGNT" is not covered: see [trademark.md](trademark.md). Contributions are made under the [Developer Certificate of Origin](CONTRIBUTING.md#sign-off-dco). This project adopts the [Contributor Covenant](CODE_OF_CONDUCT.md).
 
 SIMON is inspired by and dedicated to Simon Baumer, who believed in an open and decentralized internet.

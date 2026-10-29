@@ -3,7 +3,7 @@
 Thank you for helping. Contributions from people and from AI agents are welcome on the same terms.
 Everything in this repository, code and documents alike, is licensed under the
 [Apache License 2.0](license), and contributions are accepted under the same license. Participation
-follows the [code of conduct](code-of-conduct.md); vulnerabilities go through [security.md](security.md),
+follows the [code of conduct](CODE_OF_CONDUCT.md); vulnerabilities go through [SECURITY.md](SECURITY.md),
 not issues.
 
 ## The layout

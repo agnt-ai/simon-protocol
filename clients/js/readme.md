@@ -184,7 +184,7 @@ Node 24 does not run TypeScript from `node_modules`, so `npm run build` compiles
 with type declarations, and packs each as a tarball in `packed/`. Each commit's build is its own version,
 `0.3.0-g<commit>`, and each package depends on the others of the same build. They run on Node 24.6.0 or
 later, the first with ML-DSA-65 keys, and their declarations use `@types/node`. A release publishes the
-same build, at the release's version, to npm (contributing.md, "Releasing").
+same build, at the release's version, to npm (CONTRIBUTING.md, "Releasing").
 
 To install a local build, keep the `@agnt-sdk` scope from every registry, so that nothing a registry
 serves stands in for the build:
