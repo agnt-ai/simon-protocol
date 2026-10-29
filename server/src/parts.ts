@@ -1,5 +1,5 @@
 /**
- * Content-addressed parts (spec section 7.2, CLIENT.md parts). Bytes are kept per source: the agent here
+ * Content-addressed parts (spec section 7.2, client.md parts). Bytes are kept per source: the agent here
  * that uploaded them, or the carrier they were fetched from. Bytes **held for an agent** are its uploads
  * and the bytes fetched for messages in its inbox, so it can forward a part it received. Nothing is ever
  * served because a message merely names a hash.

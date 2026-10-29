@@ -32,9 +32,9 @@
   },
   "files": [
     "dist",
-    "README.md",
-    "LICENSE",
-    "NOTICE"
+    "readme.md",
+    "license",
+    "notice"
   ],
   "engines": {
     "node": ">=26"

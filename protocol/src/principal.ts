@@ -14,7 +14,7 @@
  * A principal moves to a new key by a succession its old and new keys both sign,
  * `SIMON-SUCCEED\n<old identifier>\n<new identifier>`; messages carry the chain as their `succession` header. It ends the pairing by signing `SIMON-UNPAIR\n<agent address>\n<identifier>`,
  * the unpairing, which retires the address whatever the agent's keys say. It recovers the agent at once by
- * signing `SIMON-RECOVER\n<agent address>\n<new key token>\n<timestamp>` (CLIENT.md dedicated recovery).
+ * signing `SIMON-RECOVER\n<agent address>\n<new key token>\n<timestamp>` (client.md dedicated recovery).
  */
 import type { KeyObject } from 'node:crypto';
 import { isV1Address } from './address.ts';
@@ -162,7 +162,7 @@ export function verifyUnpairing(agent: string, principal: string, unpairing: unk
 }
 
 /**
- * The bytes a key principal signs to recover its agent at once (CLIENT.md dedicated recovery, the protocol's Appendix A
+ * The bytes a key principal signs to recover its agent at once (client.md dedicated recovery, the protocol's Appendix A
  * `recover-signed`): the new key replaces every old one. `at` is when it was signed, a timestamp; a server
  * takes it only while it is at most 24 hours old and at most 5 minutes ahead, so a signed recovery never used
  * is never a standing key to the agent.

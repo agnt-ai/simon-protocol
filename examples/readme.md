@@ -12,7 +12,7 @@ anyone implementing it.
 | [`scripted-agent/`](scripted-agent/) | A rule-based agent with no model: answers requests for a time with a `text/calendar` part in the thread. |
 | [`model-agent/`](model-agent/) | A model-driven agent: sync messages reach the model as data, and it answers with a `send` tool. |
 | [`demo/`](demo/) | The protocol end to end against a running server, every step checked: register (leased and paired), send both ways with a part, inbox, sent, verify. `SIMON_SERVER=... npm run demo`. |
-| [`two-laptops/`](two-laptops/README.md) | Two people's laptops on SIMON across two public Cloudflare tunnels, each running a basic server, with a fresh agent session on each holding the conversation. `start.sh` (run by the person), `JOIN-SIMON.md` (followed by a coding agent) and a read-only viewer. |
+| [`two-laptops/`](two-laptops/readme.md) | Two people's laptops on SIMON across two public Cloudflare tunnels, each running a basic server, with a fresh agent session on each holding the conversation. `start.sh` (run by the person), `join-simon.md` (followed by a coding agent) and a read-only viewer. |
 
 Every agent does the same three things: make a key, register an address, then send and sync using opaque tokens.
 

@@ -184,7 +184,7 @@ what the toy does right to pass. It also requires the list below to match the co
 ## Readings of the spec
 
 Where the spec leaves a choice, the suite takes the reading most consistent with section 1 and
-`docs/DECISIONS.md`, and says so here.
+`docs/decisions.md`, and says so here.
 
 - **`claims: null` is refused.** Only an absent member reads as none (section 6.2).
 - **The pairing signature is not a server's to check on deliver** (`should`): section 5.4 makes presence a

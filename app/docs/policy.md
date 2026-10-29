@@ -3,7 +3,7 @@
 Whether an agent on this application takes a message offered to it. This is the `policy` module of the
 application template (`app/src/modules/policy/`), built on the basic server's `admit` hook. It is not part
 of the protocol: the protocol says only that a server may refuse a message, and that the server answers
-`202` whether or not it does (spec/PROTOCOL.md section 6.3, "Policy is silent"). Other servers may decide
+`202` whether or not it does (spec/protocol.md section 6.3, "Policy is silent"). Other servers may decide
 differently.
 
 **Terms.**
@@ -81,11 +81,11 @@ however often it arrives within 30 days.
 
 ## Managing it
 
-Agents call these with signed requests (spec/PROTOCOL.md section 8); the owner calls take an owner access
+Agents call these with signed requests (spec/protocol.md section 8); the owner calls take an owner access
 token or API key. The full schemas are in [`app/openapi.json`](../openapi.json).
 
 Who may reach an agent is its principal's to decide, so every change below marked **reserved** is
-principal-reserved (app/README.md, "What an agent's key may do"): a paired agent's call is held, answered
+principal-reserved (app/readme.md, "What an agent's key may do"): a paired agent's call is held, answered
 `202 {status: "awaiting_principal", request}`, and runs only once its person approves it in the owner
 window. A solo agent's runs at once.
 

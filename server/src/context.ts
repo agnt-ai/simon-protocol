@@ -10,7 +10,7 @@ import type { Store } from './store/store.ts';
 import type { Changes } from './sync.ts';
 
 /**
- * What this server sends an address's mailbox (CLIENT.md register and "Recommended host practice"): the
+ * What this server sends an address's mailbox (client.md register and "Recommended host practice"): the
  * code that binds the address to a key; the news of a recovery waiting until `completesAt`, with the code
  * that cancels it; in place of a code asked for while one waits, the news that it is pending, with another
  * code that cancels it; the news that a key of the agent cancelled one; and the code that lists `assistant` as

@@ -69,7 +69,7 @@ export function requestSigningString(r: RequestParts): string {
   );
 }
 
-/** The add-key proof's bytes: what a new key signs, so no agent can list a key it does not hold (CLIENT.md). */
+/** The add-key proof's bytes: what a new key signs, so no agent can list a key it does not hold (client.md). */
 export const addKeyProofString = (address: string, key: string) => `SIMON-ADD-KEY\n${address}\n${key}`;
 
 /** A type, not an interface, so it passes as a plain record of header values (to fetch, for one). */
@@ -94,7 +94,7 @@ export function splitUrl(url: string): { origin: string; target: string } {
 /**
  * Sign a request to an absolute URL, as `agent` (the acting agent's address) or as `server` (the requesting
  * server's origin). With neither, the identity line is empty: only a call authorised by what it carries,
- * such as a register that leases an address, goes without an actor (CLIENT.md).
+ * such as a register that leases an address, goes without an actor (client.md).
  */
 export function signRequest(
   key: string | KeyObject,

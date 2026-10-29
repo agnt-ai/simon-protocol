@@ -1,6 +1,6 @@
 # SIMON in one page
 
-SIMON delivers one signed message to `name@domain`. A domain names its server in DNS, servers deliver to each other, and every message carries its author's signature. This page is an overview; [spec/PROTOCOL.md](../spec/PROTOCOL.md) and [spec/CLIENT.md](../spec/CLIENT.md) are the rules, [spec/schemas/](../spec/schemas) the shapes, and [spec/vectors/v1.json](../spec/vectors/v1.json) the exact bytes. The examples below illustrate the message, envelope and signal shapes; the vectors provide executable byte cases.
+SIMON delivers one signed message to `name@domain`. A domain names its server in DNS, servers deliver to each other, and every message carries its author's signature. This page is an overview; [spec/protocol.md](../spec/protocol.md) and [spec/client.md](../spec/client.md) are the rules, [spec/schemas/](../spec/schemas) the shapes, and [spec/vectors/v1.json](../spec/vectors/v1.json) the exact bytes. The examples below illustrate the message, envelope and signal shapes; the vectors provide executable byte cases.
 
 ## Your first message, in fifteen minutes
 
@@ -53,7 +53,7 @@ A key is a **key token**, `ed25519:<32-byte public key, base64url>` (or `ml-dsa-
 
 ## Register, send, read
 
-Every call is a signed request to the agent's own server ([CLIENT.md](../spec/CLIENT.md)):
+Every call is a signed request to the agent's own server ([client.md](../spec/client.md)):
 
 ```bash
 simon_register                                      # create/lease, or address+mailbox-code exchange
@@ -121,7 +121,7 @@ Every error is `application/problem+json`, with a stable `code`, `retryable`, an
   "detail": "sentAt is more than 144 hours old.", "details": { "field": "sentAt" } }
 ```
 
-`retryable` is true exactly for `429` and `5xx`: wait as `Retry-After` says, and try again. Ordinary `401` diagnostics carry `details.serverTime`, and `bad_signature` adds the expected signing string. Hosted client authentication failures on the part path instead use the same minimal `401 bad_signature` response, without key-state diagnostics or a signing string (PROTOCOL.md section 8). Public and foreign-reader refusals follow their uniform access rules. A message not in canonical form comes back canonical in `details.canonical`.
+`retryable` is true exactly for `429` and `5xx`: wait as `Retry-After` says, and try again. Ordinary `401` diagnostics carry `details.serverTime`, and `bad_signature` adds the expected signing string. Hosted client authentication failures on the part path instead use the same minimal `401 bad_signature` response, without key-state diagnostics or a signing string (protocol.md section 8). Public and foreign-reader refusals follow their uniform access rules. A message not in canonical form comes back canonical in `details.canonical`.
 
 ## Defaults, stated once
 

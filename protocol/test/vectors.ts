@@ -1343,7 +1343,7 @@ async function requests() {
   };
   return {
     about:
-      'Signed requests (section 8). signed: requests, the eight-line signing string the server rebuilds (its fourth line is actor, the value of simon-agent or simon-server), and headers whose signature verifies with simon-key. checks: what a server answers to each request at now, given the key entry it holds for simon-key (null: none), whether it holds the nonce from this key (a server keeps a nonce until the timestamp of its request leaves the window), and whether it is a server request (server: simon-server required) or an agent request (agent: simon-agent required); request.actor is the identity line the server signs over. The refusals come in the order of section 8: headers, window, key, validity, signature, and only then the nonce. details are as the server sends them. nonces: until when a server keeps a nonce, given the simon-timestamp of its request: the first moment that timestamp is outside the window, checked in whole seconds. addKeyProofs: the proof a new key signs (CLIENT.md, register). signedFor: the origin line a request to a server whose origin is written as given signs, the serialised origin (section 3); simon-server carries the same form, and any other is refused. addressSegments: an address as one path segment: every byte that is not an RFC 3986 pchar percent-encoded with upper-case hex, @ literal; a server reads the target exactly as sent, before any decoding.',
+      'Signed requests (section 8). signed: requests, the eight-line signing string the server rebuilds (its fourth line is actor, the value of simon-agent or simon-server), and headers whose signature verifies with simon-key. checks: what a server answers to each request at now, given the key entry it holds for simon-key (null: none), whether it holds the nonce from this key (a server keeps a nonce until the timestamp of its request leaves the window), and whether it is a server request (server: simon-server required) or an agent request (agent: simon-agent required); request.actor is the identity line the server signs over. The refusals come in the order of section 8: headers, window, key, validity, signature, and only then the nonce. details are as the server sends them. nonces: until when a server keeps a nonce, given the simon-timestamp of its request: the first moment that timestamp is outside the window, checked in whole seconds. addKeyProofs: the proof a new key signs (client.md, register). signedFor: the origin line a request to a server whose origin is written as given signs, the serialised origin (section 3); simon-server carries the same form, and any other is refused. addressSegments: an address as one path segment: every byte that is not an RFC 3986 pchar percent-encoded with upper-case hex, @ literal; a server reads the target exactly as sent, before any decoding.',
     signed: [
       signed('POST', '/simon/send', sendBody, ada, asAda),
       signed('GET', sync, '', ada, asAda),
@@ -1898,7 +1898,7 @@ function principals() {
   ];
   return {
     about:
-      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, CLIENT.md send): for is the principal; pairing is present, and pairs the agent at its sentAt and, when now is given (the server's clock), at now too, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
+      "What an agent's own server answers on send, given the agent's kind and, for a paired agent, its principal (sections 2.2 and 5.4, client.md send): for is the principal; pairing is present, and pairs the agent at its sentAt and, when now is given (the server's clock), at now too, exactly when the principal is a key; a succession verifies, and for may be a successor of the agent's principal only along it (the server then moves its record); a solo agent carries neither. Every message here is valid, pairing present exactly when for is a key; whether for is this agent's principal and whether its pairing verifies bind the sending agent, so only its server, and readers, check them.",
     cases: cases.map(([name, message, agent, now]) => ({
       name,
       agent,
@@ -2157,7 +2157,7 @@ function signals() {
 }
 
 /** Unpairings (section 2.2): a key principal ends its pairing. */
-/** A key principal's recovery of its agent (CLIENT.md register, Appendix A `recover-signed`), both algorithms. */
+/** A key principal's recovery of its agent (client.md register, Appendix A `recover-signed`), both algorithms. */
 function recoveries() {
   const at = '2026-10-14T20:00:00Z';
   const recovery = (agent: string, k: FixedKey, newKey: string, signed = { agent, newKey, at }) => {
@@ -2175,7 +2175,7 @@ function recoveries() {
   };
   return {
     about:
-      "A key principal's recovery (CLIENT.md register): bytes is SIMON-RECOVER, the agent address, the new key token and at, joined by newlines (Appendix A recover-signed); recover is the principal key's signature; verifies is whether it recovers this agent to this key at this time for this principal. A server takes it only while at is at most 24 hours old and 5 minutes ahead.",
+      "A key principal's recovery (client.md register): bytes is SIMON-RECOVER, the agent address, the new key token and at, joined by newlines (Appendix A recover-signed); recover is the principal key's signature; verifies is whether it recovers this agent to this key at this time for this principal. A server takes it only while at is at most 24 hours old and 5 minutes ahead.",
     cases: [
       { why: 'an Ed25519 principal', ...recovery('bob@example.net', erin, carol.key) },
       { why: 'an ML-DSA-65 principal', ...recovery('bob@example.net', frank, ada.key) },
@@ -2539,7 +2539,7 @@ async function resolution() {
   ];
   return {
     about:
-      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _simon.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/simon: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest this library caches each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime); these caps are the reference library’s (docs/HOST-NOTES.md), within the bounds section 3 sets.',
+      'Resolution (section 3) of domain (example.com when absent). txt is the TXT records at _simon.<domain>, each as its character strings, or "servfail" or "dnssec_failure". wellKnown is the answer to GET https://<domain>/.well-known/simon: a status and body, or how the fetch failed: "nxdomain", "refused" or "bad_certificate" (absences, so not_found), or "timeout" or "dropped" (temporary); when absent it must not be fetched. origins: server origins as written, and as compared. cacheMs: the longest this library caches each outcome, given the lifetime its source allows (sourceTtlMs: the DNS TTL, or the HTTP freshness lifetime); these caps are the reference library’s (docs/host-notes.md), within the bounds section 3 sets.',
     cases: await Promise.all(cases.map(async c => ({ ...c, result: await resolveCase(c) }))),
     origins: [
       'https://simon.example.com',
@@ -2584,7 +2584,7 @@ export function resolveCase(c: ResolutionCase) {
 
 const clock = {
   about:
-    'Clock-dependent rules (sections 6.3 and CLIENT.md send), each at its own now: send is whether a server takes the message from its agent (24 h back, 5 min ahead), deliver whether a receiver accepts a delivery (144 h back, 5 min ahead), repeat whether a receiver still recognises a delivery it accepted before (168 h back, and any time ahead).',
+    'Clock-dependent rules (sections 6.3 and client.md send), each at its own now: send is whether a server takes the message from its agent (24 h back, 5 min ahead), deliver whether a receiver accepts a delivery (144 h back, 5 min ahead), repeat whether a receiver still recognises a delivery it accepted before (168 h back, and any time ahead).',
   sentAt: question.sentAt,
   cases: [
     ['at sentAt', 0],
@@ -2663,7 +2663,7 @@ export async function buildVectors() {
   const key = (k: FixedKey) => ({ alg: k.alg, seed: k.seed, key: k.key });
   return {
     about:
-      'SIMON Protocol version 1 test vectors (spec/PROTOCOL.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
+      'SIMON Protocol version 1 test vectors (spec/protocol.md section 15). Each section says what its cases mean. Private keys are 32-byte seeds in hex (RFC 8032 for Ed25519, FIPS 204 ML-DSA.KeyGen for ML-DSA-65); every other byte string is as it appears on the wire. ML-DSA-65 signatures are hedged, so another implementation verifies them rather than reproducing them.',
     keys: {
       about:
         'The keys every section uses, from their seeds. erin and frank are principals who pair with agents by key.',

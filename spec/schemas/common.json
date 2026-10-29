@@ -2,13 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "common.json",
   "title": "SIMON shared definitions",
-  "description": "Grammars every SIMON schema uses (spec/PROTOCOL.md section 2 and Appendix A). Lengths and rules a regular expression cannot state are given in each description.",
+  "description": "Grammars every SIMON schema uses (spec/protocol.md section 2 and Appendix A). Lengths and rules a regular expression cannot state are given in each description.",
   "$defs": {
     "address": {
       "type": "string",
       "maxLength": 318,
       "pattern": "^(?=[^@]{1,64}@[^@]{1,253}$)[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$",
-      "description": "A version 1 address, local@domain, in lower case (PROTOCOL.md 2.1). The local part is at most 64 bytes, the domain at most 253, and the domain's last label is not all digits."
+      "description": "A version 1 address, local@domain, in lower case (protocol.md 2.1). The local part is at most 64 bytes, the domain at most 253, and the domain's last label is not all digits."
     },
     "domain": {
       "type": "string",
@@ -18,7 +18,7 @@
     "timestamp": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z$",
-      "description": "RFC 3339 in UTC, whole seconds or exactly three fractional digits, naming a real calendar moment (PROTOCOL.md 2.5)."
+      "description": "RFC 3339 in UTC, whole seconds or exactly three fractional digits, naming a real calendar moment (protocol.md 2.5)."
     },
     "messageId": {
       "type": "string",
@@ -33,44 +33,44 @@
       "type": "string",
       "minLength": 1,
       "pattern": "^[A-Za-z0-9_-]+$",
-      "description": "Unpadded, canonical base64url (PROTOCOL.md 2.5)."
+      "description": "Unpadded, canonical base64url (protocol.md 2.5)."
     },
     "pairing": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3})?Z [A-Za-z0-9_-]+$",
-      "description": "A key principal's pairing, <until> <signature>: a timestamp, one space, and the principal's canonical base64url signature over SIMON-PAIR, the address, the principal and until, joined by newlines (PROTOCOL.md 2.2, 5.4). It counts before until, by at most 366 days."
+      "description": "A key principal's pairing, <until> <signature>: a timestamp, one space, and the principal's canonical base64url signature over SIMON-PAIR, the address, the principal and until, joined by newlines (protocol.md 2.2, 5.4). It counts before until, by at most 366 days."
     },
     "succession": {
       "type": "string",
       "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+ [A-Za-z0-9_-]+ [A-Za-z0-9_-]+(,[a-z0-9-]+:[A-Za-z0-9_-]+ [A-Za-z0-9_-]+ [A-Za-z0-9_-]+){0,15}$",
-      "description": "A key principal's succession: 1 to 16 steps, oldest first, joined by commas; each the old key's token, its signature and the new key's, one space apart, over SIMON-SUCCEED, the old identifier and the new, joined by newlines (PROTOCOL.md 2.2, 5.4). Each step's new key is the next step's old key, the last's the key in for, and no key appears twice."
+      "description": "A key principal's succession: 1 to 16 steps, oldest first, joined by commas; each the old key's token, its signature and the new key's, one space apart, over SIMON-SUCCEED, the old identifier and the new, joined by newlines (protocol.md 2.2, 5.4). Each step's new key is the next step's old key, the last's the key in for, and no key appears twice."
     },
     "keyToken": {
       "type": "string",
       "pattern": "^[a-z0-9-]+:[A-Za-z0-9_-]+$",
-      "description": "An algorithm name, a colon, and the raw public key in base64url: ed25519:... or ml-dsa-65:... (PROTOCOL.md 2.3)."
+      "description": "An algorithm name, a colon, and the raw public key in base64url: ed25519:... or ml-dsa-65:... (protocol.md 2.3)."
     },
     "principal": {
       "type": "string",
       "pattern": "^(mailto:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+|tel:\\+[1-9][0-9]{1,14}|simon-key:[a-z0-9-]+:[A-Za-z0-9_-]+)$",
-      "description": "A principal's identifier: mailto:, tel: (E.164) or simon-key: (PROTOCOL.md 2.2)."
+      "description": "A principal's identifier: mailto:, tel: (E.164) or simon-key: (protocol.md 2.2)."
     },
     "origin": {
       "type": "string",
       "pattern": "^[Hh][Tt][Tt][Pp][Ss]://[^/:?#]+(:[0-9]{1,5})?/?$",
-      "description": "A server origin, https://host[:port] (PROTOCOL.md 3). Development servers may use http:, never by default."
+      "description": "A server origin, https://host[:port] (protocol.md 3). Development servers may use http:, never by default."
     },
     "headerName": {
       "type": "string",
       "maxLength": 128,
-      "description": "A name: hyphen-joined lower-case labels, several joined by dots for a private reverse-domain name (PROTOCOL.md 5.4).",
+      "description": "A name: hyphen-joined lower-case labels, several joined by dots for a private reverse-domain name (protocol.md 5.4).",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)*$"
     },
     "mediaType": {
       "type": "string",
       "maxLength": 200,
       "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126}(; ?[a-z0-9][a-z0-9!#$&^_.+-]{0,126}=([A-Za-z0-9!#$&^_.+-]+|\"[ !#-\\[\\]-~]*\"))*$",
-      "description": "A lower-case type/subtype with optional parameters (PROTOCOL.md 5.3)."
+      "description": "A lower-case type/subtype with optional parameters (protocol.md 5.3)."
     },
     "keyEntry": {
       "type": "object",
@@ -104,7 +104,7 @@
           "minLength": 1
         }
       },
-      "description": "A statement a carrier makes about a message's author (PROTOCOL.md 6.2). acts-for has agent, for, verifiedAt and scope; other types are the registry's."
+      "description": "A statement a carrier makes about a message's author (protocol.md 6.2). acts-for has agent, for, verifiedAt and scope; other types are the registry's."
     },
     "anyMessage": {
       "type": "object",
@@ -140,7 +140,7 @@
       "then": {
         "$ref": "message.json"
       },
-      "description": "A message of any version: the invariants every version keeps (PROTOCOL.md 1), and message.json for version 1. A server routes a version it does not know on these alone."
+      "description": "A message of any version: the invariants every version keeps (protocol.md 1), and message.json for version 1. A server routes a version it does not know on these alone."
     }
   }
 }

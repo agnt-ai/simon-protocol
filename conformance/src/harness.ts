@@ -1,7 +1,7 @@
 /**
  * The machinery every check runs on: a registry of checks, the HTTP exchanges each one records, and the
  * report they add up to. A check is declared once, with its id, spec section, level and expectation, so
- * the list in README.md is generated from the same declarations that run.
+ * the list in readme.md is generated from the same declarations that run.
  */
 import http from 'node:http';
 import https from 'node:https';

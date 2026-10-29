@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "problem.json",
   "title": "SIMON error",
-  "description": "Every error, as application/problem+json: RFC 9457 problem details with code, retryable and details (PROTOCOL.md 9).",
+  "description": "Every error, as application/problem+json: RFC 9457 problem details with code, retryable and details (protocol.md 9).",
   "type": "object",
   "required": ["type", "title", "status", "code", "retryable", "detail"],
   "properties": {
@@ -20,7 +20,7 @@
     "code": {
       "type": "string",
       "pattern": "^[a-z0-9_]+$",
-      "description": "A stable code: PROTOCOL.md section 9 and CLIENT.md \"Errors\" list them."
+      "description": "A stable code: protocol.md section 9 and client.md \"Errors\" list them."
     },
     "retryable": {
       "type": "boolean",
@@ -41,7 +41,7 @@
         },
         "serverTime": {
           "type": "integer",
-          "description": "On every 401: the server's clock, in whole seconds since the Unix epoch, as simon-timestamp is written (PROTOCOL.md 8)."
+          "description": "On every 401: the server's clock, in whole seconds since the Unix epoch, as simon-timestamp is written (protocol.md 8)."
         },
         "signingString": {
           "type": "string"

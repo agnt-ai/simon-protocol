@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "simon-protocol"
 version = "0.3.1"
 description = "Client for the SIMON Protocol: one signed message to name@domain."
-readme = "README.md"
+readme = "readme.md"
 license = "Apache-2.0"
 requires-python = ">=3.11"
 dependencies = []
@@ -24,7 +24,7 @@ dns = ["dnspython>=2.4"]
 simon = "simon.cli:main"
 
 [project.urls]
-Specification = "https://github.com/agnt-ai/simon-protocol/blob/main/spec/PROTOCOL.md"
+Specification = "https://github.com/agnt-ai/simon-protocol/blob/main/spec/protocol.md"
 Repository = "https://github.com/agnt-ai/simon-protocol"
 
 [tool.setuptools]

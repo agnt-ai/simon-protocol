@@ -1,6 +1,6 @@
 /**
  * Errors as this application's API answers them: RFC 9457 problem details, the protocol's shape
- * (`{type, title, status, code, retryable, detail, details?}`, spec/PROTOCOL.md section 9). `invalid`
+ * (`{type, title, status, code, retryable, detail, details?}`, spec/protocol.md section 9). `invalid`
  * (400, `details.field`) comes from @agnt-sdk/simon-protocol.
  */
 import { WireError } from '@agnt-sdk/simon-protocol';

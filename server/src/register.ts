@@ -1,5 +1,5 @@
 /**
- * `POST /simon/register` (CLIENT.md): creation/pairing for a key; recovery uses its own resource. The call is signed by the key it
+ * `POST /simon/register` (client.md): creation/pairing for a key; recovery uses its own resource. The call is signed by the key it
  * registers, which it carries as `key`.
  *
  *   with no address                        an address leased on the lease domain
@@ -71,7 +71,7 @@ type RegisterBody = Body<(typeof MEMBERS)[number]>;
 /**
  * A mailbox challenge is bound to the account's recovery epoch when it was issued (Agent.recoveryEpoch).
  * Only a recovery ending or authority being reset advances it, never a key added or revoked, so a thief
- * holding a key cannot void the owner's code (CLIENT.md: "delay the mailbox's holder once, never for good").
+ * holding a key cannot void the owner's code (client.md: "delay the mailbox's holder once, never for good").
  */
 interface CodeChallenge {
   hash: string;

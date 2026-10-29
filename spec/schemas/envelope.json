@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "envelope.json",
   "title": "SIMON transport envelope",
-  "description": "What one server posts to another at POST /simon/deliver (PROTOCOL.md 6.1, 6.2). The signature is the carrying server's, over SIMON-ENVELOPE\\n and the canonical envelope without signature; claimsSignature is over SIMON-CLAIMS\\n and the canonical {\"claims\",\"message\":<id>}. Members a receiver does not know are ignored and signed.",
+  "description": "What one server posts to another at POST /simon/deliver (protocol.md 6.1, 6.2). The signature is the carrying server's, over SIMON-ENVELOPE\\n and the canonical envelope without signature; claimsSignature is over SIMON-CLAIMS\\n and the canonical {\"claims\",\"message\":<id>}. Members a receiver does not know are ignored and signed.",
   "type": "object",
   "required": ["message", "server", "recipients", "signature"],
   "properties": {

@@ -4,7 +4,7 @@
 #   docker build -t simon-server .             the basic server (server/): the default, last stage
 #   docker build -t simon-app --target app .   the application template (app/), for MongoDB
 #
-# Both are configured by environment variables (server/README.md, app/README.md) and listen on SIMON_PORT.
+# Both are configured by environment variables (server/readme.md, app/readme.md) and listen on SIMON_PORT.
 
 # The application template: the basic server plus its modules, with the npm packages app/ depends on.
 FROM node:26-alpine AS app

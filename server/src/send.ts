@@ -1,5 +1,5 @@
 /**
- * `POST /simon/send` (CLIENT.md): an agent here hands over a message for delivery. Checked in the order the
+ * `POST /simon/send` (client.md): an agent here hands over a message for delivery. Checked in the order the
  * client API gives: the message as a delivery would check it (spec section 6.3, steps 1, 3 and 4); a
  * version this server implements; `from` the agent's own address, on a domain that still names this
  * server; the author's signature; the paired or solo rule; the 24-hour window; no message with an audience
@@ -236,7 +236,7 @@ export function contentParts(m: AnyMessage): { sha256: string; size: number }[] 
 }
 
 /**
- * The `simon-hints` header: one JSON object, in ASCII (CLIENT.md send), or `{}` when absent. A byte outside
+ * The `simon-hints` header: one JSON object, in ASCII (client.md send), or `{}` when absent. A byte outside
  * printable ASCII is refused rather than read as Latin-1 and passed on changed.
  */
 function readHintsHeader(header: string | string[] | undefined): Json {

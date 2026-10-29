@@ -1,6 +1,6 @@
 # How the reference server behaves
 
-[`spec/PROTOCOL.md`](../spec/PROTOCOL.md) holds the rules every server follows. This note holds what the reference server in `server/` does where the protocol leaves a choice to each implementation: how it protects itself, and how it protects its own users. Another implementation may choose differently and still interoperate. Values here are defaults chosen for one server, not requirements.
+[`spec/protocol.md`](../spec/protocol.md) holds the rules every server follows. This note holds what the reference server in `server/` does where the protocol leaves a choice to each implementation: how it protects itself, and how it protects its own users. Another implementation may choose differently and still interoperate. Values here are defaults chosen for one server, not requirements.
 
 Several processes may share one store. Where a bound must hold for all of them, it is kept in the store; where it bounds one process's own work, it is kept in that process, and this note says which.
 
@@ -16,7 +16,7 @@ Until arrivals and inbox events are claimed too, a deployment of several copies 
 
 ## Deliveries and signals from other servers
 
-- **Core requires** checking the carrier's signature before recipient-dependent work and bounding lookups caused by unauthenticated requests (PROTOCOL.md sections 6.3 and 11.2). The pools, limits and keys below are how it meets the second; their values are its own.
+- **Core requires** checking the carrier's signature before recipient-dependent work and bounding lookups caused by unauthenticated requests (protocol.md sections 6.3 and 11.2). The pools, limits and keys below are how it meets the second; their values are its own.
 - **Repeats count.** Every delivery and signal counts against its carrier's budget, repeats included, and a repeat never costs more work than a new delivery.
 - **The envelope beside its message** is bounded by default at the most a spec-valid envelope holds at the server's `recipients` limit (`envelopeExtrasBytes` in its configuration; 64059 canonical bytes at 100 recipients), covering the known protocol-defined fields at that recipient limit. The host extras limit also applies to unknown signed extension members; an otherwise valid extended envelope may exceed it. Anything larger is `400 invalid` with `details.field` set to `envelope`. This is the server's own limit, not a protocol rule.
 - **Three lookup pools,** each bounded in the process:
@@ -35,7 +35,7 @@ Until arrivals and inbox events are claimed too, a deployment of several copies 
 
 ## Delivering
 
-- **Retries** follow PROTOCOL.md section 6.3: `429`, `5xx` and failures that may pass back off from a minute to four hours. A `400 invalid` on `recipients` is retried for an hour from the first such answer, the recipients' domain resolved again without the cache before each attempt. A `403 bad_signature` is retried while the server began serving the author's domain less than an hour ago, the time it first found the domain naming it when an agent there sent (kept in the store, forgotten when the domain stops naming it, and lapsing an hour after the last send that found it naming the server, so a domain that moved away and back unseen begins again).
+- **Retries** follow protocol.md section 6.3: `429`, `5xx` and failures that may pass back off from a minute to four hours. A `400 invalid` on `recipients` is retried for an hour from the first such answer, the recipients' domain resolved again without the cache before each attempt. A `403 bad_signature` is retried while the server began serving the author's domain less than an hour ago, the time it first found the domain naming it when an agent there sent (kept in the store, forgotten when the domain stops naming it, and lapsing an hour after the last send that found it naming the server, so a domain that moved away and back unseen begins again).
 
 ## Registering and recovering
 
@@ -53,13 +53,13 @@ The reference implementation provides CLIENT's dedicated register/create, accoun
 
 ## Fetching files
 
-The reference schedules fetches independently of recipient admission and reads, aiming to avoid revealing either through fetch timing. Budgets, retries, retention and network observations still have limits; PROTOCOL.md section 12 describes the disclosures.
+The reference schedules fetches independently of recipient admission and reads, aiming to avoid revealing either through fetch timing. Budgets, retries, retention and network observations still have limits; protocol.md section 12 describes the disclosures.
 
 - **It fetches the files of every message it accepts,** soon after accepting it, whoever the recipients are and whatever its policy decides. It checks the bytes of a message no agent took like any others, then drops them.
 - **It never fetches because an agent asked** for a file or read a message.
 - **Each fetch waits** a random interval of up to a few minutes.
 - **Retries:** six attempts with backoff. After terminal exhaustion it does not restart that message's fetch because of a read. A private read without another usable grant gets `404`; independent held or publication grants still compose.
-- **A file declared larger than `partBytes`** is refused at deliver, whether the message names it or a message it carries inline does (PROTOCOL.md sections 5.3 and 6.3), so nothing is ever fetched only on demand and no fetch is larger than `partBytes`.
+- **A file declared larger than `partBytes`** is refused at deliver, whether the message names it or a message it carries inline does (protocol.md sections 5.3 and 6.3), so nothing is ever fetched only on demand and no fetch is larger than `partBytes`.
 - **Fair sharing:**
   - 4 fetches at once in one process, with at most 64 MiB of declared size underway;
   - at most 2 live fetch leases from one carrier across processes sharing the store, taken in turn across carriers; a slot that frees goes first to a carrier with the fewest fetches underway in that process, so a few carriers with older backlogs cannot hold every slot from a newer one (each tick reads 64 due rows in turn across carriers, so more than 64 carriers with older backlogs can still delay it); stale I/O requires ownership-fenced settlement;

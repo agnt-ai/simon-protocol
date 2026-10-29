@@ -1,5 +1,5 @@
 /**
- * CLIENT.md "The agent's address and keys", beside register: the account, adding and revoking keys, grants,
+ * client.md "The agent's address and keys", beside register: the account, adding and revoking keys, grants,
  * cancelling a recovery by key and by cancel code, and unpairing, with the reference server's practice.
  */
 import assert from 'node:assert/strict';
@@ -16,7 +16,7 @@ import { CLOCK_PAIRING_UNTIL, Federation, toRequest, type TestAgent } from './ha
 
 const DAY = 86_400_000;
 
-describe("the agent's address and keys (CLIENT.md)", async () => {
+describe("the agent's address and keys (client.md)", async () => {
   const fed = new Federation();
   after(() => fed.close());
   const alpha = await fed.server('alpha');

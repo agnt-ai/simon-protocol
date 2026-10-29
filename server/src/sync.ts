@@ -1,5 +1,5 @@
 /**
- * What an agent reads about its own messages (CLIENT.md):
+ * What an agent reads about its own messages (client.md):
  *
  *   GET /simon/sync?since=<token>&limit=<n>&wait=<seconds>   what entered the agent's stream since the token:
  *                                     the messages it received and those it wrote here, from any of its

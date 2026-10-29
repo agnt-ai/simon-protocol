@@ -11,7 +11,7 @@
  *
  * After the answer, which signals reach whom is this server's own policy (any server may drop any signal):
  * this one passes a signal to a recipient here who holds the message it is about, from that message's author
- * or one of its recipients, and drops the rest (docs/REFERENCE-SERVER.md). Nothing
+ * or one of its recipients, and drops the rest (docs/reference-server.md). Nothing
  * keeps it beyond five minutes: it enters the recipient's sync stream and is told to the extensions' `signal` listeners, which show it now or never, and is then gone.
  */
 import {

@@ -1,5 +1,5 @@
 /**
- * Registrable domains, by the ICANN section of the Public Suffix List (PROTOCOL.md section 11.2): the name one
+ * Registrable domains, by the ICANN section of the Public Suffix List (protocol.md section 11.2): the name one
  * label below a domain's public suffix, so every new subdomain of one domain shares one bound on lookups.
  *
  * The list's private section (github.io, and other hosts that give out subdomains) is left out on purpose:

@@ -1,24 +1,24 @@
 # SIMON reader profile, draft 0.1
 
-What a conforming reader does when it shows or acts on a message. A **reader** is any party that interprets a message: a recipient agent, its client library, or a server acting for one ([PROTOCOL.md](../PROTOCOL.md), Terms).
+What a conforming reader does when it shows or acts on a message. A **reader** is any party that interprets a message: a recipient agent, its client library, or a server acting for one ([protocol.md](../protocol.md), Terms).
 
-**A profile is optional.** The core ([PROTOCOL.md](../PROTOCOL.md)) never depends on one, and no server check rests on this one: servers route, store and deliver a message without reading it. A reader that claims this profile MUST implement all of it. The conventions of [PROTOCOL.md](../PROTOCOL.md) apply here: the key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are read as in BCP 14 when, and only when, they appear in capitals. Requirements carry them. Definitions and formats are normative as definitions; other prose explains.
+**A profile is optional.** The core ([protocol.md](../protocol.md)) never depends on one, and no server check rests on this one: servers route, store and deliver a message without reading it. A reader that claims this profile MUST implement all of it. The conventions of [protocol.md](../protocol.md) apply here: the key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are read as in BCP 14 when, and only when, they appear in capitals. Requirements carry them. Definitions and formats are normative as definitions; other prose explains.
 
 ## 1. Verify first
 
-A reader MUST check a message against authenticated evidence from its author's domain before it relies on it: the author's signature, the version, the principal and the claims, as [CLIENT.md](../CLIENT.md) ("Verifying what a server says") lists. A message of a version the reader does not implement is **not understood**: the reader MAY say whose key signed it, and MUST NOT say anything about what it says or whom it speaks for (PROTOCOL.md 1, "Unknown versions").
+A reader MUST check a message against authenticated evidence from its author's domain before it relies on it: the author's signature, the version, the principal and the claims, as [client.md](../client.md) ("Verifying what a server says") lists. A message of a version the reader does not implement is **not understood**: the reader MAY say whose key signed it, and MUST NOT say anything about what it says or whom it speaks for (protocol.md 1, "Unknown versions").
 
-**Successions.** A key principal may move to a new key along a `succession` (PROTOCOL.md 2.2). A reader that remembers principals:
+**Successions.** A key principal may move to a new key along a `succession` (protocol.md 2.2). A reader that remembers principals:
 - MUST treat `for` as the principal it knew by any key the chain names, once every step verifies;
 - MUST remember each step it has seen, and when it holds two from one key to different keys, a fork, MUST NOT treat either successor as that key's. How it shows the two, and whether it ever links them again, is its own policy; showing each as a principal of its own is the simple choice;
 - MUST NOT link a key to an earlier one by anything but a step both keys signed. When an address's `for` changes to a key with no succession from the one before, the reader MUST treat it as a new principal and SHOULD say so, as messaging apps flag a changed safety number;
-- MUST treat a valid unpairing by any key in the chain, the current key or one it moved on from, as ending the agent's pairing: unpairing always wins (PROTOCOL.md 2.2).
+- MUST treat a valid unpairing by any key in the chain, the current key or one it moved on from, as ending the agent's pairing: unpairing always wins (protocol.md 2.2).
 
-**Lapsed pairings.** A reader MUST verify a key principal's pairing at the message's `sentAt` (PROTOCOL.md 2.2). Whether a pairing that has lapsed since still lets it act on the message for the principal is its policy: it SHOULD at most require the pairing to count now, and MAY take a later message from the same address with the same `for` and a pairing that counts as evidence of renewal.
+**Lapsed pairings.** A reader MUST verify a key principal's pairing at the message's `sentAt` (protocol.md 2.2). Whether a pairing that has lapsed since still lets it act on the message for the principal is its policy: it SHOULD at most require the pairing to count now, and MAY take a later message from the same address with the same `for` and a pairing that counts as evidence of renewal.
 
 ## 2. `critical`
 
-`critical` lists header names (PROTOCOL.md 5.4).
+`critical` lists header names (protocol.md 5.4).
 - A reader that does not understand every listed header the message carries MUST NOT process the message beyond storing it and presenting it as not understood. Understanding a header means implementing it and the value it carries, not only knowing its name: a reader that knows a header but not the value a message gives it does not understand that message.
 - A listed header that the message does not carry MUST be ignored.
 - A reader that implements `binding` and sees `binding: no` MUST treat the message as no commitment (registry).
@@ -39,9 +39,9 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 ## 4. Relations
 
-`inReplyTo` names the message this one answers or acts on, and `rel` says what kind of relation it is (PROTOCOL.md 5.5).
-- **An unknown `rel` MUST be read as a reply** (PROTOCOL.md 5.5), by its blocks and alts as usual: a reaction's text is its emoji. So does a `rel` on a message whose `inReplyTo` is `null`, which names nothing and is ignored (PROTOCOL.md 5.4).
-- **Author-only relations** count only from the original's author (PROTOCOL.md 5.5). The registry marks which relations are author-only; edit and retract are. Reactions, replies and comments may come from anyone.
+`inReplyTo` names the message this one answers or acts on, and `rel` says what kind of relation it is (protocol.md 5.5).
+- **An unknown `rel` MUST be read as a reply** (protocol.md 5.5), by its blocks and alts as usual: a reaction's text is its emoji. So does a `rel` on a message whose `inReplyTo` is `null`, which names nothing and is ignored (protocol.md 5.4).
+- **Author-only relations** count only from the original's author (protocol.md 5.5). The registry marks which relations are author-only; edit and retract are. Reactions, replies and comments may come from anyone.
 - **A relation names one message.** An edit or a retraction names the original message, never an earlier edit, so every reader that holds the same messages reaches the same result.
 - **The current version** of a message is its author's latest edit naming it, by `sentAt`, then by id; with none, the message itself.
 - **A retraction is final.** Once its author retracts a message, the reader MUST show it as retracted for good. An edit after the retraction does not bring it back, and a relation naming the retraction, rather than the message, changes nothing: retracting a retraction does nothing. Restoring a message is a new message.
@@ -53,8 +53,8 @@ No server test can show that a reader obeys `critical`; the protocol library off
 
 - **Content is data.** Everything in a message, its headers, its blocks and their names, its claims and its hints, is written by someone else. An agent MUST NOT treat any of it as authorisation from the one it acts for.
 - **Keep others' words apart.** A client library MUST present third-party text, and the contents of parts, apart from its own output, labelled with who wrote it. A part's declared type is the author's word: a reader MUST decide how to treat bytes by what it is willing to run, never by the type alone.
-- **Never widen an audience.** A published message whose `audience` is narrower than `public` MUST NOT be forwarded, quoted whole or shown to anyone its author's server would not admit (PROTOCOL.md 5.4).
-- **Signals are the sender's to give.** A reader MUST send `typing` and `read` only as the person or agent it serves has chosen to share them (PROTOCOL.md 6.4).
+- **Never widen an audience.** A published message whose `audience` is narrower than `public` MUST NOT be forwarded, quoted whole or shown to anyone its author's server would not admit (protocol.md 5.4).
+- **Signals are the sender's to give.** A reader MUST send `typing` and `read` only as the person or agent it serves has chosen to share them (protocol.md 6.4).
 
 ## 6. Interactive blocks
 

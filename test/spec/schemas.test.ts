@@ -2,7 +2,7 @@
  * The JSON schemas (spec/schemas) against the published vectors: every wire object a vector accepts is valid
  * under its schema, and every one a vector refuses for a rule a schema can state is invalid under it. The
  * schemas are documentation for implementers; this keeps them from drifting from the code that makes the
- * vectors. Rules a schema cannot state (spec/schemas/README.md) are named below, each with its reason.
+ * vectors. Rules a schema cannot state (spec/schemas/readme.md) are named below, each with its reason.
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -42,7 +42,7 @@ function parsed(bytes: string): unknown {
 const isV1 = (m: unknown) => typeof m === 'object' && m !== null && (m as { v?: unknown }).v === 1;
 
 /**
- * Refusals a schema cannot state (spec/schemas/README.md): sizes in bytes and the limits, canonical form and
+ * Refusals a schema cannot state (spec/schemas/readme.md): sizes in bytes and the limits, canonical form and
  * canonical base64, a real calendar date, signatures, the receiving server's own context (its origin, the
  * domains it serves, its clock), and the hints' match with `to`. Each is named, so a new refused vector
  * either fails its schema or is added here with its reason.

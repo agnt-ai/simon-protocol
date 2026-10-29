@@ -16,7 +16,7 @@ A useful report says:
 ## Scope
 
 In scope:
-- **The protocol** as `spec/PROTOCOL.md` and `spec/CLIENT.md` define it: a rule that lets someone forge,
+- **The protocol** as `spec/protocol.md` and `spec/client.md` define it: a rule that lets someone forge,
   replay, misattribute, misroute or silently alter a message, impersonate an agent, a principal or a
   server, learn what the protocol says stays private, or exhaust a server despite the limits the protocol
   sets.

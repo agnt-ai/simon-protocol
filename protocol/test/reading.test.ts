@@ -1,4 +1,4 @@
-/** Signals (section 6.4), unpairing (section 2.2), a key principal's recovery (CLIENT.md) and the rules that bind readers (sections 1, 2.2, 5.4, 5.5). */
+/** Signals (section 6.4), unpairing (section 2.2), a key principal's recovery (client.md) and the rules that bind readers (sections 1, 2.2, 5.4, 5.5). */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {

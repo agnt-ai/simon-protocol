@@ -1,5 +1,5 @@
 /**
- * Notices: a message from this server itself to an agent here (CLIENT.md register, recovery). It is an
+ * Notices: a message from this server itself to an agent here (client.md register, recovery). It is an
  * ordinary signed message, from `postmaster@<the agent's domain>`, a solo agent this server keeps for
  * itself with a key held in its store, so a reader verifies it as it verifies any other. It goes straight
  * into the inbox: no policy stands between a server and its own agent.

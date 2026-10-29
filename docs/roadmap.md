@@ -1,10 +1,10 @@
 # Roadmap
 
-What comes after the core and the client layer, in short entries. Each names the problem, the direction, the precedent, and what has to happen first. Nothing here is specified yet; when an entry is, it moves into `spec/` or [MODULES.md](MODULES.md) and leaves this page.
+What comes after the core and the client layer, in short entries. Each names the problem, the direction, the precedent, and what has to happen first. Nothing here is specified yet; when an entry is, it moves into `spec/` or [modules.md](modules.md) and leaves this page.
 
 ## Encryption profile (after launch)
 
-**Problem.** Without end-to-end encryption, every server a message passes through reads it, as with email (PROTOCOL.md section 12).
+**Problem.** Without end-to-end encryption, every server a message passes through reads it, as with email (protocol.md section 12).
 
 **Direction.** A profile, never a change to the core: agents publish encryption keys in their documents (`encryptionKeys`, reserved in the registry) and send ciphertext as parts (`application/simon-sealed`, reserved). Servers carry it unchanged.
 - **One recipient:** HPKE (RFC 9180).
@@ -19,15 +19,15 @@ What comes after the core and the client layer, in short entries. Each names the
 
 **Direction.** An opt-in upgrade. Once two agents know each other, a signed message offers a live channel for that conversation only (an endpoint, a token, an expiry), and the other accepts with a signed reply. The message network stays the source of truth: anything that matters, such as an agreement, is sent as a message afterwards. The precedents are SIP's offer and answer, and XMPP's Jingle negotiated over an existing session.
 
-**First.** Real cases where a store-and-forward round trip is too slow. Until then, `sync` with `wait` and webhooks (CLIENT.md) keep a round trip to seconds.
+**First.** Real cases where a store-and-forward round trip is too slow. Until then, `sync` with `wait` and webhooks (client.md) keep a round trip to seconds.
 
 ## Governance and ecosystem
 
 **Open and community-run.**
-- **`GOVERNANCE.md`:** who decides, how a change is proposed (an issue, then the spec, vectors and suite together, as CONTRIBUTING.md says), how maintainers are added, and how a vendor's vote is limited.
+- **`governance.md`:** who decides, how a change is proposed (an issue, then the spec, vectors and suite together, as CONTRIBUTING.md says), how maintainers are added, and how a vendor's vote is limited.
 - **The protocol is SIMON; AGNT is the platform built on it.** The protocol goes open and community-run, so it carries no vendor's name. AGNT stays a product, as Exchange is beside SMTP. The rename is done for the wire and the packages: the headers, DNS record, paths, media types, signing contexts and environment variables say `simon`, the npm packages are `@agnt-sdk/simon-*`, and the spec text names the protocol SIMON. What remains is where the repository lives, which follows the name if it moves.
-- **A neutral home for SIMON.** We intend to move SIMON's name and repositories to a neutral open-source foundation at or after the public release, such as one that already hosts agent protocols, with the registry, the conformance service in network mode and key-transparency coordination alongside them. We also intend to take the wire spec to the IETF, with the IANA requests of PROTOCOL.md section 13, once an independent second implementation passes ([SECOND-IMPLEMENTATION.md](SECOND-IMPLEMENTATION.md)). Neither is a commitment yet: each depends on that body's charter and process at the time, and on the implementations and interest there are by then.
-- **Trademarks:** **AGNT keeps its trademark,** as it stands in `TRADEMARK.md`, since AGNT is the platform. If SIMON moves to a neutral home, the SIMON name would go with it, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled.
+- **A neutral home for SIMON.** We intend to move SIMON's name and repositories to a neutral open-source foundation at or after the public release, such as one that already hosts agent protocols, with the registry, the conformance service in network mode and key-transparency coordination alongside them. We also intend to take the wire spec to the IETF, with the IANA requests of protocol.md section 13, once an independent second implementation passes ([second-implementation.md](second-implementation.md)). Neither is a commitment yet: each depends on that body's charter and process at the time, and on the implementations and interest there are by then.
+- **Trademarks:** **AGNT keeps its trademark,** as it stands in `trademark.md`, since AGNT is the platform. If SIMON moves to a neutral home, the SIMON name would go with it, under that home's trademark policy, so implementers can say "SIMON" plainly and no one reads the protocol as vendor-controlled.
 
 **SDKs.** TypeScript and Python exist. Go, Rust and Java next, each reproducing every vector and passing the reader profile (`spec/profiles/reader.md`), ideally written by people outside the team.
 
@@ -38,7 +38,7 @@ What comes after the core and the client layer, in short entries. Each names the
 - Formal models (ProVerif or Tamarin) of pairing, delivery, key continuity, recovery and grants. An external security review names these as what matters most before version 1 is declared stable.
 - Review by models of other families, since models of one family share blind spots.
 
-**Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in PROTOCOL.md 2.2:
+**Privacy and erasure.** A `mailto:` or `tel:` principal is signed into every message its agent sends, for good, and cannot be erased without breaking the signature and every thread after it. The direction, already a SHOULD in protocol.md 2.2:
 - name principals by keys (`simon-key:`), held for them if they hold none;
 - carry their email and phone numbers as claims, message by message (the registry's `identifier`).
 
@@ -46,4 +46,4 @@ Erasing a person then erases the claims a host keeps, and nothing signed names t
 
 ## The application template
 
-The template in `app/` has known faults from a security review that must be fixed before anyone forks it: [app/docs/KNOWN-ISSUES.md](../app/docs/KNOWN-ISSUES.md).
+The template in `app/` has known faults from a security review that must be fixed before anyone forks it: [app/docs/known-issues.md](../app/docs/known-issues.md).

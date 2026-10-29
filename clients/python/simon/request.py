@@ -1,4 +1,4 @@
-"""Signed requests (spec section 8), and the add-key proof (CLIENT.md, register).
+"""Signed requests (spec section 8), and the add-key proof (client.md, register).
 
     simon-key:        <key token of the signing key>
     simon-timestamp:  <unix seconds: 1 to 12 ASCII digits>

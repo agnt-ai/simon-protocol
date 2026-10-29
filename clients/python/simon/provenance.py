@@ -92,7 +92,7 @@ def present_entry(entry: Mapping[str, Any]) -> dict[str, Any]:
     return presented
 
 
-#: Failure reasons the protocol defines (section 3 outcomes, section 9 codes, CLIENT.md ``expired``); any
+#: Failure reasons the protocol defines (section 3 outcomes, section 9 codes, client.md ``expired``); any
 #: other is another server's word.
 KNOWN_REASONS = frozenset(
     {

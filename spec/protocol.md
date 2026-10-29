@@ -8,16 +8,16 @@ SIMON delivers one signed message to `name@domain`. The test for every rule here
 3. Addressed to someone, it is sent: a copy lands in each recipient's inbox.
 4. Addressed to no one, it is published: kept by the author's server, readable by whoever its audience label allows ([publishing profile](profiles/publishing.md)).
 5. A signal is a small, short-lived note between servers (typing, collected, read), never stored.
-6. A client reads and manages a mailbox, holding its own key or given scoped access by the host ([CLIENT.md](CLIENT.md)).
+6. A client reads and manages a mailbox, holding its own key or given scoped access by the host ([client.md](client.md)).
 7. Anything else is a header, a block type or a relation, in the registry.
 
 **Core and profiles.** This document is the transport core: addresses, keys, messages, delivery, signed requests, versions and claims. Optional **profiles** build on it, each a short document of its own in [`spec/profiles/`](profiles/): the [reader](profiles/reader.md) profile (showing and acting on messages), [conversations](profiles/conversations.md) (grouping messages into conversations), [publishing](profiles/publishing.md) (published messages, feeds and their relations) and [discovery](profiles/discovery.md) (finding the assistant an email address or phone number chose). The core never depends on a profile. A server or reader that claims a profile MUST implement all of it.
 
-Nothing in the core is about AI: an agent is just a sender. A feature is in this document only when it has existed for decades in some form, and adding it later would force every server to change. Everything else is a registry entry. [`docs/CORE.md`](../docs/CORE.md) maps each idea to core or registry and gives its precedent.
+Nothing in the core is about AI: an agent is just a sender. A feature is in this document only when it has existed for decades in some form, and adding it later would force every server to change. Everything else is a registry entry. [`docs/core.md`](../docs/core.md) maps each idea to core or registry and gives its precedent.
 
 **Status.** SIMON 1, a public draft: its messages carry `"v":1`, and this text is what the reference packages' release 0.3.0 implements. It is declared stable when two independent implementations reproduce every test vector and pass the conformance suite against each other. Until then any rule may change, except that changes to section 1 need an overwhelming reason. Unreleased drafts share version 1; once a version is released, `v` changes only for an incompatible revision (section 10). The npm 0.1.x packages implemented an earlier pre-release draft of this same version; that format is deprecated, not given a number of its own.
 
-**Audience.** Most implementers will be agents. Every rule is stated so it can be implemented without asking anyone. The grammars are in Appendix A, and offline rules are exercised by `spec/vectors/v1.json`; section 15 describes coverage and its limits. The agent-to-server API is in [CLIENT.md](CLIENT.md), conventions are in [registry.md](registry.md), and the reasoning behind each choice is in [`docs/DECISIONS.md`](../docs/DECISIONS.md).
+**Audience.** Most implementers will be agents. Every rule is stated so it can be implemented without asking anyone. The grammars are in Appendix A, and offline rules are exercised by `spec/vectors/v1.json`; section 15 describes coverage and its limits. The agent-to-server API is in [client.md](client.md), conventions are in [registry.md](registry.md), and the reasoning behind each choice is in [`docs/decisions.md`](../docs/decisions.md).
 
 **Conventions.**
 - The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are to be read as in BCP 14 (RFC 2119, RFC 8174) when, and only when, they appear in capitals. Requirements carry them.
@@ -48,7 +48,7 @@ These invariants hold for every version, present and future, so a server built t
 Everything else belongs to a version.
 
 **Unknown versions.** A server MUST route, store and deliver a message of a version it does not know, applying only the checks of section 6.3 that do not depend on the version. Only readers interpret what a later version adds.
-- An agent's own server MUST refuse to *accept* a message of a version it does not implement (CLIENT.md), so an agent on an honest server cannot use a new version number to step around the rules of the versions its server knows.
+- An agent's own server MUST refuse to *accept* a message of a version it does not implement (client.md), so an agent on an honest server cannot use a new version number to step around the rules of the versions its server knows.
 - Anyone who runs a server can still write any version. So a reader that does not implement a message's version MUST present it as **not understood**: it MAY say whose key signed it, and MUST NOT say anything about what it says or whom it speaks for. It MUST NOT act on anything in it, or apply any claim or principal to it.
 
 ## 2. Addresses, agents, keys and encodings
@@ -82,7 +82,7 @@ An agent is one of two kinds, fixed for the life of its address.
 **How a principal is verified.** A `for` header on its own is only the agent's word, as a From line in email is. A reader MUST NOT treat a principal as verified unless one of these holds:
 - **A key principal:** the message carries a `pairing` header that verifies.
   - The principal approved the pairing by signing the bytes `SIMON-PAIR\n<agent address>\n<identifier>\n<until>` with its key, where `until` is a timestamp, and every message the agent sends carries `until` and that signature.
-  - The pairing counts at a moment before its `until` and at most 366 days before it. To verify a message, a reader MUST judge the pairing at the message's `sentAt`: a message sent while its pairing counted stays verified after the pairing lapses. `sentAt` is the sender's word, but the agent's own server judged the pairing at its own clock as well when it accepted the message (CLIENT.md send), so a message cannot be backdated past a lapse by more than that server's send window allows.
+  - The pairing counts at a moment before its `until` and at most 366 days before it. To verify a message, a reader MUST judge the pairing at the message's `sentAt`: a message sent while its pairing counted stays verified after the pairing lapses. `sentAt` is the sender's word, but the agent's own server judged the pairing at its own clock as well when it accepted the message (client.md send), so a message cannot be backdated past a lapse by more than that server's send window allows.
   - Whether a pairing must still count *now* for a reader to act on the message, for instance to answer for the principal, is the reader's policy: a reader SHOULD at most require that, and MAY instead take a later message from the same address with the same `for` and a pairing that counts as evidence that the pairing was renewed.
   - Any recipient can check the pairing without trusting any server. The message's own signature is still checked with the keys the agent's server publishes, so a server that lies about its agent's keys can make its own messages carry the pairing: the pairing proves the principal's consent, not that the server is honest.
   - It proves that the key's holder consented to this address speaking for that key. It says nothing about who or what holds the key, or whether it is a human.
@@ -95,25 +95,25 @@ A message without a `for` header names no principal. Whether an agent is paired 
 
 **What a pairing does not say.** It carries no scope or limit on what the agent may do for its principal. That is a matter for applications, and claims may carry it (section 6.2). A key pairing binds the address, not the agent's current key, so it survives key rotation and key compromise alike. It lapses at its `until`, ends when its address retires, and ends when its principal ends it.
 
-**A pairing lasts at most a year,** as a certificate lasts its validity period, so no signature binds an address to a principal for good. The principal sets `until`; an agent may propose one, but only the principal's signature makes it. Before it lapses, the principal **renews** the pairing by signing the same bytes with a later `until`, and the agent carries the new one from then on. A server holds no pairing to update: the agent's own server checks the pairing each message carries against its `for` (CLIENT.md send), so renewing needs no call. A host that holds a key for its principal (section 12, "Erasure") renews it as the principal's policy allows; a person who gives an email address or a phone number signs nothing, and so has nothing to renew. Libraries sign a year (365 days) by default; the cap of 366 leaves a day's leeway for clocks and leap years.
+**A pairing lasts at most a year,** as a certificate lasts its validity period, so no signature binds an address to a principal for good. The principal sets `until`; an agent may propose one, but only the principal's signature makes it. Before it lapses, the principal **renews** the pairing by signing the same bytes with a later `until`, and the agent carries the new one from then on. A server holds no pairing to update: the agent's own server checks the pairing each message carries against its `for` (client.md send), so renewing needs no call. A host that holds a key for its principal (section 12, "Erasure") renews it as the principal's policy allows; a person who gives an email address or a phone number signs nothing, and so has nothing to renew. Libraries sign a year (365 days) by default; the cap of 366 leaves a day's leeway for clocks and leap years.
 
 **A lapsed pairing.** A paired agent whose pairing has lapsed is still that principal's agent, waiting for renewal:
 - it keeps its address, and keeps receiving;
-- its own server MUST refuse what it sends until it carries a pairing that counts (CLIENT.md send);
+- its own server MUST refuse what it sends until it carries a pairing that counts (client.md send);
 - the principal may renew at any time, after the lapse as well as before it, by signing a later `until`; the agent carries the new pairing from then on.
 
 If the principal's key is lost, nothing can renew the pairing or sign a succession (below). The host MAY then retire the address, as its policy says. A new key pairs **new** addresses: it cannot take over the old ones, because nothing the old key signed links the two.
 
 **A key principal ends its pairing** by signing the bytes `SIMON-UNPAIR\n<agent address>\n<identifier>`. The signature is the **unpairing**.
-- A server that hosts the agent and is given a valid unpairing MUST retire the address at once (CLIENT.md says how it is given). No key of the agent can stop it, because the principal outranks the agent's keys.
+- A server that hosts the agent and is given a valid unpairing MUST retire the address at once (client.md says how it is given). No key of the agent can stop it, because the principal outranks the agent's keys.
 - A reader that holds a valid unpairing for an address MUST treat that address's pairing as ended, whatever messages it sees later.
-- **Unpairing always wins.** An unpairing signed by any key in the principal's succession chain, the current key or one it moved on from, MUST end the agent: at its server, when the unpairing comes with the succession from its signer to the principal the server holds (CLIENT.md); at a reader, which links the signer to the agent's `for` by the succession it holds. A move never shields an agent from a key it moved on from.
+- **Unpairing always wins.** An unpairing signed by any key in the principal's succession chain, the current key or one it moved on from, MUST end the agent: at its server, when the unpairing comes with the succession from its signer to the principal the server holds (client.md); at a reader, which links the signer to the agent's `for` by the succession it holds. A move never shields an agent from a key it moved on from.
 - Short of an unpairing, an old pairing counts until its `until`. If the address's domain changes hands, whoever controls the domain next can present that pairing until then (section 11.2).
 
 **A key principal moves to a new key** by a **succession**, so a principal who replaces a key keeps its place with everyone who knew the old one, as a certificate is reissued, or a domain's DKIM selector rotates.
 - Its old key and its new key both sign the bytes `SIMON-SUCCEED\n<old identifier>\n<new identifier>`: the old consents to pass on its place, and the new to take it.
 - An agent paired with the old key then carries the new one as `for`, with a `pairing` the new key signed, and the chain of steps as its `succession` header (section 5.4), oldest first, from any earlier key it chooses on to `for`. Each step names the one before it.
-- The agent's own server MUST move its record to the new key on the first such message, and MUST hold the agent to the new key from then on (CLIENT.md send). No other call is needed.
+- The agent's own server MUST move its record to the new key on the first such message, and MUST hold the agent to the new key from then on (client.md send). No other call is needed.
 - A reader that knew any key in the chain MAY treat `for` as the same principal. A **fork**, two steps from one key to different keys, means that key was used twice: a reader that holds both MUST NOT treat either successor as the old key's. How it shows them, and whether it ever links them again, is its policy (reader profile).
 - A reader that sees an address's `for` change to a key with no succession from the one before MUST treat it as a new principal, and SHOULD say so, as messaging apps flag a changed safety number; how is its policy.
 - A succession is for a planned change, while the old key is still held. A principal who has lost its key has nothing to sign a succession with; its pairings lapse, and a new key pairs new addresses ("A lapsed pairing", above).
@@ -142,7 +142,7 @@ Applications may present several pairs together; the protocol never mixes them. 
 - stop serving its published messages and their parts; public serving of signed retirement evidence is host policy (section 4);
 - never pair the address again.
 
-How a host names paired agents, and how it carries a principal's identifiers when they change, is advice for hosts ([`docs/HOST-NOTES.md`](../docs/HOST-NOTES.md)).
+How a host names paired agents, and how it carries a principal's identifiers when they change, is advice for hosts ([`docs/host-notes.md`](../docs/host-notes.md)).
 
 ### 2.3 Keys and algorithms
 
@@ -167,7 +167,7 @@ Version 1 defines two algorithms. Every implementation MUST implement `ed25519`,
 Every published key carries `added` and `revoked` (a timestamp, or `null`). A key is **valid at** a moment `t` when `added` is at most 300 seconds after `t` (a signer's clock may run behind) and either `revoked` is `null` or `t` is before it.
 
 - **History only grows forward.** A key's `added` is its first publication time. An authorized move between hosts MAY preserve genuine existing key history and its original timestamps; it MUST NOT invent an earlier history for a new key. A revocation takes effect when first published: a server MUST NOT backdate it or deliberately schedule it in the future. Readers allow the ordinary 300-second clock tolerance. Once a key is revoked, a server MUST NOT make it valid again or move its recorded revocation. A reader that caches documents can catch conflicting history; there is no transparency log (section 12).
-- **Who adds, revokes and recovers keys** is the agent's host's policy. Other servers see only the result, the keys and revocations in the agent document. The client API is specified separately in CLIENT.md; this core does not promise principal recovery, mailbox-only cancellation or any particular recovery wait. CLIENT.md defines the dedicated account and recovery calls; the host documents the delays, limits and recovery guarantees it offers. A key principal's unpairing (section 2.2) ends a pairing whatever the agent's keys say.
+- **Who adds, revokes and recovers keys** is the agent's host's policy. Other servers see only the result, the keys and revocations in the agent document. The client API is specified separately in client.md; this core does not promise principal recovery, mailbox-only cancellation or any particular recovery wait. client.md defines the dedicated account and recovery calls; the host documents the delays, limits and recovery guarantees it offers. A key principal's unpairing (section 2.2) ends a pairing whatever the agent's keys say.
 - A server MAY stop listing a revoked key. A fresh reader that no longer obtains the necessary authenticated key history cannot verify what that key signed. Keeping a message alone does not preserve the evidence needed to verify it again. A recipient may retain previously authenticated key material for its own local trust decisions; this is not a transferable proof of historical DNS authority, signing time or completeness, and version 1 defines no durable archival-evidence format or perpetual verification service.
 
 ### 2.5 Encodings and timestamps
@@ -207,7 +207,7 @@ GET https://<domain>/.well-known/simon            {"server":"https://<host>"}
     - `not_found`: no simon record exists, and the well-known fetch did not answer with a valid `200`. That covers a host that does not exist (NXDOMAIN), a refused connection, a certificate not valid for the domain, and any other answer, except as below.
   - try again, `temporary`: a lookup or fetch failed in a way that may pass. That covers a DNS server error, a timeout, a dropped connection, a `429` or a `5xx` from the well-known host, and a DNSSEC validation failure (section 11.1).
 - **Try again never becomes no server.** A temporary TXT failure MUST end the resolution attempt with `temporary`, without trying the well-known answer, even if it would be reachable. A resolver MUST retry a `temporary` outcome later, and MUST NOT read it, or cache it, as no server.
-- **Caching.** A resolver MAY cache a `server` answer for no longer than its DNS TTL, or than the well-known response's HTTP caching headers allow (RFC 9111), and only briefly when the answer states no lifetime. It MAY cache `not_found` as DNS caches a negative answer (RFC 2308), and only briefly when the absence came from the well-known fetch. It MAY remember a `temporary` outcome only briefly, so a recovery is never hidden for long. It MUST NOT cache `invalid_domain`, `invalid_record` or `conflict`: they come from records whose fix should take effect at once. How long it keeps an answer within those bounds is its own; [`docs/HOST-NOTES.md`](../docs/HOST-NOTES.md) gives the reference library's caps.
+- **Caching.** A resolver MAY cache a `server` answer for no longer than its DNS TTL, or than the well-known response's HTTP caching headers allow (RFC 9111), and only briefly when the answer states no lifetime. It MAY cache `not_found` as DNS caches a negative answer (RFC 2308), and only briefly when the absence came from the well-known fetch. It MAY remember a `temporary` outcome only briefly, so a recovery is never hidden for long. It MUST NOT cache `invalid_domain`, `invalid_record` or `conflict`: they come from records whose fix should take effect at once. How long it keeps an answer within those bounds is its own; [`docs/host-notes.md`](../docs/host-notes.md) gives the reference library's caps.
 
   Nothing else resolves anything.
 - **Limitations.**
@@ -424,7 +424,7 @@ Content-Type: application/json
 **Claims** are statements the carrier makes about the author. They are read by the receiver's policy if at all, and by readers wherever the message travels afterwards.
 
 - When present, `claims` is an array of at most 16 objects, each with a non-empty string `type`. Types other than `acts-for` are defined by the registry.
-- **Claims are signed on their own, for the message.** An envelope that carries `claims` MUST also carry `claimsSignature`, and one without `claims` MUST NOT. It is the carrier's base64url signature over `SIMON-CLAIMS\n` and the canonical bytes of `{"claims":<claims>,"message":<the message id>}`. The envelope is for one server, but the claims and their signature travel with the message into its recipients' inboxes (CLIENT.md), so a later reader can check that the carrier made them while the necessary authenticated carrier key history remains obtainable, or under a local trust decision using previously authenticated material. The signed claims alone do not preserve that key history. It MUST check them with a key of the carrier valid at some moment of the message's delivery window, from its `sentAt` to the delivery horizon, 144 hours after (section 9). That window rests on the author's `sentAt`, so a carrier key revoked after a compromise still verifies claims on messages dated before its revocation, as it verifies those messages themselves (section 11.2).
+- **Claims are signed on their own, for the message.** An envelope that carries `claims` MUST also carry `claimsSignature`, and one without `claims` MUST NOT. It is the carrier's base64url signature over `SIMON-CLAIMS\n` and the canonical bytes of `{"claims":<claims>,"message":<the message id>}`. The envelope is for one server, but the claims and their signature travel with the message into its recipients' inboxes (client.md), so a later reader can check that the carrier made them while the necessary authenticated carrier key history remains obtainable, or under a local trust decision using previously authenticated material. The signed claims alone do not preserve that key history. It MUST check them with a key of the carrier valid at some moment of the message's delivery window, from its `sentAt` to the delivery horizon, 144 hours after (section 9). That window rests on the author's `sentAt`, so a carrier key revoked after a compromise still verifies claims on messages dated before its revocation, as it verifies those messages themselves (section 11.2).
 - A claim travels only with the messages it concerns, so nothing about who stands behind an agent is published anywhere. A carrier MUST attach a claim only as its agent chose, and MUST NOT attach one that names an identifier its agent did not choose to show (section 2.2).
 - **`acts-for`** means the carrier verified that the principal in the message's `for` header approved this agent. Its members are:
   - `agent`: the message's `from`.
@@ -433,7 +433,7 @@ Content-Type: application/json
   - `scope`: an array of strings naming what the principal allowed. Their meaning belongs to the carrier and the applications that read them; the registry lists the common ones.
 - **Ignored claims.** A receiver MUST ignore an `acts-for` claim that lacks a member above or has one malformed, whose `agent` is not the message's `from`, or whose `for` is not the message's `for` header. A message without a `for` header carries no `acts-for` claim that counts.
 - **Authority.** An `acts-for` claim is **authoritative** when its `for` is a `mailto:` identifier whose domain names the carrier by its `_simon` TXT record (sections 2.2 and 3). A domain whose server is named only by its well-known answer grants no authority. The registry's `identifier` claim is judged the same way, by its identifier.
-  - A receiving server MUST pass its judgement to its agents beside the claims, never inside them (CLIENT.md). A member named `authoritative` in a received claim means nothing, and a receiver MUST drop it from its judged copy only. It MUST preserve the original claims and signature byte-exact as signed evidence; reserializing their canonical JSON preserves those signing bytes.
+  - A receiving server MUST pass its judgement to its agents beside the claims, never inside them (client.md). A member named `authoritative` in a received claim means nothing, and a receiver MUST drop it from its judged copy only. It MUST preserve the original claims and signature byte-exact as signed evidence; reserializing their canonical JSON preserves those signing bytes.
   - A reader that wants to rely on a claim MUST repeat the judgement itself: it checks `claimsSignature` with the keys of the server the message's `from` domain resolves to, and resolves the identifier's domain. It MUST NOT take anything on the word of whoever handed it the message, since anyone can paste an inbox entry. This is a judgement using the DNS answer available at delivery for a receiver, and at the time of checking for a later reader, including any permitted cache. It is not proof of the DNS state when a historical claim was issued; a later DNS change can change the judgement.
 - **Attestation policy.** Before making an `acts-for` claim, the carrier MUST establish the principal's entitlement and approval under documented host policy. DNS authorization names the attesting carrier; it does not itself prove consent. A receiver SHOULD validate the authority-bearing TXT answer through DNSSEC where available or corroborating vantage points.
 - **Signing-time limit.** Claims carry no independent issued-at time. A carrier key valid within the author's delivery window can later sign claims for that message; while its history is retained, a stolen or subsequently revoked key can do so for an earlier window. `verifiedAt` is the carrier's assertion about verification, not an independently proved signing time. No historical DNS authority follows from an untrusted stored judgment or a current DNS lookup.
@@ -510,7 +510,7 @@ Content-Type: application/json
 **The sender's to give.** A signal tells its recipient something about its sender.
 - **Sending.** A server MUST send a signal only when its agent asks for it. Reading an inbox, fetching a part or any other call MUST NOT send one by itself. It MUST send `read` only when its agent, or the person the agent serves, chose to share reading.
 - **Receiving.** Any server may drop any signal it receives, silently: whose signals its agents see is its own policy.
-- **Never stored as a message.** A server MUST NOT put a signal in an inbox or a history. A host MUST hold one for at most the bound CLIENT.md sets ("Signals", five minutes); how briefly within that bound, and whether it shows it, is host policy; see the reference-server notes.
+- **Never stored as a message.** A server MUST NOT put a signal in an inbox or a history. A host MUST hold one for at most the bound client.md sets ("Signals", five minutes); how briefly within that bound, and whether it shows it, is host policy; see the reference-server notes.
 
 ## 7. Published messages and parts
 
@@ -529,9 +529,9 @@ A **file** is a part named by `sha256` and `size`.
 3. **A recipient's server SHOULD copy files when a message arrives, not when it is read,** because a fetch on read tells the carrier when the message was read. Whoever fetches MUST check the hash and the size.
 4. **Anything larger than `partBytes` MUST be sent as a link, and anything that must stay revocable or live SHOULD be,** the registry's `application/simon-reference+json`, whose bytes stay where the link points.
 
-**Independent grants.** A request with `simon-server` uses authenticated delivery grants; a hosted agent uses its private client grant, as CLIENT.md says. How these compose with publication grants, and what a failed signature asks as, is in the publishing profile, section 2. A local file still being fetched may produce the client API's `503`.
+**Independent grants.** A request with `simon-server` uses authenticated delivery grants; a hosted agent uses its private client grant, as client.md says. How these compose with publication grants, and what a failed signature asks as, is in the publishing profile, section 2. A local file still being fetched may produce the client API's `503`.
 
-How a server schedules, limits and retries its fetches is its own; the reference server's notes describe one way (`docs/REFERENCE-SERVER.md`). When it fetches says something about its agents (section 12).
+How a server schedules, limits and retries its fetches is its own; the reference server's notes describe one way (`docs/reference-server.md`). When it fetches says something about its agents (section 12).
 
 **What sharing a file means.**
 - **It cannot be taken back.** Bytes are copied to recipients' servers. A sender who may need to revoke access sends a link instead (rule 4).
@@ -548,7 +548,7 @@ Moved to the [publishing profile](profiles/publishing.md), section 4.
 
 ## 8. Signed requests
 
-Agents sign their calls to their own server ([CLIENT.md](CLIENT.md)) and their reads of published messages, their files, feeds and relations (publishing profile), and servers sign the few calls they make to each other that are not deliveries or signals, such as fetching parts. All use these headers:
+Agents sign their calls to their own server ([client.md](client.md)) and their reads of published messages, their files, feeds and relations (publishing profile), and servers sign the few calls they make to each other that are not deliveries or signals, such as fetching parts. All use these headers:
 
 ```
 simon-key:        <key token of the signing key>
@@ -559,7 +559,7 @@ simon-agent:      <the acting agent's address; on agent requests>
 simon-server:     <the requesting server's serialized origin; on server requests>
 ```
 
-A request MUST carry one of `simon-agent` and `simon-server`, never both: it names who the request acts as. Only a call CLIENT.md says is authorised by what it carries, such as `register`, whose body names the address it acts on, MAY carry neither; its identity line is then empty.
+A request MUST carry one of `simon-agent` and `simon-server`, never both: it names who the request acts as. Only a call client.md says is authorised by what it carries, such as `register`, whose body names the address it acts on, MAY carry neither; its identity line is then empty.
 
 The **signing string** is eight lines joined by single newlines, with no trailing newline:
 
@@ -603,9 +603,9 @@ SIMON-REQUEST
 - On a `bad_signature`, also `details.signingString`: the string the server expected, so a signer can fix its string or its clock without reading documentation.
 
 **Exceptions.**
-- Section 7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: a `simon-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_simon` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures MUST use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; CLIENT.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
+- Section 7.2 uses public service/domain routing to distinguish hosted client calls from foreign reads, never hidden account existence. **Public service/domain routing** means: a `simon-agent` request names an address on a domain this server serves (one it hosts or leases, or one whose `_simon` record resolves to it), so it is a hosted client call; one naming any other address is a foreign read. It depends only on the domain, never on whether an agent holds that address. Hosted authentication failures MUST use the same minimal `401 bad_signature` outward response for unknown, revoked, retired and invalid-signature cases; client.md defines that response instead of exposing key-state diagnostics or a signing string. Authorized pending fetches may return `503`. Foreign invalid signatures ask as nobody and may still use an independent public grant; absent any grant they get uniform `404`.
 - The publishing profile's reads answer a request whose signature fails as they answer one that is not signed, so the refusal tells nothing about the message.
-- A call CLIENT.md says is authorised by what it carries, such as a `register` that proves an address by code, proceeds with a key the server does not know; the server MUST still verify the signature with the key in `simon-key`.
+- A call client.md says is authorised by what it carries, such as a `register` that proves an address by code, proceeds with a key the server does not know; the server MUST still verify the signature with the key in `simon-key`.
 
 ## 9. HTTP, errors and limits
 
@@ -626,7 +626,7 @@ SIMON-REQUEST
  "detail":"sentAt is more than 144 hours old.","details":{"field":"sentAt"}}
 ```
 
-The codes the protocol defines (the client API's own are in [CLIENT.md](CLIENT.md)):
+The codes the protocol defines (the client API's own are in [client.md](client.md)):
 
 | Status | Code | When |
 | --- | --- | --- |
@@ -648,7 +648,7 @@ The codes the protocol defines (the client API's own are in [CLIENT.md](CLIENT.m
 - the time windows below, and those sections 2.2, 4 and 6.4 state.
 
 **Time windows.** Three constants set the windows of sending and delivery: the **send window**, 24 hours; the **delivery horizon**, 144 hours after a message's `sentAt`; and the **clock skew** every party allows, 300 seconds. The rest follow from them:
-- **Send:** an agent's own server takes a message whose `sentAt` is at most the send window old (CLIENT.md send), which leaves 120 hours, five days, to deliver it.
+- **Send:** an agent's own server takes a message whose `sentAt` is at most the send window old (client.md send), which leaves 120 hours, five days, to deliver it.
 - **Deliver:** a receiver takes a message whose `sentAt` is at most the horizon old and at most the skew ahead (section 6.3 step 10).
 - **Deadline:** an author's server stops delivering at the earlier of five days after it accepted the message and an hour before the horizon, so a delivery made by the deadline is never stale on arrival (section 6.3).
 - **Repeats:** a receiver recognises a message it accepted until a day after the horizon, 168 hours after `sentAt`, so a late retry of an accepted message is answered `202` (section 6.3 step 9).
@@ -663,7 +663,7 @@ The codes the protocol defines (the client API's own are in [CLIENT.md](CLIENT.m
 
 Every server MUST accept anything within the minimums, so a sender that stays within them is never refused for size.
 
-These are the protocol's only numbers. Every other limit an implementation keeps, such as how many parts it fetches at once, how many bytes it keeps for one carrier or how much it accepts from one sender, is that implementation's own. The reference server's values are defaults chosen for one server, not requirements (`docs/REFERENCE-SERVER.md`).
+These are the protocol's only numbers. Every other limit an implementation keeps, such as how many parts it fetches at once, how many bytes it keeps for one carrier or how much it accepts from one sender, is that implementation's own. The reference server's values are defaults chosen for one server, not requirements (`docs/reference-server.md`).
 
 ## 10. Extending the protocol
 
@@ -759,7 +759,7 @@ A server MUST bound DNS and document lookup work caused by unauthenticated reque
 - **Interactive blocks are data, never code.** A block that offers choices is a description the reader draws with its own components; choosing never calls a URL or runs anything the author sent (reader profile, section 6).
 - **Resource exhaustion.** An implementation that decodes HTTP content encodings MUST bound both the transferred body and the decoded bytes passed to parsers or hash/size checks, or refuse encodings it does not support. A compressed transfer-size cap alone is not a decoded-size cap. Every input has a bound: message, signal and document sizes, key counts, part counts and time windows. Deliver and signal do work for anyone who can reach the server.
   - A server MUST NOT resolve a recipient's domain, or do other recipient-dependent work for a delivery, before the carrier's signature verifies (section 6.3), so one unsigned request cannot make it contact a hundred recipient domains. Looking up the purported carrier and its keys necessarily happens before verifying it; foreign-reader authentication also needs an unauthenticated lookup. These lookups are not covered by a claim that authentication precedes every lookup.
-  - How a server protects itself beyond that, its budgets, rate limits and fairness between senders, is its own. The reference server's notes describe what it does (`docs/REFERENCE-SERVER.md`).
+  - How a server protects itself beyond that, its budgets, rate limits and fairness between senders, is its own. The reference server's notes describe what it does (`docs/reference-server.md`).
 - **What answers reveal.**
   - Agent documents reveal that an agent exists.
   - Deliver and signal reveal nothing about recipients.
@@ -806,7 +806,7 @@ Until a neutral home takes over, this repository is the registry's interim home,
 **Registrations requested:**
 - **Underscored DNS node name** (RFC 8552): `_simon`, RR type TXT, referencing section 3.
 - **Well-known URI** (RFC 8615): suffix `simon`, change controller the SIMON Protocol maintainers, status provisional, referencing section 3.
-- **HTTP field names** (RFC 9110 section 16.3.1): `simon-key`, `simon-timestamp`, `simon-nonce`, `simon-signature`, `simon-agent` and `simon-server` (section 8), and `simon-hints` (CLIENT.md).
+- **HTTP field names** (RFC 9110 section 16.3.1): `simon-key`, `simon-timestamp`, `simon-nonce`, `simon-signature`, `simon-agent` and `simon-server` (section 8), and `simon-hints` (client.md).
 - **HTTP authentication scheme:** `SIMON` (section 8).
 
 **Registries to create,** each with the policy Specification Required (RFC 8126), where the specification may be a registry entry with a public description:
@@ -829,7 +829,7 @@ Until a neutral home takes over, this repository is the registry's interim home,
 - What a pairing allows an agent to do for its principal.
 
 **Storage and retention:**
-- How long a server keeps unread messages beyond what CLIENT.md requires.
+- How long a server keeps unread messages beyond what client.md requires.
 - Deleting a message once delivered. A convention may ask, but nothing forces a server to forget.
 - Searching or querying messages beyond the inbox cursor.
 
@@ -849,7 +849,7 @@ Until a neutral home takes over, this repository is the registry's interim home,
 
 **Server features:**
 - Webhooks, acknowledgments, notices, bridges and owner windows.
-- Spam economics beyond rate limits and refusal. [`docs/DECISIONS.md`](../docs/DECISIONS.md) gives the abuse model.
+- Spam economics beyond rate limits and refusal. [`docs/decisions.md`](../docs/decisions.md) gives the abuse model.
 
 All of these are server features or services built on top.
 
@@ -964,7 +964,7 @@ In a media type, the type, subtype and parameter names are lower case, while `rn
 
 ## Appendix B. Rules and their tests
 
-Each row names a rule or a group of rules, where it is stated, and what tests it: sections of `spec/vectors/v1.json` (with a member in parentheses where only part of a section applies) and conformance checks by id, `*` matching any ending ([`conformance/README.md`](../conformance/README.md) lists each). A dash means nothing tests the rule yet. A spec test (`test/spec/appendix.test.ts`) fails when a vector section or a conformance check is in neither column.
+Each row names a rule or a group of rules, where it is stated, and what tests it: sections of `spec/vectors/v1.json` (with a member in parentheses where only part of a section applies) and conformance checks by id, `*` matching any ending ([`conformance/readme.md`](../conformance/readme.md) lists each). A dash means nothing tests the rule yet. A spec test (`test/spec/appendix.test.ts`) fails when a vector section or a conformance check is in neither column.
 
 | Rule | Section | Vectors | Conformance |
 | --- | --- | --- | --- |
@@ -1009,4 +1009,4 @@ Each row names a rule or a group of rules, where it is stated, and what tests it
 | Lookups: advertised by `discovery`, signed by the asker, one identifier at a time, the same `404` for every identifier without a record | discovery profile 2, 6 | — | `discovery.signed`, `discovery.not-found` |
 | Who answers: the identifier's own domain is final, a failed lookup never falls through to a directory or means nobody | discovery profile 3 | — | — (readers are not servers) |
 | Keeping a directory: listing only on the holder's code and the assistant's signature, unlisting by either, codes | discovery profile 4, 6 | — | — |
-| The client API | CLIENT.md | `principals`, `recoveries`, `clock` | `register.*`, `account.*`, `keys.*`, `send.*`, `sync.*`, `sent.*`, `parts.upload*` |
+| The client API | client.md | `principals`, `recoveries`, `clock` | `register.*`, `account.*`, `keys.*`, `send.*`, `sync.*`, `sent.*`, `parts.upload*` |

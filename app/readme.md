@@ -1,6 +1,6 @@
 # simon-app
 
-The SIMON application template: the basic server ([`server/`](../server/README.md)) with a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Every module is built on the basic server's extension API; none edits its core. Storage is MongoDB.
+The SIMON application template: the basic server ([`server/`](../server/readme.md)) with a directory of people, pairing by email and phone, recipient policy, introductions, an owner window, webhooks, upload checks and an email bridge. Every module is built on the basic server's extension API; none edits its core. Storage is MongoDB.
 
 ## Run
 
@@ -20,7 +20,7 @@ All of them run unless `SIMON_MODULES` names fewer. Each is one extension of the
 | --- | --- | --- |
 | `agents` (always) | An agent's card, its check-in (`GET /api/agents/me/home`), its read cursor, ending it | routes |
 | `directory` | People and their identifiers; pairing agents with `mailto:` and `tel:` principals by a code; profiles as attestations; entities claimed by DNS; the relationship graph; resolve, search, reach | `verifyPrincipal`, `claimsFor`, `on.recovered`, routes, background work |
-| `policy` | Allow and block lists (an agent's, and a person's for all their agents), invites, accept-known, the opt-in verified-human rule, contact tiers, inbound limits ([docs/POLICY.md](docs/POLICY.md)) | `admit`, `on.stored`, `on.inbox`, routes |
+| `policy` | Allow and block lists (an agent's, and a person's for all their agents), invites, accept-known, the opt-in verified-human rule, contact tiers, inbound limits ([docs/policy.md](docs/policy.md)) | `admit`, `on.stored`, `on.inbox`, routes |
 | `intros` | Double-blind introductions, carried only by people whose own edge says they know the requester, in waves, and never to a target who blocks the requester | routes, background work |
 | `owner` | The owner window (`/api/me`) over OAuth 2.1 with PKCE, API keys, the activity log, and the person's decisions on what their agents ask | `on.stored`, `on.inbox`, routes, background work |
 | `bridge` | Mail to recipients whose domain names no SIMON server, and replies back from `bridge@` | `on.unroutable`, routes, background work |
@@ -34,12 +34,12 @@ The application's own agents, `notices@` and `bridge@` on the system domain, are
 
 ## Pairing
 
-One agent and one identifier make one address, for life (spec/PROTOCOL.md section 2.2). An email or phone principal pairs through the server's `verifyPrincipal` hook:
+One agent and one identifier make one address, for life (spec/protocol.md section 2.2). An email or phone principal pairs through the server's `verifyPrincipal` hook:
 
 1. `POST /simon/register {key, address?, for: "mailto:ada@example.com", "agnt.ai:scope"?}` answers `202 {status: "pairing_code_sent", address, for, sentTo}`; the code goes to the address, naming the agent, its key and the scope asked for (default `converse`, `schedule`).
 2. The same call with `agnt.ai:pairingCode` registers the agent, paired. Its messages then carry an `acts-for` claim with that scope.
 
-`agnt.ai:scope` and `agnt.ai:pairingCode` are host-defined members, named under the domain of the host that defined them as CLIENT.md ("Bodies") asks; they are not part of the SIMON client API. A fork names its own under its own domain.
+`agnt.ai:scope` and `agnt.ai:pairingCode` are host-defined members, named under the domain of the host that defined them as client.md ("Bodies") asks; they are not part of the SIMON client API. A fork names its own under its own domain.
 
 A person's several pairs (work and personal email, two assistants) show together in the owner window once the person proves each identifier theirs in the session (below). Ending a pair (`DELETE /api/me/agents/{address}`, or `DELETE /api/agents/me` once the person approves it) retires the address. When a paired agent's keys are replaced by a code to its own address, its claim narrows to `converse`, with `recoveredAt`, until the person confirms by the link sent to the identifier it speaks for.
 
@@ -47,7 +47,7 @@ Key principals pair by their own signature, which the core checks; the directory
 
 ## What an agent's key may do
 
-An agent's key authorises the protocol's calls, and a server may reserve its other operations to the agent's principal (spec/CLIENT.md). This application reserves to the principal what decides who may reach an agent, what is published about it and its person, where it is woken, whether it lives, which introductions its person joins, and what it writes into the graph:
+An agent's key authorises the protocol's calls, and a server may reserve its other operations to the agent's principal (spec/client.md). This application reserves to the principal what decides who may reach an agent, what is published about it and its person, where it is woken, whether it lives, which introductions its person joins, and what it writes into the graph:
 
 | Principal-reserved | Routes |
 | --- | --- |
@@ -101,7 +101,7 @@ Everything this application adds is under `/api/`, described by [`openapi.json`]
 - a principal-reserved call by a paired agent answers `202 {status: "awaiting_principal", request}` (above);
 - identifiers are principals: `mailto:<address>`, `tel:+<E.164>` or `simon-key:<key token>`.
 
-Agents sign their requests as on `/simon/` (spec/PROTOCOL.md section 8); people send an owner access token or API key as a Bearer token.
+Agents sign their requests as on `/simon/` (spec/protocol.md section 8); people send an owner access token or API key as a Bearer token.
 
 ## The client
 
@@ -128,7 +128,7 @@ if (isAwaiting(asked)) await owner.decide(asked.request.id, 'approve');
 
 ## Configuration
 
-The basic server's variables are in [server/README.md](../server/README.md). This application's, each read by the module it belongs to:
+The basic server's variables are in [server/readme.md](../server/readme.md). This application's, each read by the module it belongs to:
 
 | Variable | Meaning | Default |
 | --- | --- | --- |
@@ -140,7 +140,7 @@ The basic server's variables are in [server/README.md](../server/README.md). Thi
 | `SIMON_SMTP_HOST`, `_PORT`, `_TLS`, `_USER`, `_PASS`, `SIMON_MAIL_FROM` | Mail; required outside development when `directory`, `owner` or `bridge` runs | none |
 | `SIMON_DEV_OUTBOX` | Development: append each email to this file | console |
 | `SIMON_TWILIO_SID`, `_TOKEN`, `_FROM` | Text messages, for `tel:` principals | console in development, none otherwise |
-| `SIMON_INBOUND_PER_SENDER`, `_PER_DOMAIN`, `_FIRST_CONTACTS` | Policy's inbound limits, per recipient per UTC day ([docs/POLICY.md](docs/POLICY.md)) | 200, 2000, 30 |
+| `SIMON_INBOUND_PER_SENDER`, `_PER_DOMAIN`, `_FIRST_CONTACTS` | Policy's inbound limits, per recipient per UTC day ([docs/policy.md](docs/policy.md)) | 200, 2000, 30 |
 | `SIMON_CLAMD_HOST`, `SIMON_CLAMD_PORT` | The upload scanner | none |
 | `SIMON_ALLOW_UNSCANNED_UPLOADS` | `1`: keep uploads with no scanner | `1` in development only |
 | `SIMON_UPLOAD_BYTES_PER_DAY` | Upload volume per agent | 500 MiB |
@@ -150,7 +150,7 @@ The basic server's variables are in [server/README.md](../server/README.md). Thi
 
 ## Storage
 
-`MongoStore` ([`@agnt-sdk/simon-store-mongo`](../store-mongo/README.md), in `store-mongo/`) implements the server's `Store` on MongoDB, in the `core.*` collections; its contract checks are in `store-mongo/test/store.test.ts`, and `SIMON_TEST_MONGO_URI=<connection string> node --test store-mongo/test/store.test.ts` runs them against a real deployment, Amazon DocumentDB for instance, each test in its own `simon_contract_*` database, dropped afterwards. The application's own tests take their databases from the same package's `/testing` entry, so `SIMON_TEST_MONGO_URI` runs them against a real deployment too. It uses MongoDB atomic document writes, unique indexes and shared database-clock cursor reservations. Inbox readers use the cursor counter and unfinished reservations to choose a safe watermark for returned entries. Each module keeps its own records in its own collections (`directory.*`, `policy.*`, `owner.*`, ...) behind a small interface of its own, in its `store.ts`.
+`MongoStore` ([`@agnt-sdk/simon-store-mongo`](../store-mongo/readme.md), in `store-mongo/`) implements the server's `Store` on MongoDB, in the `core.*` collections; its contract checks are in `store-mongo/test/store.test.ts`, and `SIMON_TEST_MONGO_URI=<connection string> node --test store-mongo/test/store.test.ts` runs them against a real deployment, Amazon DocumentDB for instance, each test in its own `simon_contract_*` database, dropped afterwards. The application's own tests take their databases from the same package's `/testing` entry, so `SIMON_TEST_MONGO_URI` runs them against a real deployment too. It uses MongoDB atomic document writes, unique indexes and shared database-clock cursor reservations. Inbox readers use the cursor counter and unfinished reservations to choose a safe watermark for returned entries. Each module keeps its own records in its own collections (`directory.*`, `policy.*`, `owner.*`, ...) behind a small interface of its own, in its `store.ts`.
 
 ## Layout
 

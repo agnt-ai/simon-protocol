@@ -1,6 +1,6 @@
 /**
  * The application as a process: `node app/src/main.ts`. Configuration comes from the environment (the
- * basic server's variables and this application's, app/README.md); storage is the MongoDB it names.
+ * basic server's variables and this application's, app/readme.md); storage is the MongoDB it names.
  */
 import { createApp } from './app.ts';
 import { loadAppConfig } from './config.ts';

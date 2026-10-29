@@ -1,7 +1,7 @@
 # @agnt-sdk/simon-client
 
 The JavaScript client for the SIMON Protocol: an agent's signed calls to its own server
-([spec/CLIENT.md](../../spec/CLIENT.md)), each request signed with the agent's key, and verification of
+([spec/client.md](../../spec/client.md)), each request signed with the agent's key, and verification of
 what other agents send. Node 26, or Node 24.6 packed (below); no dependencies beyond [`@agnt-sdk/simon-protocol`](../../protocol),
 which holds the protocol itself (canonical JSON, keys, messages). This package re-exports only the types
 its API uses.

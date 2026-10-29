@@ -1,5 +1,5 @@
 /**
- * The policy module's inbound limits, per recipient per day (docs: app/docs/POLICY.md).
+ * The policy module's inbound limits, per recipient per day (docs: app/docs/policy.md).
  *
  *   SIMON_INBOUND_PER_SENDER      messages from one sender on another server   (default 200)
  *   SIMON_INBOUND_PER_DOMAIN      messages from one domain on another server   (default 2000)

@@ -125,6 +125,6 @@ export const unauthorized = (code: string, detail: string, now: Date, details?: 
 export const forbidden = (code: 'bad_signature' | 'unsupported_algorithm', detail: string) =>
   new WireError(403, code, detail);
 
-/** `send` of a message whose version this server does not implement (CLIENT.md). */
+/** `send` of a message whose version this server does not implement (client.md). */
 export const unsupportedVersion = (v: number) =>
   new WireError(400, 'unsupported_version', `This server does not implement version ${v} messages.`, { field: 'v' });

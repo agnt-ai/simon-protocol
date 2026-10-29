@@ -1,5 +1,5 @@
 /**
- * Spec section 7.2 and CLIENT.md parts: uploads, the three ways bytes may be read, and the recipient's
+ * Spec section 7.2 and client.md parts: uploads, the three ways bytes may be read, and the recipient's
  * server fetching bytes for its agents.
  */
 import assert from 'node:assert/strict';

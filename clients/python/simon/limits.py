@@ -50,7 +50,7 @@ REVOCATION_AHEAD_MS = 300_000
 _HOUR_MS = 3_600_000
 #: How far ahead of a receiver's clock ``sentAt`` may be, everywhere.
 SENT_AT_AHEAD_MS = 300_000
-#: How old ``sentAt`` may be when an agent sends to its own server (CLIENT.md, send).
+#: How old ``sentAt`` may be when an agent sends to its own server (client.md, send).
 SEND_WINDOW_MS = 24 * _HOUR_MS
 #: How old ``sentAt`` may be when another server delivers it (section 6.3, step 9).
 DELIVERY_WINDOW_MS = 144 * _HOUR_MS
