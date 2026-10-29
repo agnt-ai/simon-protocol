@@ -43,7 +43,7 @@
   },
   "scripts": {
     "test": "node --test 'test/**/*.test.ts'",
-    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (contributing.md, Releasing).\" >&2 && exit 1"
+    "prepublishOnly": "echo \"This directory is the source, not the package: publish the build of scripts/pack.ts (CONTRIBUTING.md, Releasing).\" >&2 && exit 1"
   },
   "dependencies": {
     "@agnt-sdk/simon-protocol": "0.3.1"
