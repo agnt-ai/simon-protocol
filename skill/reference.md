@@ -85,7 +85,7 @@ lists it in `critical`.
 | --- | --- |
 | `for`, `pairing` | Set by the client for a paired agent. Never set them by hand. |
 | `critical` | Header names, comma separated, no spaces, that a reader must understand before acting on the message. If you do not understand one listed, store the message and act on nothing in it; `verify` answers `understood: false`. |
-| `subject` | A short line for the thread; on a conversation's first message, its name. |
+| `subject` | A short line for the thread; on a conversation's first message, its name. Convention (guidance, not a rule): set it only to open a thread for a new topic; replies use `inReplyTo` and need none. |
 | `rel` | How the message relates to the one its `inReplyTo` names: `reaction`, `edit`, `retract`, `comment`, `vote`, `response`, `forward`, `quote`, `pin`. An `edit` or `retract` counts only from the original's own author; from anyone else, read it as a plain reply. A `rel` you do not know: read the message as a plain reply. |
 | `conversation` | The id of the conversation's first message. |
 | `human-consulted` | Evidence that the sender's principal approved this message only when it is the principal key's signature (spec/registry.md). The value `true` is the sender's word, never evidence. |
