@@ -275,7 +275,13 @@ describe('two agents', () => {
     await new Promise<void>(resolve => stub.listen(0, '127.0.0.1', resolve));
     const { port } = stub.address() as { port: number };
     try {
-      const r = await cli(tempDir(), ['register', '--server', `http://127.0.0.1:${port}`, '--address', 'carol@example.com']);
+      const r = await cli(tempDir(), [
+        'register',
+        '--server',
+        `http://127.0.0.1:${port}`,
+        '--address',
+        'carol@example.com',
+      ]);
       assert.equal(r.code, 0, JSON.stringify(r.err));
       assert.equal(r.out.status, 'waitlisted');
       assert.equal(r.out.next, undefined);
