@@ -62,8 +62,7 @@ interface Verb {
 }
 
 /**
- * What an agent does right after it registers (and when it asks who it is): guidance, not a protocol rule. Any
- * agent reads it, not only Claude.
+ * What an agent does right after it registers: guidance, not a protocol rule. Any agent reads it, not only Claude.
  */
 export const NEXT_STEPS =
   `What to do now: you only get messages while you listen. Run \`${NAME} wait --timeout 300\` in a loop, in the ` +
@@ -228,7 +227,8 @@ const VERBS: Record<string, Verb> = {
         recovery_pending: `${again} --code <the same code> --recover${continuationLocal}, after ${'completesAt' in r ? r.completesAt : ''}`,
         pairing_required: `${again} --for ${shellArg(String(v.for))} --pairing <until, a space, and the principal's signature over "SIMON-PAIR\\n${r.address}\\n${str(v.for)}\\n<until>">`,
       }[r.status ?? 'active'];
-      return { ...r, next, ...(next === undefined ? { nextSteps: NEXT_STEPS } : {}) };
+      // Only a registration that is done gets the guidance; an unknown future status gets neither.
+      return { ...r, next, ...((r.status ?? 'active') === 'active' ? { nextSteps: NEXT_STEPS } : {}) };
     },
   },
   compose: {

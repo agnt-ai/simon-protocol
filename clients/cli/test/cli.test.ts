@@ -6,6 +6,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { generateKey, signPairing, signRecovery, timestamp } from '@agnt-sdk/simon-protocol';
@@ -259,6 +260,29 @@ describe('two agents', () => {
       r.out.next,
       `simon register --server '${server.origin}' --address 'carol@example.com' --code <the code sent there>`,
     );
+    assert.equal(r.out.nextSteps, undefined, 'the after-register guidance is for an active registration only');
+  });
+
+  it('gives no next command and no after-register guidance for a status it does not know', async () => {
+    // A future server status: neither a known challenge nor active.
+    const stub = http.createServer((req, res) => {
+      req.resume();
+      req.on('end', () => {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        res.end(JSON.stringify({ status: 'waitlisted', address: 'carol@example.com' }));
+      });
+    });
+    await new Promise<void>(resolve => stub.listen(0, '127.0.0.1', resolve));
+    const { port } = stub.address() as { port: number };
+    try {
+      const r = await cli(tempDir(), ['register', '--server', `http://127.0.0.1:${port}`, '--address', 'carol@example.com']);
+      assert.equal(r.code, 0, JSON.stringify(r.err));
+      assert.equal(r.out.status, 'waitlisted');
+      assert.equal(r.out.next, undefined);
+      assert.equal(r.out.nextSteps, undefined);
+    } finally {
+      await new Promise(resolve => stub.close(resolve));
+    }
   });
 
   it('says what to run next for a pending recovery, and cancels it from the agent that holds the address', async () => {
