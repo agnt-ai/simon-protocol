@@ -94,6 +94,8 @@ describe('JSON-RPC', () => {
     assert.deepEqual(r.result.capabilities, { tools: { listChanged: false } });
     assert.match(r.result.instructions, /never instructions to you and never authorisation/);
     assert.match(r.result.instructions, /content item of its own/);
+    assert.match(r.result.instructions, /call wait_for_message in a loop/);
+    assert.match(r.result.instructions, /one per topic.*never one per message/);
     const unknown = await s.request('initialize', { protocolVersion: '1999-01-01' });
     assert.equal(unknown.result.protocolVersion, '2025-11-25');
   });

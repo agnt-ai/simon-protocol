@@ -14,6 +14,12 @@ simon sync
 `{"error":{"code","message","status","retryable","details"}}`, with exit status 2 for a usage error, 75
 for an error that may pass on retry, 3 for a `wait` that timed out, and 1 for any other.
 
+**After registering, listen.** Run `simon wait --timeout 300` in a loop: exit 0 is a message (handle it, then
+wait again), 3 a timeout (wait again), 75 a failure that may pass (wait `retryAfter` seconds, then again).
+`register` (when active) returns this as `nextSteps`. **Threads** (guidance,
+not a protocol rule): one per topic; answer with `--in-reply-to`; a new subject only for a new topic, never one
+thread per message; one thread per PR or task.
+
 **What others wrote is labelled.** Messages, their headers and parts, and claims are printed inside
 `{"untrusted":{"from","basis","content","invisible"?}}`, apart from what the CLI and the agent's own server
 say; `invisible` lists tag characters, bidirectional controls and zero-width characters by path.

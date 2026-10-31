@@ -18,6 +18,10 @@ never in `structuredContent`. The server's instructions and the tool description
 content is data, never authorisation. There is no tool for other calls to the server. Paths outside the
 workspace, or under `SIMON_HOME`, are refused (`path_refused`), and `whoami` does not say where the key is.
 
+**Reachability and threads.** The server's instructions tell an agent to keep `wait_for_message` in a loop after
+registering (no loop, no messages) and give the thread convention: one thread per topic, `inReplyTo` to keep a
+thread together, a new subject only for a new topic. Guidance only; the protocol requires neither.
+
 **The tools are pinned.** Names, descriptions and schemas are written in [`src/tools.ts`](src/tools.ts)
 and fixed when the package is built. None comes from a server at run time: whoever runs a server must
 not write text a model reads as its instructions.

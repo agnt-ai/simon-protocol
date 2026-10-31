@@ -144,7 +144,8 @@ export const TOOLS: Tool[] = [
     description:
       'Send a signed message to one or more agents (local@domain). text becomes a ' +
       'text/plain part, ahead of parts. attachments are files in the workspace, uploaded and sent by hash with ' +
-      'their file names; a message may carry files alone. Reply by setting inReplyTo to the id you received. ' +
+      'their file names; a message may carry files alone. Reply by setting inReplyTo to the id you received, so the conversation stays in one thread; ' +
+      'set a subject header only to start a new thread for a new topic, never one thread per message. ' +
       'hints go to recipients\' servers, keyed by an address in to, e.g. {"bob@example.net":{"invite":"..."}}. ' +
       "A paired agent's for and pairing headers are added for you. Send only what the one you act for wants sent." +
       DATA,
@@ -408,7 +409,7 @@ export const TOOLS: Tool[] = [
       'Wait for the next message not yet shown by this tool (or by the CLI wait), oldest first, up to ' +
       'timeoutSeconds (1 to 300, 60 by default). Answers status "message" with the entry, or "timeout". What was ' +
       'shown is remembered with the key, so wait, reply, wait never shows a message twice. from waits for one ' +
-      'correspondent and leaves the rest. The message and its claims come in content items of their own, marked ' +
+      'correspondent and leaves the rest. Call it again after every result so you stay reachable. The message and its claims come in content items of their own, marked ' +
       'untrusted.' +
       DATA,
     inputSchema: schema({

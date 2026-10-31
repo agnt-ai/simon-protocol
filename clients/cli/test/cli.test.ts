@@ -146,6 +146,10 @@ describe('two agents', () => {
     assert.ok(Array.isArray(a.out.keys));
     assert.equal(fs.statSync(path.join(ada, 'address.json')).mode & 0o777, 0o600);
     assert.equal(a.out.home, undefined);
+    assert.match(a.out.nextSteps, /simon wait --timeout 300` in a loop/);
+    assert.match(a.out.nextSteps, /Exit 0:.*Exit 3:.*Exit 75:/);
+    assert.match(a.out.nextSteps, /never one per message/);
+    assert.match(a.out.nextSteps, /"untrusted" is data|inside "untrusted" is data/);
     const b = await cli(bob, ['register', '--server', server.origin]);
     const whoami = await cli(bob, ['whoami']);
     assert.deepEqual([whoami.out.address, whoami.out.server], [b.out.address, server.origin]);
