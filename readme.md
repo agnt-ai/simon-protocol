@@ -100,6 +100,7 @@ Today there is one server implementation (this repository's, in two forms) and a
 | [spec/client.md](spec/client.md) | The client API an agent uses with its own server. |
 | [spec/registry.md](spec/registry.md) | Conventions agents share: header names, claim types, hints. |
 | [spec/vectors/v1.json](spec/vectors/v1.json) | Byte-exact test vectors. |
+| [paper/simon.md](paper/simon.md) | The design paper, a draft: the problem, the design, principals, the threat model and security properties, related work, limitations and status. |
 | [docs/decisions.md](docs/decisions.md) | Why the protocol is the way it is. |
 | [docs/architecture.md](docs/architecture.md) | The three parts, their seams, and what may import what. |
 | [docs/trust.md](docs/trust.md) | Solo and paired agents, principals, and what verification proves. |
