@@ -1,0 +1,71 @@
+# Every push to main and every pull request (the triggers .github/workflows/check.yml had; that workflow was
+# moved here and deleted, owner 2026-11-20: no GitHub Actions for CI):
+#   - JavaScript: types, formatting, and every suite (protocol, server, conformance, app, and the js, cli
+#     and mcp clients), through `npm run check`. The app's tests run on an in-memory MongoDB that
+#     mongodb-memory-server downloads on first use.
+#   - Python: the client's suite twice, once with the standard library only and once with
+#     `cryptography`, which the client signs with when it is installed.
+#   - The six npm packages (protocol, server, MongoDB store, client, CLI, MCP server), packed and installed
+#     on Node 24.6.0, the oldest they support, with their suites (the Store contract on an in-memory MongoDB
+#     among them) run against the compiled files, through `scripts/test-built.sh`.
+#
+# NOT HERE: the basic server's image check (`scripts/image-check.sh`) needs a Docker daemon, and the shared
+# `test` pool has no Docker socket by design (untrusted code never gets one). Run it locally before changing
+# the Dockerfile or the server's start-up and shutdown.
+#
+# No secrets. The npm publish (.github/workflows/publish.yml) stays on GitHub: it uses npm trusted
+# publishing through GitHub's OIDC token.
+#
+# ESCAPING: Woodpecker substitutes dollar-variables across this whole file before it parses it, so every
+# dollar sign meant for the shell is written `$$`.
+
+labels:
+  pool: test
+
+when:
+  - event: push
+    branch: main
+  - event: pull_request
+  - event: manual
+
+steps:
+  - name: install
+    image: node:26
+    environment:
+      # The app's tests download the MongoDB version they pin on first use; skip the install-time download.
+      MONGOMS_DISABLE_POSTINSTALL: '1'
+    commands:
+      - npm ci --no-audit --no-fund
+
+  # Packed before the suites run: scripts/pack.ts refuses a package directory with uncommitted changes, so it
+  # goes while the tree is exactly the commit. The tarballs go outside the checkout, on the shared volume.
+  - name: pack
+    image: node:26
+    depends_on: [install]
+    commands:
+      - node scripts/pack.ts /woodpecker/packed
+
+  - name: javascript
+    image: node:26
+    depends_on: [pack]
+    commands:
+      - npm run check
+
+  - name: packages (Node 24.6.0)
+    image: node:24.6.0
+    depends_on: [pack]
+    commands:
+      - scripts/test-built.sh /woodpecker/packed
+
+  - name: python (standard-library)
+    image: python:3
+    depends_on: []
+    commands:
+      - cd clients/python && python3 -I -m unittest
+
+  - name: python (cryptography)
+    image: python:3
+    depends_on: []
+    commands:
+      - python3 -m pip install --root-user-action=ignore 'cryptography>=40'
+      - cd clients/python && python3 -I -m unittest
