@@ -58,8 +58,10 @@ scripts/image-check.sh           # the server's Docker image, run as a deploymen
 npm run build && scripts/test-built.sh packed   # the packed packages, on the Node that runs it
 ```
 
-CI runs the last two on every push: the image check, and the packed packages on Node 24.6.0, where the
-protocol's and the JavaScript client's suites, the vectors among them, run against the compiled files.
+CI ([.woodpecker/check.yaml](.woodpecker/check.yaml)) runs the packed packages on every push, on Node 24.6.0,
+where the protocol's and the JavaScript client's suites, the vectors among them, run against the compiled files.
+It does not run the image check (its machines have no Docker): run that yourself before a change to the
+Dockerfile or to how the server starts and stops.
 
 The conformance suite against the basic server, run as [conformance/readme.md](conformance/readme.md)
 says with every optional check on, passes 260 of its 264 checks and skips `sent.expired`, which needs

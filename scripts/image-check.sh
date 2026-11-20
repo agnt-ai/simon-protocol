@@ -3,7 +3,7 @@
 # with the settings such a deployment uses (an https origin, a server key, plain http inside the
 # container, trusted proxies, a long keep-alive) and its sqlite file in a volume. The server must answer
 # its health check, stop cleanly on SIGTERM, and keep its store across the restart: its server document's
-# key keeps the `added` time it was first published with. Needs Docker and Node 26; CI runs it on every push.
+# key keeps the `added` time it was first published with. Needs Docker and Node 26. CI does not run it (the Woodpecker test pool has no Docker); run it locally.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 NAME=simon-image-check
